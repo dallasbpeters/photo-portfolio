@@ -18,7 +18,15 @@ import { PhotoEditorConfig } from './config/plugin';
 
 export { PhotoEditorConfig } from './config/plugin';
 
-export async function initPhotoEditor(cesdk: CreativeEditorSDK) {
+export type InitPhotoEditorOptions = {
+  /** Called when the user clicks "Save". Receives the exported PNG blob. */
+  onSave?: (blob: Blob) => void | Promise<void>;
+};
+
+export async function initPhotoEditor(
+  cesdk: CreativeEditorSDK,
+  options: InitPhotoEditorOptions = {},
+) {
   await cesdk.addPlugin(new PhotoEditorConfig());
 
   cesdk.ui.setTheme('dark');
@@ -36,15 +44,35 @@ export async function initPhotoEditor(cesdk: CreativeEditorSDK) {
   await cesdk.addPlugin(new VectorShapeAssetSource());
 
   cesdk.i18n.setTranslations({
-    en: { 'actions.export.image': 'Export Image' },
+    en: {
+      'actions.export.image': 'Export Image',
+      'actions.save.image': 'Save',
+    },
   });
+
+  if (options.onSave) {
+    const onSave = options.onSave;
+    cesdk.ui.insertOrderComponent(
+      { in: 'ly.img.navigation.bar', position: 'end' },
+      {
+        id: 'ly.img.action.navigationBar',
+        key: 'actions.save.image',
+        color: 'accent',
+        icon: '@imgly/Save',
+        label: 'actions.save.image',
+        onClick: async () => {
+          const { blobs } = await cesdk.utils.export({ mimeType: 'image/png' });
+          await onSave(blobs[0]);
+        },
+      }
+    );
+  }
 
   cesdk.ui.insertOrderComponent(
     { in: 'ly.img.navigation.bar', position: 'end' },
     {
       id: 'ly.img.action.navigationBar',
       key: 'actions.export.image',
-      color: 'accent',
       icon: '@imgly/Image',
       label: 'actions.export.image',
       onClick: async () => {

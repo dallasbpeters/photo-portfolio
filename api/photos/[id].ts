@@ -23,6 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     const categoryId = typeof body.categoryId === 'string' ? body.categoryId.trim() : '';
     const order = typeof body.order === 'number' ? body.order : Number(body.order);
+    const url = typeof body.url === 'string' && body.url.trim() ? body.url.trim() : null;
 
     if (!title || !categoryId) {
       return res.status(400).json({ error: 'Invalid title or categoryId' });
@@ -41,7 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rows = (await sql`
         WITH u AS (
           UPDATE photos
-          SET title = ${title}, category_id = ${categoryId}, sort_order = ${order}
+          SET title = ${title}, category_id = ${categoryId}, sort_order = ${order},
+            url = COALESCE(${url}, url)
           WHERE id = ${id}
           RETURNING id
         )

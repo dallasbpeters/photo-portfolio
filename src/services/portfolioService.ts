@@ -307,7 +307,7 @@ export const portfolioService = {
 
   updatePhoto: async (
     id: string,
-    data: { title: string; categoryId: string; order: number },
+    data: { title: string; categoryId: string; order: number; url?: string },
   ): Promise<Photo> => {
     const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -316,6 +316,7 @@ export const portfolioService = {
         title: data.title,
         categoryId: data.categoryId,
         order: data.order,
+        ...(data.url ? { url: data.url } : {}),
       }),
     });
     const json = (await res.json().catch(() => ({}))) as Photo & { error?: string };

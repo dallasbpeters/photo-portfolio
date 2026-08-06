@@ -22,6 +22,7 @@ import { useAdminView } from '../hooks/useAdminView';
 import { useNewPhoto } from '../hooks/useNewPhoto';
 import { usePhotoDetails } from '../hooks/usePhotoDetails';
 import { usePhotoSelection } from '../hooks/usePhotoSelection';
+import type { Photo } from '../types';
 
 type AdminProps = {
   isAuthenticated: boolean;
@@ -31,7 +32,7 @@ type AdminProps = {
 
 export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
-  const [editingPhotoUrl, setEditingPhotoUrl] = useState<string | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
 
   const login      = useAdminLogin(onLogin);
   const data       = useAdminData(isAuthenticated);
@@ -440,7 +441,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                                 variant="ghost"
                                 size="icon"
                                 type="button"
-                                onClick={() => setEditingPhotoUrl(photo.url)}
+                                onClick={() => setEditingPhoto(photo)}
                                 className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
                                 aria-label={`Open image editor for ${photo.title}`}
                               >
@@ -541,8 +542,14 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         </DialogContent>
       </Dialog>
 
-      {editingPhotoUrl && (
-        <PhotoEditor imageUrl={editingPhotoUrl} onClose={() => setEditingPhotoUrl(null)} />
+      {editingPhoto && (
+        <PhotoEditor
+          photo={editingPhoto}
+          onClose={() => setEditingPhoto(null)}
+          onSaved={() => {
+            void data.reload();
+          }}
+        />
       )}
     </div>
   );

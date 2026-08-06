@@ -1,14 +1,19 @@
 import { useEffect, useRef } from 'react';
 import CreativeEditorSDK from '@cesdk/cesdk-js';
+import { toast } from 'sonner';
 import { initPhotoEditor } from '../imgly';
+import { portfolioService } from '../services/portfolioService';
+import type { Photo } from '../types';
 import { X } from 'lucide-react';
 
 interface PhotoEditorProps {
-  imageUrl: string;
+  photo: Photo;
   onClose: () => void;
+  /** Called after the edited image is uploaded and the photo record is updated. */
+  onSaved: (updated: Photo) => void;
 }
 
-export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
+export function PhotoEditor({ photo, onClose, onSaved }: PhotoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cesdkRef = useRef<CreativeEditorSDK | null>(null);
 
@@ -21,6 +26,26 @@ export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
       userId: 'cyan-photo-editor',
     };
 
+    const handleSave = async (blob: Blob) => {
+      const toastId = toast.loading('Saving changes…');
+      try {
+        const file = new File([blob], `${photo.id}.png`, { type: 'image/png' });
+        const { url } = await portfolioService.uploadImageFile(file);
+        const updated = await portfolioService.updatePhoto(photo.id, {
+          title: photo.title,
+          categoryId: photo.categoryId,
+          order: photo.order,
+          url,
+        });
+        toast.success('Changes saved', { id: toastId });
+        onSaved(updated);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not save changes', {
+          id: toastId,
+        });
+      }
+    };
+
     CreativeEditorSDK.create(containerRef.current, config)
       .then(async (cesdk) => {
         if (disposed) {
@@ -31,7 +56,7 @@ export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
         cesdkRef.current = cesdk;
 
         try {
-          await initPhotoEditor(cesdk);
+          await initPhotoEditor(cesdk, { onSave: handleSave });
 
           // Resolve natural image dimensions before creating the scene
           const { width: imgW, height: imgH } = await new Promise<{ width: number; height: number }>(
@@ -40,7 +65,7 @@ export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
               img.crossOrigin = 'anonymous';
               img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
               img.onerror = () => resolve({ width: 1080, height: 1080 }); // fallback
-              img.src = imageUrl;
+              img.src = photo.url;
             },
           );
 
@@ -53,7 +78,7 @@ export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
 
           if (page != null) {
             const imageFill = engine.block.createFill('image');
-            engine.block.setString(imageFill, 'fill/image/imageFileURI', imageUrl);
+            engine.block.setString(imageFill, 'fill/image/imageFileURI', photo.url);
             engine.block.setFill(page, imageFill);
             engine.block.setContentFillMode(page, 'Cover');
 
@@ -74,7 +99,7 @@ export function PhotoEditor({ imageUrl, onClose }: PhotoEditorProps) {
         cesdkRef.current = null;
       }
     };
-  }, [imageUrl]);
+  }, [photo.id]);
 
   return (
     <div className="fixed inset-0 z-100 bg-black flex flex-col">
