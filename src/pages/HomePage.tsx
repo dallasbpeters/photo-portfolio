@@ -90,11 +90,15 @@ export const HomePage = () => {
     setHeroIndex((prev) => (prev + 1) % heroPhotos.length);
   }, [heroPhotos.length]);
 
+  // Depends on heroIndex so the countdown restarts whenever the slide changes,
+  // including a manual pick. Without that, choosing a photo left the original
+  // schedule running and it could advance a moment later — which reads as the
+  // button not working.
   useEffect(() => {
-    if (heroPhotos.length === 0) return;
+    if (heroPhotos.length < 2) return;
     const timer = setInterval(handleNextHero, 8000);
     return () => clearInterval(timer);
-  }, [handleNextHero, heroPhotos.length]);
+  }, [handleNextHero, heroPhotos.length, heroIndex]);
 
   const handleNextLightbox = () => {
     if (lightboxIndex === null || filteredPhotos.length === 0) return;

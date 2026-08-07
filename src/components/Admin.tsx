@@ -21,6 +21,7 @@ import { SiteSettingsPanel } from './admin/SiteSettingsPanel';
 import { PagesPanel } from './admin/PagesPanel';
 import { BatchUploader } from './admin/BatchUploader';
 import { PhotoEditor } from './PhotoEditor';
+import { OptimizedImage } from './OptimizedImage';
 import { useAdminData } from '../hooks/useAdminData';
 import { useAdminLogin } from '../hooks/useAdminLogin';
 import { useAdminView } from '../hooks/useAdminView';
@@ -382,9 +383,10 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                                     transitionDelay: `${i * 20}ms`,
                                   }}
                                 >
-                                  <img
+                                  <OptimizedImage
                                     src={photo.url}
                                     alt=""
+                                    sizes="120px"
                                     className="h-full w-full object-cover"
                                     referrerPolicy="no-referrer"
                                   />
@@ -438,9 +440,10 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                               selected ? 'border-white/40 ring-1 ring-white/30' : 'border-white/10'
                             }`}
                           >
-                            <img
+                            <OptimizedImage
                               src={photo.url}
                               alt=""
+                              sizes="(min-width: 1024px) 300px, (min-width: 640px) 45vw, 90vw"
                               className="absolute inset-0 h-full w-full object-cover"
                               referrerPolicy="no-referrer"
                             />

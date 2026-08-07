@@ -28,6 +28,14 @@ const isOptimizable = (src: string): boolean => {
 const optimizedUrl = (src: string, width: number, quality: number): string =>
   `/_vercel/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality}`;
 
+/**
+ * Optimized URL for callers that cannot use the component — animated images, or
+ * anywhere an <img> element is produced by another library. Returns the source
+ * unchanged when it is not optimizable.
+ */
+export const optimizedImageSrc = (src: string, width: number, quality = 80): string =>
+  isOptimizable(src) ? optimizedUrl(src, width, quality) : src;
+
 interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'srcSet'> {
   src: string;
   alt: string;

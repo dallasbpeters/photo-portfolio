@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Photo } from '../types';
+import { optimizedImageSrc } from './OptimizedImage';
 
 interface LightboxProps {
   photos: Photo[];
@@ -49,7 +50,9 @@ export function Lightbox({ photos, currentIndex, onClose, onNext, onPrev }: Ligh
           key={currentPhoto.id}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          src={currentPhoto.url}
+          // Capped at max-w-5xl, so 2048px covers a retina view without
+          // pulling the full-resolution original.
+          src={optimizedImageSrc(currentPhoto.url, 2048, 85)}
           alt={currentPhoto.title}
           className="w-full h-full object-contain"
           referrerPolicy="no-referrer"

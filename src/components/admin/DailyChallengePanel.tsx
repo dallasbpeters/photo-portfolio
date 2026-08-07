@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { portfolioService } from '../../services/portfolioService';
+import { OptimizedImage } from '../OptimizedImage';
 import { cn } from '@/lib/utils';
 import { useTodayChallenge, canUseNotifications } from '../../hooks/useTodayChallenge';
 import { useChallengeHistory } from '../../hooks/useChallengeHistory';
@@ -81,7 +82,7 @@ const HistoryEntry = ({ entry, isToday, onSaved, onDeleted }: HistoryEntryProps)
         className="w-full flex items-center gap-3 p-3 text-left hover:bg-white/5 transition-colors"
         aria-expanded={open}
       >
-        <img src={thumb} alt={entry.challenge.altText || ''} className="size-12 rounded object-cover shrink-0 opacity-80" referrerPolicy="no-referrer" />
+        <OptimizedImage src={thumb} alt={entry.challenge.altText || ''} sizes="48px" className="size-12 rounded object-cover shrink-0 opacity-80" referrerPolicy="no-referrer" />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-widest text-white/50 flex items-center gap-1.5">
             {isToday && <span className="inline-block size-1.5 rounded-full bg-amber-300/80 shrink-0" />}
@@ -106,9 +107,10 @@ const HistoryEntry = ({ entry, isToday, onSaved, onDeleted }: HistoryEntryProps)
               className="block overflow-hidden rounded border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               aria-label="Open photo on Unsplash"
             >
-              <img
+              <OptimizedImage
                 src={entry.challenge.imageThumbUrl ?? entry.challenge.imageUrl}
                 alt={entry.challenge.altText || 'Challenge photo'}
+                sizes="(min-width: 1024px) 420px, 90vw"
                 className="aspect-5/3 w-full object-cover opacity-90 hover:opacity-100 transition-opacity"
                 referrerPolicy="no-referrer"
               />
@@ -296,9 +298,10 @@ export const DailyChallengePanel = () => {
                       className="group block overflow-hidden rounded-lg border border-white/10 bg-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                       aria-label="Open photo on Unsplash"
                     >
-                      <img
+                      <OptimizedImage
                         src={today.challenge.imageUrl}
                         alt={today.challenge.altText || 'Daily challenge photo'}
+                        sizes="(min-width: 1024px) 560px, 90vw"
                         className="aspect-5/3 w-full object-cover transition-opacity group-hover:opacity-95"
                         referrerPolicy="no-referrer"
                       />
