@@ -11,9 +11,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.3.0
         version: 1.3.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@cesdk/cesdk-js':
-        specifier: ^1.71.0
-        version: 1.71.0(react@19.2.4)
       '@fontsource-variable/cormorant-garamond':
         specifier: ^5.3.0
         version: 5.3.0
@@ -324,31 +321,6 @@ packages:
 
   '@bytecodealliance/preview2-shim@0.17.6':
     resolution: {integrity: sha512-n3cM88gTen5980UOBAD6xDcNNL3ocTK8keab21bpx1ONdA+ARj7uD1qoFxOWCyKlkpSi195FH+GeAut7Oc6zZw==}
-
-  '@cesdk/cesdk-js@1.71.0':
-    resolution: {integrity: sha512-8JZlKzzAj+z1DOpDbqK0+T8UP7KYUzqwaAKTfydufdivlCmTlWADxSeyVO6m4CUNvAgmnmpZeNIRpXcC78DNuw==}
-    peerDependencies:
-      '@angular/common': '>=14.0.0'
-      '@angular/core': '>=14.0.0'
-      react: '>16'
-      vue: ^3.0.0
-    peerDependenciesMeta:
-      '@angular/common':
-        optional: true
-      '@angular/core':
-        optional: true
-      react:
-        optional: true
-      vue:
-        optional: true
-
-  '@cesdk/engine@1.71.0':
-    resolution: {integrity: sha512-igpek+OHWdaTCWyuTLUYvD7K9ACCDy99OA6CRgtwvHYZM/vKUVSMCQPRiRNULRz9nu3Dy57/2/ZjSVvC/YcIOg==}
-    peerDependencies:
-      react: '>16'
-    peerDependenciesMeta:
-      react:
-        optional: true
 
   '@dotenvx/dotenvx@1.59.1':
     resolution: {integrity: sha512-Qg+meC+XFxliuVSDlEPkKnaUjdaJKK6FNx/Wwl2UxhQR8pyPIuLhMavsF7ePdB9qFZUWV1jEK3ckbJir/WmF4w==}
@@ -4102,16 +4074,6 @@ snapshots:
       '@types/react': 19.2.14
 
   '@bytecodealliance/preview2-shim@0.17.6': {}
-
-  '@cesdk/cesdk-js@1.71.0(react@19.2.4)':
-    dependencies:
-      '@cesdk/engine': 1.71.0(react@19.2.4)
-    optionalDependencies:
-      react: 19.2.4
-
-  '@cesdk/engine@1.71.0(react@19.2.4)':
-    optionalDependencies:
-      react: 19.2.4
 
   '@dotenvx/dotenvx@1.59.1':
     dependencies:
