@@ -1,4 +1,5 @@
 import type { Category, DailyChallengeHistoryEntry, DailyChallengeJournal, DailyChallengeResponse, Photo } from '../types';
+import type { ResolvedSiteSettings } from '../../config/siteSettings';
 
 const apiBase = (): string => {
   // Dev: always same-origin. Vite proxies /api → vercel dev :3000.
@@ -332,6 +333,34 @@ export const portfolioService = {
 
   notifyCategoriesChanged: () => {
     window.dispatchEvent(new CustomEvent('cyan-categories-changed'));
+  },
+};
+
+export const settingsApi = {
+  /** Public read of the live site content and theme. */
+  get: async (): Promise<ResolvedSiteSettings> => {
+    const res = await fetch(`${apiBase()}/api/site-settings`);
+    if (!res.ok) throw new Error(`Could not load site settings (${res.status})`);
+    return (await res.json()) as ResolvedSiteSettings;
+  },
+
+  /** Admin write. Returns the re-read settings, not an echo of the input. */
+  update: async (
+    input: Partial<ResolvedSiteSettings>,
+    token: string,
+  ): Promise<ResolvedSiteSettings> => {
+    const res = await fetch(`${apiBase()}/api/site-settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    });
+    const data = (await res.json().catch(() => ({}))) as
+      | ResolvedSiteSettings
+      | { error?: string };
+    if (!res.ok) {
+      throw new Error(('error' in data && data.error) || `Could not save settings (${res.status})`);
+    }
+    return data as ResolvedSiteSettings;
   },
 };
 

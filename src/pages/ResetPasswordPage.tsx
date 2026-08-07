@@ -7,12 +7,13 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { authApi, authStorage } from '../services/portfolioService';
-import { site } from '../site';
+import { useSiteSettings } from '../theme/SiteSettingsProvider';
 
 /** Kept in step with MIN_PASSWORD_LENGTH in api/_lib/resetToken.ts. */
 const MIN_PASSWORD_LENGTH = 8;
 
 export function ResetPasswordPage() {
+  const { settings } = useSiteSettings();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token') ?? '';
@@ -54,7 +55,7 @@ export function ResetPasswordPage() {
       <nav className="border-b border-white/10 bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
         <div className="mx-auto px-4 sm:px-6 min-h-16 sm:min-h-20 flex items-center">
           <h1 className="text-lg sm:text-xl font-light tracking-[0.25em] sm:tracking-[0.3em] uppercase truncate">
-            {site.shortName} Admin
+            {settings.shortName} Admin
           </h1>
         </div>
       </nav>

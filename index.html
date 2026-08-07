@@ -8,7 +8,8 @@
   <meta name="theme-color" content="%SITE_THEME_COLOR%" />
   <link rel="icon" href="/sites/%SITE_KEY%/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/sites/%SITE_KEY%/icon512_rounded.png" />
-  <link rel="manifest" href="/manifest.json" type="application/manifest+json" />
+  <!-- Served from the database so name/theme changes need no rebuild. -->
+  <link rel="manifest" href="/api/manifest" type="application/manifest+json" />
   <title>%SITE_NAME%</title>
 </head>
 

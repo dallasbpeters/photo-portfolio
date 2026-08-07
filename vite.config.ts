@@ -5,9 +5,11 @@ import { defineConfig, type Plugin } from 'vite';
 import { resolveSite } from './config/sites';
 
 /**
- * Substitutes the %SITE_*% placeholders in index.html and emits a manifest.json
- * for the site being built, so one codebase produces correctly branded output
- * for every site without a per-site index.html or public/ directory.
+ * Substitutes the %SITE_*% placeholders in index.html so one codebase produces
+ * correctly branded output for every site without a per-site index.html.
+ *
+ * These are the build-time defaults. Anything an admin can edit is overridden at
+ * runtime from site_settings; the manifest is served by api/manifest.ts.
  */
 const siteBranding = (siteKey: string | undefined): Plugin => {
   const site = resolveSite(siteKey);
@@ -20,59 +22,6 @@ const siteBranding = (siteKey: string | undefined): Plugin => {
         .replaceAll('%SITE_NAME%', site.name)
         .replaceAll('%SITE_KEY%', site.key)
         .replaceAll('%SITE_THEME_COLOR%', site.themeColor),
-
-    generateBundle() {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'manifest.json',
-        source: JSON.stringify(
-          {
-            theme_color: site.themeColor,
-            background_color: site.themeColor,
-            icons: [
-              {
-                purpose: 'maskable',
-                sizes: '512x512',
-                src: `/sites/${site.key}/icon512_maskable.png`,
-                type: 'image/png',
-              },
-              {
-                purpose: 'any',
-                sizes: '512x512',
-                src: `/sites/${site.key}/icon512_rounded.png`,
-                type: 'image/png',
-              },
-            ],
-            orientation: 'any',
-            display: 'standalone',
-            dir: 'auto',
-            lang: 'en-US',
-            name: site.name,
-            short_name: site.shortName,
-            id: `https://${site.domain}`,
-            start_url: '/admin',
-            scope: '/',
-            shortcuts: [
-              {
-                name: 'Portfolio',
-                short_name: 'Home',
-                description: 'Public gallery',
-                url: '/',
-                icons: [
-                  {
-                    src: `/sites/${site.key}/icon512_rounded.png`,
-                    sizes: '512x512',
-                    type: 'image/png',
-                  },
-                ],
-              },
-            ],
-          },
-          null,
-          2,
-        ),
-      });
-    },
   };
 };
 

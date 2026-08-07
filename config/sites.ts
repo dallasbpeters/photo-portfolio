@@ -31,8 +31,6 @@ export type SiteConfig = {
   domain: string;
   /** Every origin the API accepts cross-origin requests from. */
   origins: string[];
-  /** Tailwind text-color class for the hero wordmark. */
-  heroAccentClass: string;
   /** Line under the footer wordmark. */
   tagline: string;
   instagramUrl: string;
@@ -54,9 +52,8 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     ownerName: 'Addison',
     domain: 'addisonsphotos.com',
     origins: ['https://addisonsphotos.com', 'https://www.addisonsphotos.com'],
-    heroAccentClass: 'text-white',
     tagline: 'Visual Storyteller & Photographer',
-    instagramUrl: 'https://www.instagram.com/not_dislesic',
+    instagramUrl: 'https://www.instagram.com/knot_dislesic',
     instagramHandle: '@knot_dislesic',
     defaultAdminEmail: 'addisonrpeters@gmail.com',
     emailFrom: "Addison's Photos <noreply@addisonsphotos.com>",
@@ -70,7 +67,6 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     ownerName: 'Cyan',
     domain: 'cyansphotos.com',
     origins: ['https://cyansphotos.com', 'https://www.cyansphotos.com'],
-    heroAccentClass: 'text-cyan-200',
     tagline: 'Visual Storyteller & Photographer',
     instagramUrl: 'https://www.instagram.com/cyans_pov',
     instagramHandle: '@cyans_pov',

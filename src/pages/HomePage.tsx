@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Photo, ViewMode } from '../types';
 import { Lightbox } from '../components/Lightbox';
+import { OptimizedImage } from '../components/OptimizedImage';
 import { Toaster, toast } from 'sonner';
 import { portfolioService } from '../services/portfolioService';
 import { Instagram } from 'iconoir-react';
-import { site } from '../site';
+import { useSiteSettings } from '../theme/SiteSettingsProvider';
 
 const formatCategoryLabel = (category: string): string =>
   category
@@ -14,6 +15,7 @@ const formatCategoryLabel = (category: string): string =>
     .join(' ');
 
 export const HomePage = () => {
+  const { settings } = useSiteSettings();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('all');
 
@@ -147,9 +149,13 @@ export const HomePage = () => {
                 transition={{ duration: 1.5, ease: 'easeInOut' }}
                 className="relative w-full h-full"
               >
-                <img
-                  src={heroPhotos[heroIndex]?.url}
+                <OptimizedImage
+                  src={heroPhotos[heroIndex]?.url ?? ''}
                   alt={heroPhotos[heroIndex]?.title ?? ''}
+                  sizes="100vw"
+                  quality={90}
+                  loading="eager"
+                  fetchPriority="high"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
@@ -162,8 +168,8 @@ export const HomePage = () => {
         </div>
 
         <div className="absolute top-12 left-8 md:left-24 z-50">
-          <h1 className={`text-3xl ${site.heroAccentClass} font-bold tracking-widest uppercase`}>
-            {site.heroTitle}
+          <h1 className="text-3xl text-accent font-bold tracking-widest uppercase">
+            {settings.heroTitle}
           </h1>
         </div>
       </section>
@@ -185,9 +191,10 @@ export const HomePage = () => {
               className="group cursor-pointer aspect-video md:aspect-square overflow-hidden bg-white/5"
               onClick={() => setLightboxIndex(index)}
             >
-              <img
+              <OptimizedImage
                 src={photo.url}
                 alt={photo.title}
+                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 referrerPolicy="no-referrer"
               />
@@ -199,14 +206,14 @@ export const HomePage = () => {
       <footer className="py-24 px-12 border-t border-white/5 bg-black">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold uppercase tracking-widest">{site.ownerName}</h2>
+            <h2 className="text-3xl font-bold uppercase tracking-widest">{settings.ownerName}</h2>
             <p className="text-sm text-white/40 uppercase tracking-widest max-w-xs">
-              {site.tagline}
+              {settings.tagline}
             </p>
             <div className="flex gap-6">
               <a
-                href={site.instagramUrl}
-                aria-label={`${site.ownerName} on Instagram`}
+                href={settings.instagramUrl}
+                aria-label={`${settings.ownerName} on Instagram`}
                 className="hover:text-white/60 transition-colors"
               >
                 <Instagram width={20} height={20} />
@@ -216,7 +223,7 @@ export const HomePage = () => {
 
           <div className="flex flex-col gap-4 text-[10px] uppercase tracking-[0.3em] text-white/20">
             <p>
-              © {new Date().getFullYear()} {site.ownerName}. All rights reserved.
+              © {new Date().getFullYear()} {settings.ownerName}. All rights reserved.
             </p>
           </div>
         </div>
