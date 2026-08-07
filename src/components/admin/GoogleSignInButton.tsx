@@ -112,11 +112,11 @@ export function GoogleSignInButton({ onSignedIn }: GoogleSignInButtonProps) {
         });
         api.renderButton(containerRef.current, {
           type: 'standard',
-          theme: 'filled_black',
+          theme: 'outline',
           size: 'large',
           text: 'signin_with',
           shape: 'rectangular',
-          logo_alignment: 'center',
+          logo_alignment: 'left',
           width: 320,
         });
       })
