@@ -222,7 +222,7 @@ export const HomePage = () => {
       </section>
 
       <footer className="py-24 px-12 border-t border-white/5 bg-black">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
+        <div className="max-w-10xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
           <div className="space-y-6">
             <h2 className="text-3xl font-bold uppercase tracking-widest">{settings.ownerName}</h2>
             <p className="text-sm text-white/40 uppercase tracking-widest max-w-xs">
