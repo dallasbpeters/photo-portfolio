@@ -8,6 +8,7 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { pagesApi, type PageRecord, type PageSummary } from '../../services/portfolioService';
 import { PageEditor } from '../../cms/PageEditor';
+import { IconPicker } from '../../cms/IconPicker';
 
 const labelClass = 'text-[10px] uppercase tracking-widest text-white/40';
 const inputClass =
@@ -261,16 +262,11 @@ function PageEditorPanel({
             <Label htmlFor="page-icon" className={labelClass}>
               Icon (optional)
             </Label>
-            <Input
+            <IconPicker
               id="page-icon"
-              value={draft.icon ?? ''}
-              onChange={(e) => setDraft({ ...draft, icon: e.target.value || null })}
-              placeholder="Camera"
-              className={inputClass}
+              value={draft.icon}
+              onChange={(icon) => setDraft({ ...draft, icon })}
             />
-            <p className="text-[10px] text-white/25">
-              An Iconoir name, e.g. Camera, Mail, InfoCircle
-            </p>
           </div>
         </div>
 
