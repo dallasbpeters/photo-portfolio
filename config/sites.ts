@@ -56,7 +56,7 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     origins: ['https://addisonsphotos.com', 'https://www.addisonsphotos.com'],
     heroAccentClass: 'text-white',
     tagline: 'Visual Storyteller & Photographer',
-    instagramUrl: 'https://www.instagram.com/addisonrpeters',
+    instagramUrl: 'https://www.instagram.com/not_dislesic',
     instagramHandle: '@knot_dislesic',
     defaultAdminEmail: 'addisonrpeters@gmail.com',
     emailFrom: "Addison's Photos <noreply@addisonsphotos.com>",
