@@ -1,4 +1,5 @@
 import type CreativeEditorSDK from '@cesdk/cesdk-js';
+import { developDockEntry } from '../../develop/panel';
 
 export function setupDock(cesdk: CreativeEditorSDK): void {
   const { engine, ui } = cesdk;
@@ -27,24 +28,9 @@ export function setupDock(cesdk: CreativeEditorSDK): void {
         }
       },
     },
-    {
-      id: 'ly.img.assetLibrary.dock',
-      key: 'ly.img.adjustment',
-      icon: '@imgly/Adjustments',
-      label: 'Adjust',
-      entries: [],
-      isSelected: () => ui.isPanelOpen('//ly.img.panel/inspector/adjustments'),
-      onClick: () => {
-        const panelId = '//ly.img.panel/inspector/adjustments';
-        if (ui.isPanelOpen(panelId)) { ui.closePanel(panelId); return; }
-        const page = engine.scene.getCurrentPage();
-        if (page == null) return;
-        ui.closePanel('*');
-        engine.editor.setEditMode('Transform');
-        engine.block.select(page);
-        ui.openPanel(panelId, { floating: true });
-      },
-    },
+    // Replaces the stock Adjust panel: same underlying effect, but the full
+    // photo-grade control set plus compare and looks (see develop/panel.ts).
+    developDockEntry(cesdk),
     {
       id: 'ly.img.assetLibrary.dock',
       key: 'ly.img.filter',

@@ -15,8 +15,11 @@ import {
 } from '@cesdk/cesdk-js/plugins';
 
 import { PhotoEditorConfig } from './config/plugin';
+import { registerDevelopPanel } from './develop/panel';
+import { site } from '../site';
 
 export { PhotoEditorConfig } from './config/plugin';
+export { DEVELOP_PANEL_ID } from './develop/panel';
 
 export type InitPhotoEditorOptions = {
   /** Called when the user clicks "Save". Receives the exported PNG blob. */
@@ -30,6 +33,9 @@ export async function initPhotoEditor(
   await cesdk.addPlugin(new PhotoEditorConfig());
 
   cesdk.ui.setTheme('dark');
+
+  // Registered before the dock renders so the Develop entry resolves.
+  registerDevelopPanel(cesdk, site.key);
 
   await cesdk.addPlugin(new BlurAssetSource());
   await cesdk.addPlugin(new ColorPaletteAssetSource());
