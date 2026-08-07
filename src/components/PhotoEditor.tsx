@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import { PhotoEditorShell } from '../editor/ui/PhotoEditorShell';
 import { portfolioService } from '../services/portfolioService';
 import type { Photo } from '../types';
+import posthog from '../lib/posthog';
 
 interface PhotoEditorProps {
   photo: Photo;
@@ -27,6 +28,9 @@ export function PhotoEditor({ photo, onClose, onSaved }: PhotoEditorProps) {
         categoryId: photo.categoryId,
         order: photo.order,
         url,
+      });
+      posthog.capture('photo_edit_saved', {
+        export_format: extension,
       });
       toast.success('Changes saved', { id: toastId });
       onSaved(updated);

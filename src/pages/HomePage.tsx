@@ -7,6 +7,7 @@ import { Toaster, toast } from 'sonner';
 import { portfolioService } from '../services/portfolioService';
 import { Instagram } from 'iconoir-react';
 import { useSiteSettings } from '../theme/SiteSettingsProvider';
+import posthog from '../lib/posthog';
 
 const formatCategoryLabel = (category: string): string =>
   category
@@ -38,6 +39,9 @@ export const HomePage = () => {
   const gridSectionRef = useRef<HTMLElement>(null);
 
   const handleFilterClick = useCallback((mode: ViewMode) => {
+    posthog.capture('portfolio_category_filtered', {
+      category: mode,
+    });
     setViewMode(mode);
     requestAnimationFrame(() => {
       gridSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -189,7 +193,12 @@ export const HomePage = () => {
               viewport={{ once: true }}
               transition={{ duration: 1 }}
               className="group cursor-pointer aspect-video md:aspect-square overflow-hidden bg-white/5"
-              onClick={() => setLightboxIndex(index)}
+              onClick={() => {
+                posthog.capture('portfolio_photo_opened', {
+                  category: photo.category,
+                });
+                setLightboxIndex(index);
+              }}
             >
               <OptimizedImage
                 src={photo.url}

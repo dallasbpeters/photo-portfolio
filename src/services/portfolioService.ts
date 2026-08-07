@@ -71,6 +71,31 @@ const writeStoredToken = (token: string | null): void => {
 
 const getAuthToken = (): string | null => readStoredToken();
 
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+};
+
+const getStoredUser = (): AuthenticatedUser | null => {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      sub?: unknown;
+      email?: unknown;
+    };
+    if (typeof decoded.sub !== 'string' || !decoded.sub || typeof decoded.email !== 'string') {
+      return null;
+    }
+    return { id: decoded.sub, email: decoded.email };
+  } catch {
+    return null;
+  }
+};
+
 const jsonHeaders = (): HeadersInit => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getAuthToken();
@@ -366,6 +391,7 @@ export const settingsApi = {
 
 export const authStorage = {
   getToken: readStoredToken,
+  getUser: getStoredUser,
   setToken: writeStoredToken,
 };
 

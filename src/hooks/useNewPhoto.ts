@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import type { Category } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
+import posthog from '../lib/posthog';
 
 type PhotoForm = { title: string; categoryId: string };
 
@@ -59,6 +60,9 @@ export const useNewPhoto = (categories: Category[], reload: () => Promise<void>)
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
       setNewlyAddedPhotoId(added.id);
       highlightTimerRef.current = setTimeout(() => setNewlyAddedPhotoId(null), 3000);
+      posthog.capture('photo_created', {
+        category_id: added.categoryId,
+      });
       toast.success('Photo added successfully');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error adding photo');

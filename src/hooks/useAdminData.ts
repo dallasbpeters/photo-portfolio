@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Category, Photo } from '../types';
 import { portfolioService, authStorage } from '../services/portfolioService';
 import { toast } from 'sonner';
+import posthog from '../lib/posthog';
 
 const sortCategories = (list: Category[]): Category[] =>
   [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
@@ -82,6 +83,7 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
         const cat = await portfolioService.createCategory({ label: trimmed, sortOrder: maxOrder + 1 });
         await loadCategories();
         portfolioService.notifyCategoriesChanged();
+        posthog.capture('category_created');
         toast.success(`Added "${cat.label}"`);
         return cat.id;
       } catch (e) {
@@ -100,6 +102,7 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
       await portfolioService.deleteCategory(cat.id);
       await loadCategories();
       portfolioService.notifyCategoriesChanged();
+      posthog.capture('category_deleted');
       toast.success('Category deleted');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not delete category');

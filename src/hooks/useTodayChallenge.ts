@@ -3,6 +3,7 @@ import type { DailyChallengeInfo, DailyChallengeJournal } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
 import { site } from '../site';
+import posthog from '../lib/posthog';
 
 // Storage keys stay literal: they are already scoped per origin, and renaming
 // them would sign existing admins out of a site that is live.
@@ -87,6 +88,7 @@ export const useTodayChallenge = (): TodayChallengeState => {
       setChallenge(data.challenge);
       setJournal(data.journal);
       setThoughts((prev) => (data.journal ? data.journal.body : prev));
+      posthog.capture('daily_challenge_refreshed');
       toast.success('New inspiration loaded');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not refresh photo');
@@ -100,6 +102,7 @@ export const useTodayChallenge = (): TodayChallengeState => {
     try {
       const saved = await portfolioService.saveDailyChallengeJournal(currentThoughts);
       setJournal(saved);
+      posthog.capture('daily_challenge_journal_saved');
       toast.success('Journal saved');
       return saved;
     } catch (err) {

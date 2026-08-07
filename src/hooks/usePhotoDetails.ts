@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import type { Photo } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
+import posthog from '../lib/posthog';
 
 export type PhotoDetailsResult = {
   detailsPhoto: Photo | null;
@@ -46,6 +47,9 @@ export const usePhotoDetails = (reload: () => Promise<void>): PhotoDetailsResult
         order: detailsOrder,
       });
       await reload();
+      posthog.capture('photo_details_updated', {
+        category_id: detailsCategoryId,
+      });
       toast.success('Details saved');
       close();
     } catch (error) {

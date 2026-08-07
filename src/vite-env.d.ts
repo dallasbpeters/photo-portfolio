@@ -8,6 +8,10 @@ interface ImportMetaEnv {
   readonly VITE_SITE?: string;
   /** Google OAuth web client id. Unset hides the Google sign-in button. */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  /** Public PostHog project token used by the browser SDK. */
+  readonly VITE_POSTHOG_KEY?: string;
+  /** PostHog API host used by the browser SDK. */
+  readonly VITE_POSTHOG_HOST?: string;
 }
 
 interface ImportMeta {

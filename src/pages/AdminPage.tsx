@@ -1,19 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { LogOut } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Admin } from '../components/Admin';
 import { authStorage } from '../services/portfolioService';
+import posthog from '../lib/posthog';
 import { useSiteSettings } from '../theme/SiteSettingsProvider';
 
 export function AdminPage() {
   const { settings } = useSiteSettings();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(authStorage.getToken()));
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const user = authStorage.getUser();
+    if (user) {
+      posthog.identify(user.id, { email: user.email });
+    }
+  }, [isAuthenticated]);
+
   const handleLogin = () => setIsAuthenticated(true);
 
   const handleLogout = () => {
+    posthog.reset();
     authStorage.setToken(null);
     setIsAuthenticated(false);
     toast.message('Signed out');

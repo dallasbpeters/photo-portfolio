@@ -11,6 +11,7 @@ import { useSiteSettings } from '../../theme/SiteSettingsProvider';
 import { siteConfig } from '../../site';
 import { defaultSiteSettings, type ResolvedSiteSettings } from '../../../config/siteSettings';
 import { contrastRatio, SANS_FONTS, SERIF_FONTS, type FontId } from '../../../config/theme';
+import posthog from '../../lib/posthog';
 
 const labelClass = 'text-[10px] uppercase tracking-widest text-white/40';
 const inputClass =
@@ -80,6 +81,7 @@ export function SiteSettingsPanel() {
       // Apply immediately so the admin sees the theme they just chose.
       setSettings(saved);
       setDraft(saved);
+      posthog.capture('site_settings_updated');
       toast.success('Settings saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save settings');

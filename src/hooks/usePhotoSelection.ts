@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Category, Photo } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
+import posthog from '../lib/posthog';
 
 export type PhotoSelectionResult = {
   selectedIds: string[];
@@ -74,6 +75,10 @@ export const usePhotoSelection = (
       await reload();
       setSelectedIds([]);
       if (updated === 0) { toast.error('No photos were updated — check selections and try again.'); return; }
+      posthog.capture('photos_category_updated', {
+        category_id: batchCategoryId,
+        photo_count: updated,
+      });
       toast.success(`Updated ${updated} photo(s)`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Batch update failed');
@@ -92,6 +97,10 @@ export const usePhotoSelection = (
       await reload();
       setSelectedIds([]);
       if (deleted === 0) { toast.error('No photos were deleted.'); return; }
+      posthog.capture('photos_deleted', {
+        photo_count: deleted,
+        deletion_method: 'batch',
+      });
       toast.success(`Deleted ${deleted} photo${deleted === 1 ? '' : 's'}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Batch delete failed');
@@ -106,6 +115,10 @@ export const usePhotoSelection = (
       await portfolioService.deletePhoto(id);
       await reload();
       setSelectedIds((prev) => prev.filter((x) => x !== id));
+      posthog.capture('photos_deleted', {
+        photo_count: 1,
+        deletion_method: 'single',
+      });
       toast.success('Photo deleted');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error deleting photo');
