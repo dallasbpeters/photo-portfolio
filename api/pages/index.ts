@@ -41,7 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ORDER BY sort_order ASC, title ASC
       `) as PageRow[];
       // Public callers get summaries only — the nav does not need every body.
-      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=300');
+      // Short window on purpose: publishing should show up almost at once.
+      res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
       return res.status(200).json(rows.map(rowToSummary));
     }
 

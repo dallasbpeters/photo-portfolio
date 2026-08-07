@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Page not found' });
       }
       if (row.status === 'published') {
-        res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=300');
+        res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
       }
       return res.status(200).json(rowToDto(row));
     }
