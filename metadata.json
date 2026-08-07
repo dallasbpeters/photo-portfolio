@@ -1,5 +1,5 @@
 {
-  "name": "Studio Ignatov Clone",
-  "description": "A minimalist photography and film production portfolio with a lightbox and admin management section.",
+  "name": "Photo Portfolio",
+  "description": "A minimalist photography and film production portfolio with a lightbox and admin management section. Branding per site lives in config/sites.ts.",
   "requestFramePermissions": []
 }

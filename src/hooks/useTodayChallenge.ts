@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { DailyChallengeInfo, DailyChallengeJournal } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
+import { site } from '../site';
 
+// Storage keys stay literal: they are already scoped per origin, and renaming
+// them would sign existing admins out of a site that is live.
 const LS_NOTIFY = 'cyan_daily_challenge_notify';
 const LS_LAST_NOTIFIED = 'cyan_daily_challenge_last_notify_date';
 
@@ -17,8 +20,8 @@ export const maybeFireDailyNotification = (challenge: DailyChallengeInfo): void 
     const dateKey = challenge.challengeDate;
     if (localStorage.getItem(LS_LAST_NOTIFIED) === dateKey) return;
     new Notification("Today's photo challenge", {
-      body: "Open Cyan Admin to see today's inspiration and jot your thoughts.",
-      icon: '/icon512_rounded.png',
+      body: `Open ${site.shortName} Admin to see today's inspiration and jot your thoughts.`,
+      icon: `/sites/${site.key}/icon512_rounded.png`,
       tag: `cyan-challenge-${dateKey}`,
     });
     localStorage.setItem(LS_LAST_NOTIFIED, dateKey);

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import pg from 'pg';
 import { INITIAL_PHOTOS_SEED } from '../src/data/initialPhotos';
 import { loadEnv } from './loadEnv';
+import { resolveSite } from '../config/sites';
 
 loadEnv();
 
@@ -10,7 +11,8 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is required (set in .env, .env.local, or .env.development.local)');
 }
 
-const email = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@cyan.test').trim().toLowerCase();
+const site = resolveSite(process.env.SITE);
+const email = (process.env.DEFAULT_ADMIN_EMAIL || site.defaultAdminEmail).trim().toLowerCase();
 const password = process.env.DEFAULT_ADMIN_PASSWORD;
 if (!password || password.length < 8) {
   throw new Error(

@@ -1,15 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getSite } from './site.js';
 
-const defaultOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://cyansphotos.com',
-  'https://www.cyansphotos.com',
-];
+const localOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
 const allowedOrigins = (): Set<string> => {
   const extras = process.env.CORS_ALLOWED_ORIGINS;
-  const origins = new Set(defaultOrigins);
+  // Production origins come from the site config, so a new site is one entry in
+  // config/sites.ts rather than an edit here.
+  const origins = new Set([...localOrigins, ...getSite().origins]);
   if (extras?.trim()) {
     for (const s of extras.split(',')) {
       const trimmed = s.trim();

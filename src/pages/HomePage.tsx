@@ -4,7 +4,8 @@ import { Photo, ViewMode } from '../types';
 import { Lightbox } from '../components/Lightbox';
 import { Toaster, toast } from 'sonner';
 import { portfolioService } from '../services/portfolioService';
-import { Instagram, Mail } from 'iconoir-react';
+import { Instagram } from 'iconoir-react';
+import { site } from '../site';
 
 const formatCategoryLabel = (category: string): string =>
   category
@@ -123,9 +124,8 @@ export const HomePage = () => {
                 key={photo.id}
                 type="button"
                 onClick={() => setHeroIndex(i)}
-                className={`group flex items-start gap-2 text-left transition-all duration-1000 ${
-                  heroIndex === i ? 'text-white opacity-100' : 'text-white/30 hover:text-white/50'
-                }`}
+                className={`group flex items-start gap-2 text-left transition-all duration-1000 ${heroIndex === i ? 'text-white opacity-100' : 'text-white/30 hover:text-white/50'
+                  }`}
               >
                 <span className="text-4xl md:text-7xl font-black tracking-tighter leading-[0.85] uppercase">
                   {photo.title}
@@ -162,14 +162,16 @@ export const HomePage = () => {
         </div>
 
         <div className="absolute top-12 left-8 md:left-24 z-50">
-          <h1 className="text-3xl text-cyan-200 font-bold tracking-widest uppercase">Cyan's POV</h1>
+          <h1 className={`text-3xl ${site.heroAccentClass} font-bold tracking-widest uppercase`}>
+            {site.heroTitle}
+          </h1>
         </div>
       </section>
 
       <section
         ref={gridSectionRef}
         id="portfolio-grid"
-        className="scroll-mt-6 py-24 px-4 md:px-8 max-w-[1800px] mx-auto"
+        className="scroll-mt-6 py-24 px-4 md:px-8 max-w-450 mx-auto"
         aria-label="Portfolio grid"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -197,19 +199,25 @@ export const HomePage = () => {
       <footer className="py-24 px-12 border-t border-white/5 bg-black">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold uppercase tracking-widest">Cyan</h2>
+            <h2 className="text-3xl font-bold uppercase tracking-widest">{site.ownerName}</h2>
             <p className="text-sm text-white/40 uppercase tracking-widest max-w-xs">
-              Visual Storyteller & Photographer
+              {site.tagline}
             </p>
             <div className="flex gap-6">
-              <a href="https://www.instagram.com/cyans_pov" className="hover:text-white/60 transition-colors">
+              <a
+                href={site.instagramUrl}
+                aria-label={`${site.ownerName} on Instagram`}
+                className="hover:text-white/60 transition-colors"
+              >
                 <Instagram width={20} height={20} />
               </a>
             </div>
           </div>
 
           <div className="flex flex-col gap-4 text-[10px] uppercase tracking-[0.3em] text-white/20">
-            <p>© 2024 Cyan. All rights reserved.</p>
+            <p>
+              © {new Date().getFullYear()} {site.ownerName}. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>

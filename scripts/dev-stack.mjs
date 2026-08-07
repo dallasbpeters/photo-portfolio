@@ -39,7 +39,9 @@ for (const port of PORTS) killPort(port);
 // Give the OS a moment to release the ports before vercel dev tries to bind.
 await new Promise((r) => setTimeout(r, 500));
 
-console.log('\n[cyan] Starting dev server → http://localhost:3000\n');
+console.log(
+  `\n[${process.env.VITE_SITE || 'addison'}] Starting dev server → http://localhost:3000\n`,
+);
 
 const pnpm = isWin ? 'pnpm.cmd' : 'pnpm';
 const child = spawn(pnpm, ['exec', 'vercel', 'dev', '--listen', '3000'], {

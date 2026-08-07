@@ -5,6 +5,7 @@ import { initPhotoEditor } from '../imgly';
 import { portfolioService } from '../services/portfolioService';
 import type { Photo } from '../types';
 import { X } from 'lucide-react';
+import { site } from '../site';
 
 interface PhotoEditorProps {
   photo: Photo;
@@ -23,7 +24,7 @@ export function PhotoEditor({ photo, onClose, onSaved }: PhotoEditorProps) {
     let disposed = false;
 
     const config = {
-      userId: 'cyan-photo-editor',
+      userId: `${site.key}-photo-editor`,
     };
 
     const handleSave = async (blob: Blob) => {

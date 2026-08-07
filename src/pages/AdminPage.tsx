@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Admin } from '../components/Admin';
 import { authStorage } from '../services/portfolioService';
+import { site } from '../site';
 
 export function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(authStorage.getToken()));
@@ -23,7 +24,7 @@ export function AdminPage() {
       <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/10 bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
         <div className="mx-auto px-4 sm:px-6 min-h-16 sm:min-h-20 flex items-center justify-between gap-4 py-3 sm:py-0">
           <h1 className="text-lg sm:text-xl font-light tracking-[0.25em] sm:tracking-[0.3em] uppercase truncate">
-            Cyan Admin
+            {site.shortName} Admin
           </h1>
           <div className="flex items-center gap-2 shrink-0">
             <Link

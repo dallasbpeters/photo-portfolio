@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
@@ -24,11 +24,21 @@ await client.connect();
 try {
   const schemaSql = readFileSync(join(root, 'db/schema.sql'), 'utf8');
   await client.query(schemaSql);
-  const patchSql = readFileSync(join(root, 'db/patches/001_legacy_photo_categories.sql'), 'utf8');
-  await client.query(patchSql);
-  const patch2 = readFileSync(join(root, 'db/patches/002_daily_challenge.sql'), 'utf8');
-  await client.query(patch2);
-  console.log('Migration finished.');
+  console.log('Applied db/schema.sql');
+
+  // Every patch is idempotent, so applying all of them in filename order is safe
+  // to re-run. Adding a patch means dropping a file in db/patches — no edit here.
+  const patchDir = join(root, 'db/patches');
+  const patches = readdirSync(patchDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  for (const file of patches) {
+    await client.query(readFileSync(join(patchDir, file), 'utf8'));
+    console.log(`Applied db/patches/${file}`);
+  }
+
+  console.log(`Migration finished (${patches.length} patches).`);
 } finally {
   await client.end();
 }
