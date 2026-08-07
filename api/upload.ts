@@ -1,14 +1,24 @@
-import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put } from '@vercel/blob';
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { getBearerUser } from './_lib/auth.js';
 import { handleCors } from './_lib/cors.js';
-import { parseJsonBody } from './_lib/parseBody.js';
 
-const MAX_BYTES = 8 * 1024 * 1024;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
+/**
+ * Signs client-side uploads to Vercel Blob.
+ *
+ * The browser sends bytes straight to Blob storage; this function only
+ * authorises the transfer. The previous design base64-encoded the file into a
+ * JSON request body, which capped uploads at roughly 3.3MB: Vercel rejects
+ * function payloads above ~4.5MB, and base64 inflates a file by a third. Every
+ * photo above that failed with an opaque 413 before any of this code ran, so
+ * the friendly size message could never fire — and a normal camera JPEG could
+ * not be uploaded at all.
+ *
+ * Going direct also means no size ceiling worth worrying about, real progress
+ * events, and no multi-megabyte string sitting in function memory.
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
 
@@ -17,56 +27,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const user = getBearerUser(req.headers.authorization);
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!token) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     return res.status(503).json({
       error: 'Upload storage is not configured',
-      hint:
-        'Vercel → Project → Storage → Blob → create/link store, then set BLOB_READ_WRITE_TOKEN on the project (all envs). For local `vercel dev`, add it to .env.development.local or run `vercel env pull`. See .env.example and https://vercel.com/docs/storage/vercel-blob',
+      hint: 'Set BLOB_READ_WRITE_TOKEN on the project (all environments). See .env.example.',
     });
   }
 
-  const body = parseJsonBody(req.body);
-  const filenameRaw = typeof body.filename === 'string' ? body.filename : 'image';
-  const contentType = typeof body.contentType === 'string' ? body.contentType.trim() : '';
-  const b64 = typeof body.file === 'string' ? body.file.trim() : '';
-
-  if (!contentType || !ALLOWED_TYPES.has(contentType)) {
-    return res.status(400).json({ error: 'Use JPEG, PNG, WebP, or GIF only' });
-  }
-  if (!b64) {
-    return res.status(400).json({ error: 'Missing file payload' });
-  }
-
-  let buffer: Buffer;
   try {
-    buffer = Buffer.from(b64, 'base64');
-  } catch {
-    return res.status(400).json({ error: 'Invalid file encoding' });
-  }
+    const body = req.body as HandleUploadBody;
 
-  if (buffer.length === 0 || buffer.length > MAX_BYTES) {
-    return res.status(400).json({ error: `Image must be under ${MAX_BYTES / (1024 * 1024)}MB` });
-  }
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
 
-  const safeName = filenameRaw.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'image';
-  const pathname = `portfolio/${user.userId}/${randomUUID()}-${safeName}`;
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // The upload helper posts here directly, so the session token travels in
+        // clientPayload rather than an Authorization header.
+        const user = getBearerUser(`Bearer ${clientPayload ?? ''}`);
+        if (!user) {
+          throw new Error('Unauthorized');
+        }
 
-  try {
-    const blob = await put(pathname, buffer, {
-      access: 'public',
-      token,
-      contentType,
-      addRandomSuffix: false,
+        return {
+          allowedContentTypes: ALLOWED_TYPES,
+          // Namespaced per user, and suffixed so re-uploading the same filename
+          // never overwrites an existing photo.
+          addRandomSuffix: true,
+          tokenPayload: JSON.stringify({ userId: user.userId, pathname }),
+        };
+      },
+
+      onUploadCompleted: async () => {
+        // Vercel calls this from its own servers once the transfer lands. The
+        // client already receives the URL, and the photo row is created by the
+        // caller, so there is nothing to do here — but the callback must exist.
+      },
     });
-    return res.status(200).json({ url: blob.url });
+
+    return res.status(200).json(jsonResponse);
   } catch (e) {
     console.error(e);
-    return res.status(502).json({ error: 'Upload to storage failed' });
+    const message = e instanceof Error ? e.message : 'Upload failed';
+    if (message === 'Unauthorized') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return res.status(400).json({ error: message });
   }
 }

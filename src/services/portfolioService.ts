@@ -16,17 +16,6 @@ const uploadPath = (): string => `${apiBase()}/api/upload`;
 const dailyChallengePath = (): string => `${apiBase()}/api/daily-challenge`;
 const dailyChallengeHistoryPath = (): string => `${apiBase()}/api/daily-challenge/history`;
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const r = reader.result as string;
-      const comma = r.indexOf(',');
-      resolve(comma >= 0 ? r.slice(comma + 1) : r);
-    };
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
-    reader.readAsDataURL(file);
-  });
 /** Persists across iOS PWA launches; sessionStorage did not. */
 const ADMIN_TOKEN_KEY = 'cyan_admin_token';
 
@@ -170,34 +159,47 @@ export const portfolioService = {
     throw new Error(msg || 'Could not delete category');
   },
 
-  uploadImageFile: async (file: File): Promise<{ url: string }> => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
-    const contentType = file.type && (allowed as readonly string[]).includes(file.type) ? file.type : '';
-    if (!contentType) {
-      throw new Error('Choose a JPEG, PNG, WebP, or GIF image');
+  /**
+   * Uploads directly to Vercel Blob.
+   *
+   * The bytes bypass the serverless function entirely — it only signs the
+   * transfer — so there is no meaningful size ceiling. The previous
+   * base64-through-JSON approach failed with an opaque 413 above roughly
+   * 3.3MB, which is smaller than a typical camera JPEG.
+   */
+  uploadImageFile: async (
+    file: File,
+    onProgress?: (percent: number) => void,
+  ): Promise<{ url: string }> => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'] as const;
+    if (!file.type || !(allowed as readonly string[]).includes(file.type)) {
+      throw new Error('Choose a JPEG, PNG, WebP, AVIF or GIF image');
     }
-    const b64 = await fileToBase64(file);
-    const res = await fetch(uploadPath(), {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify({
-        file: b64,
-        filename: file.name || 'image',
-        contentType,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as {
-      url?: string;
-      error?: string;
-      hint?: string;
-    };
-    if (!res.ok) {
-      throw new Error([data.error, data.hint].filter(Boolean).join(' — ') || 'Upload failed');
+
+    const token = getAuthToken();
+    if (!token) throw new Error('Sign in again to upload');
+
+    const { upload } = await import('@vercel/blob/client');
+
+    try {
+      const blob = await upload(`portfolio/${file.name || 'image'}`, file, {
+        access: 'public',
+        handleUploadUrl: uploadPath(),
+        contentType: file.type,
+        // The upload helper posts straight to the handler, so the session token
+        // rides along here instead of in an Authorization header.
+        clientPayload: token,
+        onUploadProgress: onProgress
+          ? ({ percentage }) => onProgress(Math.round(percentage))
+          : undefined,
+      });
+      return { url: blob.url };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      throw new Error(
+        /unauthor/i.test(message) ? 'Sign in again to upload' : `Upload failed: ${message}`,
+      );
     }
-    if (!data.url) {
-      throw new Error('Invalid upload response');
-    }
-    return { url: data.url };
   },
 
   batchSetPhotoCategories: async (photoIds: string[], categoryId: string): Promise<number> => {
