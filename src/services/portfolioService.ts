@@ -386,4 +386,61 @@ export const authApi = {
     }
     return { token: data.token };
   },
+
+  /**
+   * Exchanges a Google ID token for a session. Rejects when the Google account's
+   * address has no admin user — Google sign-in authenticates, it does not enrol.
+   */
+  loginWithGoogle: async (credential: string): Promise<{ token: string }> => {
+    const res = await fetch(`${apiBase()}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || `Google sign-in failed (${res.status})`);
+    }
+    if (!data.token) {
+      throw new Error('Invalid response from server (no token)');
+    }
+    return { token: data.token };
+  },
+
+  /**
+   * Requests a reset link. Resolves with the server's neutral message whether or
+   * not the address has an account — the API deliberately does not say which.
+   */
+  requestPasswordReset: async (email: string): Promise<{ message: string }> => {
+    const res = await fetch(`${apiBase()}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || `Could not send reset email (${res.status})`);
+    }
+    return { message: data.message ?? 'If that email has an account, a reset link is on its way.' };
+  },
+
+  /** Exchanges a reset token for a new password, returning a session token. */
+  resetPassword: async (token: string, password: string): Promise<{ token: string }> => {
+    const res = await fetch(`${apiBase()}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || `Could not reset password (${res.status})`);
+    }
+    if (!data.token) {
+      throw new Error('Invalid response from server (no token)');
+    }
+    return { token: data.token };
+  },
 };

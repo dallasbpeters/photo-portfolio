@@ -14,6 +14,8 @@ import { Checkbox } from './ui/checkbox';
 import { Trash2, Plus, LogIn, Shield, Pencil, FilePenLine, Tags, Upload, Layers, LayoutGrid } from 'lucide-react';
 import { CategoryPicker } from './admin/CategoryPicker';
 import { CategoriesManageDialog } from './admin/CategoriesManageDialog';
+import { ForgotPasswordForm } from './admin/ForgotPasswordForm';
+import { GoogleSignInButton } from './admin/GoogleSignInButton';
 import { DailyChallengePanel } from './admin/DailyChallengePanel';
 import { PhotoEditor } from './PhotoEditor';
 import { useAdminData } from '../hooks/useAdminData';
@@ -33,6 +35,7 @@ type AdminProps = {
 export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
   const login      = useAdminLogin(onLogin);
   const data       = useAdminData(isAuthenticated);
@@ -44,6 +47,15 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
   const categoryOptionsDisabled = data.categories.length === 0;
 
   // ── Login screen ────────────────────────────────────────────────────────────
+
+  if (!isAuthenticated && isRecoveringPassword) {
+    return (
+      <ForgotPasswordForm
+        initialEmail={login.email}
+        onBack={() => setIsRecoveringPassword(false)}
+      />
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -99,7 +111,15 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
             <LogIn size={16} aria-hidden />
             {login.isSubmitting ? 'Signing in…' : 'Sign in'}
           </Button>
+          <button
+            type="button"
+            onClick={() => setIsRecoveringPassword(true)}
+            className="w-full min-h-11 text-[10px] uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors"
+          >
+            Forgot password?
+          </button>
         </form>
+        <GoogleSignInButton onSignedIn={onLogin} />
       </div>
     );
   }
