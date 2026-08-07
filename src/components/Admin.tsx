@@ -19,6 +19,7 @@ import { GoogleSignInButton } from './admin/GoogleSignInButton';
 import { DailyChallengePanel } from './admin/DailyChallengePanel';
 import { SiteSettingsPanel } from './admin/SiteSettingsPanel';
 import { PagesPanel } from './admin/PagesPanel';
+import { BatchUploader } from './admin/BatchUploader';
 import { PhotoEditor } from './PhotoEditor';
 import { useAdminData } from '../hooks/useAdminData';
 import { useAdminLogin } from '../hooks/useAdminLogin';
@@ -138,6 +139,12 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         isCreating={data.isSavingCategory}
         onCreate={data.createCategoryFromLabel}
         onDelete={(cat) => void data.handleDeleteCategory(cat)}
+      />
+
+      <BatchUploader
+        categories={data.categories}
+        reload={data.reload}
+        onCreateCategory={data.createCategoryFromLabel}
       />
 
       {/* ── Top row: daily challenge + add form ── */}
