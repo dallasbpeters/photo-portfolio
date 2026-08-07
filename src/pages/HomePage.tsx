@@ -7,6 +7,8 @@ import { Toaster, toast } from 'sonner';
 import { portfolioService } from '../services/portfolioService';
 import { Instagram } from 'iconoir-react';
 import { useSiteSettings } from '../theme/SiteSettingsProvider';
+import { SiteNav } from '../cms/SiteNav';
+import { pagesApi, type PageSummary } from '../services/portfolioService';
 import posthog from '../lib/posthog';
 
 const formatCategoryLabel = (category: string): string =>
@@ -18,6 +20,7 @@ const formatCategoryLabel = (category: string): string =>
 export const HomePage = () => {
   const { settings } = useSiteSettings();
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [pages, setPages] = useState<PageSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('all');
 
   const categoriesInUse = useMemo(() => {
@@ -67,6 +70,11 @@ export const HomePage = () => {
   useEffect(() => {
     void refreshPhotos();
   }, [refreshPhotos]);
+
+  useEffect(() => {
+    // Decorative: if this fails the gallery still renders, just without links.
+    void pagesApi.list().then(setPages).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const onChanged = () => void refreshPhotos();
@@ -175,6 +183,7 @@ export const HomePage = () => {
           <h1 className="text-3xl text-accent font-bold tracking-widest uppercase">
             {settings.heroTitle}
           </h1>
+          <SiteNav pages={pages} />
         </div>
       </section>
 

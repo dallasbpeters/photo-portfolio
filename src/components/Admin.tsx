@@ -18,6 +18,7 @@ import { ForgotPasswordForm } from './admin/ForgotPasswordForm';
 import { GoogleSignInButton } from './admin/GoogleSignInButton';
 import { DailyChallengePanel } from './admin/DailyChallengePanel';
 import { SiteSettingsPanel } from './admin/SiteSettingsPanel';
+import { PagesPanel } from './admin/PagesPanel';
 import { PhotoEditor } from './PhotoEditor';
 import { useAdminData } from '../hooks/useAdminData';
 import { useAdminLogin } from '../hooks/useAdminLogin';
@@ -572,6 +573,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           }}
         />
       )}
+
+      <PagesPanel />
 
       <SiteSettingsPanel />
     </div>

@@ -76,3 +76,36 @@
 
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+/* ── CMS editor surface ──────────────────────────────────────────────────────
+   The public renderer (src/cms/PageContent.tsx) styles nodes with Tailwind
+   classes, but inside ProseMirror the markup is produced by TipTap, so the
+   equivalent styling has to be declared here to keep authoring WYSIWYG. */
+.cms-editor .ProseMirror { outline: none; }
+.cms-editor .ProseMirror > * + * { margin-top: 0.9em; }
+.cms-editor .ProseMirror h2 {
+  font-size: 1rem; font-weight: 300; text-transform: uppercase;
+  letter-spacing: 0.24em; margin-top: 2rem; color: #fff;
+}
+.cms-editor .ProseMirror h3 {
+  font-size: 0.875rem; font-weight: 300; text-transform: uppercase;
+  letter-spacing: 0.2em; margin-top: 1.5rem; color: #fff;
+}
+.cms-editor .ProseMirror p { font-size: 0.9375rem; line-height: 1.75; }
+.cms-editor .ProseMirror ul,
+.cms-editor .ProseMirror ol { padding-left: 1.25rem; }
+.cms-editor .ProseMirror ul { list-style: disc; }
+.cms-editor .ProseMirror ol { list-style: decimal; }
+.cms-editor .ProseMirror li { margin: 0.35em 0; }
+.cms-editor .ProseMirror blockquote {
+  border-left: 1px solid rgba(255,255,255,0.2);
+  padding-left: 1.25rem; font-style: italic; color: rgba(255,255,255,0.5);
+}
+.cms-editor .ProseMirror pre {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+  padding: 1rem; font-family: ui-monospace, monospace; font-size: 0.75rem; overflow-x: auto;
+}
+.cms-editor .ProseMirror code { font-family: ui-monospace, monospace; font-size: 0.9em; }
+.cms-editor .ProseMirror img { max-width: 100%; height: auto; }
+.cms-editor .ProseMirror a { text-decoration: underline; text-underline-offset: 4px; }
+.cms-editor .ProseMirror hr { border-color: rgba(255,255,255,0.1); margin: 2rem 0; }

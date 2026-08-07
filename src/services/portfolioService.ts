@@ -499,3 +499,79 @@ export const authApi = {
     return { token: data.token };
   },
 };
+
+export type PageSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  icon: string | null;
+  order: number;
+};
+
+export type PageRecord = PageSummary & {
+  content: unknown;
+  status: 'draft' | 'published';
+  createdAt: string;
+  updatedAt: string;
+};
+
+const pagesPath = (): string => `${apiBase()}/api/pages`;
+
+const readPageError = async (res: Response, fallback: string): Promise<string> => {
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  return data.error || `${fallback} (${res.status})`;
+};
+
+export const pagesApi = {
+  /** Published summaries for the public nav; every page when signed in. */
+  list: async (): Promise<PageSummary[]> => {
+    const res = await fetch(pagesPath(), { headers: jsonHeaders() });
+    if (!res.ok) throw new Error(await readPageError(res, 'Could not load pages'));
+    return (await res.json()) as PageSummary[];
+  },
+
+  get: async (slug: string): Promise<PageRecord> => {
+    const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) throw new Error(await readPageError(res, 'Could not load page'));
+    return (await res.json()) as PageRecord;
+  },
+
+  create: async (input: {
+    title: string;
+    slug: string;
+    icon?: string | null;
+    status?: 'draft' | 'published';
+  }): Promise<PageRecord> => {
+    const res = await fetch(pagesPath(), {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(await readPageError(res, 'Could not create page'));
+    return (await res.json()) as PageRecord;
+  },
+
+  update: async (
+    slug: string,
+    input: Partial<Pick<PageRecord, 'title' | 'slug' | 'icon' | 'status' | 'content' | 'order'>>,
+  ): Promise<PageRecord> => {
+    const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
+      method: 'PATCH',
+      headers: jsonHeaders(),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(await readPageError(res, 'Could not save page'));
+    return (await res.json()) as PageRecord;
+  },
+
+  remove: async (slug: string): Promise<void> => {
+    const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    });
+    if (res.status === 204 || res.status === 404) return;
+    throw new Error(await readPageError(res, 'Could not delete page'));
+  },
+};
