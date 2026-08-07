@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 .vercel
+
+# Apple Icon Composer source (design asset, not build input)
+Icon.icon/

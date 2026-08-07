@@ -39,19 +39,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Unknown category' });
       }
 
+      // The CTE must RETURNING every column the response needs: a data-modifying CTE's
+      // writes are invisible to the rest of the same statement, so re-joining `photos`
+      // here would read the pre-update snapshot and echo stale values back to the editor.
       const rows = (await sql`
         WITH u AS (
           UPDATE photos
           SET title = ${title}, category_id = ${categoryId}, sort_order = ${order},
             url = COALESCE(${url}, url)
           WHERE id = ${id}
-          RETURNING id
+          RETURNING id, url, title, sort_order, created_at, category_id
         )
-        SELECT p.id, p.url, p.title, p.sort_order, p.created_at,
+        SELECT u.id, u.url, u.title, u.sort_order, u.created_at,
           c.id AS category_id, c.slug AS category_slug, c.label AS category_label
         FROM u
-        JOIN photos p ON p.id = u.id
-        JOIN categories c ON c.id = p.category_id
+        JOIN categories c ON c.id = u.category_id
       `) as PhotoRow[];
 
       if (rows.length === 0) {
