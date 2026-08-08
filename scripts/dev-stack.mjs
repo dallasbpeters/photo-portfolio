@@ -41,7 +41,9 @@ function killPort(port) {
       for (const pid of pids) {
         try {
           execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
-        } catch {}
+        } catch {
+          // The process may already be gone; that is the desired end state.
+        }
       }
     } else {
       execSync(`lsof -ti tcp:${port} | xargs kill -9 2>/dev/null || true`, {
@@ -49,7 +51,9 @@ function killPort(port) {
         stdio: "ignore",
       });
     }
-  } catch {}
+  } catch {
+    // Nothing was listening on the port, which is exactly what we want.
+  }
 }
 
 for (const port of PORTS) {

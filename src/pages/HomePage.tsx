@@ -268,7 +268,9 @@ export const HomePage = () => {
                 <OptimizedImage
                   alt={photo.alt || photo.title}
                   className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                  height={photo.height ?? undefined}
                   lqip={photo.lqip}
+                  width={photo.width ?? undefined}
                   referrerPolicy="no-referrer"
                   sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
                   src={photo.url}

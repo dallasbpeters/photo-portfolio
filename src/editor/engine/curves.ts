@@ -47,21 +47,21 @@ const buildInterpolator = (points: CurvePoint[]): ((x: number) => number) => {
 
   // Secant slopes between consecutive points.
   const delta: number[] = [];
-  for (let i = 0; i < n - 1; i++) {
+  for (let i = 0; i < n - 1; i += 1) {
     const dx = xs[i + 1]! - xs[i]!;
     delta.push(dx === 0 ? 0 : (ys[i + 1]! - ys[i]!) / dx);
   }
 
   // Tangents, then the Fritsch–Carlson clamp that guarantees monotonicity.
   const m: number[] = [delta[0] ?? 0];
-  for (let i = 1; i < n - 1; i++) {
+  for (let i = 1; i < n - 1; i += 1) {
     const d0 = delta[i - 1]!;
     const d1 = delta[i]!;
     m.push(d0 * d1 <= 0 ? 0 : (d0 + d1) / 2);
   }
   m.push(delta[n - 2] ?? 0);
 
-  for (let i = 0; i < n - 1; i++) {
+  for (let i = 0; i < n - 1; i += 1) {
     const d = delta[i]!;
     if (d === 0) {
       m[i] = 0;
@@ -87,7 +87,7 @@ const buildInterpolator = (points: CurvePoint[]): ((x: number) => number) => {
     }
 
     let i = n - 2;
-    for (let j = 0; j < n - 1; j++) {
+    for (let j = 0; j < n - 1; j += 1) {
       if (x < xs[j + 1]!) {
         i = j;
         break;
@@ -117,7 +117,7 @@ export const buildCurveTexture = (curve: ToneCurve): Uint8Array => {
   const blue = buildInterpolator(curve.b ?? IDENTITY);
 
   const data = new Uint8Array(256 * 4);
-  for (let i = 0; i < 256; i++) {
+  for (let i = 0; i < 256; i += 1) {
     const x = i / 255;
     // The master is composed with each channel so a single RGB curve still
     // affects all three without the shader needing a second lookup.
@@ -210,15 +210,15 @@ export const parseCubeLut = (
     domainMax[2]! - domainMin[2]!,
   ];
 
-  for (let b = 0; b < size; b++) {
-    for (let g = 0; g < size; g++) {
-      for (let r = 0; r < size; r++) {
+  for (let b = 0; b < size; b += 1) {
+    for (let g = 0; g < size; g += 1) {
+      for (let r = 0; r < size; r += 1) {
         const src = (b * size * size + g * size + r) * 3;
         // Hald layout: tiles laid left to right by blue, so the shader can
         // address a slice with a single horizontal offset.
         const x = b * size + r;
         const dst = (g * size * size + x) * 4;
-        for (let c = 0; c < 3; c++) {
+        for (let c = 0; c < 3; c += 1) {
           const norm =
             span[c] === 0 ? 0 : (values[src + c]! - domainMin[c]!) / span[c]!;
           data[dst + c] = Math.round(Math.min(1, Math.max(0, norm)) * 255);

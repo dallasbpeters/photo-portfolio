@@ -260,7 +260,7 @@ export class PhotoPipeline {
 
     // HSL bands, flattened to the vec3 array the shader declares.
     const bands = new Float32Array(24);
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 8; i += 1) {
       const band = edit.hsl[i];
       bands[i * 3 + 0] = band?.hue ?? 0;
       bands[i * 3 + 1] = band?.saturation ?? 0;
@@ -449,7 +449,9 @@ export class PhotoPipeline {
     if (this.pongFbo) {
       gl.deleteFramebuffer(this.pongFbo);
     }
-    this.pingTexture = this.pongTexture = null;
-    this.pingFbo = this.pongFbo = null;
+    this.pingTexture = null;
+    this.pongTexture = null;
+    this.pingFbo = null;
+    this.pongFbo = null;
   }
 }

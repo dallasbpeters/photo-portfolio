@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
@@ -98,9 +100,6 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
 }
-
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 /* ── CMS editor surface ──────────────────────────────────────────────────────
    The public renderer (src/cms/PageContent.tsx) styles nodes with Tailwind

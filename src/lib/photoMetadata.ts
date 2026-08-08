@@ -130,7 +130,11 @@ const buildLqip = async (file: File): Promise<string | undefined> => {
       : canvas.toDataURL("image/jpeg", 0.5);
     // A placeholder large enough to bloat the photo list defeats the purpose.
     return usable.length > 4000 ? undefined : usable;
-  } catch {}
+  } catch {
+    // A placeholder is a nicety. An image the canvas cannot decode still
+    // uploads fine; it simply loads without a blur.
+    return undefined;
+  }
 };
 
 const readExif = async (file: File): Promise<PhotoExif | undefined> => {
@@ -174,7 +178,11 @@ const readExif = async (file: File): Promise<PhotoExif | undefined> => {
 
     // Drop the object entirely when the file carried nothing useful.
     return Object.values(exif).some((v) => v !== undefined) ? exif : undefined;
-  } catch {}
+  } catch {
+    // Plenty of images carry no EXIF at all, and a malformed block is not a
+    // reason to refuse the upload.
+    return undefined;
+  }
 };
 
 /**

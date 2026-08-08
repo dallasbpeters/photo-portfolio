@@ -62,7 +62,7 @@ const FALLBACK_BY_DAY: DailyInspirationPhoto[] = [
 
 export const pickFallbackForDate = (utcDate: string): DailyInspirationPhoto => {
   let hash = 0;
-  for (let i = 0; i < utcDate.length; i++) {
+  for (let i = 0; i < utcDate.length; i += 1) {
     hash = (hash + utcDate.charCodeAt(i) * (i + 1)) % 997;
   }
   return FALLBACK_BY_DAY[Math.abs(hash) % FALLBACK_BY_DAY.length]!;
@@ -121,9 +121,12 @@ export const fetchUnsplashDailyPhoto = async (
   }
 
   if (mapped.downloadLocation) {
+    // Unsplash asks that a download be registered when a photo is used. It is
+    // a courtesy ping: nothing downstream depends on it, so a failure is
+    // swallowed rather than surfaced.
     void fetch(mapped.downloadLocation, {
       headers: { Authorization: `Client-ID ${key}` },
-    }).catch(() => {});
+    }).catch(() => undefined);
   }
 
   return mapped;

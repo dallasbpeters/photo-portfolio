@@ -305,15 +305,15 @@ export const portfolioService = {
     let res: Response;
     try {
       res = await fetch(photosPath());
-    } catch {
+    } catch (cause) {
       if (import.meta.env.DEV) {
         const url = photosPath();
         const hint = url.startsWith("http")
           ? devApiHintRemote
           : devApiHintLocal;
-        throw new Error(`Could not reach ${url}. ${hint}`);
+        throw new Error(`Could not reach ${url}. ${hint}`, { cause });
       }
-      throw new Error("Failed to load portfolio");
+      throw new Error("Failed to load portfolio", { cause });
     }
     if (!res.ok) {
       const detail = import.meta.env.DEV
@@ -460,7 +460,8 @@ export const portfolioService = {
       throw new Error(
         /unauthor/i.test(message)
           ? "Sign in again to upload"
-          : `Upload failed: ${message}`
+          : `Upload failed: ${message}`,
+        { cause: err }
       );
     }
   },
@@ -521,9 +522,10 @@ export const authApi = {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-    } catch {
+    } catch (cause) {
       throw new Error(
-        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3000), or check VITE_API_BASE_URL.`
+        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3002), or check VITE_API_BASE_URL.`,
+        { cause }
       );
     }
 
@@ -531,7 +533,7 @@ export const authApi = {
     let data: { token?: string; error?: string };
     try {
       data = JSON.parse(text) as { token?: string; error?: string };
-    } catch {
+    } catch (parseError) {
       const looksHtml =
         /<!DOCTYPE/i.test(text) ||
         /<html[\s>]/i.test(text) ||
@@ -547,7 +549,8 @@ export const authApi = {
           : " The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`."
         : " Is the API running?";
       throw new Error(
-        `Login failed (${res.status}): not JSON from ${href}.${detail}`
+        `Login failed (${res.status}): not JSON from ${href}.${detail}`,
+        { cause: parseError }
       );
     }
 

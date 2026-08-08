@@ -76,6 +76,8 @@ export function OptimizedImage({
   decoding = "async",
   lqip,
   style,
+  width,
+  height,
   ...rest
 }: OptimizedImageProps) {
   const [loaded, setLoaded] = useState(false);
@@ -102,16 +104,21 @@ export function OptimizedImage({
     style: { ...placeholderStyle, ...style },
   };
 
+  // Intrinsic size is passed through explicitly rather than only via ...rest:
+  // without width and height the browser cannot reserve the box, and the grid
+  // reflows as each photograph decodes.
   if (!isOptimizable(src)) {
-    return <img {...rest} {...shared} src={src} />;
+    return <img {...rest} {...shared} height={height} src={src} width={width} />;
   }
 
   return (
     <img
       {...rest}
       {...shared}
+      height={height}
       sizes={sizes}
       src={optimizedUrl(src, 1080, quality)}
+      width={width}
       srcSet={WIDTHS.map((w) => `${optimizedUrl(src, w, quality)} ${w}w`).join(
         ", "
       )}

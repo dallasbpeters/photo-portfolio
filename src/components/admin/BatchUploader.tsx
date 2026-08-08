@@ -152,7 +152,8 @@ export function BatchUploader({
     let cursor = 0;
     const worker = async () => {
       while (cursor < pending.length) {
-        const item = pending[cursor++];
+        const item = pending[cursor];
+        cursor += 1;
         if (!item) {
           break;
         }
@@ -169,7 +170,7 @@ export function BatchUploader({
     // Phase 2 — create rows sequentially, in reverse. Each POST inserts at
     // position 0 and shifts the rest up, so reversing here leaves the gallery
     // reading in the order the files were dropped.
-    for (let i = pending.length - 1; i >= 0; i--) {
+    for (let i = pending.length - 1; i >= 0; i -= 1) {
       const item = pending[i];
       if (!item) {
         continue;
