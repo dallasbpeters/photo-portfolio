@@ -74,12 +74,12 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
 
       {open ? (
         <div
-          className="absolute z-50 mt-1 max-h-72 w-full min-w-[280px] overflow-y-auto border border-white/15 bg-black shadow-2xl"
+          className="absolute z-50 mt-1 max-h-72 w-full min-w-70 overflow-y-auto border border-white/15 bg-black shadow-2xl"
           role="listbox"
         >
           <button
             aria-selected={value === null}
-            className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[11px] uppercase tracking-[0.14em] transition-colors hover:bg-white/[0.06] ${
+            className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[11px] uppercase tracking-[0.14em] transition-colors hover:bg-white/6 ${
               value === null ? "text-white" : "text-white/90"
             }`}
             onClick={() => {

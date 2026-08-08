@@ -21,7 +21,7 @@ export function AdjustmentPanel({
   }
 
   return (
-    <div className="divide-y divide-white/[0.05]">
+    <div className="divide-y divide-white/5">
       {group.items.map((def) => (
         <EditorSlider
           centered={def.centered}

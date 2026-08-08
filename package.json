@@ -75,6 +75,7 @@
     "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
     "pg": "^8.14.1",
+    "playwright": "^1.62.1",
     "sharp": "^0.35.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

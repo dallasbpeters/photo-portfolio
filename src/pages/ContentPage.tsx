@@ -126,7 +126,7 @@ export function ContentPage() {
             </h1>
 
             {page.status === "draft" && (
-              <p className="mb-8 border border-amber-400/25 bg-amber-400/[0.06] px-4 py-2.5 text-[10px] text-amber-300/80 uppercase tracking-[0.16em]">
+              <p className="mb-8 border border-amber-400/25 bg-amber-400/6 px-4 py-2.5 text-[10px] text-amber-300/80 uppercase tracking-[0.16em]">
                 Draft — only visible to signed-in admins
               </p>
             )}

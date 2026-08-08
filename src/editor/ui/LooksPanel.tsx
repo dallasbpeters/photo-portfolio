@@ -19,7 +19,9 @@ export function LooksPanel({
 }) {
   // Opens on the active look's family so returning to the panel lands where the
   // photograph already is.
-  const [openFamily, setOpenFamily] = useState<string>(active?.family ?? "a");
+  const [openFamily, setOpenFamily] = useState<string>(
+    active ? active.family : "a"
+  );
   const family = LOOK_FAMILIES.find((f) => f.id === openFamily);
   if (!family) {
     // LOOK_FAMILIES is a non-empty literal, so this is unreachable — but it is
@@ -30,7 +32,7 @@ export function LooksPanel({
   return (
     <div className="space-y-5 py-1">
       {/* Family rail — the signature colour is the whole affordance. */}
-      <div className="flex gap-px bg-white/[0.06]">
+      <div className="flex gap-px bg-white/6">
         {LOOK_FAMILIES.map((f) => {
           const isOpen = f.id === family.id;
           const holdsActive = active?.family === f.id;

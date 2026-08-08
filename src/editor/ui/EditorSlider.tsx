@@ -163,7 +163,7 @@ export function EditorSlider({
         tabIndex={isDisabled ? -1 : 0}
       >
         {/* Track */}
-        <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-white/[0.09]" />
+        <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-white/9" />
 
         {/* Detent at neutral */}
         {centered ? (
@@ -183,8 +183,8 @@ export function EditorSlider({
         <div
           className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white transition-all duration-150 ${
             isDragging
-              ? "h-3.5 w-[3px]"
-              : "h-2.5 w-px group-hover/slider:h-3.5 group-hover/slider:w-[3px]"
+              ? "h-3.5 w-0.75"
+              : "h-2.5 w-px group-hover/slider:h-3.5 group-hover/slider:w-0.75"
           }`}
           style={{ left: `${percent}%` }}
         />

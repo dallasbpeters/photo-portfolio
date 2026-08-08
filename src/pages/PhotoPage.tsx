@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SiteNav } from "../cms/SiteNav";
 import { OptimizedImage } from "../components/OptimizedImage";
+import { ShareButtons } from "../components/ShareButtons";
 import { formatExif } from "../lib/photoMetadata";
 import {
   type PageSummary,
@@ -144,6 +145,15 @@ export function PhotoPage() {
                 >
                   {photo.categoryLabel}
                 </Link>
+
+                <div className="pt-2">
+                  <ShareButtons
+                    description={photo.alt || photo.title}
+                    imageUrl={photo.url}
+                    title={`${photo.title} — ${settings.name}`}
+                    url={`/photo/${photo.id}`}
+                  />
+                </div>
               </div>
 
               <nav
