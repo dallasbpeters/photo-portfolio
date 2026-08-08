@@ -6,6 +6,7 @@ import { Toaster, toast } from "sonner";
 import { SiteNav } from "../cms/SiteNav";
 import { Lightbox } from "../components/Lightbox";
 import { OptimizedImage } from "../components/OptimizedImage";
+import { useIsInstalledApp } from "../hooks/useIsInstalledApp";
 import posthog from "../lib/posthog";
 import { startViewTransition } from "../lib/viewTransition";
 import {
@@ -26,6 +27,7 @@ const formatCategoryLabel = (category: string): string =>
 
 export const HomePage = () => {
   const { settings } = useSiteSettings();
+  const isInstalledApp = useIsInstalledApp();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
@@ -308,16 +310,19 @@ export const HomePage = () => {
               © {new Date().getFullYear()} {settings.ownerName}. All rights
               reserved.
             </p>
-            {/* The installed app has no address bar, and iOS ignores the
-                manifest's Admin shortcut, so this is the only way back into
-                the admin from a home-screen launch. The route is already
-                behind authentication — the link reveals nothing. */}
-            <Link
-              className="text-white/40 transition-colors hover:text-white"
-              to="/admin"
-            >
-              Admin
-            </Link>
+            {/* Only shown to an installed app, which has no address bar and so
+                cannot reach /admin by typing. In an ordinary tab the owner can
+                navigate there directly, so showing this to every visitor would
+                buy nothing. iOS needs it because it ignores the manifest's
+                Admin shortcut. */}
+            {isInstalledApp ? (
+              <Link
+                className="text-white/40 transition-colors hover:text-white"
+                to="/admin"
+              >
+                Admin
+              </Link>
+            ) : null}
           </div>
         </div>
       </footer>
