@@ -163,11 +163,11 @@ export function GoogleSignInButton({ onSignedIn }: GoogleSignInButtonProps) {
         <span className="h-px flex-1 bg-white/10" />
       </div>
       <div className="flex min-h-11 justify-center" ref={containerRef} />
-      {failed && (
+      {failed ? (
         <p className="text-center text-[10px] text-white/30 uppercase tracking-[0.15em]">
           Google sign-in is unavailable. Use your email and password.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

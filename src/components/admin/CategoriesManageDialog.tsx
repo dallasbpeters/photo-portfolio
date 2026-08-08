@@ -105,7 +105,7 @@ export const CategoriesManageDialog = ({
             />
           </div>
 
-          {showAddNew && (
+          {showAddNew ? (
             <Button
               className="w-full border-white/20 text-[10px] text-white uppercase tracking-widest hover:bg-white/10"
               disabled={isCreating || loading}
@@ -115,7 +115,7 @@ export const CategoriesManageDialog = ({
             >
               {isCreating ? "Adding…" : `Add category “${trimmed}”`}
             </Button>
-          )}
+          ) : null}
 
           <div
             aria-label="Categories"

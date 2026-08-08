@@ -49,7 +49,7 @@ export function AdminPage() {
             >
               Back to site
             </Link>
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <Button
                 className="flex min-h-11 items-center gap-2 px-2 text-[10px] text-white/40 uppercase tracking-widest hover:text-white"
                 onClick={handleLogout}
@@ -59,7 +59,7 @@ export function AdminPage() {
                 <LogOut aria-hidden size={16} />
                 Sign out
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </nav>

@@ -1,4 +1,28 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/biome/core", "ultracite/biome/react"]
+  "extends": ["ultracite/biome/core", "ultracite/biome/react"],
+  "linter": {
+    "rules": {
+      "performance": {
+        // Every inline arrow in JSX would have to be hoisted into useCallback.
+        // On components this size that adds indirection without a measurable
+        // win, and a rule that is always ignored trains you past the ones that
+        // matter — noInvalidPositionAtImportRule was hiding in this noise and
+        // turned out to be a genuine bug.
+        "noJsxPropsBind": "off"
+      },
+      "style": {
+        // Wants kebab-case for every file, including React components. The
+        // project follows the React convention of PascalCase component files,
+        // and renaming ~48 files would rewrite every import for no behavioural
+        // gain.
+        "useFilenamingConvention": "off"
+      },
+      "complexity": {
+        // `void promise` is used deliberately to mark fire-and-forget work,
+        // which is clearer at the call site than an empty .catch().
+        "noVoid": "off"
+      }
+    }
+  }
 }

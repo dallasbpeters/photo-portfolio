@@ -98,6 +98,8 @@ export function EditorSlider({
   }, [isDragging, onChange]);
 
   const isActive = value !== 0;
+  // Centred sliders show an explicit sign so +10 and -10 are distinguishable.
+  const displayValue = centered && value > 0 ? `+${value}` : String(value);
 
   return (
     <div className="group/slider select-none py-2.5">
@@ -114,7 +116,7 @@ export function EditorSlider({
             isDragging || isActive ? "text-white/60 opacity-100" : "opacity-0"
           }`}
         >
-          {value > 0 && centered ? `+${value}` : value}
+          {displayValue}
         </span>
       </div>
 
@@ -147,12 +149,12 @@ export function EditorSlider({
         <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-white/[0.09]" />
 
         {/* Detent at neutral */}
-        {centered && (
+        {centered ? (
           <div
             className="absolute top-1/2 h-1.5 w-px -translate-x-1/2 -translate-y-1/2 bg-white/20"
             style={{ left: `${zeroPercent}%` }}
           />
-        )}
+        ) : null}
 
         {/* Fill */}
         <div

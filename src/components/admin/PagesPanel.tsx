@@ -126,7 +126,7 @@ export function PagesPanel() {
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {isCreating && (
+        {isCreating ? (
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => void handleCreate(e)}
@@ -143,11 +143,11 @@ export function PagesPanel() {
                 placeholder="About"
                 value={newTitle}
               />
-              {newTitle.trim() && (
+              {newTitle.trim() ? (
                 <p className="font-mono text-[10px] text-white/25">
                   /{slugify(newTitle)}
                 </p>
-              )}
+              ) : null}
             </div>
             <Button
               className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
@@ -158,7 +158,7 @@ export function PagesPanel() {
               Create draft
             </Button>
           </form>
-        )}
+        ) : null}
 
         {pages.length === 0 ? (
           <p className="text-[11px] text-white/25 uppercase tracking-[0.15em]">

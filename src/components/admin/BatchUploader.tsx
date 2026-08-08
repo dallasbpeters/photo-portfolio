@@ -220,7 +220,7 @@ export function BatchUploader({
   return (
     <>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
-        {items.length > 0 && (
+        {items.length > 0 ? (
           <button
             className="text-[10px] text-white/35 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:opacity-30"
             disabled={isRunning}
@@ -229,7 +229,7 @@ export function BatchUploader({
           >
             Clear
           </button>
-        )}
+        ) : null}
       </CardHeader>
 
       <div className="space-y-5">
@@ -299,26 +299,26 @@ export function BatchUploader({
           type="file"
         />
 
-        {items.length > 0 && (
+        {items.length > 0 ? (
           <>
             <ul className="max-h-72 divide-y divide-white/6 overflow-y-auto">
               {items.map((item) => (
                 <li className="flex items-center gap-3 py-2.5" key={item.id}>
                   <span className="w-5 shrink-0">
-                    {item.status === "done" && (
+                    {item.status === "done" ? (
                       <Check
                         className="text-emerald-400/80"
                         height={14}
                         width={14}
                       />
-                    )}
-                    {item.status === "error" && (
+                    ) : null}
+                    {item.status === "error" ? (
                       <WarningTriangle
                         className="text-red-400/80"
                         height={14}
                         width={14}
                       />
-                    )}
+                    ) : null}
                   </span>
 
                   <div className="min-w-0 flex-1">
@@ -338,26 +338,26 @@ export function BatchUploader({
                       }}
                       value={item.title}
                     />
-                    {item.status === "uploading" && (
+                    {item.status === "uploading" ? (
                       <div className="mt-1.5 h-px w-full bg-white/10">
                         <div
                           className="h-px bg-white/70 transition-all duration-200"
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
-                    )}
-                    {item.error && (
+                    ) : null}
+                    {item.error ? (
                       <p className="mt-1 text-[10px] text-red-400/70">
                         {item.error}
                       </p>
-                    )}
+                    ) : null}
                   </div>
 
                   <span className="shrink-0 font-mono text-[10px] text-white/25 tabular-nums">
                     {(item.file.size / 1024 / 1024).toFixed(1)}MB
                   </span>
 
-                  {!isRunning && item.status !== "done" && (
+                  {!isRunning && item.status !== "done" ? (
                     <button
                       aria-label={`Remove ${item.file.name}`}
                       className="shrink-0 text-white/25 transition-colors hover:text-white"
@@ -368,7 +368,7 @@ export function BatchUploader({
                     >
                       <Xmark height={13} width={13} />
                     </button>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -383,14 +383,14 @@ export function BatchUploader({
               >
                 {isRunning ? "Uploading…" : `Upload ${pendingCount}`}
               </Button>
-              {doneCount > 0 && (
+              {doneCount > 0 ? (
                 <span className="text-[10px] text-white/35 uppercase tracking-[0.16em]">
                   {doneCount} of {items.length} done
                 </span>
-              )}
+              ) : null}
             </div>
           </>
-        )}
+        ) : null}
       </div>
     </>
   );

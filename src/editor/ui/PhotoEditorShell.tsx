@@ -290,9 +290,9 @@ export function PhotoEditorShell({
             title={label}
             type="button"
           >
-            {tool === id && (
+            {tool === id ? (
               <span aria-hidden className="absolute left-0 h-4 w-px bg-white" />
-            )}
+            ) : null}
             <Icon height={16} width={16} />
           </button>
         ))}
@@ -307,16 +307,16 @@ export function PhotoEditorShell({
         </header>
 
         <div className="flex-1 overflow-y-auto px-5 py-3">
-          {tool === "looks" && (
+          {tool === "looks" ? (
             <LooksPanel
               active={activeLook}
               onChoose={chooseLook}
               onStrength={changeStrength}
               strength={lookStrength}
             />
-          )}
+          ) : null}
 
-          {tool === "export" && (
+          {tool === "export" ? (
             <ExportPanel
               estimatedSize={estimatedSize}
               height={exportedSize.height}
@@ -324,7 +324,7 @@ export function PhotoEditorShell({
               settings={exportSettings}
               width={exportedSize.width}
             />
-          )}
+          ) : null}
 
           {ADJUSTMENT_GROUPS.filter((g) => g.id === tool).map((group) => (
             <div className="divide-y divide-white/[0.05]" key={group.id}>
@@ -372,11 +372,11 @@ export function PhotoEditorShell({
             {title}
           </span>
           <div className="flex items-center gap-5">
-            {dimensions.width > 0 && (
+            {dimensions.width > 0 ? (
               <span className="font-mono text-[10px] text-white/25 tabular-nums">
                 {dimensions.width} × {dimensions.height}
               </span>
-            )}
+            ) : null}
             <button
               className={`flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] transition-colors disabled:opacity-20 ${
                 showOriginal
@@ -409,11 +409,11 @@ export function PhotoEditorShell({
                 }`}
                 ref={canvasRef}
               />
-              {!isReady && (
+              {!isReady ? (
                 <span className="absolute text-[10px] text-white/25 uppercase tracking-[0.3em]">
                   Loading
                 </span>
-              )}
+              ) : null}
             </>
           )}
         </div>
@@ -518,7 +518,7 @@ function LooksPanel({
         </div>
       </div>
 
-      {active && (
+      {active ? (
         <div className="border-white/[0.06] border-t pt-1">
           <EditorSlider
             label={`${active.code} · ${active.name}`}
@@ -528,7 +528,7 @@ function LooksPanel({
             value={strength}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -573,7 +573,7 @@ function ExportPanel({
         </div>
       </section>
 
-      {settings.format !== "image/png" && (
+      {settings.format !== "image/png" ? (
         <EditorSlider
           label="Quality"
           max={100}
@@ -581,7 +581,7 @@ function ExportPanel({
           onChange={(v) => onChange({ ...settings, quality: v / 100 })}
           value={Math.round(settings.quality * 100)}
         />
-      )}
+      ) : null}
 
       <section className="space-y-2">
         <p className="text-[10px] text-white/35 uppercase tracking-[0.18em]">
@@ -622,12 +622,12 @@ function ExportPanel({
         </div>
       </dl>
 
-      {tooLarge && (
+      {tooLarge ? (
         <p className="text-[10px] text-amber-400/70 leading-relaxed tracking-[0.05em]">
           Over the {formatBytes(MAX_UPLOAD_BYTES)} upload limit. Lower the
           quality or the longest edge.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

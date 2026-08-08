@@ -72,7 +72,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
         />
       </button>
 
-      {open && (
+      {open ? (
         <div
           className="absolute z-50 mt-1 max-h-72 w-full min-w-[280px] overflow-y-auto border border-white/15 bg-black shadow-2xl"
           role="listbox"
@@ -129,7 +129,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

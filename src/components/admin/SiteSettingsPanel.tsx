@@ -154,9 +154,9 @@ export function SiteSettingsPanel() {
                   type={field.type ?? "text"}
                   value={draft[field.key]}
                 />
-                {field.hint && (
+                {field.hint ? (
                   <p className="text-[10px] text-white/25">{field.hint}</p>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ export function SiteSettingsPanel() {
 
             {/* Nothing here can leave the site unstyled, but it can leave it
                 unreadable — so say so before it ships. */}
-            {(bodyContrast < AA_NORMAL || accentContrast < 3) && (
+            {(bodyContrast < AA_NORMAL || accentContrast < 3) ? (
               <p className="flex items-start gap-2 text-[11px] text-amber-300/80 leading-relaxed">
                 <TriangleAlert
                   aria-hidden
@@ -206,21 +206,21 @@ export function SiteSettingsPanel() {
                   size={14}
                 />
                 <span>
-                  {bodyContrast < AA_NORMAL && (
+                  {bodyContrast < AA_NORMAL ? (
                     <>
                       Text on background is {bodyContrast.toFixed(1)}:1 — below
                       the {AA_NORMAL}:1 WCAG AA minimum.{" "}
                     </>
-                  )}
-                  {accentContrast < 3 && (
+                  ) : null}
+                  {accentContrast < 3 ? (
                     <>
                       Accent on background is {accentContrast.toFixed(1)}:1 and
                       may be hard to read.
                     </>
-                  )}
+                  ) : null}
                 </span>
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="space-y-4">

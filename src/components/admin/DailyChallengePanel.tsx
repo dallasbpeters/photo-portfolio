@@ -125,9 +125,9 @@ const HistoryEntry = ({
         />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[10px] text-white/50 uppercase tracking-widest">
-            {isToday && (
+            {isToday ? (
               <span className="inline-block size-1.5 shrink-0 rounded-full bg-amber-300/80" />
-            )}
+            ) : null}
             {formatDate(entry.challenge.challengeDate)}
           </p>
           <p className="mt-0.5 truncate text-white/40 text-xs">
@@ -149,7 +149,7 @@ const HistoryEntry = ({
         )}
       </button>
 
-      {open && (
+      {open ? (
         <div className="space-y-3 border-white/8 border-t bg-black/20 p-3">
           <div className="grid items-start gap-4 sm:grid-cols-[160px_1fr]">
             <a
@@ -194,15 +194,15 @@ const HistoryEntry = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[9px] text-white/25">
                   {text.length.toLocaleString()} / 20,000
-                  {entry.journal?.updatedAt && (
+                  {entry.journal?.updatedAt ? (
                     <span className="ml-2">
                       · Saved{" "}
                       {new Date(entry.journal.updatedAt).toLocaleString()}
                     </span>
-                  )}
+                  ) : null}
                 </p>
                 <div className="flex items-center gap-2">
-                  {entry.journal && (
+                  {entry.journal ? (
                     <Button
                       aria-label="Delete journal entry"
                       className="gap-1.5 text-[10px] text-red-400/70 uppercase tracking-widest hover:bg-red-400/10 hover:text-red-400"
@@ -215,7 +215,7 @@ const HistoryEntry = ({
                       <Trash2 aria-hidden size={12} />
                       {deleting ? "Deleting…" : "Delete"}
                     </Button>
-                  )}
+                  ) : null}
                   <Button
                     className="border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
                     disabled={saving}
@@ -231,9 +231,9 @@ const HistoryEntry = ({
           </div>
 
           {(entry.challenge.photographerName ||
-            entry.challenge.unsplashHtmlLink) && (
+            entry.challenge.unsplashHtmlLink) ? (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-white/35">
-              {entry.challenge.photographerName && (
+              {entry.challenge.photographerName ? (
                 <span>
                   Photo by{" "}
                   {entry.challenge.photographerUsername ? (
@@ -250,8 +250,8 @@ const HistoryEntry = ({
                   )}{" "}
                   on Unsplash
                 </span>
-              )}
-              {entry.challenge.unsplashHtmlLink && (
+              ) : null}
+              {entry.challenge.unsplashHtmlLink ? (
                 <a
                   className="inline-flex items-center gap-0.5 text-white/40 hover:text-white"
                   href={entry.challenge.unsplashHtmlLink}
@@ -261,11 +261,11 @@ const HistoryEntry = ({
                   <ExternalLink aria-hidden size={10} />
                   View
                 </a>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -329,7 +329,7 @@ export const DailyChallengePanel = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {view === "today" && (
+          {view === "today" ? (
             <>
               <Button
                 aria-label="Load a different inspiration photo"
@@ -348,7 +348,7 @@ export const DailyChallengePanel = () => {
                 {today.refreshing ? "Loading…" : "New photo"}
               </Button>
 
-              {canUseNotifications() && (
+              {canUseNotifications() ? (
                 <Button
                   aria-pressed={notifs.enabled}
                   className="shrink-0 gap-2 border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
@@ -364,9 +364,9 @@ export const DailyChallengePanel = () => {
                   )}
                   {notifs.enabled ? "Turn off alerts" : "Notify me"}
                 </Button>
-              )}
+              ) : null}
             </>
-          )}
+          ) : null}
 
           <Button
             className="shrink-0 gap-2 border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
@@ -394,17 +394,17 @@ export const DailyChallengePanel = () => {
         {/* ── TODAY ── */}
         {view === "today" && (
           <>
-            {today.loading && (
+            {today.loading ? (
               <p className="text-center text-[10px] text-white/40 uppercase tracking-widest">
                 Loading…
               </p>
-            )}
+            ) : null}
             {!(today.loading || today.challenge) && (
               <p className="text-sm text-white/50">
                 Could not load today's challenge.
               </p>
             )}
-            {!today.loading && today.challenge && (
+            {!today.loading && today.challenge ? (
               <>
                 <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                   <div className="space-y-2">
@@ -441,7 +441,7 @@ export const DailyChallengePanel = () => {
                         )}{" "}
                         on Unsplash
                       </span>
-                      {today.challenge.unsplashHtmlLink && (
+                      {today.challenge.unsplashHtmlLink ? (
                         <a
                           className="inline-flex items-center gap-0.5 text-white/55 hover:text-white"
                           href={today.challenge.unsplashHtmlLink}
@@ -451,7 +451,7 @@ export const DailyChallengePanel = () => {
                           <ExternalLink aria-hidden size={12} />
                           View on Unsplash
                         </a>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
@@ -480,12 +480,12 @@ export const DailyChallengePanel = () => {
                       />
                       <p className="text-[9px] text-white/30">
                         {today.thoughts.length.toLocaleString()} / 20,000
-                        {today.journal?.updatedAt && (
+                        {today.journal?.updatedAt ? (
                           <span className="ml-2 text-white/25">
                             · Saved{" "}
                             {new Date(today.journal.updatedAt).toLocaleString()}
                           </span>
-                        )}
+                        ) : null}
                       </p>
                     </div>
                     <Button
@@ -499,31 +499,31 @@ export const DailyChallengePanel = () => {
                   </form>
                 </div>
 
-                {notifs.perm === "denied" && (
+                {notifs.perm === "denied" ? (
                   <p className="text-[10px] text-amber-200/70">
                     Notifications are blocked for this site. Enable them in
                     browser settings if you want alerts.
                   </p>
-                )}
+                ) : null}
               </>
-            )}
+            ) : null}
           </>
         )}
 
         {/* ── HISTORY ── */}
-        {view === "history" && (
+        {view === "history" ? (
           <div className="space-y-2">
-            {history.loading && (
+            {history.loading ? (
               <p className="text-center text-[10px] text-white/40 uppercase tracking-widest">
                 Loading…
               </p>
-            )}
-            {!history.loading && history.entries.length === 0 && (
+            ) : null}
+            {!history.loading && history.entries.length === 0 ? (
               <p className="py-4 text-center text-sm text-white/40">
                 No past entries yet.
               </p>
-            )}
-            {!history.loading && history.entries.length > 0 && (
+            ) : null}
+            {!history.loading && history.entries.length > 0 ? (
               <>
                 <p className="pb-1 text-[10px] text-white/30 uppercase tracking-widest">
                   {history.entries.length}{" "}
@@ -540,9 +540,9 @@ export const DailyChallengePanel = () => {
                   />
                 ))}
               </>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

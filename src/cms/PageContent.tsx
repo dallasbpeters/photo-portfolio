@@ -186,11 +186,11 @@ const renderNode = (node: Node, key: string): ReactNode => {
             sizes="(min-width: 768px) 720px, 100vw"
             src={src}
           />
-          {alt && (
+          {alt ? (
             <figcaption className="mt-2 text-[10px] text-white/25 uppercase tracking-[0.18em]">
               {alt}
             </figcaption>
-          )}
+          ) : null}
         </figure>
       );
     }

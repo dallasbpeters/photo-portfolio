@@ -319,7 +319,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
             </Button>
           </div>
 
-          {selection.someSelected && (
+          {selection.someSelected ? (
             <div
               aria-label="Batch actions for selected photos"
               className="flex w-full flex-col gap-2 md:ml-auto md:w-auto md:flex-row md:items-center"
@@ -382,7 +382,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </CardHeader>
 
         <CardContent className="p-0">
@@ -396,7 +396,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
             </p>
           ) : (
             <>
-              {!view.stackedView && (
+              {!view.stackedView ? (
                 <div className="flex items-center gap-3 border-white/10 border-b bg-black/20 px-3 py-2.5">
                   <Checkbox
                     aria-label="Select all photos"
@@ -410,10 +410,10 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                     Select all
                   </span>
                 </div>
-              )}
+              ) : null}
 
               {/* ── Stacked view ── */}
-              {view.stackedView && (
+              {view.stackedView ? (
                 <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     {view.categorizedPhotos.map((group, groupIdx) => {
@@ -499,10 +499,10 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                     })}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* ── Grid view ── */}
-              {!view.stackedView && (
+              {!view.stackedView ? (
                 <div className="p-2 sm:p-3">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     {data.photos.map((photo) => {
@@ -602,7 +602,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                     })}
                   </div>
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </CardContent>
@@ -693,7 +693,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         </DialogContent>
       </Dialog>
 
-      {editingPhoto && (
+      {editingPhoto ? (
         <PhotoEditor
           onClose={() => setEditingPhoto(null)}
           onSaved={() => {
@@ -701,7 +701,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           }}
           photo={editingPhoto}
         />
-      )}
+      ) : null}
 
       <PagesPanel />
 

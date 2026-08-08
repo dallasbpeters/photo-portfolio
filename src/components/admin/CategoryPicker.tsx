@@ -158,15 +158,15 @@ export const CategoryPicker = ({
         role="combobox"
         value={query}
       />
-      {open && !disabled && (
+      {open && !disabled ? (
         <div
           className="absolute top-full z-200 mt-1 max-h-48 w-full min-w-60 overflow-auto rounded-md border border-white/10 bg-neutral-950 py-1 shadow-xl ring-1 ring-black/40"
           id={listboxId}
           role="listbox"
         >
-          {filtered.length === 0 && !showAddNew && (
+          {filtered.length === 0 && !showAddNew ? (
             <p className="px-3 py-2 text-white/40 text-xs">No matches</p>
-          )}
+          ) : null}
           {filtered.map((cat) => (
             <button
               aria-selected={cat.id === value}
@@ -183,7 +183,7 @@ export const CategoryPicker = ({
               </span>
             </button>
           ))}
-          {showAddNew && (
+          {showAddNew ? (
             <div className="border-white/10 border-t p-2">
               <Button
                 className="w-full border-white/20 text-[10px] text-white uppercase tracking-widest hover:bg-white/10"
@@ -197,9 +197,9 @@ export const CategoryPicker = ({
                 {isCreating ? "Adding…" : `Add “${trimmed}”`}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

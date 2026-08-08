@@ -137,7 +137,7 @@ export const HomePage = () => {
     <div className="min-h-screen overflow-x-hidden bg-black font-sans text-white selection:bg-white selection:text-black">
       <Toaster position="top-center" theme="dark" />
 
-      {isLoadingPhotos && (
+      {isLoadingPhotos ? (
         <div
           aria-label="Loading portfolio"
           aria-live="polite"
@@ -148,16 +148,16 @@ export const HomePage = () => {
             Loading portfolio…
           </p>
         </div>
-      )}
+      ) : null}
 
-      {loadError && !isLoadingPhotos && (
+      {loadError && !isLoadingPhotos ? (
         <div
           className="fixed top-24 left-1/2 z-90 max-w-md -translate-x-1/2 rounded border border-white/20 bg-black/90 px-6 py-4 text-center text-sm text-white/80"
           role="alert"
         >
           {loadError}
         </div>
-      )}
+      ) : null}
 
       <section className="relative flex h-screen w-full items-center overflow-hidden">
         <div className="pointer-events-none absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:w-[70%] md:px-24">
@@ -343,7 +343,7 @@ export const HomePage = () => {
       </nav>
 
       <AnimatePresence>
-        {lightboxIndex !== null && filteredPhotos.length > 0 && (
+        {lightboxIndex !== null && filteredPhotos.length > 0 ? (
           <Lightbox
             currentIndex={lightboxIndex}
             onClose={() => setLightboxIndex(null)}
@@ -351,7 +351,7 @@ export const HomePage = () => {
             onPrev={handlePrevLightbox}
             photos={filteredPhotos}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );
