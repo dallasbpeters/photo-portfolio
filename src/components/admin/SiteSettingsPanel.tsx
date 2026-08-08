@@ -129,7 +129,7 @@ export function SiteSettingsPanel() {
   };
 
   return (
-    <Card className="border-white/10 bg-white/[0.02]">
+    <Card className="border-white/10 bg-white/2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
           <Palette aria-hidden size={16} />
