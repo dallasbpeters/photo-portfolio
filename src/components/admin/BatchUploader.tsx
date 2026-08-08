@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Upload, Xmark, Check, WarningTriangle } from 'iconoir-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { CategoryPicker } from './CategoryPicker';
 import { portfolioService } from '../../services/portfolioService';
 import type { Category } from '../../types';
 import posthog from '../../lib/posthog';
@@ -36,7 +35,14 @@ const titleFromFile = (name: string): string =>
 interface BatchUploaderProps {
   categories: Category[];
   reload: () => Promise<void>;
-  onCreateCategory: (label: string) => Promise<string | null>;
+  /**
+   * Category for the batch, supplied by the host form.
+   *
+   * This component no longer renders its own picker — it sits inside the Add
+   * New Item card, which already has one. Falling back to the first category
+   * instead would silently file a whole shoot under the wrong heading.
+   */
+  categoryId: string;
 }
 
 /**
@@ -47,9 +53,8 @@ interface BatchUploaderProps {
  * succeeds or fails independently — one bad file never abandons the rest of the
  * batch, and failures stay listed so they can be retried.
  */
-export function BatchUploader({ categories, reload, onCreateCategory }: BatchUploaderProps) {
+export function BatchUploader({ categories, reload, categoryId }: BatchUploaderProps) {
   const [items, setItems] = useState<Item[]>([]);
-  const [categoryId, setCategoryId] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +63,7 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
   const dragDepth = useRef(0);
 
   const effectiveCategory = categoryId || categories[0]?.id || '';
+
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const accepted: Item[] = [];
@@ -173,152 +179,150 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
   const doneCount = items.filter((i) => i.status === 'done').length;
   const pendingCount = items.filter((i) => i.status === 'queued' || i.status === 'error').length;
 
-  return (
-    <Card className="bg-white/2 border-white/10">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        {items.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setItems([])}
-            disabled={isRunning}
-            className="text-[10px] uppercase tracking-[0.18em] text-white/35 transition-colors hover:text-white disabled:opacity-30"
-          >
-            Clear
-          </button>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-5">
-        <CategoryPicker
-          id="batch-category"
-          label="Category"
-          categories={categories}
-          value={effectiveCategory}
-          onChange={setCategoryId}
-          onCreate={onCreateCategory}
-          disabled={categories.length === 0 || isRunning}
-        />
-
-        <div
-          onDragEnter={(e) => {
-            e.preventDefault();
-            dragDepth.current += 1;
-            setIsDragging(true);
-          }}
-          onDragOver={(e) => e.preventDefault()}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            dragDepth.current -= 1;
-            if (dragDepth.current <= 0) setIsDragging(false);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            dragDepth.current = 0;
-            setIsDragging(false);
-            if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-          }}
-          onClick={() => inputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click();
-          }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${isDragging
-            ? 'border-white/50 bg-white/6'
-            : 'border-white/15 hover:border-white/30 hover:bg-white/2'
-            }`}
+  return (<>
+    <CardHeader className="flex flex-row items-center justify-between gap-4">
+      {items.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setItems([])}
+          disabled={isRunning}
+          className="text-[10px] uppercase tracking-[0.18em] text-white/35 transition-colors hover:text-white disabled:opacity-30"
         >
-          <Upload width={20} height={20} className="text-white/30" aria-hidden />
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/50">
-            Drop photos here
-          </p>
-          <p className="text-[10px] text-white/25">or click to browse — JPEG, PNG, WebP, AVIF, GIF</p>
-        </div>
+          Clear
+        </button>
+      )}
+    </CardHeader>
 
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={ACCEPTED.join(',')}
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.length) addFiles(e.target.files);
-            e.target.value = '';
-          }}
-        />
+    <div className="space-y-5">
 
-        {items.length > 0 && (
-          <>
-            <ul className="max-h-72 divide-y divide-white/6 overflow-y-auto">
-              {items.map((item) => (
-                <li key={item.id} className="flex items-center gap-3 py-2.5">
-                  <span className="w-5 shrink-0">
-                    {item.status === 'done' && (
-                      <Check width={14} height={14} className="text-emerald-400/80" />
-                    )}
-                    {item.status === 'error' && (
-                      <WarningTriangle width={14} height={14} className="text-red-400/80" />
-                    )}
-                  </span>
+      <div
+        onDragEnter={(e) => {
+          e.preventDefault();
+          dragDepth.current += 1;
+          setIsDragging(true);
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          dragDepth.current -= 1;
+          if (dragDepth.current <= 0) setIsDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dragDepth.current = 0;
+          setIsDragging(false);
+          if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        }}
+        onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            // Same reason as the title inputs: this sits inside a form.
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${isDragging
+          ? 'border-white/50 bg-white/6'
+          : 'border-white/15 hover:border-white/30 hover:bg-white/2'
+          }`}
+      >
+        <Upload width={20} height={20} className="text-white/30" aria-hidden />
+        <p className="text-[11px] uppercase tracking-[0.18em] text-white/50">
+          Drop photos here
+        </p>
+        <p className="text-[10px] text-white/25">or click to browse — JPEG, PNG, WebP, AVIF, GIF</p>
+      </div>
 
-                  <div className="min-w-0 flex-1">
-                    <input
-                      value={item.title}
-                      onChange={(e) => update(item.id, { title: e.target.value })}
-                      disabled={isRunning || item.status === 'done'}
-                      aria-label={`Title for ${item.file.name}`}
-                      className="w-full bg-transparent text-sm text-white/85 focus:outline-none disabled:text-white/40"
-                    />
-                    {item.status === 'uploading' && (
-                      <div className="mt-1.5 h-px w-full bg-white/10">
-                        <div
-                          className="h-px bg-white/70 transition-all duration-200"
-                          style={{ width: `${item.progress}%` }}
-                        />
-                      </div>
-                    )}
-                    {item.error && (
-                      <p className="mt-1 text-[10px] text-red-400/70">{item.error}</p>
-                    )}
-                  </div>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={ACCEPTED.join(',')}
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) addFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
 
-                  <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/25">
-                    {(item.file.size / 1024 / 1024).toFixed(1)}MB
-                  </span>
-
-                  {!isRunning && item.status !== 'done' && (
-                    <button
-                      type="button"
-                      onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
-                      aria-label={`Remove ${item.file.name}`}
-                      className="shrink-0 text-white/25 transition-colors hover:text-white"
-                    >
-                      <Xmark width={13} height={13} />
-                    </button>
+      {items.length > 0 && (
+        <>
+          <ul className="max-h-72 divide-y divide-white/6 overflow-y-auto">
+            {items.map((item) => (
+              <li key={item.id} className="flex items-center gap-3 py-2.5">
+                <span className="w-5 shrink-0">
+                  {item.status === 'done' && (
+                    <Check width={14} height={14} className="text-emerald-400/80" />
                   )}
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                onClick={() => void start()}
-                disabled={isRunning || pendingCount === 0 || !effectiveCategory}
-                variant="outline"
-                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-              >
-                {isRunning ? 'Uploading…' : `Upload ${pendingCount}`}
-              </Button>
-              {doneCount > 0 && (
-                <span className="text-[10px] uppercase tracking-[0.16em] text-white/35">
-                  {doneCount} of {items.length} done
+                  {item.status === 'error' && (
+                    <WarningTriangle width={14} height={14} className="text-red-400/80" />
+                  )}
                 </span>
-              )}
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
+
+                <div className="min-w-0 flex-1">
+                  <input
+                    value={item.title}
+                    onChange={(e) => update(item.id, { title: e.target.value })}
+                    onKeyDown={(e) => {
+                      // This input lives inside the Add New Item form; Enter
+                      // would otherwise submit that form mid-batch.
+                      if (e.key === 'Enter') e.preventDefault();
+                    }}
+                    disabled={isRunning || item.status === 'done'}
+                    aria-label={`Title for ${item.file.name}`}
+                    className="w-full bg-transparent text-sm text-white/85 focus:outline-none disabled:text-white/40"
+                  />
+                  {item.status === 'uploading' && (
+                    <div className="mt-1.5 h-px w-full bg-white/10">
+                      <div
+                        className="h-px bg-white/70 transition-all duration-200"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                  )}
+                  {item.error && (
+                    <p className="mt-1 text-[10px] text-red-400/70">{item.error}</p>
+                  )}
+                </div>
+
+                <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/25">
+                  {(item.file.size / 1024 / 1024).toFixed(1)}MB
+                </span>
+
+                {!isRunning && item.status !== 'done' && (
+                  <button
+                    type="button"
+                    onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
+                    aria-label={`Remove ${item.file.name}`}
+                    className="shrink-0 text-white/25 transition-colors hover:text-white"
+                  >
+                    <Xmark width={13} height={13} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => void start()}
+              disabled={isRunning || pendingCount === 0 || !effectiveCategory}
+              variant="outline"
+              className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+            >
+              {isRunning ? 'Uploading…' : `Upload ${pendingCount}`}
+            </Button>
+            {doneCount > 0 && (
+              <span className="text-[10px] uppercase tracking-[0.16em] text-white/35">
+                {doneCount} of {items.length} done
+              </span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  </>);
 }

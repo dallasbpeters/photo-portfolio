@@ -145,7 +145,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
 
 
       {/* ── Top row: daily challenge + add form ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 md:gap-6 items-end">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 md:gap-6 items-stretch">
         <DailyChallengePanel />
 
         <Card className="bg-white/5 border-white/10 overflow-visible h-full">
@@ -157,7 +157,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           <CardContent>
             <form
               onSubmit={(e) => void newPhoto.handleAdd(e)}
-              className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 items-end"
+              className="grid grid-cols-1 gap-5 md:gap-6 items-end"
             >
               <div className="space-y-3 lg:col-span-2">
                 <Label htmlFor="add-image-file" className="text-[10px] uppercase tracking-widest text-white/40">
@@ -187,6 +187,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
 
 
 
+
               <div className="space-y-3 lg:col-span-2">
                 <Label htmlFor="title" className="text-[10px] uppercase tracking-widest text-white/40">
                   Title
@@ -198,6 +199,14 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                   placeholder="Project Name"
                   required
                   className="min-h-11 text-base sm:text-sm bg-black/40 border-white/10 focus:border-white/40 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-3 lg:col-span-2">
+                <BatchUploader
+                  categories={data.categories}
+                  reload={data.reload}
+                  categoryId={newPhoto.form.categoryId}
                 />
               </div>
 
@@ -228,11 +237,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         </Card>
       </div>
 
-      <BatchUploader
-        categories={data.categories}
-        reload={data.reload}
-        onCreateCategory={data.createCategoryFromLabel}
-      />
+
 
       {/* ── Current items ── */}
       <Card className="bg-white/5 border-white/10 overflow-hidden">
@@ -362,7 +367,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                           className="animate-stack-in flex flex-col gap-3"
                           style={{ animationDelay: `${groupIdx * 0.07}s` }}
                         >
-                          <div className="group/stack relative aspect-3/4 rounded-lg p-[8px]">
+                          <div className="group/stack relative aspect-3/4 rounded-lg p-2">
                             <div
                               aria-hidden
                               className={`animate-gradient-spin absolute inset-0 rounded-lg blur-[5px] transition-opacity duration-500 ${allSelected ? 'opacity-100' : someSelected ? 'opacity-60' : 'opacity-0 group-hover/stack:opacity-30'
@@ -430,7 +435,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                       return (
                         <article
                           key={photo.id}
-                          className={`group relative aspect-3/4 rounded-lg p-[2px] ${isNew ? 'animate-photo-enter' : ''}`}
+                          className={`group relative aspect-3/4 rounded-lg p-0.5 ${isNew ? 'animate-photo-enter' : ''}`}
                         >
                           <div
                             aria-hidden
@@ -441,7 +446,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                             }}
                           />
                           <div
-                            className={`relative h-full overflow-hidden rounded-[calc(0.5rem-2px)] border bg-black/40 transition-colors ${selected ? 'border-white/40 ring-1 ring-white/30' : 'border-white/10'
+                            className={`relative h-full overflow-hidden rounded-md border bg-black/40 transition-colors ${selected ? 'border-white/40 ring-1 ring-white/30' : 'border-white/10'
                               }`}
                           >
                             <OptimizedImage
