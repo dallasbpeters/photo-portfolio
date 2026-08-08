@@ -41,7 +41,10 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api': {
-          target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3000',
+          // Follows the same PORT as scripts/dev-stack.mjs so the two cannot drift.
+          target:
+            process.env.VITE_API_PROXY_TARGET ||
+            `http://127.0.0.1:${process.env.PORT || 3002}`,
           changeOrigin: true,
         },
       },
