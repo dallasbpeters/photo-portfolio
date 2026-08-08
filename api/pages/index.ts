@@ -15,6 +15,96 @@ import { parseJsonBody } from "../_lib/parseBody.js";
 
 const EMPTY_DOC = { content: [], type: "doc" };
 
+type Sql = ReturnType<typeof getSql>;
+type User = ReturnType<typeof getBearerUser>;
+
+async function handleGet(sql: Sql, user: User, res: VercelResponse) {
+  // Signed-in admins see drafts so they can manage them; the public sees
+  // only what has been published.
+  if (user) {
+    const rows = (await sql`
+      SELECT id, slug, title, icon, content, status, sort_order, created_at, updated_at
+      FROM pages
+      ORDER BY sort_order ASC, title ASC
+    `) as PageRow[];
+    return res.status(200).json(rows.map(rowToDto));
+  }
+
+  const rows = (await sql`
+    SELECT id, slug, title, icon, content, status, sort_order, created_at, updated_at
+    FROM pages
+    WHERE status = 'published'
+    ORDER BY sort_order ASC, title ASC
+  `) as PageRow[];
+  // Public callers get summaries only — the nav does not need every body.
+  // Short window on purpose: publishing should show up almost at once.
+  res.setHeader(
+    "Cache-Control",
+    "public, max-age=15, stale-while-revalidate=30"
+  );
+  return res.status(200).json(rows.map(rowToSummary));
+}
+
+async function handlePost(
+  sql: Sql,
+  user: User,
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const body = parseJsonBody(req.body);
+  const title =
+    typeof body.title === "string"
+      ? sanitizeText(body.title).slice(0, 120)
+      : "";
+  if (!title) {
+    return res.status(400).json({ error: "A page title is required." });
+  }
+
+  const slugCheck = normalizeSlug(body.slug);
+  if (!slugCheck.ok) {
+    return res.status(400).json({ error: slugCheck.error });
+  }
+
+  const icon =
+    typeof body.icon === "string" ? sanitizeText(body.icon).slice(0, 40) : null;
+  const status = isPageStatus(body.status) ? body.status : "draft";
+  const content = isEditorDoc(body.content) ? body.content : EMPTY_DOC;
+
+  const existing =
+    await sql`SELECT id FROM pages WHERE slug = ${slugCheck.slug} LIMIT 1`;
+  if (existing.length > 0) {
+    return res
+      .status(409)
+      .json({ error: `A page already uses "${slugCheck.slug}".` });
+  }
+
+  // New pages go to the end of the nav rather than the front, so creating
+  // one never reorders what is already published.
+  const maxOrder = (await sql`
+    SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM pages
+  `) as { next: number }[];
+  const [nextOrder] = maxOrder;
+
+  const inserted = (await sql`
+    INSERT INTO pages (slug, title, icon, content, status, sort_order, updated_by)
+    VALUES (
+      ${slugCheck.slug}, ${title}, ${icon || null}, ${JSON.stringify(content)}::jsonb,
+      ${status}, ${nextOrder?.next ?? 0}, ${user.userId}
+    )
+    RETURNING id, slug, title, icon, content, status, sort_order, created_at, updated_at
+  `) as PageRow[];
+
+  const [row] = inserted;
+  if (!row) {
+    return res.status(500).json({ error: "Could not create the page" });
+  }
+  return res.status(201).json(rowToDto(row));
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {
     return;
@@ -25,86 +115,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = getBearerUser(req.headers.authorization);
 
     if (req.method === "GET") {
-      // Signed-in admins see drafts so they can manage them; the public sees
-      // only what has been published.
-      if (user) {
-        const rows = (await sql`
-          SELECT id, slug, title, icon, content, status, sort_order, created_at, updated_at
-          FROM pages
-          ORDER BY sort_order ASC, title ASC
-        `) as PageRow[];
-        return res.status(200).json(rows.map(rowToDto));
-      }
-
-      const rows = (await sql`
-        SELECT id, slug, title, icon, content, status, sort_order, created_at, updated_at
-        FROM pages
-        WHERE status = 'published'
-        ORDER BY sort_order ASC, title ASC
-      `) as PageRow[];
-      // Public callers get summaries only — the nav does not need every body.
-      // Short window on purpose: publishing should show up almost at once.
-      res.setHeader(
-        "Cache-Control",
-        "public, max-age=15, stale-while-revalidate=30"
-      );
-      return res.status(200).json(rows.map(rowToSummary));
+      return await handleGet(sql, user, res);
     }
 
     if (req.method === "POST") {
-      if (!user) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const body = parseJsonBody(req.body);
-      const title =
-        typeof body.title === "string"
-          ? sanitizeText(body.title).slice(0, 120)
-          : "";
-      if (!title) {
-        return res.status(400).json({ error: "A page title is required." });
-      }
-
-      const slugCheck = normalizeSlug(body.slug);
-      if (!slugCheck.ok) {
-        return res.status(400).json({ error: slugCheck.error });
-      }
-
-      const icon =
-        typeof body.icon === "string"
-          ? sanitizeText(body.icon).slice(0, 40)
-          : null;
-      const status = isPageStatus(body.status) ? body.status : "draft";
-      const content = isEditorDoc(body.content) ? body.content : EMPTY_DOC;
-
-      const existing =
-        await sql`SELECT id FROM pages WHERE slug = ${slugCheck.slug} LIMIT 1`;
-      if (existing.length > 0) {
-        return res
-          .status(409)
-          .json({ error: `A page already uses "${slugCheck.slug}".` });
-      }
-
-      // New pages go to the end of the nav rather than the front, so creating
-      // one never reorders what is already published.
-      const maxOrder = (await sql`
-        SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM pages
-      `) as { next: number }[];
-
-      const inserted = (await sql`
-        INSERT INTO pages (slug, title, icon, content, status, sort_order, updated_by)
-        VALUES (
-          ${slugCheck.slug}, ${title}, ${icon || null}, ${JSON.stringify(content)}::jsonb,
-          ${status}, ${maxOrder[0]?.next ?? 0}, ${user.userId}
-        )
-        RETURNING id, slug, title, icon, content, status, sort_order, created_at, updated_at
-      `) as PageRow[];
-
-      const row = inserted[0];
-      if (!row) {
-        return res.status(500).json({ error: "Could not create the page" });
-      }
-      return res.status(201).json(rowToDto(row));
+      return await handlePost(sql, user, req, res);
     }
 
     res.setHeader("Allow", "GET, POST");

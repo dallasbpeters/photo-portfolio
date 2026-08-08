@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import posthog from "../lib/posthog";
+import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
 import type { Category, Photo } from "../types";
 
@@ -27,6 +28,7 @@ export const usePhotoSelection = (
   categories: Category[],
   reload: () => Promise<void>
 ): PhotoSelectionResult => {
+  const { confirm } = useConfirm();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchCategoryId, setBatchCategoryId] = useState("");
   const [isBatchUpdating, setIsBatchUpdating] = useState(false);
@@ -113,9 +115,13 @@ export const usePhotoSelection = (
       return;
     }
     const n = selectedIds.length;
-    if (
-      !confirm(`Delete ${n} photo${n === 1 ? "" : "s"}? This cannot be undone.`)
-    ) {
+    const ok = await confirm({
+      confirmLabel: "Delete",
+      description: "The photographs are removed from the portfolio. This cannot be undone.",
+      destructive: true,
+      title: `Delete ${n} photo${n === 1 ? "" : "s"}?`,
+    });
+    if (!ok) {
       return;
     }
     setIsBatchDeleting(true);
@@ -142,7 +148,13 @@ export const usePhotoSelection = (
   };
 
   const deletePhoto = async (id: string): Promise<void> => {
-    if (!confirm("Are you sure?")) {
+    const ok = await confirm({
+      confirmLabel: "Delete",
+      description: "The photograph is removed from the portfolio. This cannot be undone.",
+      destructive: true,
+      title: "Delete this photograph?",
+    });
+    if (!ok) {
       return;
     }
     try {

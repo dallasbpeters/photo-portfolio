@@ -28,6 +28,7 @@ import { OptimizedImage } from "../OptimizedImage";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
+import { useConfirm } from "./ConfirmProvider";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ const HistoryEntry = ({
   onSaved,
   onDeleted,
 }: HistoryEntryProps) => {
+  const { confirm } = useConfirm();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(entry.journal?.body ?? "");
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,13 @@ const HistoryEntry = ({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this journal entry? This cannot be undone.")) {
+    const ok = await confirm({
+      confirmLabel: "Delete",
+      description: "The entry for this day is removed. This cannot be undone.",
+      destructive: true,
+      title: "Delete this journal entry?",
+    });
+    if (!ok) {
       return;
     }
     setDeleting(true);

@@ -22,6 +22,7 @@ import {
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { portfolioService } from "../services/portfolioService";
+import { useConfirm } from "../components/admin/ConfirmProvider";
 
 interface PageEditorProps {
   onChange: (doc: unknown) => void;
@@ -39,6 +40,7 @@ const EMPTY_DOC = { content: [{ type: "paragraph" }], type: "doc" };
  * base64 payloads bloating the row.
  */
 export function PageEditor({ value, onChange }: PageEditorProps) {
+  const { prompt } = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -95,9 +97,14 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
     );
   }
 
-  const setLink = () => {
+  const setLink = async () => {
     const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Link URL", previous ?? "https://");
+    const url = await prompt({
+      confirmLabel: "Apply link",
+      defaultValue: previous ?? "https://",
+      placeholder: "https://example.com",
+      title: previous ? "Edit link" : "Add link",
+    });
     if (url === null) {
       return;
     }
@@ -199,7 +206,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           editor={editor}
           isActive={editor.isActive("link")}
           label="Link"
-          onClick={setLink}
+          onClick={() => void setLink()}
         >
           <LinkIcon height={14} width={14} />
         </ToolButton>

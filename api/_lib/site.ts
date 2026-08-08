@@ -9,4 +9,4 @@ bootstrapEnv();
  */
 export const getSite = (): SiteConfig => resolveSite(process.env.SITE);
 
-export type { SiteConfig };
+export type { SiteConfig } from "../../config/sites.js";

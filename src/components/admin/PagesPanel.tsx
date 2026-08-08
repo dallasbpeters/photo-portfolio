@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { IconPicker } from "../../cms/IconPicker";
+import { useConfirm } from "./ConfirmProvider";
 import { PageEditor } from "../../cms/PageEditor";
 import {
   type PageRecord,
@@ -27,6 +28,7 @@ const slugify = (title: string): string =>
     .slice(0, 60);
 
 export function PagesPanel() {
+  const { confirm } = useConfirm();
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [editing, setEditing] = useState<PageRecord | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -80,7 +82,13 @@ export function PagesPanel() {
   };
 
   const handleDelete = async (page: PageSummary): Promise<void> => {
-    if (!window.confirm(`Delete "${page.title}"? This cannot be undone.`)) {
+    const ok = await confirm({
+      confirmLabel: "Delete",
+      description: "The page and its content are removed. This cannot be undone.",
+      destructive: true,
+      title: `Delete "${page.title}"?`,
+    });
+    if (!ok) {
       return;
     }
     try {

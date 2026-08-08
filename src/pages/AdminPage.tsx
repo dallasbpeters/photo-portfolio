@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { Admin } from "../components/Admin";
+import { ConfirmProvider } from "../components/admin/ConfirmProvider";
 import { Button } from "../components/ui/button";
 import posthog from "../lib/posthog";
 import { authStorage } from "../services/portfolioService";
@@ -64,11 +65,13 @@ export function AdminPage() {
         </div>
       </nav>
       <main className="mx-auto w-full px-4 pt-24 pb-[max(4rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-32 sm:pb-20">
-        <Admin
-          isAuthenticated={isAuthenticated}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
-        />
+        <ConfirmProvider>
+          <Admin
+            isAuthenticated={isAuthenticated}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+          />
+        </ConfirmProvider>
       </main>
     </div>
   );

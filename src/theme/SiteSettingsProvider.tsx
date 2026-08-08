@@ -79,7 +79,15 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     try {
-      setSettings(await settingsApi.get());
+      const fetched = await settingsApi.get();
+      // A 200 carrying the wrong shape — a stale cache, a partial deploy, an
+      // intercepting proxy — must not take the site down. applyTheme reads
+      // theme.background directly, so an absent theme would throw during
+      // render and leave a blank page.
+      if (!fetched?.theme) {
+        throw new Error("Site settings response is missing a theme");
+      }
+      setSettings(fetched);
     } catch {
       // Keep whatever is already rendering: stale settings beat no site.
     } finally {

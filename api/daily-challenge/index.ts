@@ -51,7 +51,7 @@ const respondWithChallengeAndJournal = async (
     WHERE challenge_date = ${dateStr}::date
     LIMIT 1
   `) as ChallengeRow[];
-  const challenge = rows[0];
+  const [challenge] = rows;
   if (!challenge) {
     res.status(500).json({ error: "Could not load daily challenge" });
     return;
@@ -62,13 +62,180 @@ const respondWithChallengeAndJournal = async (
     WHERE user_id = ${user.userId}::uuid AND challenge_date = ${dateStr}::date
     LIMIT 1
   `) as JournalRow[];
-  const j = journalRows[0];
+  const [j] = journalRows;
   const journal = j
     ? { body: j.body, updatedAt: new Date(j.updated_at).toISOString() }
     : null;
   res.status(status).json({
     challenge: rowToChallengeJson(challenge),
     journal,
+  });
+};
+
+const journalTextFromBody = (body: Record<string, unknown>): string => {
+  if (typeof body.body === "string") {
+    return body.body;
+  }
+  if (typeof body.thoughts === "string") {
+    return body.thoughts;
+  }
+  return "";
+};
+
+const handleGet = async (
+  sql: ReturnType<typeof getSql>,
+  user: { userId: string; email: string },
+  dateStr: string,
+  res: VercelResponse
+): Promise<void> => {
+  let rows = (await sql`
+    SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
+      unsplash_photo_id, unsplash_html_link, alt_text
+    FROM daily_challenges
+    WHERE challenge_date = ${dateStr}::date
+    LIMIT 1
+  `) as ChallengeRow[];
+
+  if (rows.length === 0) {
+    const photo = await fetchUnsplashDailyPhoto("initial");
+    await sql`
+      INSERT INTO daily_challenges (
+        challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
+        unsplash_photo_id, unsplash_html_link, alt_text
+      )
+      VALUES (
+        ${dateStr}::date,
+        ${photo.imageUrl},
+        ${photo.imageThumbUrl},
+        ${photo.photographerName},
+        ${photo.photographerUsername},
+        ${photo.unsplashPhotoId},
+        ${photo.unsplashHtmlLink},
+        ${photo.altText}
+      )
+      ON CONFLICT (challenge_date) DO NOTHING
+    `;
+    rows = (await sql`
+      SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
+        unsplash_photo_id, unsplash_html_link, alt_text
+      FROM daily_challenges
+      WHERE challenge_date = ${dateStr}::date
+      LIMIT 1
+    `) as ChallengeRow[];
+  }
+
+  const [challenge] = rows;
+  if (!challenge) {
+    res.status(500).json({ error: "Could not load daily challenge" });
+    return;
+  }
+
+  const journalRows = (await sql`
+    SELECT body, updated_at
+    FROM challenge_journal_entries
+    WHERE user_id = ${user.userId}::uuid AND challenge_date = ${dateStr}::date
+    LIMIT 1
+  `) as JournalRow[];
+
+  const [j] = journalRows;
+  const journal = j
+    ? {
+        body: j.body,
+        updatedAt: new Date(j.updated_at).toISOString(),
+      }
+    : null;
+
+  res.status(200).json({
+    challenge: rowToChallengeJson(challenge),
+    journal,
+  });
+};
+
+const handlePost = async (
+  sql: ReturnType<typeof getSql>,
+  user: { userId: string; email: string },
+  dateStr: string,
+  res: VercelResponse
+): Promise<void> => {
+  const photo = await fetchUnsplashDailyPhoto("refresh");
+  await sql`
+    INSERT INTO daily_challenges (
+      challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
+      unsplash_photo_id, unsplash_html_link, alt_text
+    )
+    VALUES (
+      ${dateStr}::date,
+      ${photo.imageUrl},
+      ${photo.imageThumbUrl},
+      ${photo.photographerName},
+      ${photo.photographerUsername},
+      ${photo.unsplashPhotoId},
+      ${photo.unsplashHtmlLink},
+      ${photo.altText}
+    )
+    ON CONFLICT (challenge_date) DO UPDATE SET
+      image_url = EXCLUDED.image_url,
+      image_thumb_url = EXCLUDED.image_thumb_url,
+      photographer_name = EXCLUDED.photographer_name,
+      photographer_username = EXCLUDED.photographer_username,
+      unsplash_photo_id = EXCLUDED.unsplash_photo_id,
+      unsplash_html_link = EXCLUDED.unsplash_html_link,
+      alt_text = EXCLUDED.alt_text
+  `;
+  await respondWithChallengeAndJournal(sql, user, dateStr, res, 200);
+};
+
+const handlePut = async (
+  sql: ReturnType<typeof getSql>,
+  user: { userId: string; email: string },
+  dateStr: string,
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<void> => {
+  const body = parseJsonBody(req.body);
+  const text = journalTextFromBody(body).replace(/\0/g, "");
+  if (text.length > MAX_JOURNAL_CHARS) {
+    res.status(400).json({
+      error: `Journal is too long (max ${MAX_JOURNAL_CHARS} characters)`,
+    });
+    return;
+  }
+
+  const dayRows = (await sql`
+    SELECT challenge_date FROM daily_challenges WHERE challenge_date = ${dateStr}::date LIMIT 1
+  `) as { challenge_date: string }[];
+  if (dayRows.length === 0) {
+    res
+      .status(409)
+      .json({ error: "No challenge for today yet. Refresh the page." });
+    return;
+  }
+
+  await sql`
+    INSERT INTO challenge_journal_entries (user_id, challenge_date, body, updated_at)
+    VALUES (${user.userId}::uuid, ${dateStr}::date, ${text}, now())
+    ON CONFLICT (user_id, challenge_date)
+    DO UPDATE SET body = EXCLUDED.body, updated_at = now()
+  `;
+
+  const out = (await sql`
+    SELECT body, updated_at
+    FROM challenge_journal_entries
+    WHERE user_id = ${user.userId}::uuid AND challenge_date = ${dateStr}::date
+    LIMIT 1
+  `) as JournalRow[];
+
+  const [row] = out;
+  if (!row) {
+    res.status(500).json({ error: "Save failed" });
+    return;
+  }
+
+  res.status(200).json({
+    journal: {
+      body: row.body,
+      updatedAt: new Date(row.updated_at).toISOString(),
+    },
   });
 };
 
@@ -87,149 +254,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === "GET") {
-      let rows = (await sql`
-        SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
-          unsplash_photo_id, unsplash_html_link, alt_text
-        FROM daily_challenges
-        WHERE challenge_date = ${dateStr}::date
-        LIMIT 1
-      `) as ChallengeRow[];
-
-      if (rows.length === 0) {
-        const photo = await fetchUnsplashDailyPhoto("initial");
-        await sql`
-          INSERT INTO daily_challenges (
-            challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
-            unsplash_photo_id, unsplash_html_link, alt_text
-          )
-          VALUES (
-            ${dateStr}::date,
-            ${photo.imageUrl},
-            ${photo.imageThumbUrl},
-            ${photo.photographerName},
-            ${photo.photographerUsername},
-            ${photo.unsplashPhotoId},
-            ${photo.unsplashHtmlLink},
-            ${photo.altText}
-          )
-          ON CONFLICT (challenge_date) DO NOTHING
-        `;
-        rows = (await sql`
-          SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
-            unsplash_photo_id, unsplash_html_link, alt_text
-          FROM daily_challenges
-          WHERE challenge_date = ${dateStr}::date
-          LIMIT 1
-        `) as ChallengeRow[];
-      }
-
-      const challenge = rows[0];
-      if (!challenge) {
-        return res
-          .status(500)
-          .json({ error: "Could not load daily challenge" });
-      }
-
-      const journalRows = (await sql`
-        SELECT body, updated_at
-        FROM challenge_journal_entries
-        WHERE user_id = ${user.userId}::uuid AND challenge_date = ${dateStr}::date
-        LIMIT 1
-      `) as JournalRow[];
-
-      const j = journalRows[0];
-      const journal = j
-        ? {
-            body: j.body,
-            updatedAt: new Date(j.updated_at).toISOString(),
-          }
-        : null;
-
-      return res.status(200).json({
-        challenge: rowToChallengeJson(challenge),
-        journal,
-      });
+      await handleGet(sql, user, dateStr, res);
+      return;
     }
 
     if (req.method === "POST") {
-      const photo = await fetchUnsplashDailyPhoto("refresh");
-      await sql`
-        INSERT INTO daily_challenges (
-          challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
-          unsplash_photo_id, unsplash_html_link, alt_text
-        )
-        VALUES (
-          ${dateStr}::date,
-          ${photo.imageUrl},
-          ${photo.imageThumbUrl},
-          ${photo.photographerName},
-          ${photo.photographerUsername},
-          ${photo.unsplashPhotoId},
-          ${photo.unsplashHtmlLink},
-          ${photo.altText}
-        )
-        ON CONFLICT (challenge_date) DO UPDATE SET
-          image_url = EXCLUDED.image_url,
-          image_thumb_url = EXCLUDED.image_thumb_url,
-          photographer_name = EXCLUDED.photographer_name,
-          photographer_username = EXCLUDED.photographer_username,
-          unsplash_photo_id = EXCLUDED.unsplash_photo_id,
-          unsplash_html_link = EXCLUDED.unsplash_html_link,
-          alt_text = EXCLUDED.alt_text
-      `;
-      await respondWithChallengeAndJournal(sql, user, dateStr, res, 200);
+      await handlePost(sql, user, dateStr, res);
       return;
     }
 
     if (req.method === "PUT") {
-      const body = parseJsonBody(req.body);
-      const raw =
-        typeof body.body === "string"
-          ? body.body
-          : typeof body.thoughts === "string"
-            ? body.thoughts
-            : "";
-      const text = raw.replace(/\0/g, "");
-      if (text.length > MAX_JOURNAL_CHARS) {
-        return res.status(400).json({
-          error: `Journal is too long (max ${MAX_JOURNAL_CHARS} characters)`,
-        });
-      }
-
-      const dayRows = (await sql`
-        SELECT challenge_date FROM daily_challenges WHERE challenge_date = ${dateStr}::date LIMIT 1
-      `) as { challenge_date: string }[];
-      if (dayRows.length === 0) {
-        return res
-          .status(409)
-          .json({ error: "No challenge for today yet. Refresh the page." });
-      }
-
-      await sql`
-        INSERT INTO challenge_journal_entries (user_id, challenge_date, body, updated_at)
-        VALUES (${user.userId}::uuid, ${dateStr}::date, ${text}, now())
-        ON CONFLICT (user_id, challenge_date)
-        DO UPDATE SET body = EXCLUDED.body, updated_at = now()
-      `;
-
-      const out = (await sql`
-        SELECT body, updated_at
-        FROM challenge_journal_entries
-        WHERE user_id = ${user.userId}::uuid AND challenge_date = ${dateStr}::date
-        LIMIT 1
-      `) as JournalRow[];
-
-      const row = out[0];
-      if (!row) {
-        return res.status(500).json({ error: "Save failed" });
-      }
-
-      return res.status(200).json({
-        journal: {
-          body: row.body,
-          updatedAt: new Date(row.updated_at).toISOString(),
-        },
-      });
+      await handlePut(sql, user, dateStr, req, res);
+      return;
     }
 
     res.setHeader("Allow", "GET, POST, PUT");

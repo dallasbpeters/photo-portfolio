@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import posthog from "../lib/posthog";
+import { useConfirm } from "../components/admin/ConfirmProvider";
 import { authStorage, portfolioService } from "../services/portfolioService";
 import type { Category, Photo } from "../types";
 
@@ -22,6 +23,7 @@ export interface AdminDataResult {
 }
 
 export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
+  const { confirm } = useConfirm();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
@@ -112,7 +114,13 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
   );
 
   const handleDeleteCategory = async (cat: Category): Promise<void> => {
-    if (!confirm(`Delete category "${cat.label}"?`)) {
+    const ok = await confirm({
+      confirmLabel: "Delete",
+      description: "Categories in use by a photograph cannot be deleted.",
+      destructive: true,
+      title: `Delete category "${cat.label}"?`,
+    });
+    if (!ok) {
       return;
     }
     try {

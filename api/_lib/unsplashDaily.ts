@@ -65,17 +65,15 @@ export const pickFallbackForDate = (utcDate: string): DailyInspirationPhoto => {
   for (let i = 0; i < utcDate.length; i += 1) {
     hash = (hash + utcDate.charCodeAt(i) * (i + 1)) % 997;
   }
-  return FALLBACK_BY_DAY[Math.abs(hash) % FALLBACK_BY_DAY.length]!;
+  return FALLBACK_BY_DAY[Math.abs(hash) % FALLBACK_BY_DAY.length];
 };
 
 const mapJson = (json: UnsplashRandomJson): DailyInspirationPhoto | null => {
-  const id = json.id;
-  const regular = json.urls?.regular;
+  const { id, links, urls, user } = json;
+  const regular = urls?.regular;
   if (!(id && regular)) {
     return null;
   }
-  const user = json.user;
-  const links = json.links;
   return {
     altText: json.description ?? json.alt_description ?? null,
     downloadLocation: links?.download_location ?? null,
@@ -89,7 +87,7 @@ const mapJson = (json: UnsplashRandomJson): DailyInspirationPhoto | null => {
 };
 
 const randomFallback = (): DailyInspirationPhoto =>
-  FALLBACK_BY_DAY[Math.floor(Math.random() * FALLBACK_BY_DAY.length)]!;
+  FALLBACK_BY_DAY[Math.floor(Math.random() * FALLBACK_BY_DAY.length)];
 
 /** `refresh` picks a random fallback when no API key so “new photo” works without Unsplash. */
 export const fetchUnsplashDailyPhoto = async (

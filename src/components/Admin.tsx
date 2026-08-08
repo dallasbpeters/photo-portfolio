@@ -433,9 +433,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                               className={`absolute inset-0 animate-gradient-spin rounded-lg blur-[5px] transition-opacity duration-500 ${
                                 allSelected
                                   ? "opacity-100"
-                                  : someSelected
-                                    ? "opacity-60"
-                                    : "opacity-0 group-hover/stack:opacity-30"
+                                  : "opacity-0 group-hover/stack:opacity-30"
                               }`}
                               style={{
                                 background:
@@ -536,11 +534,15 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                               className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-black/20"
                             />
 
-                            <label className="absolute top-1 left-1 z-10 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md">
+                            <label
+                              className="absolute top-1 left-1 z-10 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md"
+                              htmlFor={`select-photo-${photo.id}`}
+                            >
                               <Checkbox
                                 aria-label={`Select ${photo.title}`}
                                 checked={selected}
                                 className="h-5 w-5"
+                                id={`select-photo-${photo.id}`}
                                 onChange={() => selection.toggle(photo.id)}
                               />
                             </label>
