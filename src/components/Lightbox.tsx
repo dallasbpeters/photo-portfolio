@@ -1,5 +1,7 @@
+import { OpenNewWindow } from "iconoir-react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion } from "motion/react";
+import { Link } from "react-router-dom";
 import type { Photo } from "../types";
 import { optimizedImageSrc } from "./OptimizedImage";
 
@@ -94,6 +96,20 @@ export function Lightbox({
           <p className="mt-1 text-sm text-white/90 uppercase tracking-tighter">
             {currentPhoto.categoryLabel}
           </p>
+
+          {/* The photograph's own page, which carries its camera data and its
+              share card. Without this the permalink was only reachable by
+              modifier-clicking a grid tile, which nobody would discover. */}
+          <Link
+            className="mt-4 inline-flex items-center gap-1.5 text-[10px] text-white/45 uppercase tracking-[0.2em] transition-colors hover:text-white"
+            onClick={(e) => e.stopPropagation()}
+            rel="noreferrer"
+            target="_blank"
+            to={`/photo/${currentPhoto.id}`}
+          >
+            Open photo page
+            <OpenNewWindow height={12} width={12} />
+          </Link>
         </div>
       </div>
     </motion.div>
