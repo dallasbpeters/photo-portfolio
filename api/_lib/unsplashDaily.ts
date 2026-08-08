@@ -89,6 +89,48 @@ const mapJson = (json: UnsplashRandomJson): DailyInspirationPhoto | null => {
 const randomFallback = (): DailyInspirationPhoto =>
   FALLBACK_BY_DAY[Math.floor(Math.random() * FALLBACK_BY_DAY.length)];
 
+/**
+ * What the daily prompt draws from.
+ *
+ * Deliberately no landscape, nature or scenery: the photographers using this
+ * shoot people and places, and a prompt that keeps returning mountains is not a
+ * prompt they will act on. The spread is intentional — subject, light, and
+ * technique — so consecutive days ask for genuinely different pictures rather
+ * than the same picture in a different valley.
+ *
+ * Widen or narrow this list freely; it is the single lever over what the daily
+ * challenge asks for.
+ */
+const SUBJECTS = [
+  "portrait",
+  "street photography",
+  "film photography",
+  "candid portrait",
+  "night street photography",
+  "black and white portrait",
+  "golden hour portrait",
+  "still life",
+  "architecture detail",
+  "documentary photography",
+  "reflections",
+  "shadows and light",
+  "urban minimal",
+  "motion blur",
+];
+
+/** Stable subject for the day on load; a random one when the user asks for a new photo. */
+const subjectFor = (mode: "initial" | "refresh"): string => {
+  if (mode === "refresh") {
+    return SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)];
+  }
+  const utcDate = new Date().toISOString().slice(0, 10);
+  let hash = 0;
+  for (let i = 0; i < utcDate.length; i += 1) {
+    hash = (hash + utcDate.charCodeAt(i) * (i + 1)) % 997;
+  }
+  return SUBJECTS[Math.abs(hash) % SUBJECTS.length];
+};
+
 /** `refresh` picks a random fallback when no API key so “new photo” works without Unsplash. */
 export const fetchUnsplashDailyPhoto = async (
   mode: "initial" | "refresh" = "initial"
@@ -102,8 +144,7 @@ export const fetchUnsplashDailyPhoto = async (
     return fallbackNoKey();
   }
 
-  const url =
-    "https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high";
+  const url = `https://api.unsplash.com/photos/random?content_filter=high&query=${encodeURIComponent(subjectFor(mode))}`;
   const res = await fetch(url, {
     headers: { Authorization: `Client-ID ${key}` },
   });
