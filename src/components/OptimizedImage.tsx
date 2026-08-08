@@ -1,4 +1,4 @@
-import type { ImgHTMLAttributes } from 'react';
+import { useState, type ImgHTMLAttributes } from 'react';
 
 /**
  * Serves photos through Vercel's Image Optimization instead of shipping the
@@ -40,6 +40,11 @@ interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 
   src: string;
   alt: string;
   /**
+   * Tiny inline preview, shown blurred until the real image decodes. Rendered as
+   * a background so there is no second <img> to fetch or lay out.
+   */
+  lqip?: string | null;
+  /**
    * The `sizes` attribute — how wide the image renders at each breakpoint.
    * Getting this right is what actually saves the bytes: without it the browser
    * assumes 100vw and picks the largest candidate.
@@ -55,21 +60,45 @@ export function OptimizedImage({
   quality = 75,
   loading = 'lazy',
   decoding = 'async',
+  lqip,
+  style,
   ...rest
 }: OptimizedImageProps) {
+  const [loaded, setLoaded] = useState(false);
+
+  // Blur the placeholder behind the image and fade it out once the real pixels
+  // arrive, so a photo resolves out of a blur rather than popping in.
+  const placeholderStyle =
+    lqip && !loaded
+      ? {
+          backgroundImage: `url(${lqip})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(12px)',
+          transform: 'scale(1.04)',
+        }
+      : undefined;
+
+  const shared = {
+    alt,
+    loading,
+    decoding,
+    onLoad: () => setLoaded(true),
+    style: { ...placeholderStyle, ...style },
+    className: rest.className,
+  };
+
   if (!isOptimizable(src)) {
-    return <img src={src} alt={alt} loading={loading} decoding={decoding} {...rest} />;
+    return <img {...rest} {...shared} src={src} />;
   }
 
   return (
     <img
+      {...rest}
+      {...shared}
       src={optimizedUrl(src, 1080, quality)}
       srcSet={WIDTHS.map((w) => `${optimizedUrl(src, w, quality)} ${w}w`).join(', ')}
       sizes={sizes}
-      alt={alt}
-      loading={loading}
-      decoding={decoding}
-      {...rest}
     />
   );
 }

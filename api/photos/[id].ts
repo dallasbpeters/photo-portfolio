@@ -3,7 +3,7 @@ import { getSql } from '../_lib/db.js';
 import { getBearerUser } from '../_lib/auth.js';
 import { handleCors } from '../_lib/cors.js';
 import { parseJsonBody } from '../_lib/parseBody.js';
-import { rowToDto, type PhotoRow } from '../_lib/photos.js';
+import { PHOTO_COLUMNS, rowToDto, type PhotoRow } from '../_lib/photos.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -24,6 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const categoryId = typeof body.categoryId === 'string' ? body.categoryId.trim() : '';
     const order = typeof body.order === 'number' ? body.order : Number(body.order);
     const url = typeof body.url === 'string' && body.url.trim() ? body.url.trim() : null;
+    const alt = typeof body.alt === 'string' ? body.alt.trim().slice(0, 300) : null;
 
     if (!title || !categoryId) {
       return res.status(400).json({ error: 'Invalid title or categoryId' });
@@ -46,11 +47,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         WITH u AS (
           UPDATE photos
           SET title = ${title}, category_id = ${categoryId}, sort_order = ${order},
-            url = COALESCE(${url}, url)
+            url = COALESCE(${url}, url),
+            alt = COALESCE(${alt}, alt)
           WHERE id = ${id}
-          RETURNING id, url, title, sort_order, created_at, category_id
+          RETURNING id, url, title, sort_order, created_at, category_id,
+            alt, width, height, lqip, exif
         )
         SELECT u.id, u.url, u.title, u.sort_order, u.created_at,
+          u.alt, u.width, u.height, u.lqip, u.exif,
           c.id AS category_id, c.slug AS category_slug, c.label AS category_label
         FROM u
         JOIN categories c ON c.id = u.category_id

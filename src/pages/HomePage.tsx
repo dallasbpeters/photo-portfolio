@@ -8,6 +8,8 @@ import { portfolioService } from '../services/portfolioService';
 import { Instagram } from 'iconoir-react';
 import { useSiteSettings } from '../theme/SiteSettingsProvider';
 import { SiteNav } from '../cms/SiteNav';
+import { Link } from 'react-router-dom';
+import { startViewTransition } from '../lib/viewTransition';
 import { pagesApi, type PageSummary } from '../services/portfolioService';
 import posthog from '../lib/posthog';
 
@@ -167,7 +169,8 @@ export const HomePage = () => {
               >
                 <OptimizedImage
                   src={heroPhotos[heroIndex]?.url ?? ''}
-                  alt={heroPhotos[heroIndex]?.title ?? ''}
+                  alt={heroPhotos[heroIndex]?.alt || heroPhotos[heroIndex]?.title || ''}
+                  lqip={heroPhotos[heroIndex]?.lqip}
                   sizes="100vw"
                   quality={90}
                   loading="eager"
@@ -205,21 +208,30 @@ export const HomePage = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 1 }}
-              className="group cursor-pointer aspect-video md:aspect-square overflow-hidden bg-white/5"
-              onClick={() => {
-                posthog.capture('portfolio_photo_opened', {
-                  category: photo.category,
-                });
-                setLightboxIndex(index);
-              }}
+              className="group aspect-video md:aspect-square overflow-hidden bg-white/5"
             >
-              <OptimizedImage
-                src={photo.url}
-                alt={photo.title}
-                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
+              {/* A real link, so each photograph can be opened in a new tab,
+                  copied, and followed by crawlers. A plain click still opens the
+                  lightbox, which is faster than a navigation. */}
+              <Link
+                to={`/photo/${photo.id}`}
+                className="block h-full w-full cursor-pointer"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  posthog.capture('portfolio_photo_opened', { category: photo.category });
+                  startViewTransition(() => setLightboxIndex(index));
+                }}
+              >
+                <OptimizedImage
+                  src={photo.url}
+                  alt={photo.alt || photo.title}
+                  lqip={photo.lqip}
+                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
+              </Link>
             </motion.div>
           ))}
         </div>

@@ -1,15 +1,14 @@
 import { Link } from 'react-router-dom';
-import * as Icons from 'iconoir-react';
+import { ICON_COMPONENTS, type IconComponent } from './iconMap';
 import type { PageSummary } from '../services/portfolioService';
 
 /**
  * Resolves an Iconoir component by name, since the icon is stored as free text
  * in the database and may not match anything in the pack.
  */
-export const resolveIcon = (name: string | null | undefined) => {
+export const resolveIcon = (name: string | null | undefined): IconComponent | null => {
   if (!name) return null;
-  const pack = Icons as unknown as Record<string, React.ComponentType<{ width?: number; height?: number }>>;
-  return pack[name] ?? null;
+  return ICON_COMPONENTS[name] ?? null;
 };
 
 interface SiteNavProps {

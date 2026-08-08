@@ -232,6 +232,11 @@ export const portfolioService = {
     url: string;
     title: string;
     categoryId: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+    lqip?: string;
+    exif?: unknown;
   }): Promise<Photo> => {
     const res = await fetch(photosPath(), {
       method: 'POST',
@@ -240,6 +245,11 @@ export const portfolioService = {
         url: photo.url,
         title: photo.title,
         categoryId: photo.categoryId,
+        alt: photo.alt,
+        width: photo.width,
+        height: photo.height,
+        lqip: photo.lqip,
+        exif: photo.exif,
       }),
     });
     const data = (await res.json().catch(() => ({}))) as Photo & { error?: string; debug?: string };

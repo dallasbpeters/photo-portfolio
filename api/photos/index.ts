@@ -3,7 +3,7 @@ import { NeonDbError } from '@neondatabase/serverless';
 import { getSql } from '../_lib/db.js';
 import { getBearerUser } from '../_lib/auth.js';
 import { handleCors } from '../_lib/cors.js';
-import { rowToDto, type PhotoRow } from '../_lib/photos.js';
+import { PHOTO_COLUMNS, rowToDto, type PhotoRow } from '../_lib/photos.js';
 import { parseJsonBody } from '../_lib/parseBody.js';
 import { parsePublicHttpUrl, sanitizeText } from '../_lib/httpUrl.js';
 
@@ -49,8 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'GET') {
       const rows = (await sql`
-        SELECT p.id, p.url, p.title, p.sort_order, p.created_at,
-          c.id AS category_id, c.slug AS category_slug, c.label AS category_label
+        SELECT ${sql.unsafe(PHOTO_COLUMNS)}
         FROM photos p
         INNER JOIN categories c ON c.id = p.category_id
         ORDER BY p.sort_order ASC, p.created_at ASC
@@ -88,11 +87,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Shift all existing photos up so the new one lands at position 0
       await sql`UPDATE photos SET sort_order = sort_order + 1`;
 
+      const alt = typeof body.alt === 'string' ? sanitizeText(body.alt).slice(0, 300) : null;
+      const width = Number.isFinite(Number(body.width)) ? Number(body.width) : null;
+      const height = Number.isFinite(Number(body.height)) ? Number(body.height) : null;
+      // Guard the inline placeholder: it travels in every photo list response.
+      const lqipRaw = typeof body.lqip === 'string' ? body.lqip : '';
+      const lqip = lqipRaw.startsWith('data:image/') && lqipRaw.length <= 4000 ? lqipRaw : null;
+      const exif =
+        body.exif && typeof body.exif === 'object' ? JSON.stringify(body.exif).slice(0, 4000) : null;
+
       const inserted = (await sql.query(
-        `INSERT INTO photos (url, title, category_id, sort_order, created_by)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO photos (url, title, category_id, sort_order, created_by, alt, width, height, lqip, exif)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
          RETURNING id`,
-        [url, title, categoryId, 0, user.userId],
+        [url, title, categoryId, 0, user.userId, alt, width, height, lqip, exif],
       )) as { id: string }[];
 
       const newId = inserted[0]?.id;
@@ -101,8 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const rows = (await sql`
-        SELECT p.id, p.url, p.title, p.sort_order, p.created_at,
-          c.id AS category_id, c.slug AS category_slug, c.label AS category_label
+        SELECT ${sql.unsafe(PHOTO_COLUMNS)}
         FROM photos p
         INNER JOIN categories c ON c.id = p.category_id
         WHERE p.id = ${newId}

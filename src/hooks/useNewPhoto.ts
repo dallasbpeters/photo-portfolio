@@ -4,6 +4,7 @@ import type { Category } from '../types';
 import { portfolioService } from '../services/portfolioService';
 import { toast } from 'sonner';
 import posthog from '../lib/posthog';
+import { extractPhotoMetadata } from '../lib/photoMetadata';
 
 type PhotoForm = { title: string; categoryId: string };
 
@@ -41,7 +42,9 @@ export const useNewPhoto = (categories: Category[], reload: () => Promise<void>)
 
     setIsUploading(true);
     let url: string;
+    let meta: Awaited<ReturnType<typeof extractPhotoMetadata>> = {};
     try {
+      meta = await extractPhotoMetadata(uploadDraftFile);
       const { url: uploaded } = await portfolioService.uploadImageFile(uploadDraftFile);
       url = uploaded;
     } catch (error) {
@@ -52,7 +55,14 @@ export const useNewPhoto = (categories: Category[], reload: () => Promise<void>)
     }
 
     try {
-      const added = await portfolioService.addPhoto({ ...form, url });
+      const added = await portfolioService.addPhoto({
+        ...form,
+        url,
+        width: meta.width,
+        height: meta.height,
+        lqip: meta.lqip,
+        exif: meta.exif,
+      });
       await reload();
       setUploadDraftFile(null);
       if (imageFileInputRef.current) imageFileInputRef.current.value = '';

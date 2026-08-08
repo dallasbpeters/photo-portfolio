@@ -27,6 +27,47 @@
   ],
   "rewrites": [
     {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(.*(bot|crawler|spider|facebookexternalhit|slackbot|twitterbot|whatsapp|telegram|discord|linkedin|embedly|pinterest|redditbot|applebot|bingpreview|preview|unfurl).*)"
+        }
+      ],
+      "destination": "/api/shell?path=/"
+    },
+    {
+      "source": "/photo/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(.*(bot|crawler|spider|facebookexternalhit|slackbot|twitterbot|whatsapp|telegram|discord|linkedin|embedly|pinterest|redditbot|applebot|bingpreview|preview|unfurl).*)"
+        }
+      ],
+      "destination": "/api/shell?path=/photo/:id"
+    },
+    {
+      "source": "/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(.*(bot|crawler|spider|facebookexternalhit|slackbot|twitterbot|whatsapp|telegram|discord|linkedin|embedly|pinterest|redditbot|applebot|bingpreview|preview|unfurl).*)"
+        }
+      ],
+      "destination": "/api/shell?path=/:slug"
+    },
+    {
       "source": "/((?!api|@|src\\/)(?!.*\\.).*)",
       "destination": "/index.html"
     }

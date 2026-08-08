@@ -8,6 +8,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { portfolioService } from '../../services/portfolioService';
 import type { Category } from '../../types';
 import posthog from '../../lib/posthog';
+import { extractPhotoMetadata, type PhotoMetadata } from '../../lib/photoMetadata';
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
@@ -21,6 +22,7 @@ type Item = {
   status: 'queued' | 'uploading' | 'done' | 'error';
   progress: number;
   error?: string;
+  meta?: PhotoMetadata;
 };
 
 /** Filename without extension, tidied into a human title. */
@@ -85,13 +87,16 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
   const update = (id: string, patch: Partial<Item>) =>
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
 
-  const transfer = async (item: Item): Promise<string | null> => {
+  const transfer = async (item: Item): Promise<{ url: string; meta: PhotoMetadata } | null> => {
     update(item.id, { status: 'uploading', progress: 0 });
     try {
+      // Read dimensions, EXIF and the blur placeholder from the local file —
+      // the bytes are already here, so doing it server-side would ship them twice.
+      const meta = await extractPhotoMetadata(item.file);
       const { url } = await portfolioService.uploadImageFile(item.file, (percent) =>
         update(item.id, { progress: percent }),
       );
-      return url;
+      return { url, meta };
     } catch (err) {
       update(item.id, {
         status: 'error',
@@ -115,14 +120,14 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
 
     // Phase 1 — transfer bytes concurrently. Simple worker pool: each worker
     // pulls the next file until the queue drains.
-    const urls = new Map<string, string>();
+    const uploaded = new Map<string, { url: string; meta: PhotoMetadata }>();
     let cursor = 0;
     const worker = async () => {
       while (cursor < pending.length) {
         const item = pending[cursor++];
         if (!item) break;
-        const url = await transfer(item);
-        if (url) urls.set(item.id, url);
+        const result = await transfer(item);
+        if (result) uploaded.set(item.id, result);
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pending.length) }, worker));
@@ -133,13 +138,17 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
     for (let i = pending.length - 1; i >= 0; i--) {
       const item = pending[i];
       if (!item) continue;
-      const url = urls.get(item.id);
-      if (!url) continue;
+      const result = uploaded.get(item.id);
+      if (!result) continue;
       try {
         await portfolioService.addPhoto({
           title: item.title,
           categoryId: effectiveCategory,
-          url,
+          url: result.url,
+          width: result.meta.width,
+          height: result.meta.height,
+          lqip: result.meta.lqip,
+          exif: result.meta.exif,
         });
         update(item.id, { status: 'done', progress: 100 });
         succeeded += 1;
