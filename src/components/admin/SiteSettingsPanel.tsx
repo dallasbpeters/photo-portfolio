@@ -81,7 +81,6 @@ export function SiteSettingsPanel() {
   // user is mid-edit with unsaved changes.
   useEffect(() => {
     setDraft((current) => (isDirty(current, settings) ? current : settings));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   const setField = (key: TextFieldKey, value: string) =>

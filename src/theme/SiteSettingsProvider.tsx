@@ -95,12 +95,18 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [setSettings]);
 
+  // Paints the compiled defaults immediately, then fetches the live values.
+  //
+  // This must not depend on `settings`. reload() replaces them with a freshly
+  // parsed object, so a `settings` dependency re-runs the effect, which fetches
+  // again, forever — a request loop that hammers the API for as long as the tab
+  // is open. Reading the defaults straight from the module keeps the dependency
+  // list honest rather than suppressed: on mount `settings` IS this value, and
+  // reload() re-applies the theme once the response lands.
   useEffect(() => {
-    applyTheme(settings);
+    applyTheme(defaultSiteSettings(siteConfig));
     void reload();
-    // Deliberately once on mount — `reload` re-applies the theme itself.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reload, settings]);
+  }, [reload]);
 
   const value = useMemo(
     () => ({ isLoading, reload, setSettings, settings }),
