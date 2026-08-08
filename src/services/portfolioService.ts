@@ -18,11 +18,20 @@ const apiBase = (): string => {
   if (import.meta.env.DEV) {
     return "";
   }
+  // Unset variables arrive as `undefined`, not `null`, and an unset one is the
+  // normal production case: same-origin `/api`. Stringifying it first produced
+  // the literal "undefined", so every call went to `/undefined/api/...`, which
+  // the SPA catch-all answered with index.html — a 200 full of HTML that failed
+  // to parse as JSON. Narrow to a non-empty string instead of comparing to null.
+  //
+  // The literal "undefined" is rejected too: a dashboard env var set from an
+  // empty shell variable stores that exact text, and it is never a valid host.
   const raw = import.meta.env.VITE_API_BASE_URL;
-  if (raw === null || String(raw).trim() === "") {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (trimmed === "" || trimmed === "undefined") {
     return "";
   }
-  return String(raw).replace(TRAILING_SLASH, "");
+  return trimmed.replace(TRAILING_SLASH, "");
 };
 
 const photosPath = (): string => `${apiBase()}/api/photos`;

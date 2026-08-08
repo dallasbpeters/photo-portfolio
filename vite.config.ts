@@ -1,7 +1,8 @@
 import path from "node:path";
+import posthog from "@posthog/rollup-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { resolveSite } from "./config/sites";
 
 /**
@@ -30,9 +31,65 @@ const siteBranding = (siteKey: string | undefined): Plugin => {
   };
 };
 
-export default defineConfig(() => {
+/**
+ * Uploads source maps to PostHog so Error Tracking can de-minify stack traces.
+ *
+ * Only wired in when the upload credentials are present. The plugin throws while
+ * being constructed if projectId is missing, and a config that throws takes down
+ * `vite build`, `vite preview` and `vite dev` alike — so an unconfigured
+ * checkout, or a Vercel project without these variables, could not build at all.
+ * A missing PostHog setup must degrade to "no upload", never to "no build".
+ *
+ * POSTHOG_API_KEY is a *personal* API key, not the public project token the
+ * browser SDK uses. It is read here at build time only and must never be given a
+ * VITE_ prefix, which would inline it into the client bundle. deleteAfterUpload
+ * removes the maps once uploaded, so they are never served from the origin.
+ */
+const sourcemapUpload = (): Plugin[] => {
+  const personalApiKey = process.env.POSTHOG_API_KEY;
+  const projectId = process.env.POSTHOG_PROJECT_ID;
+
+  if (!(personalApiKey && projectId)) {
+    // Loud enough to notice in a deploy log, quiet enough not to fail the build.
+    console.warn(
+      "[posthog] POSTHOG_API_KEY / POSTHOG_PROJECT_ID are unset — skipping source map upload. Production stack traces will stay minified."
+    );
+    return [];
+  }
+
+  // A personal API key starts with phx_. The public project token (phc_) and
+  // credentials for other services are easy to paste here by mistake, and the
+  // uploader exits non-zero on a malformed key — which fails the whole build and
+  // blocks the deploy. Checking the prefix turns a mistyped secret into a
+  // skipped upload plus a clear message.
+  if (!personalApiKey.startsWith("phx_")) {
+    console.warn(
+      "[posthog] POSTHOG_API_KEY is not a personal API key (expected a phx_ prefix) — skipping source map upload. The public phc_ project token cannot upload; create a personal key under Settings → Personal API keys."
+    );
+    return [];
+  }
+
+  return [
+    posthog({
+      host: process.env.POSTHOG_HOST,
+      personalApiKey,
+      projectId,
+      sourcemaps: {
+        deleteAfterUpload: true,
+      },
+    }),
+  ];
+};
+
+export default defineConfig(({ mode }) => {
+  process.env = { ...process.env, ...loadEnv(mode, process.cwd(), "") };
   return {
-    plugins: [react(), tailwindcss(), siteBranding(process.env.VITE_SITE)],
+    plugins: [
+      react(),
+      tailwindcss(),
+      siteBranding(process.env.VITE_SITE),
+      ...sourcemapUpload(),
+    ],
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),

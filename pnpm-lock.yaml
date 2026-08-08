@@ -38,6 +38,9 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.0.0
         version: 1.0.2
+      '@posthog/rollup-plugin':
+        specifier: ^1.4.7
+        version: 1.4.7(rollup@4.60.0)
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.2.2(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0))
@@ -1427,8 +1430,21 @@ packages:
   '@posthog/browser-common@0.4.0':
     resolution: {integrity: sha512-W9DCGVks15docUMPvJ2nd8NS16Gn74bsGWuaeg31beEKFSjdW8wvnQ1ETY6WSql5pYxZb3GdJmEUZVVstKSrBQ==}
 
+  '@posthog/cli@0.7.34':
+    resolution: {integrity: sha512-wrRwj0FhbypW01TLpFRo1HkPBrwZHKP2tFE9xI4NTb84yMKZnXy49ibBdbImktJ5NbW7ndeWidOCZx+2Lkk7/Q==}
+    engines: {node: '>=14.14', npm: '>=6'}
+    hasBin: true
+
   '@posthog/core@1.46.9':
     resolution: {integrity: sha512-EXO6y5ih+jBkTCpUCuYgQmajuDZuvy6vMvflkub6pLQyi0GPlCPWVSvZZkOeQw9e2MxoD5GteeGCt9R8+UJ/yQ==}
+
+  '@posthog/plugin-utils@1.1.2':
+    resolution: {integrity: sha512-CS/14cMmny9NN/LHAb4QZdW3TfxhbKzsfyVYMCjsRdE0IKMTrXMr0cPRZxwczsN6VnWvVoy2Dd5wcG6RrIjlYA==}
+
+  '@posthog/rollup-plugin@1.4.7':
+    resolution: {integrity: sha512-bJgQLKZ5gkq79PBGTNqC8S6OAE8QtNIPYbvHnoboIh8qoZ0PS7RRpxuunoeOflxrHxpnM0Id9OxvrkGKJ2JE6w==}
+    peerDependencies:
+      rollup: '>= 4.0.0'
 
   '@posthog/types@1.402.2':
     resolution: {integrity: sha512-ZZTiS4dLwF4/D0YTzS3gGSLFnhuNOY5yu4d9VGS9trGe5GW6FjIXo20p18K5BPW2RZSYSld8sdnSAY3AUXleUQ==}
@@ -5391,9 +5407,23 @@ snapshots:
       '@posthog/core': 1.46.9
       '@posthog/types': 1.402.2
 
+  '@posthog/cli@0.7.34':
+    dependencies:
+      detect-libc: 2.1.2
+
   '@posthog/core@1.46.9':
     dependencies:
       '@posthog/types': 1.402.2
+
+  '@posthog/plugin-utils@1.1.2':
+    dependencies:
+      cross-spawn: 7.0.6
+
+  '@posthog/rollup-plugin@1.4.7(rollup@4.60.0)':
+    dependencies:
+      '@posthog/cli': 0.7.34
+      '@posthog/plugin-utils': 1.1.2
+      rollup: 4.60.0
 
   '@posthog/types@1.402.2': {}
 
