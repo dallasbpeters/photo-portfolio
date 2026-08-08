@@ -43,7 +43,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       {
         theme_color: settings.theme.background,
         background_color: settings.theme.background,
+        description: `${settings.tagline} — ${settings.ownerName}.`,
         icons: [
+          // Chrome requires a 192px icon before it will offer installation.
+          {
+            purpose: 'any',
+            sizes: '192x192',
+            src: `/sites/${site.key}/icon192.png`,
+            type: 'image/png',
+          },
           {
             purpose: 'maskable',
             sizes: '512x512',
@@ -64,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name: settings.name,
         short_name: settings.shortName,
         id: `https://${site.domain}`,
-        start_url: '/admin',
+        start_url: '/',
         scope: '/',
         shortcuts: [
           {

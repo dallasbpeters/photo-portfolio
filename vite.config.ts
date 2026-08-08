@@ -21,7 +21,9 @@ const siteBranding = (siteKey: string | undefined): Plugin => {
       html
         .replaceAll('%SITE_NAME%', site.name)
         .replaceAll('%SITE_KEY%', site.key)
-        .replaceAll('%SITE_THEME_COLOR%', site.themeColor),
+        .replaceAll('%SITE_THEME_COLOR%', site.themeColor)
+        .replaceAll('%SITE_SHORT_NAME%', site.shortName)
+        .replaceAll('%SITE_DESCRIPTION%', `${site.tagline} — ${site.ownerName}.`),
   };
 };
 

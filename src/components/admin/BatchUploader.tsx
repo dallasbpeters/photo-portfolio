@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Upload, Xmark, Check, WarningTriangle } from 'iconoir-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Label } from '../ui/label';
 import { CategoryPicker } from './CategoryPicker';
 import { portfolioService } from '../../services/portfolioService';
 import type { Category } from '../../types';
@@ -175,12 +174,8 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
   const pendingCount = items.filter((i) => i.status === 'queued' || i.status === 'error').length;
 
   return (
-    <Card className="bg-white/[0.02] border-white/10">
+    <Card className="bg-white/2 border-white/10">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <CardTitle className="flex items-center gap-2 text-sm font-light uppercase tracking-[0.2em] text-white/70">
-          <Upload width={16} height={16} aria-hidden />
-          Batch upload
-        </CardTitle>
         {items.length > 0 && (
           <button
             type="button"
@@ -228,11 +223,10 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click();
           }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${
-            isDragging
-              ? 'border-white/50 bg-white/[0.06]'
-              : 'border-white/15 hover:border-white/30 hover:bg-white/[0.02]'
-          }`}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${isDragging
+            ? 'border-white/50 bg-white/6'
+            : 'border-white/15 hover:border-white/30 hover:bg-white/2'
+            }`}
         >
           <Upload width={20} height={20} className="text-white/30" aria-hidden />
           <p className="text-[11px] uppercase tracking-[0.18em] text-white/50">
@@ -255,7 +249,7 @@ export function BatchUploader({ categories, reload, onCreateCategory }: BatchUpl
 
         {items.length > 0 && (
           <>
-            <ul className="max-h-72 divide-y divide-white/[0.06] overflow-y-auto">
+            <ul className="max-h-72 divide-y divide-white/6 overflow-y-auto">
               {items.map((item) => (
                 <li key={item.id} className="flex items-center gap-3 py-2.5">
                   <span className="w-5 shrink-0">

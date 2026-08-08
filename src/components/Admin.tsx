@@ -41,12 +41,12 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
-  const login      = useAdminLogin(onLogin);
-  const data       = useAdminData(isAuthenticated);
-  const view       = useAdminView(data.photos);
-  const selection  = usePhotoSelection(data.photos, data.categories, data.reload);
-  const details    = usePhotoDetails(data.reload);
-  const newPhoto   = useNewPhoto(data.categories, data.reload);
+  const login = useAdminLogin(onLogin);
+  const data = useAdminData(isAuthenticated);
+  const view = useAdminView(data.photos);
+  const selection = usePhotoSelection(data.photos, data.categories, data.reload);
+  const details = usePhotoDetails(data.reload);
+  const newPhoto = useNewPhoto(data.categories, data.reload);
 
   const categoryOptionsDisabled = data.categories.length === 0;
 
@@ -142,11 +142,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         onDelete={(cat) => void data.handleDeleteCategory(cat)}
       />
 
-      <BatchUploader
-        categories={data.categories}
-        reload={data.reload}
-        onCreateCategory={data.createCategoryFromLabel}
-      />
+
 
       {/* ── Top row: daily challenge + add form ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 md:gap-6 items-end">
@@ -189,6 +185,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                 </div>
               </div>
 
+
+
               <div className="space-y-3 lg:col-span-2">
                 <Label htmlFor="title" className="text-[10px] uppercase tracking-widest text-white/40">
                   Title
@@ -202,6 +200,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                   className="min-h-11 text-base sm:text-sm bg-black/40 border-white/10 focus:border-white/40 transition-colors"
                 />
               </div>
+
+
 
               <CategoryPicker
                 id="add-item-category"
@@ -224,8 +224,15 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
               </Button>
             </form>
           </CardContent>
+
         </Card>
       </div>
+
+      <BatchUploader
+        categories={data.categories}
+        reload={data.reload}
+        onCreateCategory={data.createCategoryFromLabel}
+      />
 
       {/* ── Current items ── */}
       <Card className="bg-white/5 border-white/10 overflow-hidden">
@@ -250,9 +257,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
               size="sm"
               onClick={view.toggleView}
               aria-label={view.stackedView ? 'Switch to grid view' : 'Switch to stacked view'}
-              className={`flex items-center gap-1.5 border-white/15 uppercase tracking-widest text-[10px] hover:bg-white/10 hover:text-white transition-colors ${
-                view.stackedView ? 'bg-white/10 text-white border-white/30' : 'text-white/60'
-              }`}
+              className={`flex items-center gap-1.5 border-white/15 uppercase tracking-widest text-[10px] hover:bg-white/10 hover:text-white transition-colors ${view.stackedView ? 'bg-white/10 text-white border-white/30' : 'text-white/60'
+                }`}
             >
               {view.stackedView ? <LayoutGrid size={13} aria-hidden /> : <Layers size={13} aria-hidden />}
               {view.stackedView ? 'Grid' : 'Stack'}
@@ -345,11 +351,11 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                 <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     {view.categorizedPhotos.map((group, groupIdx) => {
-                      const allSelected  = group.photos.every((p) => selection.selectedIds.includes(p.id));
+                      const allSelected = group.photos.every((p) => selection.selectedIds.includes(p.id));
                       const someSelected = group.photos.some((p) => selection.selectedIds.includes(p.id));
-                      const stackCards   = group.photos.slice(0, 4).reverse();
-                      const rotations    = [-5, 3, -1.5, 0];
-                      const offsets      = [-8, -4, -2, 0];
+                      const stackCards = group.photos.slice(0, 4).reverse();
+                      const rotations = [-5, 3, -1.5, 0];
+                      const offsets = [-8, -4, -2, 0];
                       return (
                         <div
                           key={group.categoryId}
@@ -359,9 +365,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                           <div className="group/stack relative aspect-3/4 rounded-lg p-[8px]">
                             <div
                               aria-hidden
-                              className={`animate-gradient-spin absolute inset-0 rounded-lg blur-[5px] transition-opacity duration-500 ${
-                                allSelected ? 'opacity-100' : someSelected ? 'opacity-60' : 'opacity-0 group-hover/stack:opacity-30'
-                              }`}
+                              className={`animate-gradient-spin absolute inset-0 rounded-lg blur-[5px] transition-opacity duration-500 ${allSelected ? 'opacity-100' : someSelected ? 'opacity-60' : 'opacity-0 group-hover/stack:opacity-30'
+                                }`}
                               style={{
                                 background: `conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(52.74% 0.21 281.43deg) 30deg, oklch(73.91% 0.22 322.89deg) 60deg, transparent 100deg, transparent 360deg)`,
                                 filter: 'blur(20px)',
@@ -421,7 +426,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     {data.photos.map((photo) => {
                       const selected = selection.selectedIds.includes(photo.id);
-                      const isNew    = photo.id === newPhoto.newlyAddedPhotoId;
+                      const isNew = photo.id === newPhoto.newlyAddedPhotoId;
                       return (
                         <article
                           key={photo.id}
@@ -436,9 +441,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                             }}
                           />
                           <div
-                            className={`relative h-full overflow-hidden rounded-[calc(0.5rem-2px)] border bg-black/40 transition-colors ${
-                              selected ? 'border-white/40 ring-1 ring-white/30' : 'border-white/10'
-                            }`}
+                            className={`relative h-full overflow-hidden rounded-[calc(0.5rem-2px)] border bg-black/40 transition-colors ${selected ? 'border-white/40 ring-1 ring-white/30' : 'border-white/10'
+                              }`}
                           >
                             <OptimizedImage
                               src={photo.url}

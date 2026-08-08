@@ -16,6 +16,10 @@ import { useState, type ImgHTMLAttributes } from 'react';
 const WIDTHS = [256, 384, 640, 750, 828, 1080, 1200, 1920, 2048];
 
 const isOptimizable = (src: string): boolean => {
+  // /_vercel/image is served by Vercel's edge and does not exist under `vite
+  // dev` or `vercel dev`, so optimizing locally 404s every photograph. Serve
+  // originals in development instead.
+  if (import.meta.env.DEV) return false;
   // Only absolute http(s) sources go through the optimizer; data: and blob:
   // URLs (the editor's in-progress output) must render as-is.
   if (!/^https?:\/\//i.test(src)) return false;
