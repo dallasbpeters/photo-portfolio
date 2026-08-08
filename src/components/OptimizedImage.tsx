@@ -1,5 +1,8 @@
 import { type ImgHTMLAttributes, useState } from "react";
 
+const ABSOLUTE_HTTP = /^https?:\/\//i;
+const SVG_PATH = /\.svg(\?|$)/i;
+
 /**
  * Serves photos through Vercel's Image Optimization instead of shipping the
  * original file to every tile.
@@ -24,12 +27,12 @@ const isOptimizable = (src: string): boolean => {
   }
   // Only absolute http(s) sources go through the optimizer; data: and blob:
   // URLs (the editor's in-progress output) must render as-is.
-  if (!/^https?:\/\//i.test(src)) {
+  if (!ABSOLUTE_HTTP.test(src)) {
     return false;
   }
   // SVGs are passed through: rasterising them loses the point, and the
   // optimizer refuses them unless dangerouslyAllowSVG is set.
-  if (/\.svg(\?|$)/i.test(src)) {
+  if (SVG_PATH.test(src)) {
     return false;
   }
   return true;
@@ -108,7 +111,9 @@ export function OptimizedImage({
   // without width and height the browser cannot reserve the box, and the grid
   // reflows as each photograph decodes.
   if (!isOptimizable(src)) {
-    return <img {...rest} {...shared} height={height} src={src} width={width} />;
+    return (
+      <img {...rest} {...shared} height={height} src={src} width={width} />
+    );
   }
 
   return (
@@ -118,10 +123,10 @@ export function OptimizedImage({
       height={height}
       sizes={sizes}
       src={optimizedUrl(src, 1080, quality)}
-      width={width}
       srcSet={WIDTHS.map((w) => `${optimizedUrl(src, w, quality)} ${w}w`).join(
         ", "
       )}
+      width={width}
     />
   );
 }

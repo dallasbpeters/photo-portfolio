@@ -34,6 +34,7 @@ try {
     .sort();
 
   for (const file of patches) {
+    // biome-ignore lint/performance/noAwaitInLoops: patches must apply in filename order; a later one may depend on an earlier one
     await client.query(readFileSync(join(patchDir, file), "utf8"));
     console.log(`Applied db/patches/${file}`);
   }

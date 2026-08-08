@@ -16,9 +16,11 @@ import {
 import { useSiteSettings } from "../theme/SiteSettingsProvider";
 import type { Photo, ViewMode } from "../types";
 
+const CATEGORY_SEPARATORS = /[-_]/;
+
 const formatCategoryLabel = (category: string): string =>
   category
-    .split(/[-_]/)
+    .split(CATEGORY_SEPARATORS)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
 
@@ -270,10 +272,10 @@ export const HomePage = () => {
                   className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
                   height={photo.height ?? undefined}
                   lqip={photo.lqip}
-                  width={photo.width ?? undefined}
                   referrerPolicy="no-referrer"
                   sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
                   src={photo.url}
+                  width={photo.width ?? undefined}
                 />
               </Link>
             </motion.div>

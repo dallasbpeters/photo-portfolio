@@ -135,6 +135,17 @@ export const isIdentityCurve = (curve: ToneCurve | undefined): boolean =>
 
 // ── 3D LUT ────────────────────────────────────────────────────────────────────
 
+// Hoisted out of the parse loop: these run once per line of a .cube file, which
+// is up to 262,144 lines for a 64³ table.
+const CUBE_COMMENT = /^#/;
+const CUBE_TITLE = /^TITLE/i;
+const CUBE_1D_SIZE = /^LUT_1D_SIZE/i;
+const CUBE_3D_SIZE = /^LUT_3D_SIZE/i;
+const CUBE_DOMAIN_MIN = /^DOMAIN_MIN/i;
+const CUBE_DOMAIN_MAX = /^DOMAIN_MAX/i;
+const CUBE_WHITESPACE = /\s+/;
+const CUBE_LINE_BREAK = /\r?\n/;
+
 export interface Lut {
   /** RGBA bytes laid out as `size` tiles across, each `size` x `size`. */
   data: Uint8Array;
@@ -151,7 +162,7 @@ export interface Lut {
 export const parseCubeLut = (
   text: string
 ): { lut: Lut } | { error: string } => {
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(CUBE_LINE_BREAK);
   let size = 0;
   const values: number[] = [];
   let domainMin = [0, 0, 0];
@@ -159,30 +170,30 @@ export const parseCubeLut = (
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line || line.startsWith("#")) {
+    if (!line || CUBE_COMMENT.test(line)) {
       continue;
     }
 
-    if (/^TITLE/i.test(line)) {
+    if (CUBE_TITLE.test(line)) {
       continue;
     }
-    if (/^LUT_1D_SIZE/i.test(line)) {
+    if (CUBE_1D_SIZE.test(line)) {
       return { error: "This is a 1D LUT. Only 3D .cube files are supported." };
     }
-    if (/^LUT_3D_SIZE/i.test(line)) {
-      size = Number.parseInt(line.split(/\s+/)[1] ?? "", 10);
+    if (CUBE_3D_SIZE.test(line)) {
+      size = Number.parseInt(line.split(CUBE_WHITESPACE)[1] ?? "", 10);
       continue;
     }
-    if (/^DOMAIN_MIN/i.test(line)) {
-      domainMin = line.split(/\s+/).slice(1, 4).map(Number);
+    if (CUBE_DOMAIN_MIN.test(line)) {
+      domainMin = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
       continue;
     }
-    if (/^DOMAIN_MAX/i.test(line)) {
-      domainMax = line.split(/\s+/).slice(1, 4).map(Number);
+    if (CUBE_DOMAIN_MAX.test(line)) {
+      domainMax = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
       continue;
     }
 
-    const parts = line.split(/\s+/).map(Number);
+    const parts = line.split(CUBE_WHITESPACE).map(Number);
     if (parts.length >= 3 && parts.every((n) => Number.isFinite(n))) {
       values.push(parts[0]!, parts[1]!, parts[2]!);
     }

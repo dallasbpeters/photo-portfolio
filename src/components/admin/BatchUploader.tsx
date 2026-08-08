@@ -11,6 +11,10 @@ import type { Category } from "../../types";
 import { Button } from "../ui/button";
 import { CardHeader } from "../ui/card";
 
+const FILE_EXTENSION = /\.[^.]+$/;
+const SEPARATORS = /[_-]+/g;
+const WHITESPACE_RUN = /\s+/g;
+
 const ACCEPTED = [
   "image/jpeg",
   "image/png",
@@ -35,9 +39,9 @@ interface Item {
 /** Filename without extension, tidied into a human title. */
 const titleFromFile = (name: string): string =>
   name
-    .replace(/\.[^.]+$/, "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(FILE_EXTENSION, "")
+    .replace(SEPARATORS, " ")
+    .replace(WHITESPACE_RUN, " ")
     .trim()
     .slice(0, 120) || "Untitled";
 
@@ -157,6 +161,7 @@ export function BatchUploader({
         if (!item) {
           break;
         }
+        // biome-ignore lint/performance/noAwaitInLoops: this loop is the worker; concurrency comes from running CONCURRENCY of them at once
         const result = await transfer(item);
         if (result) {
           uploaded.set(item.id, result);
@@ -180,6 +185,7 @@ export function BatchUploader({
         continue;
       }
       try {
+        // biome-ignore lint/performance/noAwaitInLoops: rows are created one at a time on purpose — each insert shifts sort_order, so parallel writes would scramble the gallery order
         await portfolioService.addPhoto({
           categoryId: effectiveCategory,
           exif: result.meta.exif,

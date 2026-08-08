@@ -68,16 +68,16 @@ export function Lightbox({
       >
         <motion.img
           alt={currentPhoto.title}
-          height={currentPhoto.height ?? undefined}
-          width={currentPhoto.width ?? undefined}
           animate={{ opacity: 1, scale: 1 }}
           className="h-full w-full object-contain"
+          height={currentPhoto.height ?? undefined}
           initial={{ opacity: 0, scale: 0.9 }}
           key={currentPhoto.id}
           referrerPolicy="no-referrer"
           // Capped at max-w-5xl, so 2048px covers a retina view without
           // pulling the full-resolution original.
           src={optimizedImageSrc(currentPhoto.url, 2048, 85)}
+          width={currentPhoto.width ?? undefined}
         />
         <div className="mt-4 text-center">
           <h3 className="font-light text-lg text-white uppercase tracking-widest">

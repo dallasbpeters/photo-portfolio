@@ -56,10 +56,12 @@ const trim = async (cacheName, max) => {
   );
 };
 
+const IMAGE_EXTENSION = /\.(jpe?g|png|webp|avif|gif|svg)$/i;
+
 const isImage = (request, url) =>
   request.destination === "image" ||
   url.pathname.startsWith("/_vercel/image") ||
-  /\.(jpe?g|png|webp|avif|gif|svg)$/i.test(url.pathname);
+  IMAGE_EXTENSION.test(url.pathname);
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;

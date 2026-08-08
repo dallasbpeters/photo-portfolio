@@ -8,6 +8,9 @@ import { getSql } from "./_lib/db.js";
 import { PHOTO_COLUMNS, type PhotoRow, rowToDto } from "./_lib/photos.js";
 import { getSite } from "./_lib/site.js";
 
+const PHOTO_PATH = /^\/photo\/([0-9a-fA-F-]{36})$/;
+const TITLE_TAG = /<title>[^<]*<\/title>/;
+
 /**
  * Serves index.html with share-card metadata injected, for crawlers only.
  *
@@ -110,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     meta.title = settings.name;
     meta.description = `${settings.tagline} — ${settings.ownerName}.`;
 
-    const photoMatch = /^\/photo\/([0-9a-fA-F-]{36})$/.exec(path);
+    const photoMatch = PHOTO_PATH.exec(path);
 
     if (photoMatch) {
       const rows = (await sql`
@@ -193,10 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const shell = await loadShell(origin);
     const html = shell
-      .replace(
-        /<title>[^<]*<\/title>/,
-        `<title>${escapeHtml(meta.title)}</title>`
-      )
+      .replace(TITLE_TAG, `<title>${escapeHtml(meta.title)}</title>`)
       .replace("</head>", `    ${buildTags(meta)}\n  </head>`);
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");

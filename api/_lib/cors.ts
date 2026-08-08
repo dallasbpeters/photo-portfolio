@@ -27,7 +27,7 @@ export const handleCors = (
   req: VercelRequest,
   res: VercelResponse
 ): boolean => {
-  const origin = req.headers.origin;
+  const { origin } = req.headers;
   const allowed = allowedOrigins();
 
   if (origin && allowed.has(origin)) {

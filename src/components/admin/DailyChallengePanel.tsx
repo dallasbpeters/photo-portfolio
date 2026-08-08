@@ -230,8 +230,8 @@ const HistoryEntry = ({
             </form>
           </div>
 
-          {(entry.challenge.photographerName ||
-            entry.challenge.unsplashHtmlLink) ? (
+          {entry.challenge.photographerName ||
+          entry.challenge.unsplashHtmlLink ? (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-white/35">
               {entry.challenge.photographerName ? (
                 <span>

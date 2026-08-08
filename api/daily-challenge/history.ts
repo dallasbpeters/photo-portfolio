@@ -5,6 +5,9 @@ import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
+/** ISO calendar date, the only shape the journal accepts. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 const MAX_JOURNAL_CHARS = 20_000;
 
 interface HistoryRow {
@@ -86,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = parseJsonBody(req.body);
       const dateStr =
         typeof body.date === "string" ? body.date.slice(0, 10) : null;
-      if (!(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr))) {
+      if (!(dateStr && ISO_DATE.test(dateStr))) {
         return res.status(400).json({ error: "date is required (YYYY-MM-DD)" });
       }
 
@@ -132,7 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = parseJsonBody(req.body);
       const dateStr =
         typeof body.date === "string" ? body.date.slice(0, 10) : null;
-      if (!(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr))) {
+      if (!(dateStr && ISO_DATE.test(dateStr))) {
         return res.status(400).json({ error: "date is required (YYYY-MM-DD)" });
       }
 

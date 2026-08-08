@@ -186,6 +186,7 @@ export class PhotoPipeline {
 
     // Pass 1 — horizontal
     this.bindTarget(this.pingFbo, this.blurWidth, this.blurHeight);
+    // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is the WebGL API, not a React hook — the rule matches on the `use` prefix
     gl.useProgram(this.blurProgram);
     this.bindQuad(this.blurProgram);
     this.setTexture(this.blurProgram, "uImage", this.sourceTexture, 0);
@@ -206,6 +207,7 @@ export class PhotoPipeline {
 
     // Pass 3 — grade to the visible canvas
     this.bindTarget(null, this.imageWidth, this.imageHeight);
+    // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is the WebGL API, not a React hook
     gl.useProgram(this.gradeProgram);
     this.bindQuad(this.gradeProgram);
     this.setTexture(this.gradeProgram, "uImage", this.sourceTexture, 0);

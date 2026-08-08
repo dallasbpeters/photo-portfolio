@@ -22,6 +22,7 @@ const PORT = Number(process.env.PORT) || 3002;
 const PORTS = [PORT, 5173, 5174, 5175];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const isWin = process.platform === "win32";
+const WHITESPACE = /\s+/;
 
 function killPort(port) {
   try {
@@ -34,7 +35,7 @@ function killPort(port) {
         ...new Set(
           out
             .split("\n")
-            .map((l) => l.trim().split(/\s+/).pop())
+            .map((l) => l.trim().split(WHITESPACE).pop())
             .filter(Boolean)
         ),
       ];

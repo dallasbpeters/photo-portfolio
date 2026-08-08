@@ -198,7 +198,7 @@ export function SiteSettingsPanel() {
 
             {/* Nothing here can leave the site unstyled, but it can leave it
                 unreadable — so say so before it ships. */}
-            {(bodyContrast < AA_NORMAL || accentContrast < 3) ? (
+            {bodyContrast < AA_NORMAL || accentContrast < 3 ? (
               <p className="flex items-start gap-2 text-[11px] text-amber-300/80 leading-relaxed">
                 <TriangleAlert
                   aria-hidden

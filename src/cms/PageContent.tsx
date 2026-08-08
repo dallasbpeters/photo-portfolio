@@ -98,6 +98,7 @@ const applyMarks = (
 
 const renderNodes = (nodes: Node[] | undefined, keyPrefix = "n"): ReactNode =>
   (nodes ?? []).map((node, i) => (
+    // biome-ignore lint/suspicious/noArrayIndexKey: document nodes have no stable id and the tree is re-rendered whole rather than reordered, so position is the correct identity
     <Fragment key={`${keyPrefix}-${i}`}>
       {renderNode(node, `${keyPrefix}-${i}`)}
     </Fragment>

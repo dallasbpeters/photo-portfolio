@@ -7,6 +7,11 @@ import type {
   Photo,
 } from "../types";
 
+const TRAILING_SLASH = /\/$/;
+const DOCTYPE_TAG = /<!DOCTYPE/i;
+const HTML_TAG = /<html[\s>]/i;
+const UNAUTHORIZED = /unauthor/i;
+
 const apiBase = (): string => {
   // Dev: always same-origin. Vite proxies /api → vercel dev :3000.
   // Port 3000 (vercel) hits its own handlers directly. Either port works.
@@ -17,7 +22,7 @@ const apiBase = (): string => {
   if (raw === null || String(raw).trim() === "") {
     return "";
   }
-  return String(raw).replace(/\/$/, "");
+  return String(raw).replace(TRAILING_SLASH, "");
 };
 
 const photosPath = (): string => `${apiBase()}/api/photos`;
@@ -458,7 +463,7 @@ export const portfolioService = {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
       throw new Error(
-        /unauthor/i.test(message)
+        UNAUTHORIZED.test(message)
           ? "Sign in again to upload"
           : `Upload failed: ${message}`,
         { cause: err }
@@ -535,8 +540,8 @@ export const authApi = {
       data = JSON.parse(text) as { token?: string; error?: string };
     } catch (parseError) {
       const looksHtml =
-        /<!DOCTYPE/i.test(text) ||
-        /<html[\s>]/i.test(text) ||
+        DOCTYPE_TAG.test(text) ||
+        HTML_TAG.test(text) ||
         (text.length > 0 && text.trimStart().startsWith("<"));
       const base = apiBase();
       const href =

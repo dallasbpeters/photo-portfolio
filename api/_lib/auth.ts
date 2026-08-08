@@ -47,8 +47,7 @@ export const getBearerUser = (
   if (!decoded) {
     return null;
   }
-  const userId = decoded.sub === null ? "" : String(decoded.sub);
-  const email = decoded.email === null ? "" : String(decoded.email);
+  const { sub: userId, email } = decoded;
   if (!(userId && email)) {
     return null;
   }

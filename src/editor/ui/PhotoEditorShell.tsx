@@ -409,11 +409,11 @@ export function PhotoEditorShell({
                 }`}
                 ref={canvasRef}
               />
-              {!isReady ? (
+              {isReady ? null : (
                 <span className="absolute text-[10px] text-white/25 uppercase tracking-[0.3em]">
                   Loading
                 </span>
-              ) : null}
+              )}
             </>
           )}
         </div>
@@ -573,7 +573,7 @@ function ExportPanel({
         </div>
       </section>
 
-      {settings.format !== "image/png" ? (
+      {settings.format === "image/png" ? null : (
         <EditorSlider
           label="Quality"
           max={100}
@@ -581,7 +581,7 @@ function ExportPanel({
           onChange={(v) => onChange({ ...settings, quality: v / 100 })}
           value={Math.round(settings.quality * 100)}
         />
-      ) : null}
+      )}
 
       <section className="space-y-2">
         <p className="text-[10px] text-white/35 uppercase tracking-[0.18em]">

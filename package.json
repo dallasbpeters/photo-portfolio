@@ -14,8 +14,10 @@
     "db:verify-login": "tsx scripts/verify-login.ts",
     "dev": "node scripts/dev-stack.mjs",
     "dev:cyan": "cross-env VITE_SITE=cyan node scripts/dev-stack.mjs",
+    "fix": "npx ultracite fix --claude",
     "lint": "tsc --noEmit",
     "preview": "vite preview",
+    "ultracite": "npx ultracite fix",
     "vercel:blob:create": "vercel blob create-store",
     "vercel:env:pull": "vercel env pull .env.development.local"
   },

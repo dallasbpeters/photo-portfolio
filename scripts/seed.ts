@@ -49,6 +49,7 @@ try {
     console.log(`Admin: ${email}`);
   } else {
     for (const p of INITIAL_PHOTOS_SEED) {
+      // biome-ignore lint/performance/noAwaitInLoops: inserted in order so sort_order matches the seed list
       await client.query(
         `INSERT INTO photos (url, title, category_id, sort_order, created_by)
          SELECT $1, $2, c.id, $3, $4

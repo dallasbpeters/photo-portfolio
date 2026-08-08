@@ -320,10 +320,9 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           </div>
 
           {selection.someSelected ? (
-            <div
+            <section
               aria-label="Batch actions for selected photos"
               className="flex w-full flex-col gap-2 md:ml-auto md:w-auto md:flex-row md:items-center"
-              role="region"
             >
               <span className="shrink-0 text-[10px] text-white/50 uppercase tracking-widest">
                 {selection.selectedIds.length} selected
@@ -381,7 +380,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                   Clear
                 </Button>
               </div>
-            </div>
+            </section>
           ) : null}
         </CardHeader>
 
@@ -390,13 +389,9 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
             <p className="p-6 text-center text-sm text-white/40 uppercase tracking-widest">
               Loading…
             </p>
-          ) : data.photos.length === 0 ? (
-            <p className="p-6 text-center text-sm text-white/40 uppercase tracking-widest">
-              No photos yet. Add one above.
-            </p>
           ) : (
             <>
-              {!view.stackedView ? (
+              {view.stackedView ? null : (
                 <div className="flex items-center gap-3 border-white/10 border-b bg-black/20 px-3 py-2.5">
                   <Checkbox
                     aria-label="Select all photos"
@@ -410,7 +405,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                     Select all
                   </span>
                 </div>
-              ) : null}
+              )}
 
               {/* ── Stacked view ── */}
               {view.stackedView ? (
@@ -502,7 +497,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
               ) : null}
 
               {/* ── Grid view ── */}
-              {!view.stackedView ? (
+              {view.stackedView ? null : (
                 <div className="p-2 sm:p-3">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     {data.photos.map((photo) => {
@@ -602,7 +597,7 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
                     })}
                   </div>
                 </div>
-              ) : null}
+              )}
             </>
           )}
         </CardContent>
