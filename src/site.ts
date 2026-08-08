@@ -13,4 +13,4 @@ export const siteConfig: SiteConfig = resolveSite(import.meta.env.VITE_SITE);
 /** @deprecated Prefer `useSiteSettings()` for anything an admin can edit. */
 export const site = siteConfig;
 
-export type { SiteConfig };
+export type { SiteConfig } from "../config/sites";

@@ -12,13 +12,13 @@ import { ExportPanel } from "./ExportPanel";
 import { LooksPanel } from "./LooksPanel";
 import { TOOLS, type ToolId } from "./tools";
 
-export type PhotoEditorShellProps = {
+export interface PhotoEditorShellProps {
   imageUrl: string;
-  title: string;
   onClose: () => void;
   /** Receives the graded image. Resolve to close, reject to keep the editor open. */
   onSave: (blob: Blob, extension: string) => Promise<void>;
-};
+  title: string;
+}
 
 /**
  * Composes the editor: a rail, a contextual panel, and the photograph.
@@ -99,7 +99,7 @@ export function PhotoEditorShell({
     <div className="fixed inset-0 z-100 flex bg-black text-white">
       <EditorRail active={tool} onClose={onClose} onSelect={setTool} />
 
-      <aside className="flex w-[276px] shrink-0 flex-col border-white/[0.07] border-r">
+      <aside className="flex w-69 shrink-0 flex-col border-white/[0.07] border-r">
         <header className="flex h-12 shrink-0 items-center border-white/[0.07] border-b px-5">
           <h2 className="text-[10px] text-white/45 uppercase tracking-[0.28em]">
             {TOOLS.find((t) => t.id === tool)?.label}

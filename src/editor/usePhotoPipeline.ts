@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createNeutralEdit, type EditState } from "./adjustments";
 import { PhotoPipeline } from "./engine/pipeline";
 
-export type PipelineState = {
+export interface PipelineState {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   /** True once the image is decoded and the first frame has rendered. */
   isReady: boolean;
@@ -10,7 +10,7 @@ export type PipelineState = {
   dimensions: { width: number; height: number };
   /** Renders an edit immediately, outside the normal effect. */
   render: (edit: EditState) => void;
-};
+}
 
 /**
  * Owns the WebGL pipeline for one image: loading it, standing up the renderer,

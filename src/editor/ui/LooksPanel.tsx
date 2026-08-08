@@ -30,6 +30,13 @@ export function LooksPanel({
         {LOOK_FAMILIES.map((f) => {
           const isOpen = f.id === family.id;
           const holdsActive = active?.family === f.id;
+          // Open, holds the current look, or idle — clearer named than nested.
+          let swatchOpacity = 0.28;
+          if (isOpen) {
+            swatchOpacity = 1;
+          } else if (holdsActive) {
+            swatchOpacity = 0.7;
+          }
           return (
             <button
               aria-pressed={isOpen}
@@ -49,7 +56,7 @@ export function LooksPanel({
                 className="h-[3px] w-4 rounded-full transition-opacity"
                 style={{
                   backgroundColor: f.color,
-                  opacity: isOpen ? 1 : holdsActive ? 0.7 : 0.28,
+                  opacity: swatchOpacity,
                 }}
               />
             </button>

@@ -1,11 +1,11 @@
 import { Xmark } from "iconoir-react";
 import { type Tool, TOOLS, type ToolId } from "./tools";
 
-type EditorRailProps = {
+interface EditorRailProps {
   active: ToolId;
   onSelect: (id: ToolId) => void;
   onClose: () => void;
-};
+}
 
 /** Left rail: close, then one icon per panel. */
 export function EditorRail({ active, onSelect, onClose }: EditorRailProps) {

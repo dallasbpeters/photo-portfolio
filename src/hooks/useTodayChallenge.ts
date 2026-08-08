@@ -32,6 +32,7 @@ export const maybeFireDailyNotification = (
     if (localStorage.getItem(LS_LAST_NOTIFIED) === dateKey) {
       return;
     }
+    // biome-ignore lint/correctness/noUnusedInstantiation: constructing a Notification is how the Web Notifications API displays one; there is no instance to keep
     new Notification("Today's photo challenge", {
       body: `Open ${site.shortName} Admin to see today's inspiration and jot your thoughts.`,
       icon: `/sites/${site.key}/icon512_rounded.png`,

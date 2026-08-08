@@ -13,14 +13,14 @@ import {
 /** Debounce before re-encoding for the size estimate. */
 const ESTIMATE_DELAY_MS = 350;
 
-export type EditorExport = {
+export interface EditorExport {
   settings: ExportSettings;
   setSettings: (next: ExportSettings) => void;
   /** Encoded size in bytes, or null before the first estimate lands. */
   estimatedSize: number | null;
   isSaving: boolean;
   save: () => Promise<void>;
-};
+}
 
 /**
  * Export settings, the size estimate, and saving.

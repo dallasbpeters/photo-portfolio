@@ -548,11 +548,16 @@ export const authApi = {
         typeof window !== "undefined" && url.startsWith("/")
           ? new URL(url, window.location.origin).href
           : url;
-      const detail = looksHtml
-        ? base === ""
-          ? " The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3000 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`."
-          : " The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`."
-        : " Is the API running?";
+      // Three distinct causes, each needing different advice — flattened out of
+      // nested ternaries so each branch reads on its own.
+      let detail = " Is the API running?";
+      if (looksHtml && base === "") {
+        detail =
+          " The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3002 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`.";
+      } else if (looksHtml) {
+        detail =
+          " The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`.";
+      }
       throw new Error(
         `Login failed (${res.status}): not JSON from ${href}.${detail}`,
         { cause: parseError }

@@ -12,11 +12,11 @@ import type { AdjustmentGroupId } from "../adjustments";
 /** Panels in the left rail. Adjustment groups share their id with the group. */
 export type ToolId = AdjustmentGroupId | "looks" | "export";
 
-export type Tool = {
+export interface Tool {
   id: ToolId;
   label: string;
   Icon: typeof SunLight;
-};
+}
 
 /** Ordered the way a photographer works: look, then light, then finish. */
 export const TOOLS: Tool[] = [

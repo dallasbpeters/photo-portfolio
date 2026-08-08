@@ -77,7 +77,7 @@ export const formatBytes = (bytes: number): string =>
  * nothing. Uses a 2D canvas so the browser applies its own smoothing rather
  * than a nearest-neighbour GL blit.
  */
-export const encodeCanvas = async (
+export const encodeCanvas = (
   source: HTMLCanvasElement,
   settings: ExportSettings
 ): Promise<Blob | null> => {
@@ -99,7 +99,9 @@ export const encodeCanvas = async (
 
   const ctx = scaled.getContext("2d");
   if (!ctx) {
-    return null;
+    // Explicit, since this function is no longer async and cannot rely on the
+    // implicit promise wrap.
+    return Promise.resolve(null);
   }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";

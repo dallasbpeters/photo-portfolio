@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { createNeutralEdit, type EditState, fromDisplay } from "./adjustments";
 import { applyLookAtStrength, type Look } from "./presets";
 
-export type EditController = {
+export interface EditController {
   edit: EditState;
   activeLook: Look | null;
   lookStrength: number;
@@ -11,7 +11,7 @@ export type EditController = {
   chooseLook: (look: Look) => void;
   setLookStrength: (strength: number) => void;
   reset: () => void;
-};
+}
 
 /**
  * The edit itself, and the relationship between the sliders and the looks.

@@ -1,16 +1,12 @@
-import {
-  ADJUSTMENT_GROUPS,
-  type EditState,
-  toDisplay,
-} from "../adjustments";
+import { ADJUSTMENT_GROUPS, type EditState, toDisplay } from "../adjustments";
 import { EditorSlider } from "./EditorSlider";
 
-type AdjustmentPanelProps = {
-  groupId: string;
+interface AdjustmentPanelProps {
   edit: EditState;
+  groupId: string;
   isDisabled: boolean;
   onChange: (key: keyof EditState, display: number) => void;
-};
+}
 
 /** Sliders for one adjustment group, driven by the shared definitions. */
 export function AdjustmentPanel({
@@ -25,7 +21,7 @@ export function AdjustmentPanel({
   }
 
   return (
-    <div className="divide-white/[0.05] divide-y">
+    <div className="divide-y divide-white/[0.05]">
       {group.items.map((def) => (
         <EditorSlider
           centered={def.centered}

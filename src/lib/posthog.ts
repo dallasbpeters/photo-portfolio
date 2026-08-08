@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExportedImports: this module configures the singleton before re-exporting it, so `export from` would skip the init
 import posthog from "posthog-js";
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;

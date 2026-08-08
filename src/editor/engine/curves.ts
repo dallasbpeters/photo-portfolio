@@ -135,6 +135,9 @@ export const isIdentityCurve = (curve: ToneCurve | undefined): boolean =>
 
 // ── 3D LUT ────────────────────────────────────────────────────────────────────
 
+/** Largest cube accepted; a 64³ table is already 786kB of texture. */
+const MAX_LUT_SIZE = 64;
+
 // Hoisted out of the parse loop: these run once per line of a .cube file, which
 // is up to 262,144 lines for a 64³ table.
 const CUBE_COMMENT = /^#/;
@@ -153,68 +156,85 @@ export interface Lut {
   size: number;
 }
 
-/**
- * Parses an Adobe .cube file into a Hald layout the shader can sample.
- *
- * Supports LUT_3D_SIZE with RGB triplets, the format every grading tool
- * exports. 1D cubes are rejected rather than silently misread as 3D.
- */
-export const parseCubeLut = (
-  text: string
-): { lut: Lut } | { error: string } => {
-  const lines = text.split(CUBE_LINE_BREAK);
-  let size = 0;
-  const values: number[] = [];
-  let domainMin = [0, 0, 0];
-  let domainMax = [1, 1, 1];
+/** What a .cube file declares, before validation. */
+type CubeScan = {
+  size: number;
+  values: number[];
+  domainMin: number[];
+  domainMax: number[];
+  /** Set when the file declares itself 1D, which this cannot represent. */
+  is1d: boolean;
+};
 
-  for (const raw of lines) {
+/** Reads the header directives and the RGB triplets. Performs no validation. */
+const scanCube = (text: string): CubeScan => {
+  const scan: CubeScan = {
+    domainMax: [1, 1, 1],
+    domainMin: [0, 0, 0],
+    is1d: false,
+    size: 0,
+    values: [],
+  };
+
+  for (const raw of text.split(CUBE_LINE_BREAK)) {
     const line = raw.trim();
-    if (!line || CUBE_COMMENT.test(line)) {
-      continue;
-    }
-
-    if (CUBE_TITLE.test(line)) {
+    if (!line || CUBE_COMMENT.test(line) || CUBE_TITLE.test(line)) {
       continue;
     }
     if (CUBE_1D_SIZE.test(line)) {
-      return { error: "This is a 1D LUT. Only 3D .cube files are supported." };
+      scan.is1d = true;
+      return scan;
     }
     if (CUBE_3D_SIZE.test(line)) {
-      size = Number.parseInt(line.split(CUBE_WHITESPACE)[1] ?? "", 10);
+      scan.size = Number.parseInt(line.split(CUBE_WHITESPACE)[1] ?? "", 10);
       continue;
     }
     if (CUBE_DOMAIN_MIN.test(line)) {
-      domainMin = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
+      scan.domainMin = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
       continue;
     }
     if (CUBE_DOMAIN_MAX.test(line)) {
-      domainMax = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
+      scan.domainMax = line.split(CUBE_WHITESPACE).slice(1, 4).map(Number);
       continue;
     }
 
     const parts = line.split(CUBE_WHITESPACE).map(Number);
     if (parts.length >= 3 && parts.every((n) => Number.isFinite(n))) {
-      values.push(parts[0]!, parts[1]!, parts[2]!);
+      scan.values.push(parts[0]!, parts[1]!, parts[2]!);
     }
   }
 
-  if (!size || size < 2) {
-    return { error: "No LUT_3D_SIZE found in this file." };
+  return scan;
+};
+
+/** Returns the reason a scan cannot become a LUT, or null when it can. */
+const validateCube = (scan: CubeScan): string | null => {
+  if (scan.is1d) {
+    return "This is a 1D LUT. Only 3D .cube files are supported.";
   }
-  const expected = size * size * size * 3;
-  if (values.length !== expected) {
-    return {
-      error: `Expected ${expected / 3} entries for a ${size}³ LUT, found ${values.length / 3}.`,
-    };
+  if (!scan.size || scan.size < 2) {
+    return "No LUT_3D_SIZE found in this file.";
   }
   // A 64³ table is 786kB of texture; beyond that the gain is imperceptible.
-  if (size > 64) {
-    return { error: `LUT size ${size} is too large (max 64).` };
+  if (scan.size > MAX_LUT_SIZE) {
+    return `LUT size ${scan.size} is too large (max ${MAX_LUT_SIZE}).`;
   }
+  const expected = scan.size ** 3 * 3;
+  if (scan.values.length !== expected) {
+    return `Expected ${expected / 3} entries for a ${scan.size}³ LUT, found ${scan.values.length / 3}.`;
+  }
+  return null;
+};
 
-  // .cube iterates red fastest, then green, then blue.
-  const data = new Uint8Array(size * size * size * 4);
+/**
+ * Repacks the scanned triplets into the Hald layout the shader samples.
+ *
+ * .cube iterates red fastest then green then blue; Hald lays the blue slices
+ * left to right, so the shader can address one with a horizontal offset.
+ */
+const packHaldLut = (scan: CubeScan): Lut => {
+  const { size, values, domainMin, domainMax } = scan;
+  const data = new Uint8Array(size ** 3 * 4);
   const span = [
     domainMax[0]! - domainMin[0]!,
     domainMax[1]! - domainMin[1]!,
@@ -225,10 +245,7 @@ export const parseCubeLut = (
     for (let g = 0; g < size; g += 1) {
       for (let r = 0; r < size; r += 1) {
         const src = (b * size * size + g * size + r) * 3;
-        // Hald layout: tiles laid left to right by blue, so the shader can
-        // address a slice with a single horizontal offset.
-        const x = b * size + r;
-        const dst = (g * size * size + x) * 4;
+        const dst = (g * size * size + (b * size + r)) * 4;
         for (let c = 0; c < 3; c += 1) {
           const norm =
             span[c] === 0 ? 0 : (values[src + c]! - domainMin[c]!) / span[c]!;
@@ -239,5 +256,19 @@ export const parseCubeLut = (
     }
   }
 
-  return { lut: { data, size } };
+  return { data, size };
+};
+
+/**
+ * Parses an Adobe .cube file into a Hald layout the shader can sample.
+ *
+ * Supports LUT_3D_SIZE with RGB triplets, the format every grading tool
+ * exports. 1D cubes are rejected rather than silently misread as 3D.
+ */
+export const parseCubeLut = (
+  text: string
+): { lut: Lut } | { error: string } => {
+  const scan = scanCube(text);
+  const error = validateCube(scan);
+  return error ? { error } : { lut: packHaldLut(scan) };
 };

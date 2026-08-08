@@ -1,6 +1,6 @@
 import { Eye } from "iconoir-react";
 
-type EditorCanvasProps = {
+interface EditorCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   title: string;
   isReady: boolean;
@@ -10,7 +10,7 @@ type EditorCanvasProps = {
   canCompare: boolean;
   showOriginal: boolean;
   onCompareChange: (showing: boolean) => void;
-};
+}
 
 /** The photograph, its header, and the compare control. */
 export function EditorCanvas({
