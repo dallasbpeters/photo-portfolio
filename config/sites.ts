@@ -17,6 +17,16 @@
 export type SiteKey = "addison" | "cyan";
 
 export interface SiteConfig {
+  /**
+   * PostHog ingestion host — a per-site reverse proxy on the site's own domain,
+   * so analytics are first-party and survive tracking blockers.
+   *
+   * Must be the site's own subdomain: a proxy on another site's domain would be
+   * third-party again, defeating the point. Include the scheme, no trailing
+   * slash. This is only where events are *sent*; the project token still decides
+   * which PostHog project receives them.
+   */
+  analyticsHost: string;
   /** Address `pnpm db:seed` creates the first admin for. */
   defaultAdminEmail: string;
   /** Apex domain, no scheme. Also the PWA `id`. */
@@ -45,6 +55,7 @@ export interface SiteConfig {
 
 export const SITES: Record<SiteKey, SiteConfig> = {
   addison: {
+    analyticsHost: "https://t.addisonsphotos.com",
     defaultAdminEmail: "addisonrpeters@gmail.com",
     domain: "addisonsphotos.com",
     emailFrom: "Addison's Photos <noreply@addisonsphotos.com>",
@@ -60,6 +71,7 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     themeColor: "#000000",
   },
   cyan: {
+    analyticsHost: "https://t.cyansphotos.com",
     defaultAdminEmail: "admin@cyansphotos.com",
     domain: "cyansphotos.com",
     emailFrom: "Cyan's Photos <noreply@cyansphotos.com>",

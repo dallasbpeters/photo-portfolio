@@ -81,7 +81,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         orientation: "any",
         scope: "/",
         short_name: settings.shortName,
+        // An installed app has no address bar, so /admin is unreachable by
+        // typing once it is on a home screen. Long-pressing the icon exposes
+        // these, which is the only way back in on Android and desktop.
+        // iOS ignores shortcuts entirely — the footer link covers that.
         shortcuts: [
+          {
+            description: "Sign in to manage photos",
+            icons: [
+              {
+                sizes: "512x512",
+                src: `/sites/${site.key}/icon512_rounded.png`,
+                type: "image/png",
+              },
+            ],
+            name: "Admin",
+            short_name: "Admin",
+            url: "/admin",
+          },
           {
             description: "Public gallery",
             icons: [

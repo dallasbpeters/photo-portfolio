@@ -308,6 +308,16 @@ export const HomePage = () => {
               © {new Date().getFullYear()} {settings.ownerName}. All rights
               reserved.
             </p>
+            {/* The installed app has no address bar, and iOS ignores the
+                manifest's Admin shortcut, so this is the only way back into
+                the admin from a home-screen launch. The route is already
+                behind authentication — the link reveals nothing. */}
+            <Link
+              className="text-white/40 transition-colors hover:text-white"
+              to="/admin"
+            >
+              Admin
+            </Link>
           </div>
         </div>
       </footer>
