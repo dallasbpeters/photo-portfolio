@@ -29,7 +29,7 @@ export function ExportPanel({
   return (
     <div className="space-y-6 py-2">
       <section className="space-y-2">
-        <p className="text-[10px] text-white/35 uppercase tracking-[0.18em]">
+        <p className="text-[10px] text-white/90 uppercase tracking-[0.18em]">
           Format
         </p>
         <div className="grid grid-cols-3 gap-px bg-white/[0.06]">
@@ -38,7 +38,7 @@ export function ExportPanel({
               className={`bg-black py-2 text-[10px] uppercase tracking-[0.14em] transition-colors ${
                 settings.format === f.value
                   ? "text-white"
-                  : "text-white/30 hover:text-white/60"
+                  : "text-white/90 hover:text-white/90"
               }`}
               key={f.value}
               onClick={() => onChange({ ...settings, format: f.value })}
@@ -62,7 +62,7 @@ export function ExportPanel({
       )}
 
       <section className="space-y-2">
-        <p className="text-[10px] text-white/35 uppercase tracking-[0.18em]">
+        <p className="text-[10px] text-white/90 uppercase tracking-[0.18em]">
           Longest edge
         </p>
         <div className="grid grid-cols-5 gap-px bg-white/[0.06]">
@@ -71,7 +71,7 @@ export function ExportPanel({
               className={`bg-black py-2 font-mono text-[10px] tabular-nums transition-colors ${
                 settings.maxDimension === d
                   ? "text-white"
-                  : "text-white/30 hover:text-white/60"
+                  : "text-white/90 hover:text-white/90"
               }`}
               key={d}
               onClick={() => onChange({ ...settings, maxDimension: d })}
@@ -85,13 +85,13 @@ export function ExportPanel({
 
       <dl className="space-y-1.5 border-white/[0.06] border-t pt-4 text-[10px] uppercase tracking-[0.14em]">
         <div className="flex justify-between">
-          <dt className="text-white/30">Output</dt>
+          <dt className="text-white/90">Output</dt>
           <dd className="font-mono text-white/55 tabular-nums">
             {width} × {height}
           </dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-white/30">Size</dt>
+          <dt className="text-white/90">Size</dt>
           <dd
             className={`font-mono tabular-nums ${tooLarge ? "text-amber-400/90" : "text-white/55"}`}
           >

@@ -41,6 +41,7 @@ export const usePhotoSelection = (
 
   useEffect(() => {
     const indeterminate = someSelected && !allSelected;
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
     if (selectAllRef.current) {
       selectAllRef.current.indeterminate = indeterminate;
     }

@@ -85,7 +85,7 @@ export const CategoriesManageDialog = ({
           >
             <div className="min-w-0 flex-1">
               <span className="font-light text-white">{cat.label}</span>
-              <span className="ml-2 text-[10px] text-white/35 uppercase tracking-wider">
+              <span className="ml-2 text-[10px] text-white/90 uppercase tracking-wider">
                 {cat.slug}
               </span>
               <span className="ml-2 text-white/90 text-xs">
@@ -94,7 +94,7 @@ export const CategoriesManageDialog = ({
             </div>
             <Button
               aria-label={`Remove category ${cat.label}`}
-              className="shrink-0 text-white/90 hover:text-red-400 disabled:opacity-25"
+              className="shrink-0 text-white/90 hover:text-red-400 disabled:opacity-60"
               disabled={cat.photoCount > 0}
               onClick={() => void onDelete(cat)}
               size="icon"

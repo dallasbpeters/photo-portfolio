@@ -178,7 +178,7 @@ export const CategoryPicker = ({
               type="button"
             >
               <span>{cat.label}</span>
-              <span className="shrink-0 text-[10px] text-white/35 uppercase tracking-wider">
+              <span className="shrink-0 text-[10px] text-white/90 uppercase tracking-wider">
                 {cat.slug}
               </span>
             </button>

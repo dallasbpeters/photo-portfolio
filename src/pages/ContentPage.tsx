@@ -74,7 +74,7 @@ export function ContentPage() {
 
       <main className="mx-auto max-w-2xl px-8 py-16 md:py-24">
         {state === "loading" && (
-          <p className="text-[10px] text-white/25 uppercase tracking-[0.3em]">
+          <p className="text-[10px] text-white/80 uppercase tracking-[0.3em]">
             Loading
           </p>
         )}
@@ -84,7 +84,7 @@ export function ContentPage() {
             <h1 className="font-light text-2xl uppercase tracking-[0.24em]">
               Page not found
             </h1>
-            <p className="text-[13px] text-white/45 leading-relaxed">
+            <p className="text-[13px] text-white/90 leading-relaxed">
               This page may have been moved, renamed, or not published yet.
             </p>
             <Link
@@ -102,7 +102,7 @@ export function ContentPage() {
               <ol className="flex flex-wrap items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em]">
                 <li>
                   <Link
-                    className="transition-colors hover:text-white/70"
+                    className="transition-colors hover:text-white/90"
                     to="/"
                   >
                     {settings.shortName}
@@ -137,7 +137,7 @@ export function ContentPage() {
       </main>
 
       <footer className="border-white/5 border-t px-8 py-12 md:px-24">
-        <p className="text-[10px] text-white/20 uppercase tracking-[0.3em]">
+        <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
           © {new Date().getFullYear()} {settings.ownerName}
         </p>
       </footer>

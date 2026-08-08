@@ -20,8 +20,12 @@ export function LooksPanel({
   // Opens on the active look's family so returning to the panel lands where the
   // photograph already is.
   const [openFamily, setOpenFamily] = useState<string>(active?.family ?? "a");
-  const family =
-    LOOK_FAMILIES.find((f) => f.id === openFamily) ?? LOOK_FAMILIES[0]!;
+  const family = LOOK_FAMILIES.find((f) => f.id === openFamily);
+  if (!family) {
+    // LOOK_FAMILIES is a non-empty literal, so this is unreachable — but it is
+    // cheaper to return than to assert the compiler into agreeing.
+    return null;
+  }
 
   return (
     <div className="space-y-5 py-1">
@@ -30,77 +34,70 @@ export function LooksPanel({
         {LOOK_FAMILIES.map((f) => {
           const isOpen = f.id === family.id;
           const holdsActive = active?.family === f.id;
-          // Open, holds the current look, or idle — clearer named than nested.
-          let swatchOpacity = 0.28;
-          if (isOpen) {
-            swatchOpacity = 1;
-          } else if (holdsActive) {
-            swatchOpacity = 0.7;
-          }
           return (
             <button
               aria-pressed={isOpen}
-              className={`flex flex-1 flex-col items-center gap-1.5 bg-black py-2.5 transition-colors ${
-                isOpen ? "text-white" : "text-white/30 hover:text-white/60"
+              className={`relative flex flex-1 flex-col items-center gap-1.5 py-2.5 transition-all ${
+                isOpen ? "" : "opacity-55 hover:opacity-80"
               }`}
               key={f.id}
               onClick={() => setOpenFamily(f.id)}
+              style={{
+                backgroundColor: `${f.color}`,
+                color: `${f.contrastColor}`,
+              }}
               title={`${f.name} — ${f.description}`}
               type="button"
             >
               <span className="font-mono text-[11px] tracking-wider">
                 {f.letter}
               </span>
-              <span
-                aria-hidden
-                className="h-[3px] w-4 rounded-full transition-opacity"
-                style={{
-                  backgroundColor: f.color,
-                  opacity: swatchOpacity,
-                }}
-              />
+              {/* Marks the family holding the selected look when its panel is
+                  closed, so the current grade stays findable in the rail. */}
+              {holdsActive && !isOpen ? (
+                <span
+                  aria-hidden
+                  className="absolute bottom-1 size-1 rounded-full"
+                  style={{ backgroundColor: f.contrastColor }}
+                />
+              ) : null}
             </button>
           );
         })}
       </div>
 
       <div>
-        <p className="pb-2 text-[10px] text-white/35 uppercase tracking-[0.18em]">
+        <p className="pb-2 text-[10px] text-white/90 uppercase tracking-[0.18em]">
           {family.name}
-          <span className="ml-2 text-white/20 normal-case tracking-normal">
+          <span className="ml-2 text-white/90 normal-case tracking-normal">
             {family.description}
           </span>
         </p>
 
-        <div className="grid grid-cols-4 gap-px bg-white/[0.06]">
+        <div className="grid grid-cols-4 gap-px bg-white/6">
           {looksInFamily(family.id).map((look) => {
             const isActive = active?.id === look.id;
             return (
               <button
                 className={`flex aspect-square flex-col items-center justify-center gap-1 bg-black transition-colors duration-200 ${
-                  isActive ? "text-white" : "text-white/30 hover:text-white/70"
+                  isActive ? "text-white" : "text-white/90 hover:text-white/90"
                 }`}
                 key={look.id}
                 onClick={() => onChoose(look)}
                 style={
-                  isActive
-                    ? { backgroundColor: `${family.color}14` }
-                    : undefined
+                  isActive ? { backgroundColor: `${family.color}` } : undefined
                 }
                 title={look.name}
                 type="button"
               >
-                <span className="font-mono text-[11px] tracking-wider">
+                <span
+                  className="font-mono text-[11px] tracking-wider"
+                  style={{
+                    color: isActive ? `${family.contrastColor}` : "#FFFFFF",
+                  }}
+                >
                   {look.code}
                 </span>
-                <span
-                  aria-hidden
-                  className="h-px w-3 transition-opacity"
-                  style={{
-                    backgroundColor: family.color,
-                    opacity: isActive ? 1 : 0,
-                  }}
-                />
               </button>
             );
           })}
@@ -108,7 +105,7 @@ export function LooksPanel({
       </div>
 
       {active ? (
-        <div className="border-white/[0.06] border-t pt-1">
+        <div className="border-white/6 border-t pt-1">
           <EditorSlider
             label={`${active.code} · ${active.name}`}
             max={100}

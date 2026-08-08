@@ -70,7 +70,7 @@ const LoginScreen = ({
 }: LoginScreenProps) => (
   <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
     <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-      <Shield aria-hidden className="size-10 text-white/20 sm:size-12" />
+      <Shield aria-hidden className="size-10 text-white/90 sm:size-12" />
     </div>
     <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
       Admin Access
@@ -173,7 +173,7 @@ const AddItemForm = ({
             <input
               accept="image/jpeg,image/png,image/webp,image/gif"
               aria-label="Upload image from device"
-              className="min-h-11 w-full text-[11px] text-white/70 file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2.5 file:font-medium file:text-[10px] file:text-white/90 file:uppercase file:tracking-widest hover:file:bg-white/15"
+              className="min-h-11 w-full text-[11px] text-white/90 file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2.5 file:font-medium file:text-[10px] file:text-white/90 file:uppercase file:tracking-widest hover:file:bg-white/15"
               id="add-image-file"
               onChange={(e) =>
                 newPhoto.setUploadDraftFile(e.target.files?.[0] ?? null)
@@ -183,14 +183,14 @@ const AddItemForm = ({
               type="file"
             />
             {newPhoto.uploadDraftFile ? (
-              <p className="flex items-center gap-1 text-[10px] text-white/45">
+              <p className="flex items-center gap-1 text-[10px] text-white/90">
                 <Upload aria-hidden className="shrink-0 opacity-70" size={12} />
                 <span className="truncate">
                   {newPhoto.uploadDraftFile.name}
                 </span>
               </p>
             ) : (
-              <p className="text-[10px] text-white/35">
+              <p className="text-[10px] text-white/90">
                 JPEG, PNG, WebP, or GIF (max 8MB).
               </p>
             )}
@@ -419,7 +419,7 @@ const CategoryStack = ({ group, groupIdx, selection }: CategoryStackProps) => {
               />
             </div>
           ))}
-          <div className="absolute right-2 bottom-2 z-20 rounded-full bg-black/70 px-2 py-0.5 font-medium text-[9px] text-white/70 uppercase tracking-widest backdrop-blur-sm">
+          <div className="absolute right-2 bottom-2 z-20 rounded-full bg-black/70 px-2 py-0.5 font-medium text-[9px] text-white/90 uppercase tracking-widest backdrop-blur-sm">
             {group.photos.length}
           </div>
         </button>

@@ -220,7 +220,7 @@ const JournalForm = ({
       onSubmit={(e) => void journal.handleSave(e)}
     >
       <Label
-        className="text-[10px] text-white/35 uppercase tracking-widest"
+        className="text-[10px] text-white/90 uppercase tracking-widest"
         htmlFor={`journal-${entry.challenge.challengeDate}`}
       >
         Your thoughts
@@ -228,7 +228,7 @@ const JournalForm = ({
       <textarea
         className={cn(
           "w-full resize-y rounded border border-white/10 bg-black/40 px-3 py-2 text-sm text-white",
-          "placeholder:text-white/25 focus:border-white/35 focus:outline-none focus:ring-1 focus:ring-white/15"
+          "placeholder:text-white/80 focus:border-white/35 focus:outline-none focus:ring-1 focus:ring-white/15"
         )}
         id={`journal-${entry.challenge.challengeDate}`}
         maxLength={20_000}
@@ -239,7 +239,7 @@ const JournalForm = ({
         value={journal.text}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[9px] text-white/25">
+        <p className="text-[9px] text-white/80">
           {journal.text.length.toLocaleString()} / 20,000
           <JournalSavedAt journal={entry.journal} />
         </p>
@@ -310,7 +310,7 @@ const HistoryEntryCredits = ({
     return null;
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-white/35">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-white/90">
       <PhotographerCredit challenge={challenge} />
       {challenge.unsplashHtmlLink ? (
         <a
@@ -482,12 +482,12 @@ const TodayPhoto = ({ challenge }: { challenge: DailyChallengeInfo }) => (
         src={challenge.imageUrl}
       />
     </a>
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/45">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-white/90">
       <span>
         Photo by{" "}
         {challenge.photographerUsername ? (
           <a
-            className="text-white/70 underline-offset-2 hover:text-white hover:underline"
+            className="text-white/90 underline-offset-2 hover:text-white hover:underline"
             href={`https://unsplash.com/@${challenge.photographerUsername}`}
             rel="noreferrer noopener"
             target="_blank"
@@ -544,7 +544,7 @@ const TodayJournalForm = ({
       <p className="text-[9px] text-white/90">
         {today.thoughts.length.toLocaleString()} / 20,000
         {today.journal?.updatedAt ? (
-          <span className="ml-2 text-white/25">
+          <span className="ml-2 text-white/80">
             · Saved {new Date(today.journal.updatedAt).toLocaleString()}
           </span>
         ) : null}
@@ -707,7 +707,7 @@ export const DailyChallengePanel = () => {
             <Sparkles aria-hidden className="size-4 text-amber-200/80" />
             Daily challenge
           </CardTitle>
-          <p className="text-[10px] text-white/35 uppercase tracking-widest">
+          <p className="text-[10px] text-white/90 uppercase tracking-widest">
             Inspiration from Unsplash (UTC day). Your notes are private.
           </p>
         </div>

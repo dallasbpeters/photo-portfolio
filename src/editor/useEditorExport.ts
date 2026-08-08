@@ -14,12 +14,12 @@ import {
 const ESTIMATE_DELAY_MS = 350;
 
 export interface EditorExport {
-  settings: ExportSettings;
-  setSettings: (next: ExportSettings) => void;
   /** Encoded size in bytes, or null before the first estimate lands. */
   estimatedSize: number | null;
   isSaving: boolean;
   save: () => Promise<void>;
+  setSettings: (next: ExportSettings) => void;
+  settings: ExportSettings;
 }
 
 /**

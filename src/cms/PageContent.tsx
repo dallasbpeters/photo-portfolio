@@ -112,7 +112,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
     case "paragraph":
       return (
         <p
-          className={`mb-5 text-[15px] text-white/70 leading-[1.75] ${alignClass(node.attrs)}`}
+          className={`mb-5 text-[15px] text-white/90 leading-[1.75] ${alignClass(node.attrs)}`}
         >
           {renderNodes(node.content, key)}
         </p>
@@ -136,14 +136,14 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "bulletList":
       return (
-        <ul className="mb-5 list-disc space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/90">
+        <ul className="mb-5 list-disc space-y-2 pl-5 text-[15px] text-white/90 leading-[1.75] marker:text-white/90">
           {renderNodes(node.content, key)}
         </ul>
       );
 
     case "orderedList":
       return (
-        <ol className="mb-5 list-decimal space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/90">
+        <ol className="mb-5 list-decimal space-y-2 pl-5 text-[15px] text-white/90 leading-[1.75] marker:text-white/90">
           {renderNodes(node.content, key)}
         </ol>
       );
@@ -160,7 +160,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "codeBlock":
       return (
-        <pre className="mb-6 overflow-x-auto border border-white/10 bg-white/[0.03] p-4 font-mono text-[12px] text-white/70">
+        <pre className="mb-6 overflow-x-auto border border-white/10 bg-white/[0.03] p-4 font-mono text-[12px] text-white/90">
           <code>{renderNodes(node.content, key)}</code>
         </pre>
       );
@@ -188,7 +188,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
             src={src}
           />
           {alt ? (
-            <figcaption className="mt-2 text-[10px] text-white/25 uppercase tracking-[0.18em]">
+            <figcaption className="mt-2 text-[10px] text-white/80 uppercase tracking-[0.18em]">
               {alt}
             </figcaption>
           ) : null}
@@ -210,7 +210,7 @@ export function PageContent({ doc }: { doc: unknown }) {
     root.content.length === 0
   ) {
     return (
-      <p className="text-[11px] text-white/25 uppercase tracking-[0.2em]">
+      <p className="text-[11px] text-white/80 uppercase tracking-[0.2em]">
         This page has no content yet.
       </p>
     );

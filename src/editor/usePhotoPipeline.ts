@@ -4,10 +4,10 @@ import { PhotoPipeline } from "./engine/pipeline";
 
 export interface PipelineState {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  dimensions: { width: number; height: number };
   /** True once the image is decoded and the first frame has rendered. */
   isReady: boolean;
   loadError: string | null;
-  dimensions: { width: number; height: number };
   /** Renders an edit immediately, outside the normal effect. */
   render: (edit: EditState) => void;
 }
@@ -34,6 +34,7 @@ export const usePhotoPipeline = (
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
     if (!canvas) {
       return;
     }

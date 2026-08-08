@@ -121,7 +121,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               {options?.title}
             </DialogTitle>
             {options?.description ? (
-              <DialogDescription className="text-[12px] text-white/45 leading-relaxed">
+              <DialogDescription className="text-[12px] text-white/90 leading-relaxed">
                 {options.description}
               </DialogDescription>
             ) : null}
@@ -166,7 +166,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               {promptOptions?.title}
             </DialogTitle>
             {promptOptions?.description ? (
-              <DialogDescription className="text-[12px] text-white/45 leading-relaxed">
+              <DialogDescription className="text-[12px] text-white/90 leading-relaxed">
                 {promptOptions.description}
               </DialogDescription>
             ) : null}

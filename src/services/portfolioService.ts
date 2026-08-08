@@ -93,7 +93,7 @@ const getStoredUser = (): AuthenticatedUser | null => {
   }
 
   try {
-    const payload = token.split(".")[1];
+    const [, payload] = token.split(".");
     if (!payload) {
       return null;
     }

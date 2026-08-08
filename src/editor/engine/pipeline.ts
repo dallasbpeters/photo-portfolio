@@ -78,7 +78,7 @@ export class PhotoPipeline {
     width: number,
     height: number
   ): void {
-    const gl = this.gl;
+    const { gl } = this;
 
     this.imageWidth = width;
     this.imageHeight = height;
@@ -108,10 +108,11 @@ export class PhotoPipeline {
    * applied repeatedly without re-sending the table.
    */
   registerLut(id: string, lut: Lut): void {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: disposed is set in dispose(), which the checker does not fold into this branch
     if (this.disposed || this.lutTextures.has(id)) {
       return;
     }
-    const gl = this.gl;
+    const { gl } = this;
     const texture = this.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     // NEAREST on the vertical axis would band; the shader interpolates the
@@ -137,7 +138,7 @@ export class PhotoPipeline {
 
   /** Rebuilds the 256x1 curve texture, skipping the work when nothing changed. */
   private syncCurve(edit: EditState): void {
-    const gl = this.gl;
+    const { gl } = this;
     const key =
       edit.curveAmount > 0 && edit.curve ? JSON.stringify(edit.curve) : "";
     if (key === this.curveKey && this.curveTexture) {
@@ -150,7 +151,10 @@ export class PhotoPipeline {
     }
     // An identity ramp keeps the sampler valid when no curve is active, so the
     // shader never reads an unbound texture.
-    const data = key ? buildCurveTexture(edit.curve!) : buildCurveTexture({});
+    // `key` is only non-empty when edit.curve exists, but narrow on the value
+    // itself so the compiler agrees rather than being told to.
+    const data =
+      edit.curve && key ? buildCurveTexture(edit.curve) : buildCurveTexture({});
 
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -170,10 +174,11 @@ export class PhotoPipeline {
   // ── Render ────────────────────────────────────────────────────────────────
 
   render(edit: EditState): void {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: disposed is set in dispose(), which the checker does not fold into this branch
     if (this.disposed || !this.sourceTexture) {
       return;
     }
-    const gl = this.gl;
+    const { gl } = this;
 
     // Blur radius scales with the effects that consume it, so a neutral edit
     // does the cheapest possible blur rather than a wasted wide one.
@@ -288,11 +293,12 @@ export class PhotoPipeline {
   }
 
   dispose(): void {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: disposed is set in dispose(), which the checker does not fold into this branch
     if (this.disposed) {
       return;
     }
     this.disposed = true;
-    const gl = this.gl;
+    const { gl } = this;
     this.deleteTexture(this.sourceTexture);
     this.deleteTexture(this.curveTexture);
     for (const { texture } of this.lutTextures.values()) {
@@ -311,7 +317,7 @@ export class PhotoPipeline {
   // ── Internals ─────────────────────────────────────────────────────────────
 
   private buildProgram(vertexSrc: string, fragmentSrc: string): WebGLProgram {
-    const gl = this.gl;
+    const { gl } = this;
     const program = gl.createProgram();
     if (!program) {
       throw new Error("Could not allocate shader program");
@@ -334,7 +340,7 @@ export class PhotoPipeline {
   }
 
   private compile(type: number, source: string): WebGLShader {
-    const gl = this.gl;
+    const { gl } = this;
     const shader = gl.createShader(type);
     if (!shader) {
       throw new Error("Could not allocate shader");
@@ -350,7 +356,7 @@ export class PhotoPipeline {
   }
 
   private createTexture(): WebGLTexture {
-    const gl = this.gl;
+    const { gl } = this;
     const texture = gl.createTexture();
     if (!texture) {
       throw new Error("Could not allocate texture");
@@ -368,7 +374,7 @@ export class PhotoPipeline {
     width: number,
     height: number
   ): { texture: WebGLTexture; fbo: WebGLFramebuffer } {
-    const gl = this.gl;
+    const { gl } = this;
     const texture = this.createTexture();
     gl.texImage2D(
       gl.TEXTURE_2D,
@@ -403,13 +409,13 @@ export class PhotoPipeline {
     width: number,
     height: number
   ): void {
-    const gl = this.gl;
+    const { gl } = this;
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.viewport(0, 0, width, height);
   }
 
   private bindQuad(program: WebGLProgram): void {
-    const gl = this.gl;
+    const { gl } = this;
     const attr = gl.getAttribLocation(program, "aPosition");
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
     gl.enableVertexAttribArray(attr);
@@ -422,7 +428,7 @@ export class PhotoPipeline {
     texture: WebGLTexture | null,
     unit: number
   ): void {
-    const gl = this.gl;
+    const { gl } = this;
     gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1i(this.loc(program, name), unit);
@@ -442,7 +448,7 @@ export class PhotoPipeline {
   }
 
   private releaseTargets(): void {
-    const gl = this.gl;
+    const { gl } = this;
     this.deleteTexture(this.pingTexture);
     this.deleteTexture(this.pongTexture);
     if (this.pingFbo) {

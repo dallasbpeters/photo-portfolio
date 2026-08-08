@@ -43,7 +43,7 @@ export function ForgotPasswordForm({
     return (
       <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
         <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-          <Mail aria-hidden className="size-10 text-white/20 sm:size-12" />
+          <Mail aria-hidden className="size-10 text-white/90 sm:size-12" />
         </div>
         <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
           Check your email
@@ -68,7 +68,7 @@ export function ForgotPasswordForm({
   return (
     <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
       <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-        <Mail aria-hidden className="size-10 text-white/20 sm:size-12" />
+        <Mail aria-hidden className="size-10 text-white/90 sm:size-12" />
       </div>
       <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
         Reset password

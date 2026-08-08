@@ -157,7 +157,7 @@ export function GoogleSignInButton({ onSignedIn }: GoogleSignInButtonProps) {
     <div className="w-full max-w-sm space-y-3">
       <div aria-hidden className="flex items-center gap-3">
         <span className="h-px flex-1 bg-white/10" />
-        <span className="text-[9px] text-white/25 uppercase tracking-[0.3em]">
+        <span className="text-[9px] text-white/80 uppercase tracking-[0.3em]">
           or
         </span>
         <span className="h-px flex-1 bg-white/10" />

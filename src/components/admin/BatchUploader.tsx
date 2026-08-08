@@ -256,7 +256,7 @@ export function BatchUploader({
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         {items.length > 0 ? (
           <button
-            className="text-[10px] text-white/35 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:opacity-30"
+            className="text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:opacity-30"
             disabled={isRunning}
             onClick={() => setItems([])}
             type="button"
@@ -306,7 +306,7 @@ export function BatchUploader({
           <p className="text-[11px] text-white/90 uppercase tracking-[0.18em]">
             Drop photos here
           </p>
-          <p className="text-[10px] text-white/25">
+          <p className="text-[10px] text-white/80">
             or click to browse — JPEG, PNG, WebP, AVIF, GIF
           </p>
         </button>
@@ -379,14 +379,14 @@ export function BatchUploader({
                     ) : null}
                   </div>
 
-                  <span className="shrink-0 font-mono text-[10px] text-white/25 tabular-nums">
+                  <span className="shrink-0 font-mono text-[10px] text-white/80 tabular-nums">
                     {(item.file.size / 1024 / 1024).toFixed(1)}MB
                   </span>
 
                   {!isRunning && item.status !== "done" ? (
                     <button
                       aria-label={`Remove ${item.file.name}`}
-                      className="shrink-0 text-white/25 transition-colors hover:text-white"
+                      className="shrink-0 text-white/80 transition-colors hover:text-white"
                       onClick={() =>
                         setItems((prev) => prev.filter((i) => i.id !== item.id))
                       }
@@ -410,7 +410,7 @@ export function BatchUploader({
                 {isRunning ? "Uploading…" : `Upload ${pendingCount}`}
               </Button>
               {doneCount > 0 ? (
-                <span className="text-[10px] text-white/35 uppercase tracking-[0.16em]">
+                <span className="text-[10px] text-white/90 uppercase tracking-[0.16em]">
                   {doneCount} of {items.length} done
                 </span>
               ) : null}

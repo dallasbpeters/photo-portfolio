@@ -119,7 +119,7 @@ export function PagesPanel() {
   return (
     <Card className="border-white/10 bg-white/[0.02]">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/70 uppercase tracking-[0.2em]">
+        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
           <FileText aria-hidden size={16} />
           Pages
         </CardTitle>
@@ -153,7 +153,7 @@ export function PagesPanel() {
                 value={newTitle}
               />
               {newTitle.trim() ? (
-                <p className="font-mono text-[10px] text-white/25">
+                <p className="font-mono text-[10px] text-white/80">
                   /{slugify(newTitle)}
                 </p>
               ) : null}
@@ -170,7 +170,7 @@ export function PagesPanel() {
         ) : null}
 
         {pages.length === 0 ? (
-          <p className="text-[11px] text-white/25 uppercase tracking-[0.15em]">
+          <p className="text-[11px] text-white/80 uppercase tracking-[0.15em]">
             No pages yet. Create one and it appears under the site title once
             published.
           </p>
@@ -184,7 +184,7 @@ export function PagesPanel() {
                   type="button"
                 >
                   <span className="text-sm text-white/85">{page.title}</span>
-                  <span className="ml-2 font-mono text-[10px] text-white/25">
+                  <span className="ml-2 font-mono text-[10px] text-white/80">
                     /{page.slug}
                   </span>
                 </button>
@@ -198,7 +198,7 @@ export function PagesPanel() {
                 </a>
                 <button
                   aria-label={`Delete ${page.title}`}
-                  className="text-white/25 transition-colors hover:text-red-400"
+                  className="text-white/80 transition-colors hover:text-red-400"
                   onClick={() => void handleDelete(page)}
                   type="button"
                 >
@@ -252,7 +252,7 @@ function PageEditorPanel({
   return (
     <Card className="border-white/10 bg-white/[0.02]">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/70 uppercase tracking-[0.2em]">
+        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
           <FileText aria-hidden size={16} />
           {draft.title}
         </CardTitle>

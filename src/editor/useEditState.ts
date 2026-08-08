@@ -3,14 +3,14 @@ import { createNeutralEdit, type EditState, fromDisplay } from "./adjustments";
 import { applyLookAtStrength, type Look } from "./presets";
 
 export interface EditController {
-  edit: EditState;
   activeLook: Look | null;
+  chooseLook: (look: Look) => void;
+  edit: EditState;
   lookStrength: number;
+  reset: () => void;
+  setLookStrength: (strength: number) => void;
   /** Sets one adjustment from its slider value (-100..100). */
   setValue: (key: keyof EditState, display: number) => void;
-  chooseLook: (look: Look) => void;
-  setLookStrength: (strength: number) => void;
-  reset: () => void;
 }
 
 /**

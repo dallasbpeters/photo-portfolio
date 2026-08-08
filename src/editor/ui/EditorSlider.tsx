@@ -49,6 +49,7 @@ export function EditorSlider({
   const valueFromClientX = useCallback(
     (clientX: number): number => {
       const track = trackRef.current;
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
       if (!track) {
         return value;
       }
@@ -116,7 +117,7 @@ export function EditorSlider({
       <div className="flex items-baseline justify-between pb-2">
         <span
           className={`text-[10px] uppercase tracking-[0.18em] transition-colors duration-200 ${
-            isActive ? "text-white/70" : "text-white/35"
+            isActive ? "text-white/90" : "text-white/90"
           }`}
         >
           {label}
@@ -131,10 +132,10 @@ export function EditorSlider({
       </div>
 
       <div
+        aria-disabled={isDisabled}
         aria-label={label}
         aria-valuemax={max}
         aria-valuemin={min}
-        aria-disabled={isDisabled}
         aria-valuenow={value}
         className={`relative h-4 touch-none focus:outline-none ${
           isDisabled ? "pointer-events-none opacity-40" : "cursor-pointer"

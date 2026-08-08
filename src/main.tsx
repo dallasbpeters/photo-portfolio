@@ -5,7 +5,12 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerServiceWorker } from "./lib/registerServiceWorker";
 
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  throw new Error("Missing #root element — index.html did not load correctly.");
+}
+
+createRoot(rootElement).render(
   <StrictMode>
     <App />
   </StrictMode>

@@ -84,10 +84,12 @@ export const useNewPhoto = (
       });
       await reload();
       setUploadDraftFile(null);
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
       if (imageFileInputRef.current) {
         imageFileInputRef.current.value = "";
       }
       setForm((prev) => ({ categoryId: prev.categoryId, title: "" }));
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
       if (highlightTimerRef.current) {
         clearTimeout(highlightTimerRef.current);
       }

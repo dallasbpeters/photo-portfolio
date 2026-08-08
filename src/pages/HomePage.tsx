@@ -303,7 +303,7 @@ export const HomePage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 text-[10px] text-white/20 uppercase tracking-[0.3em]">
+          <div className="flex flex-col gap-4 text-[10px] text-white/90 uppercase tracking-[0.3em]">
             <p>
               © {new Date().getFullYear()} {settings.ownerName}. All rights
               reserved.
@@ -319,7 +319,7 @@ export const HomePage = () => {
         <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-6 rounded-xl border border-white/10 bg-white/5 px-8 py-3 shadow-2xl backdrop-blur-xl">
           <button
             aria-pressed={viewMode === "all"}
-            className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === "all" ? "text-white" : "text-white/90 hover:text-white/70"}`}
+            className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === "all" ? "text-white" : "text-white/90 hover:text-white/90"}`}
             onClick={() => handleFilterClick("all")}
             type="button"
           >
@@ -332,7 +332,7 @@ export const HomePage = () => {
             return (
               <button
                 aria-pressed={viewMode === category}
-                className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === category ? "text-white" : "text-white/90 hover:text-white/70"}`}
+                className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === category ? "text-white" : "text-white/90 hover:text-white/90"}`}
                 key={category}
                 onClick={() => handleFilterClick(category)}
                 type="button"

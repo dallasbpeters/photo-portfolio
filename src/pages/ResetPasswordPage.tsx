@@ -70,7 +70,7 @@ export function ResetPasswordPage() {
             <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
               <KeyRound
                 aria-hidden
-                className="size-10 text-white/20 sm:size-12"
+                className="size-10 text-white/90 sm:size-12"
               />
             </div>
             <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl">
@@ -138,7 +138,7 @@ export function ResetPasswordPage() {
             <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
               <ShieldAlert
                 aria-hidden
-                className="size-10 text-white/20 sm:size-12"
+                className="size-10 text-white/90 sm:size-12"
               />
             </div>
             <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl">

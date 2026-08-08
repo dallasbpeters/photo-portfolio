@@ -13,9 +13,9 @@ import type { AdjustmentGroupId } from "../adjustments";
 export type ToolId = AdjustmentGroupId | "looks" | "export";
 
 export interface Tool {
+  Icon: typeof SunLight;
   id: ToolId;
   label: string;
-  Icon: typeof SunLight;
 }
 
 /** Ordered the way a photographer works: look, then light, then finish. */

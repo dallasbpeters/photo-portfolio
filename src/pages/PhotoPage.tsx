@@ -97,7 +97,7 @@ export function PhotoPage() {
 
       <main className="px-4 py-10 md:px-16">
         {state === "loading" && (
-          <p className="text-[10px] text-white/25 uppercase tracking-[0.3em]">
+          <p className="text-[10px] text-white/80 uppercase tracking-[0.3em]">
             Loading
           </p>
         )}
@@ -139,7 +139,7 @@ export function PhotoPage() {
                   {photo.title}
                 </h1>
                 <Link
-                  className="inline-block text-[10px] text-white/35 uppercase tracking-[0.18em] transition-colors hover:text-white"
+                  className="inline-block text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
                   to="/"
                 >
                   {photo.categoryLabel}
@@ -185,7 +185,7 @@ export function PhotoPage() {
               <dl className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-white/[0.07] border-t pt-5">
                 {exifParts.map((part) => (
                   <dd
-                    className="font-mono text-[10px] text-white/35 tracking-[0.08em]"
+                    className="font-mono text-[10px] text-white/90 tracking-[0.08em]"
                     key={part}
                   >
                     {part}
@@ -198,7 +198,7 @@ export function PhotoPage() {
       </main>
 
       <footer className="border-white/5 border-t px-8 py-10 md:px-16">
-        <p className="text-[10px] text-white/20 uppercase tracking-[0.3em]">
+        <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
           © {new Date().getFullYear()} {settings.ownerName}
         </p>
       </footer>

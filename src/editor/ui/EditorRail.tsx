@@ -1,10 +1,10 @@
 import { Xmark } from "iconoir-react";
-import { type Tool, TOOLS, type ToolId } from "./tools";
+import { TOOLS, type Tool, type ToolId } from "./tools";
 
 interface EditorRailProps {
   active: ToolId;
-  onSelect: (id: ToolId) => void;
   onClose: () => void;
+  onSelect: (id: ToolId) => void;
 }
 
 /** Left rail: close, then one icon per panel. */
@@ -13,7 +13,7 @@ export function EditorRail({ active, onSelect, onClose }: EditorRailProps) {
     <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-white/[0.07] border-r py-4">
       <button
         aria-label="Close editor"
-        className="mb-4 flex size-9 items-center justify-center text-white/35 transition-colors hover:text-white"
+        className="mb-4 flex size-9 items-center justify-center text-white/90 transition-colors hover:text-white"
         onClick={onClose}
         type="button"
       >
@@ -27,7 +27,7 @@ export function EditorRail({ active, onSelect, onClose }: EditorRailProps) {
           className={`relative flex size-9 items-center justify-center transition-colors duration-200 ${
             active === tool.id
               ? "text-white"
-              : "text-white/30 hover:text-white/60"
+              : "text-white/90 hover:text-white/90"
           }`}
           key={tool.id}
           onClick={() => onSelect(tool.id)}

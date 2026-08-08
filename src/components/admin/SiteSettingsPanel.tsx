@@ -132,7 +132,7 @@ export function SiteSettingsPanel() {
   return (
     <Card className="border-white/10 bg-white/[0.02]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/70 uppercase tracking-[0.2em]">
+        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
           <Palette aria-hidden size={16} />
           Site settings
         </CardTitle>
@@ -155,7 +155,7 @@ export function SiteSettingsPanel() {
                   value={draft[field.key]}
                 />
                 {field.hint ? (
-                  <p className="text-[10px] text-white/25">{field.hint}</p>
+                  <p className="text-[10px] text-white/80">{field.hint}</p>
                 ) : null}
               </div>
             ))}

@@ -84,7 +84,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // intercepting proxy — must not take the site down. applyTheme reads
       // theme.background directly, so an absent theme would throw during
       // render and leave a blank page.
-      if (!fetched?.theme) {
+      if (!fetched.theme) {
         throw new Error("Site settings response is missing a theme");
       }
       setSettings(fetched);
