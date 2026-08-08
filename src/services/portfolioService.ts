@@ -1,28 +1,41 @@
-import type { Category, DailyChallengeHistoryEntry, DailyChallengeJournal, DailyChallengeResponse, Photo } from '../types';
-import type { ResolvedSiteSettings } from '../../config/siteSettings';
+import type { ResolvedSiteSettings } from "../../config/siteSettings";
+import type {
+  Category,
+  DailyChallengeHistoryEntry,
+  DailyChallengeJournal,
+  DailyChallengeResponse,
+  Photo,
+} from "../types";
 
 const apiBase = (): string => {
   // Dev: always same-origin. Vite proxies /api → vercel dev :3000.
   // Port 3000 (vercel) hits its own handlers directly. Either port works.
-  if (import.meta.env.DEV) return '';
+  if (import.meta.env.DEV) {
+    return "";
+  }
   const raw = import.meta.env.VITE_API_BASE_URL;
-  if (raw == null || String(raw).trim() === '') return '';
-  return String(raw).replace(/\/$/, '');
+  if (raw === null || String(raw).trim() === "") {
+    return "";
+  }
+  return String(raw).replace(/\/$/, "");
 };
 
 const photosPath = (): string => `${apiBase()}/api/photos`;
 const categoriesPath = (): string => `${apiBase()}/api/categories`;
 const uploadPath = (): string => `${apiBase()}/api/upload`;
 const dailyChallengePath = (): string => `${apiBase()}/api/daily-challenge`;
-const dailyChallengeHistoryPath = (): string => `${apiBase()}/api/daily-challenge/history`;
+const dailyChallengeHistoryPath = (): string =>
+  `${apiBase()}/api/daily-challenge/history`;
 
 /** Persists across iOS PWA launches; sessionStorage did not. */
-const ADMIN_TOKEN_KEY = 'cyan_admin_token';
+const ADMIN_TOKEN_KEY = "cyan_admin_token";
 
 const readStoredToken = (): string | null => {
   try {
     const persisted = localStorage.getItem(ADMIN_TOKEN_KEY);
-    if (persisted) return persisted;
+    if (persisted) {
+      return persisted;
+    }
     const legacy = sessionStorage.getItem(ADMIN_TOKEN_KEY);
     if (legacy) {
       localStorage.setItem(ADMIN_TOKEN_KEY, legacy);
@@ -50,8 +63,11 @@ const writeStoredToken = (token: string | null): void => {
     }
   } catch {
     try {
-      if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
-      else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      if (token) {
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+      } else {
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      }
     } catch {
       /* storage unavailable (e.g. locked down mode) */
     }
@@ -60,71 +76,133 @@ const writeStoredToken = (token: string | null): void => {
 
 const getAuthToken = (): string | null => readStoredToken();
 
-export type AuthenticatedUser = {
-  id: string;
+export interface AuthenticatedUser {
   email: string;
-};
+  id: string;
+}
 
 const getStoredUser = (): AuthenticatedUser | null => {
   const token = getAuthToken();
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
 
   try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+    const payload = token.split(".")[1];
+    if (!payload) {
+      return null;
+    }
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+    ) as {
       sub?: unknown;
       email?: unknown;
     };
-    if (typeof decoded.sub !== 'string' || !decoded.sub || typeof decoded.email !== 'string') {
+    if (
+      typeof decoded.sub !== "string" ||
+      !decoded.sub ||
+      typeof decoded.email !== "string"
+    ) {
       return null;
     }
-    return { id: decoded.sub, email: decoded.email };
+    return { email: decoded.email, id: decoded.sub };
   } catch {
     return null;
   }
 };
 
 const jsonHeaders = (): HeadersInit => {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   const token = getAuthToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   return headers;
 };
 
 const devApiHintLocal =
-  'Run `pnpm dev`, then open the URL Vercel prints (usually http://localhost:3000). `pnpm dev:vite` has no `/api`—do not use it for admin. Unset `VITE_API_BASE_URL` locally or rely on `VITE_USE_LOCAL_API=1` from the dev command.';
+  "Run `pnpm dev`, then open the URL Vercel prints (usually http://localhost:3000). `pnpm dev:vite` has no `/api`—do not use it for admin. Unset `VITE_API_BASE_URL` locally or rely on `VITE_USE_LOCAL_API=1` from the dev command.";
 
 const devApiHintRemote =
-  'You are calling a remote API via `VITE_API_BASE_URL`. If that fails, run `pnpm dev` for full stack or fix deploy / CORS.';
+  "You are calling a remote API via `VITE_API_BASE_URL`. If that fails, run `pnpm dev` for full stack or fix deploy / CORS.";
 
 export const portfolioService = {
-  getPhotos: async (): Promise<Photo[]> => {
-    let res: Response;
-    try {
-      res = await fetch(photosPath());
-    } catch {
-      if (import.meta.env.DEV) {
-        const url = photosPath();
-        const hint = url.startsWith('http') ? devApiHintRemote : devApiHintLocal;
-        throw new Error(`Could not reach ${url}. ${hint}`);
-      }
-      throw new Error('Failed to load portfolio');
-    }
+  addPhoto: async (photo: {
+    url: string;
+    title: string;
+    categoryId: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+    lqip?: string;
+    exif?: unknown;
+  }): Promise<Photo> => {
+    const res = await fetch(photosPath(), {
+      body: JSON.stringify({
+        alt: photo.alt,
+        categoryId: photo.categoryId,
+        exif: photo.exif,
+        height: photo.height,
+        lqip: photo.lqip,
+        title: photo.title,
+        url: photo.url,
+        width: photo.width,
+      }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    const data = (await res.json().catch(() => ({}))) as Photo & {
+      error?: string;
+      debug?: string;
+    };
     if (!res.ok) {
-      const detail = import.meta.env.DEV ? ` (${res.status} ${res.statusText})` : '';
-      throw new Error(`Failed to load portfolio${detail}`);
+      const base = data.error || "Could not add photo";
+      const hint =
+        import.meta.env.DEV &&
+        typeof data.debug === "string" &&
+        data.debug.trim()
+          ? ` (${data.debug})`
+          : "";
+      throw new Error(base + hint);
     }
-    return res.json() as Promise<Photo[]>;
+    return data as Photo;
   },
 
-  getCategories: async (): Promise<Category[]> => {
-    const res = await fetch(categoriesPath());
+  batchDeletePhotos: async (photoIds: string[]): Promise<number> => {
+    const res = await fetch(`${photosPath()}/batch-delete`, {
+      body: JSON.stringify({ photoIds }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      deleted?: number;
+      error?: string;
+    };
     if (!res.ok) {
-      const detail = import.meta.env.DEV ? ` (${res.status})` : '';
-      throw new Error(`Failed to load categories${detail}`);
+      throw new Error(data.error || "Could not delete photos");
     }
-    return res.json() as Promise<Category[]>;
+    return typeof data.deleted === "number" ? data.deleted : 0;
+  },
+
+  batchSetPhotoCategories: async (
+    photoIds: string[],
+    categoryId: string
+  ): Promise<number> => {
+    const res = await fetch(`${photosPath()}/batch`, {
+      body: JSON.stringify({ categoryId, photoIds }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      updated?: number;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not update categories");
+    }
+    return typeof data.updated === "number" ? data.updated : 0;
   },
 
   createCategory: async (input: {
@@ -133,30 +211,205 @@ export const portfolioService = {
     sortOrder: number;
   }): Promise<Category> => {
     const res = await fetch(categoriesPath(), {
-      method: 'POST',
-      headers: jsonHeaders(),
       body: JSON.stringify({
         label: input.label,
         ...(input.slug ? { slug: input.slug } : {}),
         sortOrder: input.sortOrder,
       }),
+      headers: jsonHeaders(),
+      method: "POST",
     });
-    const data = (await res.json().catch(() => ({}))) as Category & { error?: string };
+    const data = (await res.json().catch(() => ({}))) as Category & {
+      error?: string;
+    };
     if (!res.ok) {
-      throw new Error(data.error || 'Could not create category');
+      throw new Error(data.error || "Could not create category");
     }
     return data as Category;
   },
 
   deleteCategory: async (id: string): Promise<void> => {
     const res = await fetch(`${categoriesPath()}/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (res.status === 204 || res.status === 404) {
+      return;
+    }
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      detail?: string;
+    };
+    const msg = [data.error, data.detail].filter(Boolean).join(" ");
+    throw new Error(msg || "Could not delete category");
+  },
+
+  deleteJournalEntry: async (date: string): Promise<void> => {
+    const res = await fetch(dailyChallengeHistoryPath(), {
+      body: JSON.stringify({ date }),
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not delete journal entry");
+    }
+  },
+
+  deletePhoto: async (id: string): Promise<void> => {
+    const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (res.status === 204 || res.status === 404) {
+      return;
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error || "Could not delete photo");
+  },
+
+  getCategories: async (): Promise<Category[]> => {
+    const res = await fetch(categoriesPath());
+    if (!res.ok) {
+      const detail = import.meta.env.DEV ? ` (${res.status})` : "";
+      throw new Error(`Failed to load categories${detail}`);
+    }
+    return res.json() as Promise<Category[]>;
+  },
+
+  getDailyChallenge: async (): Promise<DailyChallengeResponse> => {
+    const res = await fetch(dailyChallengePath(), { headers: jsonHeaders() });
+    const data = (await res
+      .json()
+      .catch(() => ({}))) as DailyChallengeResponse & { error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not load daily challenge");
+    }
+    return data as DailyChallengeResponse;
+  },
+
+  getDailyChallengeHistory: async (): Promise<DailyChallengeHistoryEntry[]> => {
+    const res = await fetch(dailyChallengeHistoryPath(), {
       headers: jsonHeaders(),
     });
-    if (res.status === 204 || res.status === 404) return;
-    const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
-    const msg = [data.error, data.detail].filter(Boolean).join(' ');
-    throw new Error(msg || 'Could not delete category');
+    const data = (await res.json().catch(() => ({}))) as {
+      entries?: DailyChallengeHistoryEntry[];
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not load journal history");
+    }
+    return data.entries ?? [];
+  },
+  getPhotos: async (): Promise<Photo[]> => {
+    let res: Response;
+    try {
+      res = await fetch(photosPath());
+    } catch {
+      if (import.meta.env.DEV) {
+        const url = photosPath();
+        const hint = url.startsWith("http")
+          ? devApiHintRemote
+          : devApiHintLocal;
+        throw new Error(`Could not reach ${url}. ${hint}`);
+      }
+      throw new Error("Failed to load portfolio");
+    }
+    if (!res.ok) {
+      const detail = import.meta.env.DEV
+        ? ` (${res.status} ${res.statusText})`
+        : "";
+      throw new Error(`Failed to load portfolio${detail}`);
+    }
+    return res.json() as Promise<Photo[]>;
+  },
+
+  notifyCategoriesChanged: () => {
+    window.dispatchEvent(new CustomEvent("cyan-categories-changed"));
+  },
+
+  notifyPhotosChanged: () => {
+    window.dispatchEvent(new CustomEvent("cyan-photos-changed"));
+  },
+
+  refreshDailyChallenge: async (): Promise<DailyChallengeResponse> => {
+    const res = await fetch(dailyChallengePath(), {
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    const data = (await res
+      .json()
+      .catch(() => ({}))) as DailyChallengeResponse & { error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not load a new challenge photo");
+    }
+    return data as DailyChallengeResponse;
+  },
+
+  saveDailyChallengeJournal: async (
+    body: string
+  ): Promise<DailyChallengeJournal> => {
+    const res = await fetch(dailyChallengePath(), {
+      body: JSON.stringify({ body }),
+      headers: jsonHeaders(),
+      method: "PUT",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      journal?: DailyChallengeJournal;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not save journal");
+    }
+    if (!data.journal) {
+      throw new Error("Invalid response from server");
+    }
+    return data.journal;
+  },
+
+  saveDailyChallengeJournalForDate: async (
+    date: string,
+    body: string
+  ): Promise<DailyChallengeJournal> => {
+    const res = await fetch(dailyChallengeHistoryPath(), {
+      body: JSON.stringify({ body, date }),
+      headers: jsonHeaders(),
+      method: "PUT",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      journal?: DailyChallengeJournal;
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(data.error || "Could not save journal");
+    }
+    if (!data.journal) {
+      throw new Error("Invalid response from server");
+    }
+    return data.journal;
+  },
+
+  updatePhoto: async (
+    id: string,
+    data: { title: string; categoryId: string; order: number; url?: string }
+  ): Promise<Photo> => {
+    const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
+      body: JSON.stringify({
+        categoryId: data.categoryId,
+        order: data.order,
+        title: data.title,
+        ...(data.url ? { url: data.url } : {}),
+      }),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    const json = (await res.json().catch(() => ({}))) as Photo & {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(json.error || "Could not update photo");
+    }
+    return json as Photo;
   },
 
   /**
@@ -169,207 +422,47 @@ export const portfolioService = {
    */
   uploadImageFile: async (
     file: File,
-    onProgress?: (percent: number) => void,
+    onProgress?: (percent: number) => void
   ): Promise<{ url: string }> => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'] as const;
-    if (!file.type || !(allowed as readonly string[]).includes(file.type)) {
-      throw new Error('Choose a JPEG, PNG, WebP, AVIF or GIF image');
+    const allowed = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+    ] as const;
+    if (!(file.type && (allowed as readonly string[]).includes(file.type))) {
+      throw new Error("Choose a JPEG, PNG, WebP, AVIF or GIF image");
     }
 
     const token = getAuthToken();
-    if (!token) throw new Error('Sign in again to upload');
+    if (!token) {
+      throw new Error("Sign in again to upload");
+    }
 
-    const { upload } = await import('@vercel/blob/client');
+    const { upload } = await import("@vercel/blob/client");
 
     try {
-      const blob = await upload(`portfolio/${file.name || 'image'}`, file, {
-        access: 'public',
-        handleUploadUrl: uploadPath(),
-        contentType: file.type,
+      const blob = await upload(`portfolio/${file.name || "image"}`, file, {
+        access: "public",
         // The upload helper posts straight to the handler, so the session token
         // rides along here instead of in an Authorization header.
         clientPayload: token,
+        contentType: file.type,
+        handleUploadUrl: uploadPath(),
         onUploadProgress: onProgress
           ? ({ percentage }) => onProgress(Math.round(percentage))
           : undefined,
       });
       return { url: blob.url };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed';
+      const message = err instanceof Error ? err.message : "Upload failed";
       throw new Error(
-        /unauthor/i.test(message) ? 'Sign in again to upload' : `Upload failed: ${message}`,
+        /unauthor/i.test(message)
+          ? "Sign in again to upload"
+          : `Upload failed: ${message}`
       );
     }
-  },
-
-  batchSetPhotoCategories: async (photoIds: string[], categoryId: string): Promise<number> => {
-    const res = await fetch(`${photosPath()}/batch`, {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ photoIds, categoryId }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { updated?: number; error?: string };
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not update categories');
-    }
-    return typeof data.updated === 'number' ? data.updated : 0;
-  },
-
-  batchDeletePhotos: async (photoIds: string[]): Promise<number> => {
-    const res = await fetch(`${photosPath()}/batch-delete`, {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ photoIds }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { deleted?: number; error?: string };
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not delete photos');
-    }
-    return typeof data.deleted === 'number' ? data.deleted : 0;
-  },
-
-  addPhoto: async (photo: {
-    url: string;
-    title: string;
-    categoryId: string;
-    alt?: string;
-    width?: number;
-    height?: number;
-    lqip?: string;
-    exif?: unknown;
-  }): Promise<Photo> => {
-    const res = await fetch(photosPath(), {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify({
-        url: photo.url,
-        title: photo.title,
-        categoryId: photo.categoryId,
-        alt: photo.alt,
-        width: photo.width,
-        height: photo.height,
-        lqip: photo.lqip,
-        exif: photo.exif,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as Photo & { error?: string; debug?: string };
-    if (!res.ok) {
-      const base = data.error || 'Could not add photo';
-      const hint =
-        import.meta.env.DEV && typeof data.debug === 'string' && data.debug.trim()
-          ? ` (${data.debug})`
-          : '';
-      throw new Error(base + hint);
-    }
-    return data as Photo;
-  },
-
-  deletePhoto: async (id: string): Promise<void> => {
-    const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: jsonHeaders(),
-    });
-    if (res.status === 204 || res.status === 404) return;
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error || 'Could not delete photo');
-  },
-
-  getDailyChallenge: async (): Promise<DailyChallengeResponse> => {
-    const res = await fetch(dailyChallengePath(), { headers: jsonHeaders() });
-    const data = (await res.json().catch(() => ({}))) as DailyChallengeResponse & { error?: string };
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not load daily challenge');
-    }
-    return data as DailyChallengeResponse;
-  },
-
-  refreshDailyChallenge: async (): Promise<DailyChallengeResponse> => {
-    const res = await fetch(dailyChallengePath(), {
-      method: 'POST',
-      headers: jsonHeaders(),
-    });
-    const data = (await res.json().catch(() => ({}))) as DailyChallengeResponse & { error?: string };
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not load a new challenge photo');
-    }
-    return data as DailyChallengeResponse;
-  },
-
-  getDailyChallengeHistory: async (): Promise<DailyChallengeHistoryEntry[]> => {
-    const res = await fetch(dailyChallengeHistoryPath(), { headers: jsonHeaders() });
-    const data = (await res.json().catch(() => ({}))) as { entries?: DailyChallengeHistoryEntry[]; error?: string };
-    if (!res.ok) throw new Error(data.error || 'Could not load journal history');
-    return data.entries ?? [];
-  },
-
-  deleteJournalEntry: async (date: string): Promise<void> => {
-    const res = await fetch(dailyChallengeHistoryPath(), {
-      method: 'DELETE',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ date }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) throw new Error(data.error || 'Could not delete journal entry');
-  },
-
-  saveDailyChallengeJournalForDate: async (date: string, body: string): Promise<DailyChallengeJournal> => {
-    const res = await fetch(dailyChallengeHistoryPath(), {
-      method: 'PUT',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ date, body }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { journal?: DailyChallengeJournal; error?: string };
-    if (!res.ok) throw new Error(data.error || 'Could not save journal');
-    if (!data.journal) throw new Error('Invalid response from server');
-    return data.journal;
-  },
-
-  saveDailyChallengeJournal: async (body: string): Promise<DailyChallengeJournal> => {
-    const res = await fetch(dailyChallengePath(), {
-      method: 'PUT',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ body }),
-    });
-    const data = (await res.json().catch(() => ({}))) as {
-      journal?: DailyChallengeJournal;
-      error?: string;
-    };
-    if (!res.ok) {
-      throw new Error(data.error || 'Could not save journal');
-    }
-    if (!data.journal) {
-      throw new Error('Invalid response from server');
-    }
-    return data.journal;
-  },
-
-  updatePhoto: async (
-    id: string,
-    data: { title: string; categoryId: string; order: number; url?: string },
-  ): Promise<Photo> => {
-    const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: jsonHeaders(),
-      body: JSON.stringify({
-        title: data.title,
-        categoryId: data.categoryId,
-        order: data.order,
-        ...(data.url ? { url: data.url } : {}),
-      }),
-    });
-    const json = (await res.json().catch(() => ({}))) as Photo & { error?: string };
-    if (!res.ok) {
-      throw new Error(json.error || 'Could not update photo');
-    }
-    return json as Photo;
-  },
-
-  notifyPhotosChanged: () => {
-    window.dispatchEvent(new CustomEvent('cyan-photos-changed'));
-  },
-
-  notifyCategoriesChanged: () => {
-    window.dispatchEvent(new CustomEvent('cyan-categories-changed'));
   },
 };
 
@@ -377,25 +470,33 @@ export const settingsApi = {
   /** Public read of the live site content and theme. */
   get: async (): Promise<ResolvedSiteSettings> => {
     const res = await fetch(`${apiBase()}/api/site-settings`);
-    if (!res.ok) throw new Error(`Could not load site settings (${res.status})`);
+    if (!res.ok) {
+      throw new Error(`Could not load site settings (${res.status})`);
+    }
     return (await res.json()) as ResolvedSiteSettings;
   },
 
   /** Admin write. Returns the re-read settings, not an echo of the input. */
   update: async (
     input: Partial<ResolvedSiteSettings>,
-    token: string,
+    token: string
   ): Promise<ResolvedSiteSettings> => {
     const res = await fetch(`${apiBase()}/api/site-settings`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(input),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
     });
     const data = (await res.json().catch(() => ({}))) as
       | ResolvedSiteSettings
       | { error?: string };
     if (!res.ok) {
-      throw new Error(('error' in data && data.error) || `Could not save settings (${res.status})`);
+      throw new Error(
+        ("error" in data && data.error) ||
+          `Could not save settings (${res.status})`
+      );
     }
     return data as ResolvedSiteSettings;
   },
@@ -408,18 +509,21 @@ export const authStorage = {
 };
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<{ token: string }> => {
+  login: async (
+    email: string,
+    password: string
+  ): Promise<{ token: string }> => {
     const url = `${apiBase()}/api/auth/login`;
     let res: Response;
     try {
       res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
     } catch {
       throw new Error(
-        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3000), or check VITE_API_BASE_URL.`,
+        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3000), or check VITE_API_BASE_URL.`
       );
     }
 
@@ -431,25 +535,27 @@ export const authApi = {
       const looksHtml =
         /<!DOCTYPE/i.test(text) ||
         /<html[\s>]/i.test(text) ||
-        (text.length > 0 && text.trimStart().startsWith('<'));
+        (text.length > 0 && text.trimStart().startsWith("<"));
       const base = apiBase();
       const href =
-        typeof window !== 'undefined' && url.startsWith('/')
+        typeof window !== "undefined" && url.startsWith("/")
           ? new URL(url, window.location.origin).href
           : url;
       const detail = looksHtml
-        ? base === ''
-          ? ' The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3000 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`.'
-          : ' The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`.'
-        : ' Is the API running?';
-      throw new Error(`Login failed (${res.status}): not JSON from ${href}.${detail}`);
+        ? base === ""
+          ? " The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3000 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`."
+          : " The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`."
+        : " Is the API running?";
+      throw new Error(
+        `Login failed (${res.status}): not JSON from ${href}.${detail}`
+      );
     }
 
     if (!res.ok) {
       throw new Error(data.error || `Login failed (${res.status})`);
     }
     if (!data.token) {
-      throw new Error('Invalid response from server (no token)');
+      throw new Error("Invalid response from server (no token)");
     }
     return { token: data.token };
   },
@@ -460,17 +566,20 @@ export const authApi = {
    */
   loginWithGoogle: async (credential: string): Promise<{ token: string }> => {
     const res = await fetch(`${apiBase()}/api/auth/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
-    const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      token?: string;
+      error?: string;
+    };
     if (!res.ok) {
       throw new Error(data.error || `Google sign-in failed (${res.status})`);
     }
     if (!data.token) {
-      throw new Error('Invalid response from server (no token)');
+      throw new Error("Invalid response from server (no token)");
     }
     return { token: data.token };
   },
@@ -481,109 +590,141 @@ export const authApi = {
    */
   requestPasswordReset: async (email: string): Promise<{ message: string }> => {
     const res = await fetch(`${apiBase()}/api/auth/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
-    const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      message?: string;
+      error?: string;
+    };
     if (!res.ok) {
-      throw new Error(data.error || `Could not send reset email (${res.status})`);
+      throw new Error(
+        data.error || `Could not send reset email (${res.status})`
+      );
     }
-    return { message: data.message ?? 'If that email has an account, a reset link is on its way.' };
+    return {
+      message:
+        data.message ??
+        "If that email has an account, a reset link is on its way.",
+    };
   },
 
   /** Exchanges a reset token for a new password, returning a session token. */
-  resetPassword: async (token: string, password: string): Promise<{ token: string }> => {
+  resetPassword: async (
+    token: string,
+    password: string
+  ): Promise<{ token: string }> => {
     const res = await fetch(`${apiBase()}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ password, token }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
-    const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      token?: string;
+      error?: string;
+    };
     if (!res.ok) {
       throw new Error(data.error || `Could not reset password (${res.status})`);
     }
     if (!data.token) {
-      throw new Error('Invalid response from server (no token)');
+      throw new Error("Invalid response from server (no token)");
     }
     return { token: data.token };
   },
 };
 
-export type PageSummary = {
+export interface PageSummary {
+  icon: string | null;
   id: string;
+  order: number;
   slug: string;
   title: string;
-  icon: string | null;
-  order: number;
-};
+}
 
 export type PageRecord = PageSummary & {
   content: unknown;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
   createdAt: string;
   updatedAt: string;
 };
 
 const pagesPath = (): string => `${apiBase()}/api/pages`;
 
-const readPageError = async (res: Response, fallback: string): Promise<string> => {
+const readPageError = async (
+  res: Response,
+  fallback: string
+): Promise<string> => {
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   return data.error || `${fallback} (${res.status})`;
 };
 
 export const pagesApi = {
-  /** Published summaries for the public nav; every page when signed in. */
-  list: async (): Promise<PageSummary[]> => {
-    const res = await fetch(pagesPath(), { headers: jsonHeaders() });
-    if (!res.ok) throw new Error(await readPageError(res, 'Could not load pages'));
-    return (await res.json()) as PageSummary[];
+  create: async (input: {
+    title: string;
+    slug: string;
+    icon?: string | null;
+    status?: "draft" | "published";
+  }): Promise<PageRecord> => {
+    const res = await fetch(pagesPath(), {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not create page"));
+    }
+    return (await res.json()) as PageRecord;
   },
 
   get: async (slug: string): Promise<PageRecord> => {
     const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
       headers: jsonHeaders(),
     });
-    if (!res.ok) throw new Error(await readPageError(res, 'Could not load page'));
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load page"));
+    }
     return (await res.json()) as PageRecord;
   },
-
-  create: async (input: {
-    title: string;
-    slug: string;
-    icon?: string | null;
-    status?: 'draft' | 'published';
-  }): Promise<PageRecord> => {
-    const res = await fetch(pagesPath(), {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify(input),
-    });
-    if (!res.ok) throw new Error(await readPageError(res, 'Could not create page'));
-    return (await res.json()) as PageRecord;
-  },
-
-  update: async (
-    slug: string,
-    input: Partial<Pick<PageRecord, 'title' | 'slug' | 'icon' | 'status' | 'content' | 'order'>>,
-  ): Promise<PageRecord> => {
-    const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
-      method: 'PATCH',
-      headers: jsonHeaders(),
-      body: JSON.stringify(input),
-    });
-    if (!res.ok) throw new Error(await readPageError(res, 'Could not save page'));
-    return (await res.json()) as PageRecord;
+  /** Published summaries for the public nav; every page when signed in. */
+  list: async (): Promise<PageSummary[]> => {
+    const res = await fetch(pagesPath(), { headers: jsonHeaders() });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load pages"));
+    }
+    return (await res.json()) as PageSummary[];
   },
 
   remove: async (slug: string): Promise<void> => {
     const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
-      method: 'DELETE',
       headers: jsonHeaders(),
+      method: "DELETE",
     });
-    if (res.status === 204 || res.status === 404) return;
-    throw new Error(await readPageError(res, 'Could not delete page'));
+    if (res.status === 204 || res.status === 404) {
+      return;
+    }
+    throw new Error(await readPageError(res, "Could not delete page"));
+  },
+
+  update: async (
+    slug: string,
+    input: Partial<
+      Pick<
+        PageRecord,
+        "title" | "slug" | "icon" | "status" | "content" | "order"
+      >
+    >
+  ): Promise<PageRecord> => {
+    const res = await fetch(`${pagesPath()}/${encodeURIComponent(slug)}`, {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save page"));
+    }
+    return (await res.json()) as PageRecord;
   },
 };

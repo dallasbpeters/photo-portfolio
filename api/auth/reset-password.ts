@@ -1,29 +1,35 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSql } from '../_lib/db.js';
-import { handleCors } from '../_lib/cors.js';
-import { hashPassword, signToken } from '../_lib/auth.js';
-import { parseJsonBody } from '../_lib/parseBody.js';
-import { hashResetToken, MIN_PASSWORD_LENGTH } from '../_lib/resetToken.js';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { hashPassword, signToken } from "../_lib/auth.js";
+import { handleCors } from "../_lib/cors.js";
+import { getSql } from "../_lib/db.js";
+import { parseJsonBody } from "../_lib/parseBody.js";
+import { hashResetToken, MIN_PASSWORD_LENGTH } from "../_lib/resetToken.js";
 
-const INVALID = { error: 'This reset link is invalid or has expired. Request a new one.' };
+const INVALID = {
+  error: "This reset link is invalid or has expired. Request a new one.",
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return;
+  if (handleCors(req, res)) {
+    return;
+  }
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const body = parseJsonBody(req.body);
-  const token = typeof body.token === 'string' ? body.token.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
+  const token = typeof body.token === "string" ? body.token.trim() : "";
+  const password = typeof body.password === "string" ? body.password : "";
 
-  if (!token) return res.status(400).json(INVALID);
+  if (!token) {
+    return res.status(400).json(INVALID);
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return res
-      .status(400)
-      .json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    return res.status(400).json({
+      error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+    });
   }
 
   try {
@@ -43,7 +49,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     const userId = (claimed[0] as { user_id: string } | undefined)?.user_id;
-    if (!userId) return res.status(400).json(INVALID);
+    if (!userId) {
+      return res.status(400).json(INVALID);
+    }
 
     const passwordHash = await hashPassword(password);
     const updated = await sql`
@@ -54,7 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     const user = updated[0] as { id: string; email: string } | undefined;
-    if (!user) return res.status(400).json(INVALID);
+    if (!user) {
+      return res.status(400).json(INVALID);
+    }
 
     // Any other outstanding link for this user is now stale.
     await sql`
@@ -64,19 +74,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     // Sign straight in — the user just proved control of the mailbox.
-    const authToken = signToken({ sub: user.id, email: user.email });
-    return res.status(200).json({ token: authToken, user: { id: user.id, email: user.email } });
+    const authToken = signToken({ email: user.email, sub: user.id });
+    return res
+      .status(200)
+      .json({ token: authToken, user: { email: user.email, id: user.id } });
   } catch (e) {
     console.error(e);
-    const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('JWT_SECRET')) {
-      return res.status(500).json({ error: 'JWT_SECRET is not configured.' });
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("JWT_SECRET")) {
+      return res.status(500).json({ error: "JWT_SECRET is not configured." });
     }
-    if (msg.includes('password_reset_tokens')) {
+    if (msg.includes("password_reset_tokens")) {
       return res.status(503).json({
-        error: 'Database schema is out of date. Run pnpm db:migrate against this deployment.',
+        error:
+          "Database schema is out of date. Run pnpm db:migrate against this deployment.",
       });
     }
-    return res.status(500).json({ error: 'Could not reset password' });
+    return res.status(500).json({ error: "Could not reset password" });
   }
 }

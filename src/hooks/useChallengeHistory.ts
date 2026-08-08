@@ -1,18 +1,21 @@
-import { useCallback, useState } from 'react';
-import type { DailyChallengeHistoryEntry, DailyChallengeJournal } from '../types';
-import { portfolioService } from '../services/portfolioService';
-import { toast } from 'sonner';
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { portfolioService } from "../services/portfolioService";
+import type {
+  DailyChallengeHistoryEntry,
+  DailyChallengeJournal,
+} from "../types";
 
-export type ChallengeHistoryState = {
+export interface ChallengeHistoryState {
   entries: DailyChallengeHistoryEntry[];
-  loading: boolean;
-  loaded: boolean;
   load: () => Promise<void>;
-  /** Update a single entry's journal after a save (from history or today view). */
-  syncEntry: (date: string, journal: DailyChallengeJournal) => void;
+  loaded: boolean;
+  loading: boolean;
   /** Remove an entry after its journal is deleted. */
   removeEntry: (date: string) => void;
-};
+  /** Update a single entry's journal after a save (from history or today view). */
+  syncEntry: (date: string, journal: DailyChallengeJournal) => void;
+}
 
 export const useChallengeHistory = (): ChallengeHistoryState => {
   const [entries, setEntries] = useState<DailyChallengeHistoryEntry[]>([]);
@@ -20,14 +23,16 @@ export const useChallengeHistory = (): ChallengeHistoryState => {
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
-    if (loaded) return;
+    if (loaded) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await portfolioService.getDailyChallengeHistory();
       setEntries(data);
       setLoaded(true);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not load history');
+      toast.error(e instanceof Error ? e.message : "Could not load history");
     } finally {
       setLoading(false);
     }
@@ -35,13 +40,17 @@ export const useChallengeHistory = (): ChallengeHistoryState => {
 
   const syncEntry = (date: string, journal: DailyChallengeJournal): void => {
     setEntries((prev) =>
-      prev.map((h) => (h.challenge.challengeDate === date ? { ...h, journal } : h)),
+      prev.map((h) =>
+        h.challenge.challengeDate === date ? { ...h, journal } : h
+      )
     );
   };
 
   const removeEntry = (date: string): void => {
-    setEntries((prev) => prev.filter((h) => h.challenge.challengeDate !== date));
+    setEntries((prev) =>
+      prev.filter((h) => h.challenge.challengeDate !== date)
+    );
   };
 
-  return { entries, loading, loaded, load, syncEntry, removeEntry };
+  return { entries, load, loaded, loading, removeEntry, syncEntry };
 };

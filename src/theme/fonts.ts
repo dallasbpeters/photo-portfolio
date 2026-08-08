@@ -1,4 +1,4 @@
-import type { FontId } from '../../config/theme';
+import type { FontId } from "../../config/theme";
 
 /**
  * Dynamic imports rather than top-level ones: Vite splits each font's CSS into
@@ -6,20 +6,24 @@ import type { FontId } from '../../config/theme';
  * instead of all seven.
  */
 const FONT_LOADERS: Record<FontId, () => Promise<unknown>> = {
-  geist: () => import('@fontsource-variable/geist/index.css'),
-  inter: () => import('@fontsource-variable/inter/index.css'),
-  'space-grotesk': () => import('@fontsource-variable/space-grotesk/index.css'),
-  manrope: () => import('@fontsource-variable/manrope/index.css'),
-  'playfair-display': () => import('@fontsource-variable/playfair-display/index.css'),
-  fraunces: () => import('@fontsource-variable/fraunces/index.css'),
-  'cormorant-garamond': () => import('@fontsource-variable/cormorant-garamond/index.css'),
+  "cormorant-garamond": () =>
+    import("@fontsource-variable/cormorant-garamond/index.css"),
+  fraunces: () => import("@fontsource-variable/fraunces/index.css"),
+  geist: () => import("@fontsource-variable/geist/index.css"),
+  inter: () => import("@fontsource-variable/inter/index.css"),
+  manrope: () => import("@fontsource-variable/manrope/index.css"),
+  "playfair-display": () =>
+    import("@fontsource-variable/playfair-display/index.css"),
+  "space-grotesk": () => import("@fontsource-variable/space-grotesk/index.css"),
 };
 
 const loaded = new Set<FontId>();
 
 /** Loads a font's stylesheet once per session. Failures are non-fatal. */
 export const loadFont = async (id: FontId): Promise<void> => {
-  if (loaded.has(id)) return;
+  if (loaded.has(id)) {
+    return;
+  }
   loaded.add(id);
   try {
     await FONT_LOADERS[id]?.();

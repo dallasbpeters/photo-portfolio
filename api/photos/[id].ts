@@ -1,43 +1,51 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSql } from '../_lib/db.js';
-import { getBearerUser } from '../_lib/auth.js';
-import { handleCors } from '../_lib/cors.js';
-import { parseJsonBody } from '../_lib/parseBody.js';
-import { PHOTO_COLUMNS, rowToDto, type PhotoRow } from '../_lib/photos.js';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getBearerUser } from "../_lib/auth.js";
+import { handleCors } from "../_lib/cors.js";
+import { getSql } from "../_lib/db.js";
+import { parseJsonBody } from "../_lib/parseBody.js";
+import { type PhotoRow, rowToDto } from "../_lib/photos.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return;
-
-  const id = typeof req.query.id === 'string' ? req.query.id : req.query.id?.[0];
-  if (!id) {
-    return res.status(400).json({ error: 'Missing photo id' });
+  if (handleCors(req, res)) {
+    return;
   }
 
-  if (req.method === 'PATCH') {
+  const id =
+    typeof req.query.id === "string" ? req.query.id : req.query.id?.[0];
+  if (!id) {
+    return res.status(400).json({ error: "Missing photo id" });
+  }
+
+  if (req.method === "PATCH") {
     const user = getBearerUser(req.headers.authorization);
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const body = parseJsonBody(req.body);
-    const title = typeof body.title === 'string' ? body.title.trim() : '';
-    const categoryId = typeof body.categoryId === 'string' ? body.categoryId.trim() : '';
-    const order = typeof body.order === 'number' ? body.order : Number(body.order);
-    const url = typeof body.url === 'string' && body.url.trim() ? body.url.trim() : null;
-    const alt = typeof body.alt === 'string' ? body.alt.trim().slice(0, 300) : null;
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const categoryId =
+      typeof body.categoryId === "string" ? body.categoryId.trim() : "";
+    const order =
+      typeof body.order === "number" ? body.order : Number(body.order);
+    const url =
+      typeof body.url === "string" && body.url.trim() ? body.url.trim() : null;
+    const alt =
+      typeof body.alt === "string" ? body.alt.trim().slice(0, 300) : null;
 
-    if (!title || !categoryId) {
-      return res.status(400).json({ error: 'Invalid title or categoryId' });
+    if (!(title && categoryId)) {
+      return res.status(400).json({ error: "Invalid title or categoryId" });
     }
     if (!Number.isFinite(order)) {
-      return res.status(400).json({ error: 'Invalid order' });
+      return res.status(400).json({ error: "Invalid order" });
     }
 
     try {
       const sql = getSql();
-      const catOk = await sql`SELECT id FROM categories WHERE id = ${categoryId} LIMIT 1`;
+      const catOk =
+        await sql`SELECT id FROM categories WHERE id = ${categoryId} LIMIT 1`;
       if (catOk.length === 0) {
-        return res.status(400).json({ error: 'Unknown category' });
+        return res.status(400).json({ error: "Unknown category" });
       }
 
       // The CTE must RETURNING every column the response needs: a data-modifying CTE's
@@ -61,24 +69,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `) as PhotoRow[];
 
       if (rows.length === 0) {
-        return res.status(404).json({ error: 'Photo not found' });
+        return res.status(404).json({ error: "Photo not found" });
       }
 
       const row = rows[0];
       if (!row) {
-        return res.status(500).json({ error: 'Update failed' });
+        return res.status(500).json({ error: "Update failed" });
       }
       return res.status(200).json(rowToDto(row));
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ error: 'Update failed' });
+      return res.status(500).json({ error: "Update failed" });
     }
   }
 
-  if (req.method === 'DELETE') {
+  if (req.method === "DELETE") {
     const user = getBearerUser(req.headers.authorization);
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     try {
@@ -90,16 +98,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       if (deleted.length === 0) {
-        return res.status(404).json({ error: 'Photo not found' });
+        return res.status(404).json({ error: "Photo not found" });
       }
 
       return res.status(204).end();
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ error: 'Delete failed' });
+      return res.status(500).json({ error: "Delete failed" });
     }
   }
 
-  res.setHeader('Allow', 'PATCH, DELETE');
-  return res.status(405).json({ error: 'Method not allowed' });
+  res.setHeader("Allow", "PATCH, DELETE");
+  return res.status(405).json({ error: "Method not allowed" });
 }

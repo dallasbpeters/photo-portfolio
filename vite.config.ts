@@ -1,8 +1,8 @@
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { defineConfig, type Plugin } from 'vite';
-import { resolveSite } from './config/sites';
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig, type Plugin } from "vite";
+import { resolveSite } from "./config/sites";
 
 /**
  * Substitutes the %SITE_*% placeholders in index.html so one codebase produces
@@ -15,15 +15,18 @@ const siteBranding = (siteKey: string | undefined): Plugin => {
   const site = resolveSite(siteKey);
 
   return {
-    name: 'site-branding',
+    name: "site-branding",
 
     transformIndexHtml: (html) =>
       html
-        .replaceAll('%SITE_NAME%', site.name)
-        .replaceAll('%SITE_KEY%', site.key)
-        .replaceAll('%SITE_THEME_COLOR%', site.themeColor)
-        .replaceAll('%SITE_SHORT_NAME%', site.shortName)
-        .replaceAll('%SITE_DESCRIPTION%', `${site.tagline} — ${site.ownerName}.`),
+        .replaceAll("%SITE_NAME%", site.name)
+        .replaceAll("%SITE_KEY%", site.key)
+        .replaceAll("%SITE_THEME_COLOR%", site.themeColor)
+        .replaceAll("%SITE_SHORT_NAME%", site.shortName)
+        .replaceAll(
+          "%SITE_DESCRIPTION%",
+          `${site.tagline} — ${site.ownerName}.`
+        ),
   };
 };
 
@@ -32,20 +35,20 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss(), siteBranding(process.env.VITE_SITE)],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        "@": path.resolve(import.meta.dirname, "./src"),
       },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify — file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
+      hmr: process.env.DISABLE_HMR !== "true",
       proxy: {
-        '/api': {
+        "/api": {
+          changeOrigin: true,
           // Follows the same PORT as scripts/dev-stack.mjs so the two cannot drift.
           target:
             process.env.VITE_API_PROXY_TARGET ||
             `http://127.0.0.1:${process.env.PORT || 3002}`,
-          changeOrigin: true,
         },
       },
     },

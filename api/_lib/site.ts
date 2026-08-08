@@ -1,5 +1,5 @@
-import { resolveSite, type SiteConfig } from '../../config/sites.js';
-import { bootstrapEnv } from './bootstrapEnv.js';
+import { resolveSite, type SiteConfig } from "../../config/sites.js";
+import { bootstrapEnv } from "./bootstrapEnv.js";
 
 bootstrapEnv();
 

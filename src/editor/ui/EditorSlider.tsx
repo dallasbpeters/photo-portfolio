@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface EditorSliderProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
   /** Fill grows from the middle and a detent marks zero. */
   centered?: boolean;
+  label: string;
+  max: number;
+  min: number;
   onChange: (value: number) => void;
   /** Fired once when a drag ends, for undo grouping. */
   onCommit?: () => void;
+  value: number;
 }
 
 /**
@@ -42,15 +42,22 @@ export function EditorSlider({
   const valueFromClientX = useCallback(
     (clientX: number): number => {
       const track = trackRef.current;
-      if (!track) return value;
+      if (!track) {
+        return value;
+      }
       const rect = track.getBoundingClientRect();
-      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const ratio = Math.min(
+        1,
+        Math.max(0, (clientX - rect.left) / rect.width)
+      );
       const raw = min + ratio * (max - min);
       // Snap to zero near the detent so neutral is reachable by hand.
-      if (centered && Math.abs(raw) < (max - min) * 0.02) return 0;
+      if (centered && Math.abs(raw) < (max - min) * 0.02) {
+        return 0;
+      }
       return Math.round(raw);
     },
-    [centered, max, min, value],
+    [centered, max, min, value]
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -60,12 +67,16 @@ export function EditorSlider({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+    if (!isDragging) {
+      return;
+    }
     onChange(valueFromClientX(e.clientX));
   };
 
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+    if (!isDragging) {
+      return;
+    }
     e.currentTarget.releasePointerCapture(e.pointerId);
     setIsDragging(false);
     onCommit?.();
@@ -73,15 +84,17 @@ export function EditorSlider({
 
   // Escape returns the slider to neutral mid-drag.
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onChange(0);
         setIsDragging(false);
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [isDragging, onChange]);
 
   const isActive = value !== 0;
@@ -91,14 +104,14 @@ export function EditorSlider({
       <div className="flex items-baseline justify-between pb-2">
         <span
           className={`text-[10px] uppercase tracking-[0.18em] transition-colors duration-200 ${
-            isActive ? 'text-white/70' : 'text-white/35'
+            isActive ? "text-white/70" : "text-white/35"
           }`}
         >
           {label}
         </span>
         <span
           className={`font-mono text-[10px] tabular-nums transition-opacity duration-200 ${
-            isDragging || isActive ? 'text-white/60 opacity-100' : 'opacity-0'
+            isDragging || isActive ? "text-white/60 opacity-100" : "opacity-0"
           }`}
         >
           {value > 0 && centered ? `+${value}` : value}
@@ -106,23 +119,29 @@ export function EditorSlider({
       </div>
 
       <div
-        ref={trackRef}
-        role="slider"
-        tabIndex={0}
         aria-label={label}
-        aria-valuenow={value}
-        aria-valuemin={min}
         aria-valuemax={max}
+        aria-valuemin={min}
+        aria-valuenow={value}
+        className="relative h-4 cursor-pointer touch-none focus:outline-none"
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft") {
+            onChange(Math.max(min, value - (e.shiftKey ? 10 : 1)));
+          }
+          if (e.key === "ArrowRight") {
+            onChange(Math.min(max, value + (e.shiftKey ? 10 : 1)));
+          }
+          if (e.key === "Backspace" || e.key === "Delete") {
+            onChange(0);
+          }
+        }}
+        onPointerCancel={endDrag}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowLeft') onChange(Math.max(min, value - (e.shiftKey ? 10 : 1)));
-          if (e.key === 'ArrowRight') onChange(Math.min(max, value + (e.shiftKey ? 10 : 1)));
-          if (e.key === 'Backspace' || e.key === 'Delete') onChange(0);
-        }}
-        className="relative h-4 cursor-pointer touch-none focus:outline-none"
+        ref={trackRef}
+        role="slider"
+        tabIndex={0}
       >
         {/* Track */}
         <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-white/[0.09]" />
@@ -145,8 +164,8 @@ export function EditorSlider({
         <div
           className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white transition-all duration-150 ${
             isDragging
-              ? 'h-3.5 w-[3px]'
-              : 'h-2.5 w-px group-hover/slider:h-3.5 group-hover/slider:w-[3px]'
+              ? "h-3.5 w-[3px]"
+              : "h-2.5 w-px group-hover/slider:h-3.5 group-hover/slider:w-[3px]"
           }`}
           style={{ left: `${percent}%` }}
         />

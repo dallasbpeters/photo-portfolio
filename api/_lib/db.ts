@@ -1,5 +1,5 @@
-import { neon } from '@neondatabase/serverless';
-import { bootstrapEnv } from './bootstrapEnv.js';
+import { neon } from "@neondatabase/serverless";
+import { bootstrapEnv } from "./bootstrapEnv.js";
 
 bootstrapEnv();
 
@@ -8,13 +8,15 @@ bootstrapEnv();
  * docs and local dev typically use DATABASE_URL. Accept any of them.
  */
 export const getDatabaseUrl = (): string => {
-  const keys = ['DATABASE_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL'] as const;
+  const keys = ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL"] as const;
   for (const key of keys) {
     const v = process.env[key]?.trim();
-    if (v) return v;
+    if (v) {
+      return v;
+    }
   }
   throw new Error(
-    'Missing database URL: set DATABASE_URL in Vercel → Settings → Environment Variables, or connect Neon/Postgres storage so POSTGRES_URL is injected.',
+    "Missing database URL: set DATABASE_URL in Vercel → Settings → Environment Variables, or connect Neon/Postgres storage so POSTGRES_URL is injected."
   );
 };
 

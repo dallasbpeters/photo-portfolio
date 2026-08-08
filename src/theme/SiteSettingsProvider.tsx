@@ -1,21 +1,33 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { defaultSiteSettings, type ResolvedSiteSettings } from '../../config/siteSettings';
-import { findFont } from '../../config/theme';
-import { siteConfig } from '../site';
-import { settingsApi } from '../services/portfolioService';
-import { loadFont } from './fonts';
+import type { ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  defaultSiteSettings,
+  type ResolvedSiteSettings,
+} from "../../config/siteSettings";
+import { findFont } from "../../config/theme";
+import { settingsApi } from "../services/portfolioService";
+import { siteConfig } from "../site";
+import { loadFont } from "./fonts";
 
-type SiteSettingsContextValue = {
-  settings: ResolvedSiteSettings;
+interface SiteSettingsContextValue {
   /** True until the first fetch settles; the built-in defaults render meanwhile. */
   isLoading: boolean;
+  reload: () => Promise<void>;
   /** Replaces the active settings after an admin saves, with no refetch. */
   setSettings: (next: ResolvedSiteSettings) => void;
-  reload: () => Promise<void>;
-};
+  settings: ResolvedSiteSettings;
+}
 
-const SiteSettingsContext = createContext<SiteSettingsContextValue | null>(null);
+const SiteSettingsContext = createContext<SiteSettingsContextValue | null>(
+  null
+);
 
 /**
  * Applies the theme by overriding the custom properties Tailwind's @theme block
@@ -30,26 +42,32 @@ const applyTheme = (settings: ResolvedSiteSettings): void => {
   const { theme } = settings;
   const root = document.documentElement;
 
-  root.style.setProperty('--color-background', theme.background);
-  root.style.setProperty('--color-foreground', theme.foreground);
-  root.style.setProperty('--color-accent', theme.accent);
+  root.style.setProperty("--color-background", theme.background);
+  root.style.setProperty("--color-foreground", theme.foreground);
+  root.style.setProperty("--color-accent", theme.accent);
 
   const sans = findFont(theme.sansFont);
   const serif = findFont(theme.serifFont);
-  if (sans) root.style.setProperty('--font-sans', sans.stack);
-  if (serif) root.style.setProperty('--font-serif', serif.stack);
+  if (sans) {
+    root.style.setProperty("--font-sans", sans.stack);
+  }
+  if (serif) {
+    root.style.setProperty("--font-serif", serif.stack);
+  }
 
   void loadFont(theme.sansFont);
   void loadFont(theme.serifFont);
 
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.background);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", theme.background);
 };
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   // First paint uses the values compiled into the bundle, so the page is never
   // blank and never unstyled while the request is in flight.
   const [settings, setSettingsState] = useState<ResolvedSiteSettings>(() =>
-    defaultSiteSettings(siteConfig),
+    defaultSiteSettings(siteConfig)
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -74,24 +92,30 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     void reload();
     // Deliberately once on mount — `reload` re-applies the theme itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reload]);
+  }, [reload, settings]);
 
   const value = useMemo(
-    () => ({ settings, isLoading, setSettings, reload }),
-    [settings, isLoading, setSettings, reload],
+    () => ({ isLoading, reload, setSettings, settings }),
+    [settings, isLoading, setSettings, reload]
   );
 
-  return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
+  return (
+    <SiteSettingsContext.Provider value={value}>
+      {children}
+    </SiteSettingsContext.Provider>
+  );
 }
 
 /** Live site settings. Falls back to compiled defaults outside the provider. */
 export const useSiteSettings = (): SiteSettingsContextValue => {
   const ctx = useContext(SiteSettingsContext);
-  if (ctx) return ctx;
+  if (ctx) {
+    return ctx;
+  }
   return {
-    settings: defaultSiteSettings(siteConfig),
     isLoading: false,
-    setSettings: () => undefined,
     reload: async () => undefined,
+    setSettings: () => undefined,
+    settings: defaultSiteSettings(siteConfig),
   };
 };

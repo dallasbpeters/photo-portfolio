@@ -1,13 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Cyan">
-  <rect width="32" height="32" fill="#000000"/>
+<svg
+  aria-label="Cyan"
+  role="img"
+  viewBox="0 0 32 32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect fill="#000000" height="32" width="32" />
   <text
-    x="16"
-    y="16"
     dominant-baseline="central"
-    text-anchor="middle"
+    fill="#ffffff"
     font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
     font-size="18"
     font-weight="600"
-    fill="#ffffff"
-  >C</text>
+    text-anchor="middle"
+    x="16"
+    y="16"
+  >
+    C
+  </text>
 </svg>

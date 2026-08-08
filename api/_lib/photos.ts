@@ -1,56 +1,58 @@
-export type PhotoRow = {
-  id: string;
-  url: string;
-  title: string;
-  sort_order: number;
-  created_at: string | Date;
-  category_id: string;
-  category_slug: string;
-  category_label: string;
+export interface PhotoRow {
   alt: string | null;
-  width: number | null;
-  height: number | null;
-  lqip: string | null;
+  category_id: string;
+  category_label: string;
+  category_slug: string;
+  created_at: string | Date;
   exif: unknown;
-};
-
-export type PhotoDto = {
+  height: number | null;
   id: string;
-  url: string;
+  lqip: string | null;
+  sort_order: number;
   title: string;
-  categoryId: string;
-  category: string;
-  categoryLabel: string;
-  order: number;
-  createdAt: string;
+  url: string;
+  width: number | null;
+}
+
+export interface PhotoDto {
   /** Falls back to the title so an <img> is never left without a description. */
   alt: string;
-  width: number | null;
-  height: number | null;
-  lqip: string | null;
+  category: string;
+  categoryId: string;
+  categoryLabel: string;
+  createdAt: string;
   exif: unknown;
-};
+  height: number | null;
+  id: string;
+  lqip: string | null;
+  order: number;
+  title: string;
+  url: string;
+  width: number | null;
+}
 
 const toIso = (value: string | Date): string => {
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return new Date(0).toISOString();
+  if (Number.isNaN(d.getTime())) {
+    return new Date(0).toISOString();
+  }
   return d.toISOString();
 };
 
 export const rowToDto = (row: PhotoRow): PhotoDto => ({
-  id: row.id,
-  url: row.url,
-  title: row.title,
-  categoryId: row.category_id,
+  alt: (row.alt ?? "").trim() || row.title,
   category: row.category_slug,
+  categoryId: row.category_id,
   categoryLabel: row.category_label,
-  order: Number(row.sort_order),
   createdAt: toIso(row.created_at),
-  alt: (row.alt ?? '').trim() || row.title,
-  width: row.width ?? null,
-  height: row.height ?? null,
-  lqip: row.lqip ?? null,
   exif: row.exif ?? null,
+  height: row.height ?? null,
+  id: row.id,
+  lqip: row.lqip ?? null,
+  order: Number(row.sort_order),
+  title: row.title,
+  url: row.url,
+  width: row.width ?? null,
 });
 
 /** Columns every photo query needs, kept in one place so they cannot drift. */

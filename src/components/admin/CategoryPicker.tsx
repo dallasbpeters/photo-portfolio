@@ -1,21 +1,29 @@
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { Category } from '@/types';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import type React from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import type { Category } from "@/types";
 
-export type CategoryPickerProps = {
-  id: string;
-  label: string;
+export interface CategoryPickerProps {
   categories: Category[];
-  value: string;
+  className?: string;
+  disabled?: boolean;
+  id: string;
+  isCreating?: boolean;
+  label: string;
   onChange: (categoryId: string) => void;
   onCreate: (label: string) => Promise<string | null>;
-  disabled?: boolean;
-  isCreating?: boolean;
-  className?: string;
-};
+  value: string;
+}
 
 export const CategoryPicker = ({
   id,
@@ -31,32 +39,37 @@ export const CategoryPicker = ({
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const selected = useMemo(
     () => categories.find((c) => c.id === value),
-    [categories, value],
+    [categories, value]
   );
 
   useEffect(() => {
-    if (open) return;
-    setQuery(selected?.label ?? '');
+    if (open) {
+      return;
+    }
+    setQuery(selected?.label ?? "");
   }, [selected?.label, open]);
 
   const trimmed = query.trim();
   const qLower = trimmed.toLowerCase();
 
   const filtered = useMemo(() => {
-    if (!trimmed) return categories;
+    if (!trimmed) {
+      return categories;
+    }
     return categories.filter(
       (c) =>
-        c.label.toLowerCase().includes(qLower) || c.slug.toLowerCase().includes(qLower),
+        c.label.toLowerCase().includes(qLower) ||
+        c.slug.toLowerCase().includes(qLower)
     );
   }, [categories, trimmed, qLower]);
 
   const hasExactLabel = useMemo(
     () => categories.some((c) => c.label.toLowerCase() === qLower),
-    [categories, qLower],
+    [categories, qLower]
   );
 
   const showAddNew = Boolean(trimmed) && !hasExactLabel;
@@ -67,11 +80,13 @@ export const CategoryPicker = ({
       setQuery(cat.label);
       setOpen(false);
     },
-    [onChange],
+    [onChange]
   );
 
   const handleCreate = useCallback(async () => {
-    if (!trimmed || isCreating) return;
+    if (!trimmed || isCreating) {
+      return;
+    }
     const newId = await onCreate(trimmed);
     if (newId) {
       onChange(newId);
@@ -81,24 +96,28 @@ export const CategoryPicker = ({
   }, [trimmed, isCreating, onCreate, onChange]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const handlePointerDown = (e: MouseEvent) => {
-      if (containerRef.current?.contains(e.target as Node)) return;
+      if (containerRef.current?.contains(e.target as Node)) {
+        return;
+      }
       setOpen(false);
     };
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       if (open) {
         e.preventDefault();
         setOpen(false);
       }
       return;
     }
-    if (e.key === 'Enter' && open) {
+    if (e.key === "Enter" && open) {
       e.preventDefault();
       if (filtered.length === 1) {
         pick(filtered[0]);
@@ -111,65 +130,71 @@ export const CategoryPicker = ({
   };
 
   return (
-    <div ref={containerRef} className={cn('relative gap-3 flex flex-col', className)}>
-      <Label htmlFor={id} className="text-[10px] uppercase tracking-widest text-white/40">
+    <div
+      className={cn("relative flex flex-col gap-3", className)}
+      ref={containerRef}
+    >
+      <Label
+        className="text-[10px] text-white/40 uppercase tracking-widest"
+        htmlFor={id}
+      >
         {label}
       </Label>
       <Input
-        id={id}
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listboxId}
         aria-autocomplete="list"
+        aria-controls={listboxId}
+        aria-expanded={open}
+        autoComplete="off"
+        className="min-h-11 border-white/10 bg-black/40 text-base focus:border-white/40 sm:text-sm"
         disabled={disabled}
-        value={query}
+        id={id}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
-        autoComplete="off"
         placeholder="Search or add…"
-        className="min-h-11 text-base sm:text-sm border-white/10 bg-black/40 focus:border-white/40"
+        role="combobox"
+        value={query}
       />
       {open && !disabled && (
         <div
+          className="absolute top-full z-200 mt-1 max-h-48 w-full min-w-60 overflow-auto rounded-md border border-white/10 bg-neutral-950 py-1 shadow-xl ring-1 ring-black/40"
           id={listboxId}
           role="listbox"
-          className="absolute top-full z-200 mt-1 max-h-48 min-w-60 w-full overflow-auto rounded-md border border-white/10 bg-neutral-950 py-1 shadow-xl ring-1 ring-black/40"
         >
           {filtered.length === 0 && !showAddNew && (
-            <p className="px-3 py-2 text-xs text-white/40">No matches</p>
+            <p className="px-3 py-2 text-white/40 text-xs">No matches</p>
           )}
           {filtered.map((cat) => (
             <button
-              key={cat.id}
-              type="button"
-              role="option"
               aria-selected={cat.id === value}
               className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
-              onMouseDown={(e) => e.preventDefault()}
+              key={cat.id}
               onClick={() => pick(cat)}
+              onMouseDown={(e) => e.preventDefault()}
+              role="option"
+              type="button"
             >
               <span>{cat.label}</span>
-              <span className="shrink-0 text-[10px] uppercase tracking-wider text-white/35">
+              <span className="shrink-0 text-[10px] text-white/35 uppercase tracking-wider">
                 {cat.slug}
               </span>
             </button>
           ))}
           {showAddNew && (
-            <div className="border-t border-white/10 p-2">
+            <div className="border-white/10 border-t p-2">
               <Button
+                className="w-full border-white/20 text-[10px] text-white uppercase tracking-widest hover:bg-white/10"
+                disabled={isCreating}
+                onClick={() => void handleCreate()}
+                onMouseDown={(e) => e.preventDefault()}
+                size="sm"
                 type="button"
                 variant="outline"
-                size="sm"
-                disabled={isCreating}
-                className="w-full border-white/20 text-[10px] uppercase tracking-widest text-white hover:bg-white/10"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => void handleCreate()}
               >
-                {isCreating ? 'Adding…' : `Add “${trimmed}”`}
+                {isCreating ? "Adding…" : `Add “${trimmed}”`}
               </Button>
             </div>
           )}

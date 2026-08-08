@@ -1,4 +1,4 @@
-import { resolveSite, type SiteConfig } from '../config/sites';
+import { resolveSite, type SiteConfig } from "../config/sites";
 
 /**
  * The site this bundle was built for. `VITE_SITE` is inlined at build time, so

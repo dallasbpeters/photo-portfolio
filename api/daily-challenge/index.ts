@@ -1,40 +1,40 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { NeonDbError } from '@neondatabase/serverless';
-import { getSql } from '../_lib/db.js';
-import { getBearerUser } from '../_lib/auth.js';
-import { handleCors } from '../_lib/cors.js';
-import { parseJsonBody } from '../_lib/parseBody.js';
-import { fetchUnsplashDailyPhoto } from '../_lib/unsplashDaily.js';
+import { NeonDbError } from "@neondatabase/serverless";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getBearerUser } from "../_lib/auth.js";
+import { handleCors } from "../_lib/cors.js";
+import { getSql } from "../_lib/db.js";
+import { parseJsonBody } from "../_lib/parseBody.js";
+import { fetchUnsplashDailyPhoto } from "../_lib/unsplashDaily.js";
 
 const utcDateString = (): string => new Date().toISOString().slice(0, 10);
 
 const MAX_JOURNAL_CHARS = 20_000;
 
-type ChallengeRow = {
+interface ChallengeRow {
+  alt_text: string | null;
   challenge_date: string;
-  image_url: string;
   image_thumb_url: string | null;
+  image_url: string;
   photographer_name: string | null;
   photographer_username: string | null;
-  unsplash_photo_id: string | null;
   unsplash_html_link: string | null;
-  alt_text: string | null;
-};
+  unsplash_photo_id: string | null;
+}
 
-type JournalRow = {
+interface JournalRow {
   body: string;
   updated_at: string | Date;
-};
+}
 
 const rowToChallengeJson = (row: ChallengeRow) => ({
+  altText: row.alt_text,
   challengeDate: String(row.challenge_date).slice(0, 10),
-  imageUrl: row.image_url,
   imageThumbUrl: row.image_thumb_url,
+  imageUrl: row.image_url,
   photographerName: row.photographer_name,
   photographerUsername: row.photographer_username,
-  unsplashPhotoId: row.unsplash_photo_id,
   unsplashHtmlLink: row.unsplash_html_link,
-  altText: row.alt_text,
+  unsplashPhotoId: row.unsplash_photo_id,
 });
 
 const respondWithChallengeAndJournal = async (
@@ -42,7 +42,7 @@ const respondWithChallengeAndJournal = async (
   user: { userId: string; email: string },
   dateStr: string,
   res: VercelResponse,
-  status: number,
+  status: number
 ): Promise<void> => {
   const rows = (await sql`
     SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
@@ -53,7 +53,7 @@ const respondWithChallengeAndJournal = async (
   `) as ChallengeRow[];
   const challenge = rows[0];
   if (!challenge) {
-    res.status(500).json({ error: 'Could not load daily challenge' });
+    res.status(500).json({ error: "Could not load daily challenge" });
     return;
   }
   const journalRows = (await sql`
@@ -73,18 +73,20 @@ const respondWithChallengeAndJournal = async (
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (handleCors(req, res)) return;
+  if (handleCors(req, res)) {
+    return;
+  }
 
   const user = getBearerUser(req.headers.authorization);
   if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const sql = getSql();
   const dateStr = utcDateString();
 
   try {
-    if (req.method === 'GET') {
+    if (req.method === "GET") {
       let rows = (await sql`
         SELECT challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
           unsplash_photo_id, unsplash_html_link, alt_text
@@ -94,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `) as ChallengeRow[];
 
       if (rows.length === 0) {
-        const photo = await fetchUnsplashDailyPhoto('initial');
+        const photo = await fetchUnsplashDailyPhoto("initial");
         await sql`
           INSERT INTO daily_challenges (
             challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
@@ -123,7 +125,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const challenge = rows[0];
       if (!challenge) {
-        return res.status(500).json({ error: 'Could not load daily challenge' });
+        return res
+          .status(500)
+          .json({ error: "Could not load daily challenge" });
       }
 
       const journalRows = (await sql`
@@ -147,8 +151,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (req.method === 'POST') {
-      const photo = await fetchUnsplashDailyPhoto('refresh');
+    if (req.method === "POST") {
+      const photo = await fetchUnsplashDailyPhoto("refresh");
       await sql`
         INSERT INTO daily_challenges (
           challenge_date, image_url, image_thumb_url, photographer_name, photographer_username,
@@ -177,20 +181,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    if (req.method === 'PUT') {
+    if (req.method === "PUT") {
       const body = parseJsonBody(req.body);
       const raw =
-        typeof body.body === 'string' ? body.body : typeof body.thoughts === 'string' ? body.thoughts : '';
-      const text = raw.replace(/\0/g, '');
+        typeof body.body === "string"
+          ? body.body
+          : typeof body.thoughts === "string"
+            ? body.thoughts
+            : "";
+      const text = raw.replace(/\0/g, "");
       if (text.length > MAX_JOURNAL_CHARS) {
-        return res.status(400).json({ error: `Journal is too long (max ${MAX_JOURNAL_CHARS} characters)` });
+        return res.status(400).json({
+          error: `Journal is too long (max ${MAX_JOURNAL_CHARS} characters)`,
+        });
       }
 
       const dayRows = (await sql`
         SELECT challenge_date FROM daily_challenges WHERE challenge_date = ${dateStr}::date LIMIT 1
       `) as { challenge_date: string }[];
       if (dayRows.length === 0) {
-        return res.status(409).json({ error: 'No challenge for today yet. Refresh the page.' });
+        return res
+          .status(409)
+          .json({ error: "No challenge for today yet. Refresh the page." });
       }
 
       await sql`
@@ -209,7 +221,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const row = out[0];
       if (!row) {
-        return res.status(500).json({ error: 'Save failed' });
+        return res.status(500).json({ error: "Save failed" });
       }
 
       return res.status(200).json({
@@ -220,15 +232,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    res.setHeader('Allow', 'GET, POST, PUT');
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.setHeader("Allow", "GET, POST, PUT");
+    return res.status(405).json({ error: "Method not allowed" });
   } catch (e) {
     console.error(e);
-    if (e instanceof NeonDbError && (e.code === '42P01' || e.code === '42703')) {
+    if (
+      e instanceof NeonDbError &&
+      (e.code === "42P01" || e.code === "42703")
+    ) {
       return res.status(503).json({
-        error: 'Daily challenge tables are missing. Run pnpm db:migrate on this database.',
+        error:
+          "Daily challenge tables are missing. Run pnpm db:migrate on this database.",
       });
     }
-    return res.status(500).json({ error: 'Request failed' });
+    return res.status(500).json({ error: "Request failed" });
   }
 }

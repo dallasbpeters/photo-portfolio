@@ -1,5 +1,5 @@
 /** Remove NULs (break Postgres text) and trim. */
-export const sanitizeText = (s: string): string => s.replace(/\0/g, '').trim();
+export const sanitizeText = (s: string): string => s.replace(/\0/g, "").trim();
 
 /**
  * Accepts http(s) image URLs. Returns canonical href or null.
@@ -7,15 +7,21 @@ export const sanitizeText = (s: string): string => s.replace(/\0/g, '').trim();
  */
 export const parsePublicHttpUrl = (raw: string): string | null => {
   const trimmed = sanitizeText(raw);
-  if (!trimmed) return null;
+  if (!trimmed) {
+    return null;
+  }
   let toParse = trimmed;
   if (!/^https?:\/\//i.test(toParse)) {
     toParse = `https://${toParse}`;
   }
   try {
     const u = new URL(toParse);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
-    if (u.username || u.password) return null;
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return null;
+    }
+    if (u.username || u.password) {
+      return null;
+    }
     return u.href;
   } catch {
     return null;

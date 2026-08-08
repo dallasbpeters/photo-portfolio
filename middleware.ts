@@ -1,4 +1,4 @@
-import { rewrite, next } from '@vercel/edge';
+import { next, rewrite } from "@vercel/edge";
 
 /**
  * Routes link-unfurlers and search crawlers to the metadata shell.
@@ -14,7 +14,7 @@ import { rewrite, next } from '@vercel/edge';
 export const config = {
   // Skip assets and the API outright — matching them would put an edge
   // invocation in front of every image request.
-  matcher: ['/((?!api/|assets/|sites/|_vercel/|.*\\.[a-zA-Z0-9]+$).*)'],
+  matcher: ["/((?!api/|assets/|sites/|_vercel/|.*\\.[a-zA-Z0-9]+$).*)"],
 };
 
 const CRAWLER =
@@ -24,13 +24,17 @@ const CRAWLER =
 const PRIVATE_PATHS = /^\/(admin|reset-password)(\/|$)/;
 
 export default function middleware(request: Request) {
-  const userAgent = request.headers.get('user-agent') ?? '';
-  if (!CRAWLER.test(userAgent)) return next();
+  const userAgent = request.headers.get("user-agent") ?? "";
+  if (!CRAWLER.test(userAgent)) {
+    return next();
+  }
 
   const url = new URL(request.url);
-  if (PRIVATE_PATHS.test(url.pathname)) return next();
+  if (PRIVATE_PATHS.test(url.pathname)) {
+    return next();
+  }
 
-  const target = new URL('/api/shell', url.origin);
-  target.searchParams.set('path', url.pathname);
+  const target = new URL("/api/shell", url.origin);
+  target.searchParams.set("path", url.pathname);
   return rewrite(target);
 }

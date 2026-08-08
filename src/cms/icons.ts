@@ -7,80 +7,117 @@
  *
  * Grouped so the picker can show headings instead of one undifferentiated wall.
  */
-export type IconGroup = {
-  label: string;
+export interface IconGroup {
   icons: string[];
-};
+  label: string;
+}
 
 export const ICON_GROUPS: IconGroup[] = [
   {
-    label: 'Photography',
     icons: [
-      'Camera',
-      'MediaImage',
-      'MediaImagePlus',
-      'Frame',
-      'Crop',
-      'Palette',
-      'ColorFilter',
-      'VideoCamera',
-      'Printer',
-      'Sparks',
+      "Camera",
+      "MediaImage",
+      "MediaImagePlus",
+      "Frame",
+      "Crop",
+      "Palette",
+      "ColorFilter",
+      "VideoCamera",
+      "Printer",
+      "Sparks",
     ],
+    label: "Photography",
   },
   {
-    label: 'Pages',
     icons: [
-      'InfoCircle',
-      'Book',
-      'BookStack',
-      'Page',
-      'Journal',
-      'Notes',
-      'Edit',
-      'DesignNib',
-      'QuestionMark',
-      'Language',
+      "InfoCircle",
+      "Book",
+      "BookStack",
+      "Page",
+      "Journal",
+      "Notes",
+      "Edit",
+      "DesignNib",
+      "QuestionMark",
+      "Language",
     ],
+    label: "Pages",
   },
   {
-    label: 'Contact',
-    icons: ['Mail', 'Send', 'Phone', 'ChatBubble', 'User', 'Group', 'Community', 'Megaphone'],
-  },
-  {
-    label: 'Commerce',
-    icons: ['Shop', 'Cart', 'Package', 'CreditCard', 'Wallet', 'Gift', 'Trophy', 'Medal'],
-  },
-  {
-    label: 'Places',
-    icons: ['MapPin', 'Globe', 'Compass', 'Airplane', 'Car', 'Home', 'Building', 'Suitcase', 'Bicycle'],
-  },
-  {
-    label: 'Nature',
-    icons: ['Leaf', 'Tree', 'Flower', 'SunLight', 'HalfMoon', 'Cloud', 'Snow', 'Flash'],
-  },
-  {
-    label: 'Other',
     icons: [
-      'Star',
-      'Heart',
-      'Bookmark',
-      'Calendar',
-      'Clock',
-      'Link',
-      'Search',
-      'Eye',
-      'Lock',
-      'Key',
-      'Shield',
-      'Rocket',
-      'Puzzle',
-      'GraduationCap',
-      'Microphone',
-      'Headset',
-      'Cutlery',
-      'Running',
+      "Mail",
+      "Send",
+      "Phone",
+      "ChatBubble",
+      "User",
+      "Group",
+      "Community",
+      "Megaphone",
     ],
+    label: "Contact",
+  },
+  {
+    icons: [
+      "Shop",
+      "Cart",
+      "Package",
+      "CreditCard",
+      "Wallet",
+      "Gift",
+      "Trophy",
+      "Medal",
+    ],
+    label: "Commerce",
+  },
+  {
+    icons: [
+      "MapPin",
+      "Globe",
+      "Compass",
+      "Airplane",
+      "Car",
+      "Home",
+      "Building",
+      "Suitcase",
+      "Bicycle",
+    ],
+    label: "Places",
+  },
+  {
+    icons: [
+      "Leaf",
+      "Tree",
+      "Flower",
+      "SunLight",
+      "HalfMoon",
+      "Cloud",
+      "Snow",
+      "Flash",
+    ],
+    label: "Nature",
+  },
+  {
+    icons: [
+      "Star",
+      "Heart",
+      "Bookmark",
+      "Calendar",
+      "Clock",
+      "Link",
+      "Search",
+      "Eye",
+      "Lock",
+      "Key",
+      "Shield",
+      "Rocket",
+      "Puzzle",
+      "GraduationCap",
+      "Microphone",
+      "Headset",
+      "Cutlery",
+      "Running",
+    ],
+    label: "Other",
   },
 ];
 
@@ -88,4 +125,4 @@ export const ICON_GROUPS: IconGroup[] = [
 export const ICON_NAMES: string[] = ICON_GROUPS.flatMap((g) => g.icons);
 
 export const isKnownIcon = (name: string | null | undefined): boolean =>
-  typeof name === 'string' && ICON_NAMES.includes(name);
+  typeof name === "string" && ICON_NAMES.includes(name);

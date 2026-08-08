@@ -1,22 +1,24 @@
-import bcrypt from 'bcryptjs';
-import pg from 'pg';
-import { loadEnv } from './loadEnv';
+import bcrypt from "bcryptjs";
+import pg from "pg";
+import { loadEnv } from "./loadEnv";
 
 loadEnv();
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  throw new Error('DATABASE_URL is required');
+  throw new Error("DATABASE_URL is required");
 }
 
-const email = (process.env.NEW_USER_EMAIL || '').trim().toLowerCase();
+const email = (process.env.NEW_USER_EMAIL || "").trim().toLowerCase();
 const password = process.env.NEW_USER_PASSWORD;
 
 if (!email) {
-  throw new Error('Set NEW_USER_EMAIL (e.g. NEW_USER_EMAIL=you@example.com pnpm db:add-user)');
+  throw new Error(
+    "Set NEW_USER_EMAIL (e.g. NEW_USER_EMAIL=you@example.com pnpm db:add-user)"
+  );
 }
 if (!password || password.length < 8) {
-  throw new Error('NEW_USER_PASSWORD is required (min 8 characters)');
+  throw new Error("NEW_USER_PASSWORD is required (min 8 characters)");
 }
 
 const client = new pg.Client({ connectionString });
@@ -27,7 +29,7 @@ try {
     `INSERT INTO users (email, password_hash)
      VALUES ($1, $2)
      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash`,
-    [email, passwordHash],
+    [email, passwordHash]
   );
   console.log(`User upserted: ${email}`);
 } finally {

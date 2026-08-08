@@ -1,4 +1,4 @@
-import { flushSync } from 'react-dom';
+import { flushSync } from "react-dom";
 
 /**
  * Runs a state update inside a view transition when the browser supports one.
@@ -12,13 +12,13 @@ import { flushSync } from 'react-dom';
  */
 export const startViewTransition = (update: () => void): void => {
   const supported =
-    typeof document !== 'undefined' &&
-    typeof (document as Document & { startViewTransition?: unknown }).startViewTransition ===
-      'function';
+    typeof document !== "undefined" &&
+    typeof (document as Document & { startViewTransition?: unknown })
+      .startViewTransition === "function";
 
   const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   if (!supported || reducedMotion) {
     update();

@@ -1,19 +1,19 @@
-import { getSite } from './site.js';
+import { getSite } from "./site.js";
 
 /** Thrown when RESEND_API_KEY is absent, so handlers can answer 503 rather than 500. */
 export class EmailNotConfiguredError extends Error {
   constructor() {
-    super('Email is not configured');
-    this.name = 'EmailNotConfiguredError';
+    super("Email is not configured");
+    this.name = "EmailNotConfiguredError";
   }
 }
 
-export type SendEmailInput = {
-  to: string;
-  subject: string;
+export interface SendEmailInput {
   html: string;
+  subject: string;
   text: string;
-};
+  to: string;
+}
 
 /**
  * Sends one transactional email through Resend.
@@ -22,39 +22,55 @@ export type SendEmailInput = {
  * Vercel function where the only thing needed is a single POST, and it keeps the
  * dependency out of the bundle.
  */
-export const sendEmail = async ({ to, subject, html, text }: SendEmailInput): Promise<void> => {
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailInput): Promise<void> => {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) throw new EmailNotConfiguredError();
+  if (!apiKey) {
+    throw new EmailNotConfiguredError();
+  }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
+  const res = await fetch("https://api.resend.com/emails", {
+    body: JSON.stringify({
+      from: getSite().emailFrom,
+      html,
+      subject,
+      text,
+      to: [to],
+    }),
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: getSite().emailFrom, to: [to], subject, html, text }),
+    method: "POST",
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
+    const detail = await res.text().catch(() => "");
     throw new Error(`Resend responded ${res.status}: ${detail.slice(0, 300)}`);
   }
 };
 
 /** Plain-text and HTML bodies for the reset email. */
-export const passwordResetEmail = (resetUrl: string, expiresMinutes: number) => {
+export const passwordResetEmail = (
+  resetUrl: string,
+  expiresMinutes: number
+) => {
   const site = getSite();
   const subject = `Reset your ${site.name} password`;
 
   const text = [
     `Reset your ${site.name} password`,
-    '',
+    "",
     `Open this link to choose a new password. It expires in ${expiresMinutes} minutes and can only be used once.`,
-    '',
+    "",
     resetUrl,
-    '',
+    "",
     "If you didn't request this, you can ignore this email — your password will not change.",
-  ].join('\n');
+  ].join("\n");
 
   const html = `<!doctype html>
 <html>
@@ -91,12 +107,14 @@ export const passwordResetEmail = (resetUrl: string, expiresMinutes: number) => 
   </body>
 </html>`;
 
-  return { subject, text, html };
+  return { html, subject, text };
 };
 
 const escapeHtml = (s: string): string =>
   s.replace(
     /[&<>"']/g,
     (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string,
+      ({ "'": "&#39;", '"': "&quot;", "&": "&amp;", "<": "&lt;", ">": "&gt;" })[
+        c
+      ] as string
   );

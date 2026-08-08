@@ -1,53 +1,67 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { DailyChallengeInfo, DailyChallengeJournal } from '../types';
-import { portfolioService } from '../services/portfolioService';
-import { toast } from 'sonner';
-import { site } from '../site';
-import posthog from '../lib/posthog';
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import posthog from "../lib/posthog";
+import { portfolioService } from "../services/portfolioService";
+import { site } from "../site";
+import type { DailyChallengeInfo, DailyChallengeJournal } from "../types";
 
 // Storage keys stay literal: they are already scoped per origin, and renaming
 // them would sign existing admins out of a site that is live.
-const LS_NOTIFY = 'cyan_daily_challenge_notify';
-const LS_LAST_NOTIFIED = 'cyan_daily_challenge_last_notify_date';
+const LS_NOTIFY = "cyan_daily_challenge_notify";
+const LS_LAST_NOTIFIED = "cyan_daily_challenge_last_notify_date";
 
 export const canUseNotifications = (): boolean =>
-  typeof window !== 'undefined' && 'Notification' in window && window.isSecureContext;
+  typeof window !== "undefined" &&
+  "Notification" in window &&
+  window.isSecureContext;
 
-export const maybeFireDailyNotification = (challenge: DailyChallengeInfo): void => {
-  if (!canUseNotifications()) return;
+export const maybeFireDailyNotification = (
+  challenge: DailyChallengeInfo
+): void => {
+  if (!canUseNotifications()) {
+    return;
+  }
   try {
-    if (localStorage.getItem(LS_NOTIFY) !== '1') return;
-    if (Notification.permission !== 'granted') return;
+    if (localStorage.getItem(LS_NOTIFY) !== "1") {
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      return;
+    }
     const dateKey = challenge.challengeDate;
-    if (localStorage.getItem(LS_LAST_NOTIFIED) === dateKey) return;
+    if (localStorage.getItem(LS_LAST_NOTIFIED) === dateKey) {
+      return;
+    }
     new Notification("Today's photo challenge", {
       body: `Open ${site.shortName} Admin to see today's inspiration and jot your thoughts.`,
       icon: `/sites/${site.key}/icon512_rounded.png`,
       tag: `cyan-challenge-${dateKey}`,
     });
     localStorage.setItem(LS_LAST_NOTIFIED, dateKey);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 };
 
-export type TodayChallengeState = {
+export interface TodayChallengeState {
   challenge: DailyChallengeInfo | null;
   journal: DailyChallengeJournal | null;
-  thoughts: string;
-  setThoughts: (t: string) => void;
   loading: boolean;
-  saving: boolean;
-  refreshing: boolean;
   refresh: () => Promise<void>;
+  refreshing: boolean;
   /** Saves today's journal. Returns the saved entry so the caller can sync history. */
   saveJournal: (thoughts: string) => Promise<DailyChallengeJournal | null>;
+  saving: boolean;
+  setThoughts: (t: string) => void;
   /** Sync journal state from an external source (e.g. a history edit). */
   syncJournal: (journal: DailyChallengeJournal | null) => void;
-};
+  thoughts: string;
+}
 
 export const useTodayChallenge = (): TodayChallengeState => {
   const [challenge, setChallenge] = useState<DailyChallengeInfo | null>(null);
   const [journal, setJournal] = useState<DailyChallengeJournal | null>(null);
-  const [thoughts, setThoughts] = useState('');
+  const [thoughts, setThoughts] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,27 +72,33 @@ export const useTodayChallenge = (): TodayChallengeState => {
       const data = await portfolioService.getDailyChallenge();
       setChallenge(data.challenge);
       setJournal(data.journal);
-      setThoughts(data.journal?.body ?? '');
+      setThoughts(data.journal?.body ?? "");
       maybeFireDailyNotification(data.challenge);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not load daily challenge');
+      toast.error(
+        e instanceof Error ? e.message : "Could not load daily challenge"
+      );
       setChallenge(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
-    if (!canUseNotifications()) return;
+    if (!canUseNotifications()) {
+      return;
+    }
     const onVis = () => {
-      if (document.visibilityState === 'visible' && challenge) {
+      if (document.visibilityState === "visible" && challenge) {
         maybeFireDailyNotification(challenge);
       }
     };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [challenge]);
 
   const refresh = async (): Promise<void> => {
@@ -88,25 +108,30 @@ export const useTodayChallenge = (): TodayChallengeState => {
       setChallenge(data.challenge);
       setJournal(data.journal);
       setThoughts((prev) => (data.journal ? data.journal.body : prev));
-      posthog.capture('daily_challenge_refreshed');
-      toast.success('New inspiration loaded');
+      posthog.capture("daily_challenge_refreshed");
+      toast.success("New inspiration loaded");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not refresh photo');
+      toast.error(
+        err instanceof Error ? err.message : "Could not refresh photo"
+      );
     } finally {
       setRefreshing(false);
     }
   };
 
-  const saveJournal = async (currentThoughts: string): Promise<DailyChallengeJournal | null> => {
+  const saveJournal = async (
+    currentThoughts: string
+  ): Promise<DailyChallengeJournal | null> => {
     setSaving(true);
     try {
-      const saved = await portfolioService.saveDailyChallengeJournal(currentThoughts);
+      const saved =
+        await portfolioService.saveDailyChallengeJournal(currentThoughts);
       setJournal(saved);
-      posthog.capture('daily_challenge_journal_saved');
-      toast.success('Journal saved');
+      posthog.capture("daily_challenge_journal_saved");
+      toast.success("Journal saved");
       return saved;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed');
+      toast.error(err instanceof Error ? err.message : "Save failed");
       return null;
     } finally {
       setSaving(false);
@@ -115,8 +140,19 @@ export const useTodayChallenge = (): TodayChallengeState => {
 
   const syncJournal = (next: DailyChallengeJournal | null): void => {
     setJournal(next);
-    setThoughts(next?.body ?? '');
+    setThoughts(next?.body ?? "");
   };
 
-  return { challenge, journal, thoughts, setThoughts, loading, saving, refreshing, refresh, saveJournal, syncJournal };
+  return {
+    challenge,
+    journal,
+    loading,
+    refresh,
+    refreshing,
+    saveJournal,
+    saving,
+    setThoughts,
+    syncJournal,
+    thoughts,
+  };
 };

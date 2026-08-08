@@ -1,26 +1,27 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <!-- %SITE_*% placeholders are substituted per site by the siteBranding plugin in vite.config.ts -->
+    <meta content="%SITE_THEME_COLOR%" name="theme-color">
+    <link href="/sites/%SITE_KEY%/favicon.svg" rel="icon" type="image/svg+xml">
+    <link href="/sites/%SITE_KEY%/icon512_rounded.png" rel="apple-touch-icon">
+    <!-- iOS ignores the manifest for these; it needs its own hints. -->
+    <meta content="yes" name="mobile-web-app-capable">
+    <meta
+      content="black-translucent"
+      name="apple-mobile-web-app-status-bar-style"
+    >
+    <meta content="%SITE_SHORT_NAME%" name="apple-mobile-web-app-title">
+    <meta content="%SITE_DESCRIPTION%" name="description">
+    <!-- Served from the database so name/theme changes need no rebuild. -->
+    <link href="/api/manifest" rel="manifest" type="application/manifest+json">
+    <title>%SITE_NAME%</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- %SITE_*% placeholders are substituted per site by the siteBranding plugin in vite.config.ts -->
-  <meta name="theme-color" content="%SITE_THEME_COLOR%" />
-  <link rel="icon" href="/sites/%SITE_KEY%/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/sites/%SITE_KEY%/icon512_rounded.png" />
-  <!-- iOS ignores the manifest for these; it needs its own hints. -->
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="%SITE_SHORT_NAME%" />
-  <meta name="description" content="%SITE_DESCRIPTION%" />
-  <!-- Served from the database so name/theme changes need no rebuild. -->
-  <link rel="manifest" href="/api/manifest" type="application/manifest+json" />
-  <title>%SITE_NAME%</title>
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+  <body>
+    <div id="root"></div>
+    <script src="/src/main.tsx" type="module"></script>
+  </body>
 </html>

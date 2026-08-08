@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { ArrowLeft, Mail } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { authApi } from '../../services/portfolioService';
+import { ArrowLeft, Mail } from "lucide-react";
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { authApi } from "../../services/portfolioService";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 interface ForgotPasswordFormProps {
   /** Prefills the field with whatever was already typed on the sign-in form. */
@@ -13,7 +13,10 @@ interface ForgotPasswordFormProps {
   onBack: () => void;
 }
 
-export function ForgotPasswordForm({ initialEmail = '', onBack }: ForgotPasswordFormProps) {
+export function ForgotPasswordForm({
+  initialEmail = "",
+  onBack,
+}: ForgotPasswordFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -28,7 +31,9 @@ export function ForgotPasswordForm({ initialEmail = '', onBack }: ForgotPassword
       setSentTo(email.trim().toLowerCase());
       toast.success(message);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not send reset email');
+      toast.error(
+        err instanceof Error ? err.message : "Could not send reset email"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -36,23 +41,24 @@ export function ForgotPasswordForm({ initialEmail = '', onBack }: ForgotPassword
 
   if (sentTo) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[min(70dvh,32rem)] w-full px-2 space-y-6">
-        <div className="p-5 sm:p-6 bg-white/5 rounded-full border border-white/10">
-          <Mail className="size-10 text-white/20 sm:size-12" aria-hidden />
+      <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
+        <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
+          <Mail aria-hidden className="size-10 text-white/20 sm:size-12" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-light tracking-[0.25em] sm:tracking-[0.3em] uppercase text-center">
+        <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
           Check your email
         </h2>
-        <p className="text-[11px] text-white/40 uppercase tracking-[0.15em] text-center max-w-sm px-2 leading-relaxed">
-          If {sentTo} has an account, a reset link is on its way. It expires in one hour.
+        <p className="max-w-sm px-2 text-center text-[11px] text-white/40 uppercase leading-relaxed tracking-[0.15em]">
+          If {sentTo} has an account, a reset link is on its way. It expires in
+          one hour.
         </p>
         <Button
-          type="button"
+          className="flex min-h-12 items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
           onClick={onBack}
+          type="button"
           variant="outline"
-          className="min-h-12 flex items-center justify-center gap-2 border-white/20 hover:bg-white hover:text-black transition-all duration-500 uppercase tracking-widest text-[10px] px-8 py-3"
         >
-          <ArrowLeft size={16} aria-hidden />
+          <ArrowLeft aria-hidden size={16} />
           Back to sign in
         </Button>
       </div>
@@ -60,45 +66,52 @@ export function ForgotPasswordForm({ initialEmail = '', onBack }: ForgotPassword
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[min(70dvh,32rem)] w-full px-2 space-y-6">
-      <div className="p-5 sm:p-6 bg-white/5 rounded-full border border-white/10">
-        <Mail className="size-10 text-white/20 sm:size-12" aria-hidden />
+    <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
+      <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
+        <Mail aria-hidden className="size-10 text-white/20 sm:size-12" />
       </div>
-      <h2 className="text-xl sm:text-2xl font-light tracking-[0.25em] sm:tracking-[0.3em] uppercase text-center">
+      <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
         Reset password
       </h2>
-      <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] text-center max-w-sm px-2">
+      <p className="max-w-sm px-2 text-center text-[10px] text-white/40 uppercase tracking-[0.2em]">
         We'll email you a link to choose a new one.
       </p>
-      <form onSubmit={(e) => void handleSubmit(e)} className="w-full max-w-sm space-y-4" aria-label="Request password reset">
+      <form
+        aria-label="Request password reset"
+        className="w-full max-w-sm space-y-4"
+        onSubmit={(e) => void handleSubmit(e)}
+      >
         <div className="space-y-2">
-          <Label htmlFor="reset-email" className="text-[10px] uppercase tracking-widest text-white/40">
+          <Label
+            className="text-[10px] text-white/40 uppercase tracking-widest"
+            htmlFor="reset-email"
+          >
             Email
           </Label>
           <Input
-            id="reset-email"
-            type="email"
             autoComplete="username"
-            value={email}
+            autoFocus
+            className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+            id="reset-email"
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoFocus
-            className="min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors"
+            type="email"
+            value={email}
           />
         </div>
         <Button
-          type="submit"
+          className="flex min-h-12 w-full items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
           disabled={isSubmitting}
+          type="submit"
           variant="outline"
-          className="w-full min-h-12 flex items-center justify-center gap-2 border-white/20 hover:bg-white hover:text-black transition-all duration-500 uppercase tracking-widest text-[10px] px-8 py-3"
         >
-          <Mail size={16} aria-hidden />
-          {isSubmitting ? 'Sending…' : 'Send reset link'}
+          <Mail aria-hidden size={16} />
+          {isSubmitting ? "Sending…" : "Send reset link"}
         </Button>
         <button
-          type="button"
+          className="min-h-11 w-full text-[10px] text-white/40 uppercase tracking-[0.2em] transition-colors hover:text-white"
           onClick={onBack}
-          className="w-full min-h-11 text-[10px] uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors"
+          type="button"
         >
           Back to sign in
         </button>

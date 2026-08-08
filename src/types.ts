@@ -1,67 +1,67 @@
 export interface Category {
-  id: string;
-  slug: string;
-  label: string;
-  sortOrder: number;
-  photoCount: number;
   createdAt: string;
+  id: string;
+  label: string;
+  photoCount: number;
+  slug: string;
+  sortOrder: number;
 }
 
 export interface PhotoExifData {
-  make?: string;
-  model?: string;
-  lens?: string;
-  focalLength?: number;
   aperture?: number;
   exposureTime?: number;
+  focalLength?: number;
   iso?: number;
+  lens?: string;
+  make?: string;
+  model?: string;
   takenAt?: string;
 }
 
 export interface Photo {
-  id: string;
-  url: string;
-  title: string;
-  categoryId: string;
-  /** URL-safe key; matches `Category.slug` */
-  category: string;
-  categoryLabel: string;
-  order: number;
-  createdAt: string;
   /** Falls back to the title server-side, so this is never empty. */
   alt: string;
-  /** Intrinsic size, used to reserve layout space before the image loads. */
-  width: number | null;
+  /** URL-safe key; matches `Category.slug` */
+  category: string;
+  categoryId: string;
+  categoryLabel: string;
+  createdAt: string;
+  exif: PhotoExifData | null;
   height: number | null;
+  id: string;
   /** Tiny inline preview shown blurred until the full image decodes. */
   lqip: string | null;
-  exif: PhotoExifData | null;
+  order: number;
+  title: string;
+  url: string;
+  /** Intrinsic size, used to reserve layout space before the image loads. */
+  width: number | null;
 }
 
-export type ViewMode = 'all' | string;
+export type ViewMode = "all" | string;
 
-export type DailyChallengeInfo = {
+export interface DailyChallengeInfo {
+  altText: string | null;
   challengeDate: string;
-  imageUrl: string;
   imageThumbUrl: string | null;
+  imageUrl: string;
   photographerName: string | null;
   photographerUsername: string | null;
-  unsplashPhotoId: string | null;
   unsplashHtmlLink: string | null;
-  altText: string | null;
-};
+  unsplashPhotoId: string | null;
+}
 
-export type DailyChallengeJournal = {
+export interface DailyChallengeJournal {
   body: string;
   updatedAt: string;
-};
+}
 
-export type DailyChallengeResponse = {
+export interface DailyChallengeResponse {
   challenge: DailyChallengeInfo;
   journal: DailyChallengeJournal | null;
-};
+}
 
-export type DailyChallengeHistoryEntry = {
+export interface DailyChallengeHistoryEntry {
   challenge: DailyChallengeInfo;
   journal: DailyChallengeJournal | null;
-};
+}

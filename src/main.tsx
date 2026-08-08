@@ -1,14 +1,14 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
-import './lib/posthog.ts';
-import App from './App.tsx';
-import './index.css';
-import { registerServiceWorker } from './lib/registerServiceWorker';
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./lib/posthog.ts";
+import App from "./App.tsx";
+import "./index.css";
+import { registerServiceWorker } from "./lib/registerServiceWorker";
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
 
 registerServiceWorker();

@@ -14,72 +14,74 @@
  * can be imported from all four of those places.
  */
 
-export type SiteKey = 'addison' | 'cyan';
+export type SiteKey = "addison" | "cyan";
 
-export type SiteConfig = {
+export interface SiteConfig {
+  /** Address `pnpm db:seed` creates the first admin for. */
+  defaultAdminEmail: string;
+  /** Apex domain, no scheme. Also the PWA `id`. */
+  domain: string;
+  /** From-address for transactional mail. Domain must be verified in Resend. */
+  emailFrom: string;
+  /** Wordmark on the public gallery hero. */
+  heroTitle: string;
+  instagramHandle: string;
+  instagramUrl: string;
   /** Stable identifier — matches the VITE_SITE / SITE env value. */
   key: SiteKey;
   /** Full product name: browser title, PWA name, install prompt. */
   name: string;
-  /** PWA short name — keep under ~12 chars so launchers don't truncate it. */
-  shortName: string;
-  /** Wordmark on the public gallery hero. */
-  heroTitle: string;
-  /** Photographer's display name — footer, admin header, email signature. */
-  ownerName: string;
-  /** Apex domain, no scheme. Also the PWA `id`. */
-  domain: string;
   /** Every origin the API accepts cross-origin requests from. */
   origins: string[];
+  /** Photographer's display name — footer, admin header, email signature. */
+  ownerName: string;
+  /** PWA short name — keep under ~12 chars so launchers don't truncate it. */
+  shortName: string;
   /** Line under the footer wordmark. */
   tagline: string;
-  instagramUrl: string;
-  instagramHandle: string;
-  /** Address `pnpm db:seed` creates the first admin for. */
-  defaultAdminEmail: string;
-  /** From-address for transactional mail. Domain must be verified in Resend. */
-  emailFrom: string;
   /** PWA + browser chrome color. */
   themeColor: string;
-};
+}
 
 export const SITES: Record<SiteKey, SiteConfig> = {
   addison: {
-    key: 'addison',
-    name: "Addison's Photos",
-    shortName: 'Addison',
-    heroTitle: "Addison's POV",
-    ownerName: 'Addison',
-    domain: 'addisonsphotos.com',
-    origins: ['https://addisonsphotos.com', 'https://www.addisonsphotos.com'],
-    tagline: 'Visual Storyteller & Photographer',
-    instagramUrl: 'https://www.instagram.com/knot_dislesic',
-    instagramHandle: '@knot_dislesic',
-    defaultAdminEmail: 'addisonrpeters@gmail.com',
+    defaultAdminEmail: "addisonrpeters@gmail.com",
+    domain: "addisonsphotos.com",
     emailFrom: "Addison's Photos <noreply@addisonsphotos.com>",
-    themeColor: '#000000',
+    heroTitle: "Addison's POV",
+    instagramHandle: "@knot_dislesic",
+    instagramUrl: "https://www.instagram.com/knot_dislesic",
+    key: "addison",
+    name: "Addison's Photos",
+    origins: ["https://addisonsphotos.com", "https://www.addisonsphotos.com"],
+    ownerName: "Addison",
+    shortName: "Addison",
+    tagline: "Visual Storyteller & Photographer",
+    themeColor: "#000000",
   },
   cyan: {
-    key: 'cyan',
-    name: "Cyan's Photos",
-    shortName: 'Cyan',
-    heroTitle: "Cyan's POV",
-    ownerName: 'Cyan',
-    domain: 'cyansphotos.com',
-    origins: ['https://cyansphotos.com', 'https://www.cyansphotos.com'],
-    tagline: 'Visual Storyteller & Photographer',
-    instagramUrl: 'https://www.instagram.com/cyans_pov',
-    instagramHandle: '@cyans_pov',
-    defaultAdminEmail: 'admin@cyansphotos.com',
+    defaultAdminEmail: "admin@cyansphotos.com",
+    domain: "cyansphotos.com",
     emailFrom: "Cyan's Photos <noreply@cyansphotos.com>",
-    themeColor: '#000000',
+    heroTitle: "Cyan's POV",
+    instagramHandle: "@cyans_pov",
+    instagramUrl: "https://www.instagram.com/cyans_pov",
+    key: "cyan",
+    name: "Cyan's Photos",
+    origins: ["https://cyansphotos.com", "https://www.cyansphotos.com"],
+    ownerName: "Cyan",
+    shortName: "Cyan",
+    tagline: "Visual Storyteller & Photographer",
+    themeColor: "#000000",
   },
 };
 
-export const DEFAULT_SITE: SiteKey = 'addison';
+export const DEFAULT_SITE: SiteKey = "addison";
 
 export const isSiteKey = (value: string | undefined): value is SiteKey =>
-  value != null && Object.prototype.hasOwnProperty.call(SITES, value);
+  // Both null and undefined must be rejected here; a lone `!== null` lets
+  // undefined through to Object.hasOwn.
+  value !== undefined && value !== null && Object.hasOwn(SITES, value);
 
 /**
  * Resolve a site from a raw env value. Falls back to {@link DEFAULT_SITE} so a

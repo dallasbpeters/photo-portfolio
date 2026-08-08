@@ -1,14 +1,14 @@
-import { toast } from 'sonner';
-import { PhotoEditorShell } from '../editor/ui/PhotoEditorShell';
-import { portfolioService } from '../services/portfolioService';
-import type { Photo } from '../types';
-import posthog from '../lib/posthog';
+import { toast } from "sonner";
+import { PhotoEditorShell } from "../editor/ui/PhotoEditorShell";
+import posthog from "../lib/posthog";
+import { portfolioService } from "../services/portfolioService";
+import type { Photo } from "../types";
 
 interface PhotoEditorProps {
-  photo: Photo;
   onClose: () => void;
   /** Called after the edited image is uploaded and the photo record is updated. */
   onSaved: (updated: Photo) => void;
+  photo: Photo;
 }
 
 /**
@@ -19,26 +19,31 @@ interface PhotoEditorProps {
  */
 export function PhotoEditor({ photo, onClose, onSaved }: PhotoEditorProps) {
   const handleSave = async (blob: Blob, extension: string): Promise<void> => {
-    const toastId = toast.loading('Saving changes…');
+    const toastId = toast.loading("Saving changes…");
     try {
-      const file = new File([blob], `${photo.id}.${extension}`, { type: blob.type });
+      const file = new File([blob], `${photo.id}.${extension}`, {
+        type: blob.type,
+      });
       const { url } = await portfolioService.uploadImageFile(file);
       const updated = await portfolioService.updatePhoto(photo.id, {
-        title: photo.title,
         categoryId: photo.categoryId,
         order: photo.order,
+        title: photo.title,
         url,
       });
-      posthog.capture('photo_edit_saved', {
+      posthog.capture("photo_edit_saved", {
         export_format: extension,
       });
-      toast.success('Changes saved', { id: toastId });
+      toast.success("Changes saved", { id: toastId });
       onSaved(updated);
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not save changes', {
-        id: toastId,
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Could not save changes",
+        {
+          id: toastId,
+        }
+      );
       // Rethrow so the editor stays open with the edit intact.
       throw error;
     }
@@ -47,9 +52,9 @@ export function PhotoEditor({ photo, onClose, onSaved }: PhotoEditorProps) {
   return (
     <PhotoEditorShell
       imageUrl={photo.url}
-      title={photo.title}
       onClose={onClose}
       onSave={handleSave}
+      title={photo.title}
     />
   );
 }

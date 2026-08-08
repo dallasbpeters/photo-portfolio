@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { authApi, authStorage } from '../services/portfolioService';
-import { toast } from 'sonner';
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { authApi, authStorage } from "../services/portfolioService";
 
-export type AdminLoginResult = {
+export interface AdminLoginResult {
   email: string;
-  setEmail: (e: string) => void;
-  password: string;
-  setPassword: (p: string) => void;
-  isSubmitting: boolean;
   handleLogin: (e: FormEvent) => Promise<void>;
-};
+  isSubmitting: boolean;
+  password: string;
+  setEmail: (e: string) => void;
+  setPassword: (p: string) => void;
+}
 
 export const useAdminLogin = (onLogin: () => void): AdminLoginResult => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: FormEvent): Promise<void> => {
@@ -23,15 +23,15 @@ export const useAdminLogin = (onLogin: () => void): AdminLoginResult => {
     try {
       const { token } = await authApi.login(email, password);
       authStorage.setToken(token);
-      setPassword('');
-      toast.success('Signed in');
+      setPassword("");
+      toast.success("Signed in");
       onLogin();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Login failed');
+      toast.error(err instanceof Error ? err.message : "Login failed");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return { email, setEmail, password, setPassword, isSubmitting, handleLogin };
+  return { email, handleLogin, isSubmitting, password, setEmail, setPassword };
 };

@@ -1,4 +1,4 @@
-import { useState, type ImgHTMLAttributes } from 'react';
+import { type ImgHTMLAttributes, useState } from "react";
 
 /**
  * Serves photos through Vercel's Image Optimization instead of shipping the
@@ -19,13 +19,19 @@ const isOptimizable = (src: string): boolean => {
   // /_vercel/image is served by Vercel's edge and does not exist under `vite
   // dev` or `vercel dev`, so optimizing locally 404s every photograph. Serve
   // originals in development instead.
-  if (import.meta.env.DEV) return false;
+  if (import.meta.env.DEV) {
+    return false;
+  }
   // Only absolute http(s) sources go through the optimizer; data: and blob:
   // URLs (the editor's in-progress output) must render as-is.
-  if (!/^https?:\/\//i.test(src)) return false;
+  if (!/^https?:\/\//i.test(src)) {
+    return false;
+  }
   // SVGs are passed through: rasterising them loses the point, and the
   // optimizer refuses them unless dangerouslyAllowSVG is set.
-  if (/\.svg(\?|$)/i.test(src)) return false;
+  if (/\.svg(\?|$)/i.test(src)) {
+    return false;
+  }
   return true;
 };
 
@@ -37,33 +43,37 @@ const optimizedUrl = (src: string, width: number, quality: number): string =>
  * anywhere an <img> element is produced by another library. Returns the source
  * unchanged when it is not optimizable.
  */
-export const optimizedImageSrc = (src: string, width: number, quality = 80): string =>
-  isOptimizable(src) ? optimizedUrl(src, width, quality) : src;
+export const optimizedImageSrc = (
+  src: string,
+  width: number,
+  quality = 80
+): string => (isOptimizable(src) ? optimizedUrl(src, width, quality) : src);
 
-interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'srcSet'> {
-  src: string;
+interface OptimizedImageProps
+  extends Omit<ImgHTMLAttributes<HTMLImageElement>, "srcSet"> {
   alt: string;
   /**
    * Tiny inline preview, shown blurred until the real image decodes. Rendered as
    * a background so there is no second <img> to fetch or lay out.
    */
   lqip?: string | null;
+  quality?: number;
   /**
    * The `sizes` attribute — how wide the image renders at each breakpoint.
    * Getting this right is what actually saves the bytes: without it the browser
    * assumes 100vw and picks the largest candidate.
    */
   sizes?: string;
-  quality?: number;
+  src: string;
 }
 
 export function OptimizedImage({
   src,
   alt,
-  sizes = '100vw',
+  sizes = "100vw",
   quality = 75,
-  loading = 'lazy',
-  decoding = 'async',
+  loading = "lazy",
+  decoding = "async",
   lqip,
   style,
   ...rest
@@ -76,20 +86,20 @@ export function OptimizedImage({
     lqip && !loaded
       ? {
           backgroundImage: `url(${lqip})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'blur(12px)',
-          transform: 'scale(1.04)',
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+          filter: "blur(12px)",
+          transform: "scale(1.04)",
         }
       : undefined;
 
   const shared = {
     alt,
-    loading,
+    className: rest.className,
     decoding,
+    loading,
     onLoad: () => setLoaded(true),
     style: { ...placeholderStyle, ...style },
-    className: rest.className,
   };
 
   if (!isOptimizable(src)) {
@@ -100,9 +110,11 @@ export function OptimizedImage({
     <img
       {...rest}
       {...shared}
-      src={optimizedUrl(src, 1080, quality)}
-      srcSet={WIDTHS.map((w) => `${optimizedUrl(src, w, quality)} ${w}w`).join(', ')}
       sizes={sizes}
+      src={optimizedUrl(src, 1080, quality)}
+      srcSet={WIDTHS.map((w) => `${optimizedUrl(src, w, quality)} ${w}w`).join(
+        ", "
+      )}
     />
   );
 }
