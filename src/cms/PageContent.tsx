@@ -160,7 +160,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "codeBlock":
       return (
-        <pre className="mb-6 overflow-x-auto border border-white/10 bg-white/[0.03] p-4 font-mono text-[12px] text-white/90">
+        <pre className="mb-6 overflow-x-auto border border-white/10 bg-white/3 p-4 font-mono text-[12px] text-white/90">
           <code>{renderNodes(node.content, key)}</code>
         </pre>
       );

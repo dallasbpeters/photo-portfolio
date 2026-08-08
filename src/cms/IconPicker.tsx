@@ -94,7 +94,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
           </button>
 
           {ICON_GROUPS.map((group) => (
-            <div className="border-white/[0.06] border-t" key={group.label}>
+            <div className="border-white/6 border-t" key={group.label}>
               <p className="px-3 pt-3 pb-1.5 text-[9px] text-white/80 uppercase tracking-[0.22em]">
                 {group.label}
               </p>
@@ -110,7 +110,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
                       className={`flex aspect-square items-center justify-center transition-colors ${
                         value === name
                           ? "bg-white text-black"
-                          : "text-white/90 hover:bg-white/[0.08] hover:text-white"
+                          : "text-white/90 hover:bg-white/8 hover:text-white"
                       }`}
                       key={name}
                       onClick={() => {

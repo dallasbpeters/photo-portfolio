@@ -91,7 +91,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
 
   if (!editor) {
     return (
-      <div className="min-h-[380px] border border-white/10 bg-black/40 p-5 text-[11px] text-white/80 uppercase tracking-[0.2em]">
+      <div className="min-h-95 border border-white/10 bg-black/40 p-5 text-[11px] text-white/80 uppercase tracking-[0.2em]">
         Loading editor…
       </div>
     );
@@ -117,7 +117,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
 
   return (
     <div className="border border-white/10 bg-black/40">
-      <div className="flex flex-wrap items-center gap-px border-white/[0.07] border-b bg-white/[0.03] p-1">
+      <div className="flex flex-wrap items-center gap-px border-white/[0.07] border-b bg-white/3 p-1">
         <ToolButton
           editor={editor}
           isActive={editor.isActive("heading", { level: 2 })}
@@ -282,7 +282,7 @@ function ToolButton({
       className={`flex size-8 items-center justify-center transition-colors ${
         isActive
           ? "bg-white/10 text-white"
-          : "text-white/90 hover:bg-white/[0.06] hover:text-white"
+          : "text-white/90 hover:bg-white/6 hover:text-white"
       }`}
       onClick={onClick}
       title={label}

@@ -136,7 +136,7 @@ export function ContentPage() {
         )}
       </main>
 
-      <footer className="border-white/5 border-t px-8 py-12 md:px-24">
+      <footer className="border-white/5 border-t px-4 py-24 md:px-8">
         <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
           © {new Date().getFullYear()} {settings.ownerName}
         </p>

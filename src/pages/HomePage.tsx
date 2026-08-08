@@ -285,7 +285,7 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <footer className="border-white/5 border-t bg-black px-12 py-24">
+      <footer className="border-white/5 border-t bg-black px-4 py-24 md:px-8">
         <div className="mx-auto flex max-w-10xl flex-col items-end justify-between gap-12 md:flex-row">
           <div className="space-y-6">
             <h2 className="font-bold text-3xl uppercase tracking-widest">
