@@ -136,14 +136,14 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "bulletList":
       return (
-        <ul className="mb-5 list-disc space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/30">
+        <ul className="mb-5 list-disc space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/90">
           {renderNodes(node.content, key)}
         </ul>
       );
 
     case "orderedList":
       return (
-        <ol className="mb-5 list-decimal space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/30">
+        <ol className="mb-5 list-decimal space-y-2 pl-5 text-[15px] text-white/70 leading-[1.75] marker:text-white/90">
           {renderNodes(node.content, key)}
         </ol>
       );
@@ -153,7 +153,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "blockquote":
       return (
-        <blockquote className="mb-6 border-white/20 border-l pl-5 text-[15px] text-white/50 italic leading-[1.75]">
+        <blockquote className="mb-6 border-white/20 border-l pl-5 text-[15px] text-white/90 italic leading-[1.75]">
           {renderNodes(node.content, key)}
         </blockquote>
       );

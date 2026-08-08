@@ -21,6 +21,7 @@ import type { CurvePoint, ToneCurve } from "./engine/curves";
 export interface LookFamily {
   /** Signature colour for the family, used as the strip swatch. */
   color: string;
+  contrastColor?: string;
   description: string;
   id: string;
   /** Single letter shown on the strip. */
@@ -30,56 +31,64 @@ export interface LookFamily {
 
 export const LOOK_FAMILIES: LookFamily[] = [
   {
-    color: "#e8c15a",
+    color: "var(--color-a",
+    contrastColor: "var(--color-a-contrast)",
     description: "Warm negative — sun, skin, late light",
     id: "a",
     letter: "A",
     name: "Golden",
   },
   {
-    color: "#8a8f5c",
+    color: "var(--color-b)",
+    contrastColor: "var(--color-b-contrast)",
     description: "Muted earth — matte greens, faded",
     id: "b",
     letter: "B",
     name: "Olive",
   },
   {
-    color: "#d9743f",
+    color: "var(--color-c)",
+    contrastColor: "var(--color-c-contrast)",
     description: "Punchy warm — sunset, headlights",
     id: "c",
     letter: "C",
     name: "Ember",
   },
   {
-    color: "#4e8f92",
+    color: "var(--color-d)",
+    contrastColor: "var(--color-d-contrast)",
     description: "Cool cinematic — teal shadows",
     id: "d",
     letter: "D",
     name: "Tide",
   },
   {
-    color: "#4a6da8",
+    color: "var(--color-e)",
+    contrastColor: "var(--color-e-contrast)",
     description: "Cold slide — night, blue hour",
     id: "e",
     letter: "E",
     name: "Dusk",
   },
   {
-    color: "#b96a8e",
+    color: "var(--color-f)",
+    contrastColor: "var(--color-f-contrast)",
     description: "Cross-processed — bold magenta",
     id: "f",
     letter: "F",
     name: "Bloom",
   },
   {
-    color: "#9c8467",
+    color: "var(--color-g)",
+    contrastColor: "var(--color-g-contrast)",
     description: "Aged print — sepia, soft blacks",
     id: "g",
     letter: "G",
     name: "Archive",
   },
   {
-    color: "#9a9a9a",
+    color: "var(--color-m)",
+    contrastColor: "var(--color-m-contrast)",
     description: "Black and white",
     id: "m",
     letter: "M",

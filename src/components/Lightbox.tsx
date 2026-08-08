@@ -30,42 +30,50 @@ export function Lightbox({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
       exit={{ opacity: 0 }}
       initial={{ opacity: 0 }}
-      onClick={onClose}
+      // Only a click on the backdrop itself closes; clicks that land on the
+      // photo or its caption target a descendant and are ignored.
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <button
-        className="absolute top-6 right-6 text-white/50 transition-colors hover:text-white"
+        className="absolute top-6 right-6 text-white/90 transition-colors hover:text-white"
         onClick={(e) => {
           e.stopPropagation();
           onClose();
         }}
+        type="button"
       >
         <X size={32} />
       </button>
 
       <button
-        className="absolute left-6 text-white/50 transition-colors hover:text-white"
+        className="absolute left-6 text-white/90 transition-colors hover:text-white"
         onClick={(e) => {
           e.stopPropagation();
           onPrev();
         }}
+        type="button"
       >
         <ChevronLeft size={48} />
       </button>
 
       <button
-        className="absolute right-6 text-white/50 transition-colors hover:text-white"
+        className="absolute right-6 text-white/90 transition-colors hover:text-white"
         onClick={(e) => {
           e.stopPropagation();
           onNext();
         }}
+        type="button"
       >
         <ChevronRight size={48} />
       </button>
 
-      <div
-        className="max-h-[80vh] max-w-5xl px-12"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* The backdrop's handler already ignores clicks that land on a
+          descendant, so this wrapper needs no handler of its own. */}
+      <div className="max-h-[80vh] max-w-5xl px-12">
         <motion.img
           alt={currentPhoto.title}
           animate={{ opacity: 1, scale: 1 }}
@@ -83,7 +91,7 @@ export function Lightbox({
           <h3 className="font-light text-lg text-white uppercase tracking-widest">
             {currentPhoto.title}
           </h3>
-          <p className="mt-1 text-sm text-white/50 uppercase tracking-tighter">
+          <p className="mt-1 text-sm text-white/90 uppercase tracking-tighter">
             {currentPhoto.categoryLabel}
           </p>
         </div>

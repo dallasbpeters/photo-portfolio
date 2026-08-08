@@ -29,6 +29,25 @@
   inherits: false;
 }
 
+@theme {
+  --color-a: #ad311f;
+  --color-b: #de553b;
+  --color-c: #c7cc1e;
+  --color-d: #1e5653;
+  --color-e: #9100ff;
+  --color-f: #899300;
+  --color-g: #009393;
+  --color-m: #0059c1;
+  --color-a-contrast: contrast-color(var(--color-a));
+  --color-b-contrast: contrast-color(var(--color-b));
+  --color-c-contrast: contrast-color(var(--color-c));
+  --color-d-contrast: contrast-color(var(--color-d));
+  --color-e-contrast: contrast-color(var(--color-e));
+  --color-f-contrast: contrast-color(var(--color-f));
+  --color-g-contrast: contrast-color(var(--color-g));
+  --color-m-contrast: contrast-color(var(--color-m));
+}
+
 @keyframes stack-in {
   from {
     opacity: 0;

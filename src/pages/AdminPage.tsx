@@ -45,14 +45,14 @@ export function AdminPage() {
           </h1>
           <div className="flex shrink-0 items-center gap-2">
             <Link
-              className="inline-flex min-h-11 items-center justify-center px-2 font-medium text-[10px] text-white/60 uppercase tracking-[0.15em] transition-colors hover:text-white sm:text-[11px] sm:tracking-[0.2em]"
+              className="inline-flex min-h-11 items-center justify-center px-2 font-medium text-[10px] text-white/90 uppercase tracking-[0.15em] transition-colors hover:text-white sm:text-[11px] sm:tracking-[0.2em]"
               to="/"
             >
               Back to site
             </Link>
             {isAuthenticated ? (
               <Button
-                className="flex min-h-11 items-center gap-2 px-2 text-[10px] text-white/40 uppercase tracking-widest hover:text-white"
+                className="flex min-h-11 items-center gap-2 px-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
                 onClick={handleLogout}
                 type="button"
                 variant="ghost"

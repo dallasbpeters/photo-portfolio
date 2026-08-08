@@ -99,7 +99,6 @@ export function OptimizedImage({
       : undefined;
 
   const shared = {
-    alt,
     className: rest.className,
     decoding,
     loading,
@@ -112,7 +111,14 @@ export function OptimizedImage({
   // reflows as each photograph decodes.
   if (!isOptimizable(src)) {
     return (
-      <img {...rest} {...shared} height={height} src={src} width={width} />
+      <img
+        {...rest}
+        {...shared}
+        alt={alt}
+        height={height}
+        src={src}
+        width={width}
+      />
     );
   }
 
@@ -120,6 +126,7 @@ export function OptimizedImage({
     <img
       {...rest}
       {...shared}
+      alt={alt}
       height={height}
       sizes={sizes}
       src={optimizedUrl(src, 1080, quality)}

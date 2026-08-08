@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const jsonResponse = await handleUpload({
       body,
 
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
+      onBeforeGenerateToken: (pathname, clientPayload) => {
         // The upload helper posts here directly, so the session token travels in
         // clientPayload rather than an Authorization header.
         const user = getBearerUser(`Bearer ${clientPayload ?? ""}`);
@@ -56,13 +56,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           throw new Error("Unauthorized");
         }
 
-        return {
+        return Promise.resolve({
           // Namespaced per user, and suffixed so re-uploading the same filename
           // never overwrites an existing photo.
           addRandomSuffix: true,
           allowedContentTypes: ALLOWED_TYPES,
           tokenPayload: JSON.stringify({ pathname, userId: user.userId }),
-        };
+        });
       },
 
       onUploadCompleted: async () => {

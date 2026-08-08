@@ -87,7 +87,7 @@ export function ResetPasswordPage() {
               <input autoComplete="username" name="username" type="hidden" />
               <div className="space-y-2">
                 <Label
-                  className="text-[10px] text-white/40 uppercase tracking-widest"
+                  className="text-[10px] text-white/90 uppercase tracking-widest"
                   htmlFor="new-password"
                 >
                   New password
@@ -106,7 +106,7 @@ export function ResetPasswordPage() {
               </div>
               <div className="space-y-2">
                 <Label
-                  className="text-[10px] text-white/40 uppercase tracking-widest"
+                  className="text-[10px] text-white/90 uppercase tracking-widest"
                   htmlFor="confirm-password"
                 >
                   Confirm password
@@ -144,7 +144,7 @@ export function ResetPasswordPage() {
             <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl">
               Link not valid
             </h2>
-            <p className="max-w-sm text-center text-[11px] text-white/40 uppercase leading-relaxed tracking-[0.15em]">
+            <p className="max-w-sm text-center text-[11px] text-white/90 uppercase leading-relaxed tracking-[0.15em]">
               This reset link is missing its token. Request a new one from the
               sign-in page.
             </p>

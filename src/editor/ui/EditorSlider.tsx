@@ -3,6 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface EditorSliderProps {
   /** Fill grows from the middle and a detent marks zero. */
   centered?: boolean;
+  /**
+   * Blocks interaction, used while the original is being compared. Until this
+   * existed the shell passed the prop and it was silently dropped, so the
+   * controls stayed live behind the comparison.
+   */
+  isDisabled?: boolean;
   label: string;
   max: number;
   min: number;
@@ -28,6 +34,7 @@ export function EditorSlider({
   centered = false,
   onChange,
   onCommit,
+  isDisabled = false,
 }: EditorSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -61,13 +68,16 @@ export function EditorSlider({
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDisabled) {
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
     onChange(valueFromClientX(e.clientX));
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) {
+    if (isDisabled || !isDragging) {
       return;
     }
     onChange(valueFromClientX(e.clientX));
@@ -113,7 +123,7 @@ export function EditorSlider({
         </span>
         <span
           className={`font-mono text-[10px] tabular-nums transition-opacity duration-200 ${
-            isDragging || isActive ? "text-white/60 opacity-100" : "opacity-0"
+            isDragging || isActive ? "text-white/90 opacity-100" : "opacity-0"
           }`}
         >
           {displayValue}
@@ -124,9 +134,15 @@ export function EditorSlider({
         aria-label={label}
         aria-valuemax={max}
         aria-valuemin={min}
+        aria-disabled={isDisabled}
         aria-valuenow={value}
-        className="relative h-4 cursor-pointer touch-none focus:outline-none"
+        className={`relative h-4 touch-none focus:outline-none ${
+          isDisabled ? "pointer-events-none opacity-40" : "cursor-pointer"
+        }`}
         onKeyDown={(e) => {
+          if (isDisabled) {
+            return;
+          }
           if (e.key === "ArrowLeft") {
             onChange(Math.max(min, value - (e.shiftKey ? 10 : 1)));
           }
@@ -143,7 +159,7 @@ export function EditorSlider({
         onPointerUp={endDrag}
         ref={trackRef}
         role="slider"
-        tabIndex={0}
+        tabIndex={isDisabled ? -1 : 0}
       >
         {/* Track */}
         <div className="absolute top-1/2 left-0 h-px w-full -translate-y-1/2 bg-white/[0.09]" />

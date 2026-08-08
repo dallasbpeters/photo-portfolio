@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import { Input } from "../ui/input";
 
 /**
  * Promise-based confirmation, replacing window.confirm.
@@ -28,38 +28,42 @@ import {
  * Usage mirrors what it replaces:
  *   if (!(await confirm({ title: "Delete photo?" }))) return;
  */
-export type ConfirmOptions = {
-  title: string;
+export interface ConfirmOptions {
+  cancelLabel?: string;
+  confirmLabel?: string;
   /** Optional detail line. Say what cannot be undone. */
   description?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
   /** Renders the confirm action in a destructive style. */
   destructive?: boolean;
-};
-
-export type PromptOptions = {
   title: string;
-  description?: string;
+}
+
+export interface PromptOptions {
+  confirmLabel?: string;
   /** Pre-filled value. */
   defaultValue?: string;
+  description?: string;
   placeholder?: string;
-  confirmLabel?: string;
-};
+  title: string;
+}
 
-type ConfirmApi = {
+interface ConfirmApi {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   /** Resolves with the entered text, or null if dismissed. */
   prompt: (options: PromptOptions) => Promise<string | null>;
-};
+}
 
 const ConfirmContext = createContext<ConfirmApi | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
-  const [promptOptions, setPromptOptions] = useState<PromptOptions | null>(null);
+  const [promptOptions, setPromptOptions] = useState<PromptOptions | null>(
+    null
+  );
   const [promptValue, setPromptValue] = useState("");
-  const promptResolverRef = useRef<((value: string | null) => void) | null>(null);
+  const promptResolverRef = useRef<((value: string | null) => void) | null>(
+    null
+  );
   // Held in a ref so resolving does not depend on a re-render landing first.
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
 
@@ -125,7 +129,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
           <DialogFooter className="gap-2">
             <Button
-              className="min-h-11 text-[10px] text-white/50 uppercase tracking-[0.18em] hover:text-white"
+              className="min-h-11 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
               onClick={() => settle(false)}
               type="button"
               variant="ghost"
@@ -158,11 +162,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="max-w-sm border-white/10 bg-black">
           <DialogHeader>
-            <DialogTitle className="font-light text-sm uppercase tracking-[0.2em] text-white/80">
+            <DialogTitle className="font-light text-sm text-white/80 uppercase tracking-[0.2em]">
               {promptOptions?.title}
             </DialogTitle>
             {promptOptions?.description ? (
-              <DialogDescription className="text-[12px] leading-relaxed text-white/45">
+              <DialogDescription className="text-[12px] text-white/45 leading-relaxed">
                 {promptOptions.description}
               </DialogDescription>
             ) : null}
@@ -184,7 +188,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
           <DialogFooter className="gap-2">
             <Button
-              className="min-h-11 text-[10px] text-white/50 uppercase tracking-[0.18em] hover:text-white"
+              className="min-h-11 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
               onClick={() => settlePrompt(null)}
               type="button"
               variant="ghost"

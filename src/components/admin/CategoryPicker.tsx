@@ -135,7 +135,7 @@ export const CategoryPicker = ({
       ref={containerRef}
     >
       <Label
-        className="text-[10px] text-white/40 uppercase tracking-widest"
+        className="text-[10px] text-white/90 uppercase tracking-widest"
         htmlFor={id}
       >
         {label}
@@ -165,7 +165,7 @@ export const CategoryPicker = ({
           role="listbox"
         >
           {filtered.length === 0 && !showAddNew ? (
-            <p className="px-3 py-2 text-white/40 text-xs">No matches</p>
+            <p className="px-3 py-2 text-white/90 text-xs">No matches</p>
           ) : null}
           {filtered.map((cat) => (
             <button

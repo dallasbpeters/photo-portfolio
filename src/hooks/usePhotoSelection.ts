@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import posthog from "../lib/posthog";
 import { useConfirm } from "../components/admin/ConfirmProvider";
+import posthog from "../lib/posthog";
 import { portfolioService } from "../services/portfolioService";
 import type { Category, Photo } from "../types";
 
@@ -117,7 +117,8 @@ export const usePhotoSelection = (
     const n = selectedIds.length;
     const ok = await confirm({
       confirmLabel: "Delete",
-      description: "The photographs are removed from the portfolio. This cannot be undone.",
+      description:
+        "The photographs are removed from the portfolio. This cannot be undone.",
       destructive: true,
       title: `Delete ${n} photo${n === 1 ? "" : "s"}?`,
     });
@@ -150,7 +151,8 @@ export const usePhotoSelection = (
   const deletePhoto = async (id: string): Promise<void> => {
     const ok = await confirm({
       confirmLabel: "Delete",
-      description: "The photograph is removed from the portfolio. This cannot be undone.",
+      description:
+        "The photograph is removed from the portfolio. This cannot be undone.",
       destructive: true,
       title: "Delete this photograph?",
     });

@@ -3,7 +3,6 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { IconPicker } from "../../cms/IconPicker";
-import { useConfirm } from "./ConfirmProvider";
 import { PageEditor } from "../../cms/PageEditor";
 import {
   type PageRecord,
@@ -14,8 +13,9 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { useConfirm } from "./ConfirmProvider";
 
-const labelClass = "text-[10px] uppercase tracking-widest text-white/40";
+const labelClass = "text-[10px] uppercase tracking-widest text-white/90";
 const inputClass =
   "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
 
@@ -84,7 +84,8 @@ export function PagesPanel() {
   const handleDelete = async (page: PageSummary): Promise<void> => {
     const ok = await confirm({
       confirmLabel: "Delete",
-      description: "The page and its content are removed. This cannot be undone.",
+      description:
+        "The page and its content are removed. This cannot be undone.",
       destructive: true,
       title: `Delete "${page.title}"?`,
     });
@@ -123,7 +124,7 @@ export function PagesPanel() {
           Pages
         </CardTitle>
         <Button
-          className="flex items-center gap-1.5 text-[10px] text-white/50 uppercase tracking-[0.18em] hover:text-white"
+          className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
           onClick={() => setIsCreating((v) => !v)}
           type="button"
           variant="ghost"
@@ -188,7 +189,7 @@ export function PagesPanel() {
                   </span>
                 </button>
                 <a
-                  className="text-[10px] text-white/30 uppercase tracking-[0.16em] transition-colors hover:text-white"
+                  className="text-[10px] text-white/90 uppercase tracking-[0.16em] transition-colors hover:text-white"
                   href={`/${page.slug}`}
                   rel="noreferrer"
                   target="_blank"
@@ -256,7 +257,7 @@ function PageEditorPanel({
           {draft.title}
         </CardTitle>
         <Button
-          className="text-[10px] text-white/40 uppercase tracking-[0.18em] hover:text-white"
+          className="text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
           onClick={onClose}
           type="button"
           variant="ghost"
@@ -320,7 +321,7 @@ function PageEditorPanel({
           </Button>
 
           <Button
-            className="flex min-h-11 items-center gap-2 text-[10px] text-white/50 uppercase tracking-[0.18em] hover:text-white"
+            className="flex min-h-11 items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
             disabled={isSaving}
             onClick={() =>
               void save({

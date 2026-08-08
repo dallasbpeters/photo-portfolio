@@ -47,7 +47,7 @@ export const resolveSiteSettings = (
   site: SiteConfig,
   row: SiteSettingsRow | null | undefined
 ): ResolvedSiteSettings => {
-  const fallbackTheme = DEFAULT_THEME[site.key] ?? DEFAULT_THEME.addison!;
+  const fallbackTheme = DEFAULT_THEME[site.key] ?? DEFAULT_THEME.addison;
 
   return {
     heroTitle: text(row?.hero_title, site.heroTitle),

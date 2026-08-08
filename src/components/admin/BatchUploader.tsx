@@ -45,6 +45,82 @@ const titleFromFile = (name: string): string =>
     .trim()
     .slice(0, 120) || "Untitled";
 
+interface Uploaded {
+  meta: PhotoMetadata;
+  url: string;
+}
+
+/**
+ * Phase 1 — transfer bytes concurrently. Simple worker pool: each worker pulls
+ * the next file until the queue drains.
+ */
+const transferAll = async (
+  pending: Item[],
+  transfer: (item: Item) => Promise<Uploaded | null>
+): Promise<Map<string, Uploaded>> => {
+  const uploaded = new Map<string, Uploaded>();
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < pending.length) {
+      const item = pending[cursor];
+      cursor += 1;
+      if (!item) {
+        break;
+      }
+      // biome-ignore lint/performance/noAwaitInLoops: this loop is the worker; concurrency comes from running CONCURRENCY of them at once
+      const result = await transfer(item);
+      if (result) {
+        uploaded.set(item.id, result);
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, pending.length) }, worker)
+  );
+  return uploaded;
+};
+
+/**
+ * Phase 2 — create rows sequentially, in reverse. Each POST inserts at position
+ * 0 and shifts the rest up, so reversing here leaves the gallery reading in the
+ * order the files were dropped. Returns how many rows were created.
+ */
+const createRows = async (
+  pending: Item[],
+  uploaded: Map<string, Uploaded>,
+  categoryId: string,
+  update: (id: string, patch: Partial<Item>) => void
+): Promise<number> => {
+  let succeeded = 0;
+  for (let i = pending.length - 1; i >= 0; i -= 1) {
+    const item = pending[i];
+    const result = item && uploaded.get(item.id);
+    if (!(item && result)) {
+      continue;
+    }
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: rows are created one at a time on purpose — each insert shifts sort_order, so parallel writes would scramble the gallery order
+      await portfolioService.addPhoto({
+        categoryId,
+        exif: result.meta.exif,
+        height: result.meta.height,
+        lqip: result.meta.lqip,
+        title: item.title,
+        url: result.url,
+        width: result.meta.width,
+      });
+      update(item.id, { progress: 100, status: "done" });
+      succeeded += 1;
+    } catch (err) {
+      update(item.id, {
+        error: err instanceof Error ? err.message : "Could not add photo",
+        status: "error",
+      });
+    }
+  }
+  return succeeded;
+};
+
 interface BatchUploaderProps {
   categories: Category[];
   /**
@@ -148,62 +224,14 @@ export function BatchUploader({
     }
 
     setIsRunning(true);
-    let succeeded = 0;
 
-    // Phase 1 — transfer bytes concurrently. Simple worker pool: each worker
-    // pulls the next file until the queue drains.
-    const uploaded = new Map<string, { url: string; meta: PhotoMetadata }>();
-    let cursor = 0;
-    const worker = async () => {
-      while (cursor < pending.length) {
-        const item = pending[cursor];
-        cursor += 1;
-        if (!item) {
-          break;
-        }
-        // biome-ignore lint/performance/noAwaitInLoops: this loop is the worker; concurrency comes from running CONCURRENCY of them at once
-        const result = await transfer(item);
-        if (result) {
-          uploaded.set(item.id, result);
-        }
-      }
-    };
-    await Promise.all(
-      Array.from({ length: Math.min(CONCURRENCY, pending.length) }, worker)
+    const uploaded = await transferAll(pending, transfer);
+    const succeeded = await createRows(
+      pending,
+      uploaded,
+      effectiveCategory,
+      update
     );
-
-    // Phase 2 — create rows sequentially, in reverse. Each POST inserts at
-    // position 0 and shifts the rest up, so reversing here leaves the gallery
-    // reading in the order the files were dropped.
-    for (let i = pending.length - 1; i >= 0; i -= 1) {
-      const item = pending[i];
-      if (!item) {
-        continue;
-      }
-      const result = uploaded.get(item.id);
-      if (!result) {
-        continue;
-      }
-      try {
-        // biome-ignore lint/performance/noAwaitInLoops: rows are created one at a time on purpose — each insert shifts sort_order, so parallel writes would scramble the gallery order
-        await portfolioService.addPhoto({
-          categoryId: effectiveCategory,
-          exif: result.meta.exif,
-          height: result.meta.height,
-          lqip: result.meta.lqip,
-          title: item.title,
-          url: result.url,
-          width: result.meta.width,
-        });
-        update(item.id, { progress: 100, status: "done" });
-        succeeded += 1;
-      } catch (err) {
-        update(item.id, {
-          error: err instanceof Error ? err.message : "Could not add photo",
-          status: "error",
-        });
-      }
-    }
 
     setIsRunning(false);
     await reload();
@@ -239,8 +267,8 @@ export function BatchUploader({
       </CardHeader>
 
       <div className="space-y-5">
-        <div
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${
+        <button
+          className={`flex w-full cursor-pointer flex-col items-center justify-center gap-2 border border-dashed py-10 transition-colors ${
             isDragging
               ? "border-white/50 bg-white/6"
               : "border-white/15 hover:border-white/30 hover:bg-white/2"
@@ -267,29 +295,21 @@ export function BatchUploader({
               addFiles(e.dataTransfer.files);
             }
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              // Same reason as the title inputs: this sits inside a form.
-              e.preventDefault();
-              inputRef.current?.click();
-            }
-          }}
-          role="button"
-          tabIndex={0}
+          type="button"
         >
           <Upload
             aria-hidden
-            className="text-white/30"
+            className="text-white/90"
             height={20}
             width={20}
           />
-          <p className="text-[11px] text-white/50 uppercase tracking-[0.18em]">
+          <p className="text-[11px] text-white/90 uppercase tracking-[0.18em]">
             Drop photos here
           </p>
           <p className="text-[10px] text-white/25">
             or click to browse — JPEG, PNG, WebP, AVIF, GIF
           </p>
-        </div>
+        </button>
 
         <input
           accept={ACCEPTED.join(",")}
@@ -330,7 +350,7 @@ export function BatchUploader({
                   <div className="min-w-0 flex-1">
                     <input
                       aria-label={`Title for ${item.file.name}`}
-                      className="w-full bg-transparent text-sm text-white/85 focus:outline-none disabled:text-white/40"
+                      className="w-full bg-transparent text-sm text-white/85 focus:outline-none disabled:text-white/90"
                       disabled={isRunning || item.status === "done"}
                       onChange={(e) =>
                         update(item.id, { title: e.target.value })

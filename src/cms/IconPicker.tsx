@@ -55,18 +55,18 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
           {Selected ? (
             <>
               <Selected height={16} width={16} />
-              <span className="text-[11px] text-white/50 uppercase tracking-[0.14em]">
+              <span className="text-[11px] text-white/90 uppercase tracking-[0.14em]">
                 {value}
               </span>
             </>
           ) : (
-            <span className="text-[11px] text-white/30 uppercase tracking-[0.14em]">
+            <span className="text-[11px] text-white/90 uppercase tracking-[0.14em]">
               No icon
             </span>
           )}
         </span>
         <NavArrowDown
-          className={`shrink-0 text-white/30 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-white/90 transition-transform ${open ? "rotate-180" : ""}`}
           height={14}
           width={14}
         />
@@ -80,7 +80,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
           <button
             aria-selected={value === null}
             className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[11px] uppercase tracking-[0.14em] transition-colors hover:bg-white/[0.06] ${
-              value === null ? "text-white" : "text-white/40"
+              value === null ? "text-white" : "text-white/90"
             }`}
             onClick={() => {
               onChange(null);

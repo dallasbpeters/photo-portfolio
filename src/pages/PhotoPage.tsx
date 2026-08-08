@@ -153,7 +153,7 @@ export function PhotoPage() {
                 {previous ? (
                   <Link
                     aria-label={`Previous: ${previous.title}`}
-                    className="flex items-center gap-1.5 text-[10px] text-white/40 uppercase tracking-[0.18em] transition-colors hover:text-white"
+                    className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
                     to={`/photo/${previous.id}`}
                   >
                     <NavArrowLeft height={13} width={13} />
@@ -167,7 +167,7 @@ export function PhotoPage() {
                 {next ? (
                   <Link
                     aria-label={`Next: ${next.title}`}
-                    className="flex items-center gap-1.5 text-[10px] text-white/40 uppercase tracking-[0.18em] transition-colors hover:text-white"
+                    className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
                     to={`/photo/${next.id}`}
                   >
                     Next

@@ -34,8 +34,8 @@ export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
 
   const base =
     variant === "overlay"
-      ? "text-white/50 hover:text-white"
-      : "text-white/40 hover:text-white";
+      ? "text-white/90 hover:text-white"
+      : "text-white/90 hover:text-white";
 
   return (
     <nav

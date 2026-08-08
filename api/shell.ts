@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   defaultSiteSettings,
+  type ResolvedSiteSettings,
   resolveSiteSettings,
   type SiteSettingsRow,
 } from "../config/siteSettings.js";
@@ -89,6 +90,52 @@ const buildTags = (meta: Meta): string => {
   return tags.join("\n    ");
 };
 
+const photoMeta = (
+  row: PhotoRow,
+  settings: ResolvedSiteSettings,
+  origin: string
+): Meta => {
+  const photo = rowToDto(row);
+  return {
+    description:
+      photo.alt ||
+      `${photo.title}, ${photo.categoryLabel} by ${settings.ownerName}.`,
+    // The photograph is the card. Sized for the 1.91:1 slot most
+    // platforms crop to, and routed through the optimizer.
+    image: `${origin}/_vercel/image?url=${encodeURIComponent(photo.url)}&w=1200&q=85`,
+    jsonLd: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ImageObject",
+      contentUrl: photo.url,
+      datePublished: photo.createdAt,
+      description: photo.alt,
+      name: photo.title,
+      url: `${origin}/photo/${photo.id}`,
+      ...(photo.width && photo.height
+        ? { height: photo.height, width: photo.width }
+        : {}),
+      creator: {
+        "@type": "Person",
+        name: settings.ownerName,
+        url: origin,
+        ...(settings.instagramUrl ? { sameAs: [settings.instagramUrl] } : {}),
+      },
+    }),
+    title: `${photo.title} — ${settings.name}`,
+    url: `${origin}/photo/${photo.id}`,
+  };
+};
+
+const personJsonLd = (settings: ResolvedSiteSettings, origin: string): string =>
+  JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Person",
+    description: settings.tagline,
+    name: settings.ownerName,
+    url: origin,
+    ...(settings.instagramUrl ? { sameAs: [settings.instagramUrl] } : {}),
+  });
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const site = getSite();
   const origin = `https://${req.headers.host ?? site.domain}`;
@@ -122,39 +169,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         WHERE p.id = ${photoMatch[1]} LIMIT 1
       `) as PhotoRow[];
 
-      const row = rows[0];
+      const [row] = rows;
       if (row) {
-        const photo = rowToDto(row);
-        meta = {
-          description:
-            photo.alt ||
-            `${photo.title}, ${photo.categoryLabel} by ${settings.ownerName}.`,
-          // The photograph is the card. Sized for the 1.91:1 slot most
-          // platforms crop to, and routed through the optimizer.
-          image: `${origin}/_vercel/image?url=${encodeURIComponent(photo.url)}&w=1200&q=85`,
-          jsonLd: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "ImageObject",
-            contentUrl: photo.url,
-            datePublished: photo.createdAt,
-            description: photo.alt,
-            name: photo.title,
-            url: `${origin}/photo/${photo.id}`,
-            ...(photo.width && photo.height
-              ? { height: photo.height, width: photo.width }
-              : {}),
-            creator: {
-              "@type": "Person",
-              name: settings.ownerName,
-              url: origin,
-              ...(settings.instagramUrl
-                ? { sameAs: [settings.instagramUrl] }
-                : {}),
-            },
-          }),
-          title: `${photo.title} — ${settings.name}`,
-          url: `${origin}/photo/${photo.id}`,
-        };
+        meta = photoMeta(row, settings, origin);
       }
     } else if (path === "/" || path === "") {
       // The site card uses the newest photograph, so it reflects current work.
@@ -164,18 +181,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ORDER BY p.sort_order ASC, p.created_at ASC LIMIT 1
       `) as PhotoRow[];
 
-      const row = rows[0];
+      const [row] = rows;
       if (row) {
         meta.image = `${origin}/_vercel/image?url=${encodeURIComponent(rowToDto(row).url)}&w=1200&q=85`;
       }
-      meta.jsonLd = JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Person",
-        description: settings.tagline,
-        name: settings.ownerName,
-        url: origin,
-        ...(settings.instagramUrl ? { sameAs: [settings.instagramUrl] } : {}),
-      });
+      meta.jsonLd = personJsonLd(settings, origin);
     } else {
       const slug = path.replace(/^\/+|\/+$/g, "");
       const rows = await sql`

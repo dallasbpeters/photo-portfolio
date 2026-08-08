@@ -146,7 +146,7 @@ export const HomePage = () => {
           className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           role="status"
         >
-          <p className="text-[10px] text-white/60 uppercase tracking-[0.3em]">
+          <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
             Loading portfolio…
           </p>
         </div>
@@ -169,7 +169,7 @@ export const HomePage = () => {
                 className={`group flex items-start gap-2 text-left transition-all duration-1000 ${
                   heroIndex === i
                     ? "text-white opacity-100"
-                    : "text-white/30 hover:text-white/50"
+                    : "text-white/90 hover:text-white/90"
                 }`}
                 key={photo.id}
                 onClick={() => setHeroIndex(i)}
@@ -289,13 +289,13 @@ export const HomePage = () => {
             <h2 className="font-bold text-3xl uppercase tracking-widest">
               {settings.ownerName}
             </h2>
-            <p className="max-w-xs text-sm text-white/40 uppercase tracking-widest">
+            <p className="max-w-xs text-sm text-white/90 uppercase tracking-widest">
               {settings.tagline}
             </p>
             <div className="flex gap-6">
               <a
                 aria-label={`${settings.ownerName} on Instagram`}
-                className="transition-colors hover:text-white/60"
+                className="transition-colors hover:text-white/90"
                 href={settings.instagramUrl}
               >
                 <Instagram height={20} width={20} />
@@ -319,7 +319,7 @@ export const HomePage = () => {
         <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-6 rounded-xl border border-white/10 bg-white/5 px-8 py-3 shadow-2xl backdrop-blur-xl">
           <button
             aria-pressed={viewMode === "all"}
-            className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === "all" ? "text-white" : "text-white/40 hover:text-white/70"}`}
+            className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === "all" ? "text-white" : "text-white/90 hover:text-white/70"}`}
             onClick={() => handleFilterClick("all")}
             type="button"
           >
@@ -332,7 +332,7 @@ export const HomePage = () => {
             return (
               <button
                 aria-pressed={viewMode === category}
-                className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === category ? "text-white" : "text-white/40 hover:text-white/70"}`}
+                className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === category ? "text-white" : "text-white/90 hover:text-white/70"}`}
                 key={category}
                 onClick={() => handleFilterClick(category)}
                 type="button"

@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
-const labelClass = "text-[10px] uppercase tracking-widest text-white/40";
+const labelClass = "text-[10px] uppercase tracking-widest text-white/90";
 const inputClass =
   "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
 
@@ -287,7 +287,7 @@ export function SiteSettingsPanel() {
               {isSaving ? "Saving…" : "Save settings"}
             </Button>
             <Button
-              className="flex min-h-12 items-center gap-2 text-[10px] text-white/40 uppercase tracking-widest hover:text-white"
+              className="flex min-h-12 items-center gap-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
               onClick={handleReset}
               type="button"
               variant="ghost"

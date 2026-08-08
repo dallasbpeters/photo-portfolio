@@ -21,8 +21,8 @@ import {
 } from "iconoir-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { portfolioService } from "../services/portfolioService";
 import { useConfirm } from "../components/admin/ConfirmProvider";
+import { portfolioService } from "../services/portfolioService";
 
 interface PageEditorProps {
   onChange: (doc: unknown) => void;
@@ -44,7 +44,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
-    content: (value as object) ?? EMPTY_DOC,
+    content: (value as object | null | undefined) ?? EMPTY_DOC,
     editorProps: {
       attributes: {
         class:
@@ -282,7 +282,7 @@ function ToolButton({
       className={`flex size-8 items-center justify-center transition-colors ${
         isActive
           ? "bg-white/10 text-white"
-          : "text-white/40 hover:bg-white/[0.06] hover:text-white"
+          : "text-white/90 hover:bg-white/[0.06] hover:text-white"
       }`}
       onClick={onClick}
       title={label}

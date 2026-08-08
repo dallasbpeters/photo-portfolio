@@ -99,7 +99,7 @@ export function ContentPage() {
         {state === "ready" && page && (
           <article>
             <nav aria-label="Breadcrumb" className="mb-8">
-              <ol className="flex flex-wrap items-center gap-2 text-[10px] text-white/30 uppercase tracking-[0.18em]">
+              <ol className="flex flex-wrap items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em]">
                 <li>
                   <Link
                     className="transition-colors hover:text-white/70"
@@ -113,7 +113,7 @@ export function ContentPage() {
                 </li>
                 <li
                   aria-current="page"
-                  className="flex items-center gap-1.5 text-white/60"
+                  className="flex items-center gap-1.5 text-white/90"
                 >
                   {Icon && <Icon height={11} width={11} />}
                   {page.title}

@@ -48,7 +48,7 @@ export function ForgotPasswordForm({
         <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
           Check your email
         </h2>
-        <p className="max-w-sm px-2 text-center text-[11px] text-white/40 uppercase leading-relaxed tracking-[0.15em]">
+        <p className="max-w-sm px-2 text-center text-[11px] text-white/90 uppercase leading-relaxed tracking-[0.15em]">
           If {sentTo} has an account, a reset link is on its way. It expires in
           one hour.
         </p>
@@ -73,7 +73,7 @@ export function ForgotPasswordForm({
       <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
         Reset password
       </h2>
-      <p className="max-w-sm px-2 text-center text-[10px] text-white/40 uppercase tracking-[0.2em]">
+      <p className="max-w-sm px-2 text-center text-[10px] text-white/90 uppercase tracking-[0.2em]">
         We'll email you a link to choose a new one.
       </p>
       <form
@@ -83,7 +83,7 @@ export function ForgotPasswordForm({
       >
         <div className="space-y-2">
           <Label
-            className="text-[10px] text-white/40 uppercase tracking-widest"
+            className="text-[10px] text-white/90 uppercase tracking-widest"
             htmlFor="reset-email"
           >
             Email
@@ -109,7 +109,7 @@ export function ForgotPasswordForm({
           {isSubmitting ? "Sending…" : "Send reset link"}
         </Button>
         <button
-          className="min-h-11 w-full text-[10px] text-white/40 uppercase tracking-[0.2em] transition-colors hover:text-white"
+          className="min-h-11 w-full text-[10px] text-white/90 uppercase tracking-[0.2em] transition-colors hover:text-white"
           onClick={onBack}
           type="button"
         >
