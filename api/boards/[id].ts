@@ -24,7 +24,7 @@ const loadItems = async (
 ): Promise<BoardItemRow[]> => {
   const rows = (await sql`
     SELECT i.id, i.kind, i.photo_id, i.image_url, i.thumb_url,
-           i.credit_name, i.credit_url, i.body,
+           i.credit_name, i.credit_url, i.body, i.font_size,
            i.x, i.y, i.width, i.height, i.z_index, i.created_at,
            p.url AS photo_url
     FROM board_items i
@@ -95,16 +95,19 @@ async function replaceItems(sql: Sql, boardId: string, items: IncomingItem[]) {
     await sql`
       INSERT INTO board_items (
         id, board_id, kind, photo_id, image_url, thumb_url,
-        credit_name, credit_url, body, x, y, width, height, z_index
+        credit_name, credit_url, body, font_size,
+        x, y, width, height, z_index
       ) VALUES (
         ${item.id}, ${boardId}, ${item.kind}, ${item.photoId}, ${item.imageUrl},
         ${item.thumbUrl}, ${item.creditName}, ${item.creditUrl}, ${item.body},
+        ${item.fontSize},
         ${item.x}, ${item.y}, ${item.width}, ${item.height}, ${item.z}
       )
       ON CONFLICT (id) DO UPDATE
       SET x = EXCLUDED.x, y = EXCLUDED.y,
           width = EXCLUDED.width, height = EXCLUDED.height,
-          z_index = EXCLUDED.z_index, body = EXCLUDED.body
+          z_index = EXCLUDED.z_index, body = EXCLUDED.body,
+          font_size = EXCLUDED.font_size
       WHERE board_items.board_id = ${boardId}
     `;
   }

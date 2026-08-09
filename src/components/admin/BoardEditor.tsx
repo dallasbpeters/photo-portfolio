@@ -12,6 +12,7 @@ import {
   DEFAULT_TEXT_WIDTH,
 } from "../../../config/canvas.js";
 import { BoardCanvas } from "../../boards/BoardCanvas";
+import { newItemId } from "../../boards/newItemId";
 import {
   authStorage,
   boardsApi,
@@ -176,7 +177,7 @@ export function BoardEditor({
    */
   const addWritable = (kind: "note" | "text") => {
     const p = dropPoint(items.length);
-    const id = crypto.randomUUID();
+    const id = newItemId();
     change([
       ...items,
       {
@@ -210,7 +211,7 @@ export function BoardEditor({
         creditUrl: null,
         fontSize: null,
         height: DEFAULT_IMAGE_HEIGHT,
-        id: crypto.randomUUID(),
+        id: newItemId(),
         imageUrl: photo.url,
         kind: "photo",
         photoId: photo.id,
