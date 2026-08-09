@@ -5,6 +5,7 @@
  * Kept beside config/sites.ts and dependency-free so the browser, the
  * serverless functions and vite.config.ts can all import it.
  */
+/** biome-ignore-all lint/suspicious/noUnnecessaryConditions: reasons */
 
 export type FontId =
   | "geist"

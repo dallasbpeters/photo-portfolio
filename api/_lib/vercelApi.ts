@@ -156,3 +156,62 @@ export const addDomain = async (
     method: "POST",
   });
 };
+
+export interface BlobStore {
+  id: string;
+  name: string;
+}
+
+/**
+ * Creates a Blob store.
+ *
+ * Databases cannot be created the same way: Vercel Postgres was retired and its
+ * endpoint now answers 410, and its Neon replacement is a marketplace
+ * integration with no create-via-API path. So storage provisioning stops here,
+ * and the connection string has to come from outside.
+ */
+export const createBlobStore = async (name: string): Promise<BlobStore> => {
+  const data = await request<{ store: BlobStore }>("/v1/storage/stores/blob", {
+    body: { name },
+    method: "POST",
+  });
+  return data.store;
+};
+
+/**
+ * Connects a store to a project, which is what makes Vercel inject its
+ * credentials — BLOB_READ_WRITE_TOKEN is created by the connection rather than
+ * being something to set by hand.
+ */
+export const connectStore = async (
+  storeId: string,
+  projectId: string
+): Promise<void> => {
+  await request(
+    `/v1/storage/stores/${encodeURIComponent(storeId)}/connections`,
+    { body: { projectId }, method: "POST" }
+  );
+};
+
+export const listProjectEnvKeys = async (
+  projectId: string
+): Promise<string[]> => {
+  const data = await request<{ envs: { key: string }[] }>(
+    `/v9/projects/${encodeURIComponent(projectId)}/env`
+  );
+  return data.envs.map((e) => e.key);
+};
+
+export interface StoreSummary {
+  id: string;
+  name: string;
+  type?: string;
+}
+
+/** Every store on the account, used to reuse one rather than fail on its name. */
+export const listStores = async (): Promise<StoreSummary[]> => {
+  const data = await request<{ stores: StoreSummary[] }>(
+    "/v1/storage/stores?limit=100"
+  );
+  return data.stores ?? [];
+};

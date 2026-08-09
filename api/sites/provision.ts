@@ -10,6 +10,7 @@ import {
   type EnvVar,
   isManagedProject,
   isVercelConfigured,
+  listProjectEnvKeys,
   listProjects,
   managedRepo,
   setEnvVars,
@@ -19,6 +20,9 @@ import {
 const PROJECT_NAME = /^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]$/;
 
 const ALL_TARGETS: EnvVar["target"] = ["production", "preview", "development"];
+
+/** What a site needs before it can serve anything. */
+const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET", "BLOB_READ_WRITE_TOKEN"];
 
 /**
  * Listing is how the admin shows what already exists, and is the only read
@@ -37,17 +41,34 @@ async function listManagedProjects(res: VercelResponse) {
     });
   }
 
-  const projects = await listProjects();
-  return res.status(200).json({
-    projects: projects
-      .filter((p) => isManagedProject(p, repo))
-      .map((p) => ({
+  const projects = (await listProjects()).filter((p) =>
+    isManagedProject(p, repo)
+  );
+
+  // What each site still lacks, so the admin can offer setup only where there
+  // is something to do rather than on every project.
+  const summaries = await Promise.all(
+    projects.map(async (p) => {
+      let missing: string[] = [];
+      try {
+        const keys = new Set(await listProjectEnvKeys(p.id));
+        missing = REQUIRED_ENV.filter((key) => !keys.has(key));
+      } catch {
+        // A project whose variables cannot be read is reported as ready rather
+        // than as needing setup: offering to fix something on the strength of a
+        // failed lookup is worse than staying quiet.
+        missing = [];
+      }
+      return {
         framework: p.framework ?? null,
         id: p.id,
+        missing,
         name: p.name,
-      })),
-    repo,
-  });
+      };
+    })
+  );
+
+  return res.status(200).json({ projects: summaries, repo });
 }
 
 /** Creates the project and hangs the site's identity off it as env vars. */

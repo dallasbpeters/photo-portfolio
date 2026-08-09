@@ -3,6 +3,8 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   type ProvisionResult,
+  type SetupResult,
+  siteSetupApi,
   sitesApi,
   type VercelProjectSummary,
 } from "../../services/portfolioService";
@@ -110,6 +112,28 @@ export function SitesPanel() {
   const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [result, setResult] = useState<ProvisionResult | null>(null);
+  const [setupFor, setSetupFor] = useState<string | null>(null);
+  const [databaseUrl, setDatabaseUrl] = useState("");
+  const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
+  const [isSettingUp, setIsSettingUp] = useState(false);
+
+  const runSetup = async (projectId: string) => {
+    setIsSettingUp(true);
+    setSetupResult(null);
+    try {
+      const outcome = await siteSetupApi.run(
+        projectId,
+        databaseUrl.trim() || undefined
+      );
+      setSetupResult(outcome);
+      setDatabaseUrl("");
+      toast.success("Setup finished");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Setup failed");
+    } finally {
+      setIsSettingUp(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -217,6 +241,48 @@ export function SitesPanel() {
                 <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
                   {project.framework ?? "no framework"}
                 </p>
+                {project.missing.length === 0 ? (
+                  <p className="mt-2 text-[10px] text-emerald-300/70 uppercase tracking-[0.18em]">
+                    Ready
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-2 text-[10px] text-white/40">
+                      Missing: {project.missing.join(", ")}
+                    </p>
+                    <button
+                      className="mt-1 text-[10px] text-white/50 uppercase tracking-[0.18em] hover:text-white"
+                      onClick={() =>
+                        setSetupFor((current) =>
+                          current === project.id ? null : project.id
+                        )
+                      }
+                      type="button"
+                    >
+                      {setupFor === project.id ? "Cancel" : "Finish setup"}
+                    </button>
+                  </>
+                )}
+
+                {setupFor === project.id ? (
+                  <div className="mt-2 space-y-2">
+                    <Input
+                      className={inputClass}
+                      onChange={(e) => setDatabaseUrl(e.target.value)}
+                      placeholder="postgres://… (optional)"
+                      value={databaseUrl}
+                    />
+                    <Button
+                      className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+                      disabled={isSettingUp}
+                      onClick={() => void runSetup(project.id)}
+                      type="button"
+                      variant="outline"
+                    >
+                      {isSettingUp ? "Working…" : "Create storage & secrets"}
+                    </Button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -254,6 +320,27 @@ export function SitesPanel() {
               {isCreating ? "Creating…" : "Create project"}
             </Button>
           </form>
+        ) : null}
+
+        {setupResult ? (
+          <div className="space-y-2 rounded border border-white/10 bg-black/40 p-3">
+            {setupResult.done.map((step) => (
+              <p
+                className="text-[11px] text-white/70 leading-relaxed"
+                key={step}
+              >
+                ✓ {step}
+              </p>
+            ))}
+            {setupResult.remaining.map((step) => (
+              <p
+                className="text-[11px] text-white/50 leading-relaxed"
+                key={step}
+              >
+                • {step}
+              </p>
+            ))}
+          </div>
         ) : null}
 
         {result ? (

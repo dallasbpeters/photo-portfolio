@@ -942,6 +942,8 @@ export const aiApi = {
 export interface VercelProjectSummary {
   framework: string | null;
   id: string;
+  /** Required variables the project still lacks; empty means it is ready. */
+  missing: string[];
   name: string;
 }
 
@@ -987,5 +989,31 @@ export const sitesApi = {
     }
     const data = (await res.json()) as { projects: VercelProjectSummary[] };
     return data.projects;
+  },
+};
+
+export interface SetupResult {
+  done: string[];
+  remaining: string[];
+}
+
+export const siteSetupApi = {
+  /**
+   * Creates storage and secrets for a project. Safe to re-run: existing values
+   * are left alone rather than rotated.
+   */
+  run: async (
+    projectId: string,
+    databaseUrl?: string
+  ): Promise<SetupResult> => {
+    const res = await fetch(`${apiBase()}/api/sites/setup`, {
+      body: JSON.stringify({ databaseUrl, projectId }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Setup failed"));
+    }
+    return (await res.json()) as SetupResult;
   },
 };
