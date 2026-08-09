@@ -7,10 +7,12 @@ import { parseJsonBody } from "../_lib/parseBody.js";
 import {
   connectStore,
   createBlobStore,
+  createNeonDatabase,
   type EnvVar,
   isVercelConfigured,
   listProjectEnvKeys,
   listStores,
+  neonConfigurationId,
   setEnvVars,
 } from "../_lib/vercelApi.js";
 
@@ -73,6 +75,60 @@ async function connectBlobStore(projectId: string): Promise<string> {
 }
 
 /**
+ * Settles what DATABASE_URL should be, recording what happened.
+ *
+ * A connection string handed in wins, since it is the only way to point a site
+ * at a database that already exists. Otherwise a Neon database is created
+ * through the marketplace integration and connected, which is what makes Vercel
+ * inject the connection string — so nothing is set by hand on that path.
+ *
+ * Like the blob store, this has to survive a re-run: store names are unique
+ * across the account, so an existing one is connected rather than recreated.
+ */
+async function ensureDatabase(
+  site: { databaseUrl: string; existing: Set<string>; projectId: string },
+  report: { done: string[]; remaining: string[]; vars: EnvVar[] }
+): Promise<void> {
+  if (site.databaseUrl) {
+    report.vars.push({
+      key: "DATABASE_URL",
+      target: ALL_TARGETS,
+      value: site.databaseUrl,
+    });
+    report.done.push("Set DATABASE_URL");
+    return;
+  }
+
+  if (site.existing.has("DATABASE_URL")) {
+    report.done.push("DATABASE_URL already set");
+    return;
+  }
+
+  const configurationId = await neonConfigurationId();
+  if (!configurationId) {
+    report.remaining.push(
+      "Install the Neon integration, then re-run this — or re-run it with a connection string"
+    );
+    return;
+  }
+
+  const wanted = `${site.projectId}-db`.slice(0, 32);
+  const stores = await listStores();
+  const found = stores.find(
+    (candidate) => candidate.name === wanted && candidate.type !== "blob"
+  );
+
+  const store =
+    found ?? (await createNeonDatabase({ configurationId, name: wanted }));
+  await connectStore(store.id, site.projectId);
+  report.done.push(
+    found
+      ? `Connected existing database ${store.name}`
+      : `Created and connected database ${store.name}`
+  );
+}
+
+/**
  * Finishes standing a site up: storage and secrets.
  *
  * Split from creating the project because these steps are re-runnable and the
@@ -81,9 +137,10 @@ async function connectBlobStore(projectId: string): Promise<string> {
  * are left alone rather than rotated, since replacing JWT_SECRET would sign
  * every admin out.
  *
- * What it cannot do is create the database. Vercel's Postgres endpoint answers
- * 410 and its Neon replacement is a marketplace integration with no API to
- * create one, so the connection string is passed in and set from here.
+ * The database is created through the Neon marketplace integration when one is
+ * not passed in, since Vercel's own Postgres endpoint answers 410. Without that
+ * integration installed there is nothing to call, so it is reported as remaining
+ * work rather than failing the request.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {
@@ -122,18 +179,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       done.push("Generated JWT_SECRET");
     }
 
-    if (databaseUrl) {
-      vars.push({
-        key: "DATABASE_URL",
-        target: ALL_TARGETS,
-        value: databaseUrl,
-      });
-      done.push("Set DATABASE_URL");
-    } else if (!existing.has("DATABASE_URL")) {
-      remaining.push(
-        "Create a database (Neon) and re-run this with its connection string"
-      );
-    }
+    await ensureDatabase(
+      { databaseUrl, existing, projectId },
+      { done, remaining, vars }
+    );
 
     if (vars.length > 0) {
       await setEnvVars(projectId, vars);

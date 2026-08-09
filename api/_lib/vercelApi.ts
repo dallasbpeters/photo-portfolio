@@ -215,3 +215,85 @@ export const listStores = async (): Promise<StoreSummary[]> => {
   );
   return data.stores ?? [];
 };
+
+/**
+ * Authorises a marketplace purchase, returning the id the store creation needs.
+ *
+ * Marketplace resources are billed products, so Vercel requires an explicit
+ * authorization even on the free plan. Note metadata is sent as a JSON *string*
+ * here while the store call below takes an object — the two endpoints genuinely
+ * disagree.
+ */
+const authorizeMarketplacePurchase = async (input: {
+  billingPlanId: string;
+  configurationId: string;
+  region: string;
+}): Promise<string> => {
+  const data = await request<{ authorization: { id: string } }>(
+    "/v1/integrations/billing/authorization",
+    {
+      body: {
+        billingPlanId: input.billingPlanId,
+        integrationConfigurationId: input.configurationId,
+        integrationIdOrSlug: "neon",
+        integrationProductIdOrSlug: "neon",
+        metadata: JSON.stringify({ region: input.region }),
+      },
+      method: "POST",
+    }
+  );
+  return data.authorization.id;
+};
+
+/**
+ * Creates a Neon database through the Vercel marketplace integration.
+ *
+ * Not the same mechanism as a Blob store. Vercel's own Postgres was retired and
+ * its endpoint answers 410; databases are now marketplace resources, which take
+ * three calls: authorise the purchase, create the store, then connect it to a
+ * project. The configuration belongs to a team, so VERCEL_TEAM_ID is required
+ * for this even though the rest of the API works without one.
+ */
+export const createNeonDatabase = async (input: {
+  billingPlanId?: string;
+  configurationId: string;
+  name: string;
+  region?: string;
+}): Promise<{ id: string; name: string }> => {
+  // Free unless asked otherwise: provisioning should not start billing as a
+  // side effect of creating a site.
+  const billingPlanId = input.billingPlanId ?? "free_v3";
+  const region = input.region ?? "iad1";
+
+  const authorizationId = await authorizeMarketplacePurchase({
+    billingPlanId,
+    configurationId: input.configurationId,
+    region,
+  });
+
+  const data = await request<{ store: { id: string; name: string } }>(
+    "/v1/storage/stores/integration",
+    {
+      body: {
+        authorizationId,
+        billingPlanId,
+        integrationConfigurationId: input.configurationId,
+        integrationProductIdOrSlug: "neon",
+        metadata: { region },
+        name: input.name,
+      },
+      method: "POST",
+    }
+  );
+  return data.store;
+};
+
+/** The installed Neon integration, if there is one. */
+export const neonConfigurationId = async (): Promise<string | null> => {
+  const data = await request<
+    | { id: string; slug: string }[]
+    | { configurations: { id: string; slug: string }[] }
+  >("/v1/integrations/configurations?view=account");
+  const items = Array.isArray(data) ? data : data.configurations;
+  return items.find((c) => c.slug === "neon")?.id ?? null;
+};

@@ -1,6 +1,6 @@
 import { Palette, RotateCcw, Save, TriangleAlert } from "lucide-react";
-import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { type ColorResult, SketchPicker } from "react-color";
 import { toast } from "sonner";
 import {
   defaultSiteSettings,
@@ -17,6 +17,7 @@ import { authStorage, settingsApi } from "../../services/portfolioService";
 import { siteConfig } from "../../site";
 import { useSiteSettings } from "../../theme/SiteSettingsProvider";
 import { Button } from "../ui/button";
+
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -27,6 +28,14 @@ const inputClass =
 
 /** WCAG AA for normal-size body text. */
 const AA_NORMAL = 4.5;
+
+type ThemeColorKey = "background" | "foreground" | "accent";
+
+const COLOR_FIELDS: { key: ThemeColorKey; label: string }[] = [
+  { key: "background", label: "Background" },
+  { key: "foreground", label: "Text" },
+  { key: "accent", label: "Accent" },
+];
 
 type TextFieldKey =
   | "name"
@@ -76,6 +85,13 @@ export function SiteSettingsPanel() {
   const { settings, setSettings } = useSiteSettings();
   const [draft, setDraft] = useState<ResolvedSiteSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
+  /**
+   * Which swatch has its picker open, rather than whether one is.
+   *
+   * A single flag opened all three at once, since every swatch read the same
+   * boolean.
+   */
+  const [openColor, setOpenColor] = useState<ThemeColorKey | null>(null);
 
   // Re-sync when the provider finishes its initial fetch, but never while the
   // user is mid-edit with unsaved changes.
@@ -98,7 +114,7 @@ export function SiteSettingsPanel() {
     draft.theme.background
   );
 
-  const handleSubmit = async (e: FormEvent): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     const token = authStorage.getToken();
     if (!token) {
@@ -163,26 +179,28 @@ export function SiteSettingsPanel() {
           <div className="space-y-4">
             <h3 className={labelClass}>Colors</h3>
             <div className="grid gap-4 sm:grid-cols-3">
-              {(
-                [
-                  { key: "background", label: "Background" },
-                  { key: "foreground", label: "Text" },
-                  { key: "accent", label: "Accent" },
-                ] as const
-              ).map(({ key, label }) => (
+              {COLOR_FIELDS.map(({ key, label }) => (
                 <div className="space-y-2" key={key}>
                   <Label className={labelClass} htmlFor={`color-${key}`}>
                     {label}
                   </Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      aria-label={`${label} color`}
-                      className="size-11 shrink-0 cursor-pointer rounded border border-white/10 bg-transparent"
+                  <div className="relative flex items-center gap-2">
+                    <button
+                      aria-expanded={openColor === key}
+                      aria-label={`Choose ${label.toLowerCase()} color`}
+                      className="size-11 shrink-0 rounded border border-white/10"
                       id={`color-${key}`}
-                      onChange={(e) => setTheme(key, e.target.value)}
-                      type="color"
-                      value={draft.theme[key]}
+                      onClick={() =>
+                        setOpenColor((current) =>
+                          current === key ? null : key
+                        )
+                      }
+                      style={{ backgroundColor: draft.theme[key] }}
+                      type="button"
                     />
+
+                    {/* Kept alongside the picker: pasting a brand hex is faster
+                        than hunting for it on a gradient. */}
                     <Input
                       aria-label={`${label} hex value`}
                       className={`${inputClass} font-mono`}
@@ -190,6 +208,32 @@ export function SiteSettingsPanel() {
                       spellCheck={false}
                       value={draft.theme[key]}
                     />
+
+                    {openColor === key ? (
+                      <>
+                        {/* Catches the click that dismisses the picker. Sits
+                            under it, over everything else. */}
+                        <button
+                          aria-label="Close color picker"
+                          className="fixed inset-0 z-40 cursor-default"
+                          onClick={() => setOpenColor(null)}
+                          type="button"
+                        />
+                        <div className="absolute top-12 left-0 z-50">
+                          <SketchPicker
+                            color={draft.theme[key]}
+                            // Alpha is disabled deliberately: contrastRatio
+                            // returns 0 for anything that is not a plain hex,
+                            // so an rgba value would silently disable the
+                            // WCAG warning below rather than fail loudly.
+                            disableAlpha
+                            onChange={(color: ColorResult) =>
+                              setTheme(key, color.hex)
+                            }
+                          />
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ))}
