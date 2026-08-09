@@ -47,7 +47,7 @@
   --color-g-contrast: contrast-color(var(--color-g));
   --color-m-contrast: contrast-color(var(--color-m));
   --dot-bg: black;
-  --dot-color: oklch(100.00% 0 0);
+  --dot-color: oklch(100% 0 0 / 0.72);
   --dot-size: 2px;
   --dot-space: 28px;
 }

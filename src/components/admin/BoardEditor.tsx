@@ -20,6 +20,7 @@ import {
 } from "../../services/portfolioService";
 import type { Board, BoardItem, Photo } from "../../types";
 import { Button } from "../ui/button";
+import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCurstor";
 
 /** How long after the last change before the board saves itself. */
@@ -225,6 +226,32 @@ export function BoardEditor({
     setIsPicking(false);
   };
 
+  /** An Unsplash reference or a generated image. */
+  const addExternal = (image: ExternalImage) => {
+    const p = dropPoint(items.length);
+    change([
+      ...items,
+      {
+        body: null,
+        // Credit travels with the item: the licence requires it wherever the
+        // photograph is shown, and the search response is long gone by then.
+        creditName: image.creditName,
+        creditUrl: image.creditUrl,
+        fontSize: null,
+        height: DEFAULT_IMAGE_HEIGHT,
+        id: newItemId(),
+        imageUrl: image.imageUrl,
+        kind: "reference",
+        photoId: null,
+        thumbUrl: image.thumbUrl,
+        width: DEFAULT_IMAGE_WIDTH,
+        x: p.x,
+        y: p.y,
+        z: items.length + 1,
+      },
+    ]);
+  };
+
   const close = async () => {
     if (isDirty) {
       await save();
@@ -301,33 +328,12 @@ export function BoardEditor({
         />
 
         {isPicking ? (
-          <div className="absolute inset-y-0 right-0 z-10 w-72 overflow-y-auto border-white/10 border-l bg-black/95 p-3 backdrop-blur">
-            <p className="mb-3 text-[10px] text-white/50 uppercase tracking-[0.2em]">
-              Add one of your photographs
-            </p>
-            {photos.length === 0 ? (
-              <p className="text-[12px] text-white/50">No photographs yet.</p>
-            ) : null}
-            <div className="grid grid-cols-2 gap-2">
-              {photos.map((photo) => (
-                <button
-                  className="overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
-                  key={photo.id}
-                  onClick={() => addPhoto(photo)}
-                  type="button"
-                >
-                  <img
-                    alt={photo.alt}
-                    className="aspect-square w-full object-cover"
-                    height={160}
-                    loading="lazy"
-                    src={photo.url}
-                    width={160}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
+          <BoardInsertPanel
+            onAddExternal={addExternal}
+            onAddPhoto={addPhoto}
+            onClose={() => setIsPicking(false)}
+            photos={photos}
+          />
         ) : null}
       </div>
     </div>

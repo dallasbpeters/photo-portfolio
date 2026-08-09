@@ -18,11 +18,27 @@ const SVG_PATH = /\.svg(\?|$)/i;
 /** Kept in step with `images.sizes` in vercel.json. */
 const WIDTHS = [256, 384, 640, 750, 828, 1080, 1200, 1920, 2048];
 
+/** localhost, loopback, private LAN ranges, and mDNS names. */
+const LOCAL_HOSTNAME =
+  /^(localhost|127\.\d+\.\d+\.\d+|\[?::1\]?|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|.*\.local)$/i;
+
+/**
+ * True when this page is served from somewhere Vercel's edge is not.
+ *
+ * import.meta.env.DEV is not trustworthy here. Vite derives it from NODE_ENV,
+ * and `vercel dev` runs the dev server with NODE_ENV=production — so DEV is
+ * false on a local dev server, every image gets rewritten to /_vercel/image,
+ * and every one of them fails because that route only exists once deployed.
+ * The hostname is the thing that actually determines whether the optimizer is
+ * there, so ask that instead. It also covers reaching the dev server from a
+ * phone on the LAN.
+ */
+const isLocalOrigin = (): boolean =>
+  typeof window !== "undefined" &&
+  LOCAL_HOSTNAME.test(window.location.hostname);
+
 const isOptimizable = (src: string): boolean => {
-  // /_vercel/image is served by Vercel's edge and does not exist under `vite
-  // dev` or `vercel dev`, so optimizing locally 404s every photograph. Serve
-  // originals in development instead.
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV || isLocalOrigin()) {
     return false;
   }
   // Only absolute http(s) sources go through the optimizer; data: and blob:

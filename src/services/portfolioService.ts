@@ -866,3 +866,75 @@ export const boardsApi = {
     return (await res.json()) as Board;
   },
 };
+
+export interface UnsplashResult {
+  altText: string | null;
+  /** Required wherever the photograph is shown. */
+  creditName: string;
+  creditUrl: string;
+  downloadLocation: string | null;
+  id: string;
+  imageUrl: string;
+  thumbUrl: string;
+}
+
+export const unsplashApi = {
+  search: async (query: string): Promise<UnsplashResult[]> => {
+    const res = await fetch(
+      `${apiBase()}/api/unsplash/search?q=${encodeURIComponent(query)}`,
+      { headers: jsonHeaders() }
+    );
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not search Unsplash"));
+    }
+    const data = (await res.json()) as { results: UnsplashResult[] };
+    return data.results;
+  },
+
+  /**
+   * Tells Unsplash a photo was used, which their terms require.
+   *
+   * Deliberately not awaited by callers and never surfaced: crediting usage
+   * must not stand between the photographer's image and the board.
+   */
+  trackDownload: (downloadLocation: string | null): void => {
+    if (!downloadLocation) {
+      return;
+    }
+    void fetch(`${apiBase()}/api/unsplash/search`, {
+      body: JSON.stringify({ downloadLocation }),
+      headers: jsonHeaders(),
+      method: "POST",
+    }).catch(() => undefined);
+  },
+};
+
+export interface GeneratedImage {
+  description: string | null;
+  height: number | null;
+  url: string;
+  width: number | null;
+}
+
+export const aiApi = {
+  /**
+   * Generates an image, or a variation of `sourceImageUrl` when given one.
+   *
+   * The returned URL is already stored on our own blob host — fal serves
+   * results from a temporary location that would expire under the board.
+   */
+  generate: async (
+    prompt: string,
+    sourceImageUrl?: string | null
+  ): Promise<GeneratedImage> => {
+    const res = await fetch(`${apiBase()}/api/ai/generate`, {
+      body: JSON.stringify({ prompt, sourceImageUrl }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not generate an image"));
+    }
+    return (await res.json()) as GeneratedImage;
+  },
+};
