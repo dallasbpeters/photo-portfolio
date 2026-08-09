@@ -46,6 +46,17 @@ const SHARED_ENV = [
   "MAGNIFIC_API_KEY",
 ];
 
+/**
+ * What may be supplied by hand from the admin.
+ *
+ * An allowlist rather than "whatever was posted": this endpoint writes
+ * environment variables on a Vercel project, so an open field would let a
+ * request set VERCEL_TOKEN or OWNER_EMAIL on a deployment and hand itself the
+ * account. JWT_SECRET is absent deliberately — it is generated, and typing one
+ * in by hand is only ever a way to weaken it.
+ */
+const SETTABLE_ENV = new Set([...SHARED_ENV, "DATABASE_URL"]);
+
 /** 32 bytes, well past the 16-character minimum the API enforces. */
 const newSecret = (): string => randomBytes(32).toString("base64url");
 
@@ -77,6 +88,79 @@ function rejectRequest(req: VercelRequest, res: VercelResponse): boolean {
   }
 
   return false;
+}
+
+/**
+ * Values typed into the admin.
+ *
+ * Anything outside the allowlist is dropped rather than refused, so an unknown
+ * field cannot fail a whole setup run.
+ */
+function collectSuppliedEnv(rawEnv: unknown): Map<string, string> {
+  const supplied = new Map<string, string>();
+  if (typeof rawEnv !== "object" || rawEnv === null) {
+    return supplied;
+  }
+
+  for (const [key, value] of Object.entries(
+    rawEnv as Record<string, unknown>
+  )) {
+    const text = trimmedString(value);
+    if (text && SETTABLE_ENV.has(key)) {
+      supplied.set(key, text);
+    }
+  }
+
+  return supplied;
+}
+
+/** Why the request cannot be served, or an empty string when it can. */
+function badRequestReason(projectId: string, databaseUrl: string): string {
+  if (!projectId) {
+    return "A project is required";
+  }
+  if (databaseUrl && !POSTGRES_URL.test(databaseUrl)) {
+    return "The database URL must be a postgres connection string";
+  }
+  return "";
+}
+
+/** Gathers the variables to write, recording what each one was for. */
+function collectEnvVars(
+  site: { existing: Set<string>; supplied: Map<string, string> },
+  done: string[]
+): EnvVar[] {
+  const vars: EnvVar[] = [];
+
+  // Only minted when absent. Rotating it would invalidate every session.
+  if (site.existing.has("JWT_SECRET")) {
+    done.push("JWT_SECRET already set");
+  } else {
+    vars.push({ key: "JWT_SECRET", target: ALL_TARGETS, value: newSecret() });
+    done.push("Generated JWT_SECRET");
+  }
+
+  // Anything typed in wins: it is the only way to give a site its own account,
+  // and the reason to type it at all is that the inherited value is wrong or
+  // absent.
+  for (const [key, value] of site.supplied) {
+    if (key !== "DATABASE_URL") {
+      vars.push({ key, target: ALL_TARGETS, value });
+      done.push(`Set ${key}`);
+    }
+  }
+
+  // Existing values are never overwritten: a site may legitimately have been
+  // pointed at its own Resend or PostHog account.
+  for (const key of SHARED_ENV) {
+    const value = process.env[key]?.trim();
+    if (value && !(site.existing.has(key) || site.supplied.has(key))) {
+      vars.push({ key, target: ALL_TARGETS, value });
+      done.push(`Copied ${key}`);
+    }
+  }
+
+  return vars;
 }
 
 /**
@@ -180,14 +264,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = parseJsonBody(req.body);
   const projectId = trimmedString(body.projectId);
   const databaseUrl = trimmedString(body.databaseUrl);
+  const supplied = collectSuppliedEnv(body.env);
 
-  if (!projectId) {
-    return res.status(400).json({ error: "A project is required" });
-  }
-  if (databaseUrl && !POSTGRES_URL.test(databaseUrl)) {
-    return res
-      .status(400)
-      .json({ error: "The database URL must be a postgres connection string" });
+  const reason = badRequestReason(projectId, databaseUrl);
+  if (reason) {
+    return res.status(400).json({ error: reason });
   }
 
   const done: string[] = [];
@@ -195,25 +276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const existing = new Set(await listProjectEnvKeys(projectId));
-    const vars: EnvVar[] = [];
-
-    // Only minted when absent. Rotating it would invalidate every session.
-    if (existing.has("JWT_SECRET")) {
-      done.push("JWT_SECRET already set");
-    } else {
-      vars.push({ key: "JWT_SECRET", target: ALL_TARGETS, value: newSecret() });
-      done.push("Generated JWT_SECRET");
-    }
-
-    // Existing values are never overwritten: a site may legitimately have been
-    // pointed at its own Resend or PostHog account.
-    for (const key of SHARED_ENV) {
-      const value = process.env[key]?.trim();
-      if (value && !existing.has(key)) {
-        vars.push({ key, target: ALL_TARGETS, value });
-        done.push(`Copied ${key}`);
-      }
-    }
+    const vars = collectEnvVars({ existing, supplied }, done);
 
     await ensureDatabase(
       { databaseUrl, existing, projectId },

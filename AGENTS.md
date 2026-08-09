@@ -48,6 +48,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
 - Nest children between opening and closing tags instead of passing as props
 - Don't define components inside other components
+- Do not nest terniary operations.
 - Use semantic HTML and ARIA attributes for accessibility:
   - Provide meaningful alt text for images
   - Use proper heading hierarchy

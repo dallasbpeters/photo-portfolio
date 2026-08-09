@@ -1004,10 +1004,11 @@ export const siteSetupApi = {
    */
   run: async (
     projectId: string,
-    databaseUrl?: string
+    databaseUrl?: string,
+    env?: Record<string, string>
   ): Promise<SetupResult> => {
     const res = await fetch(`${apiBase()}/api/sites/setup`, {
-      body: JSON.stringify({ databaseUrl, projectId }),
+      body: JSON.stringify({ databaseUrl, env, projectId }),
       headers: jsonHeaders(),
       method: "POST",
     });
