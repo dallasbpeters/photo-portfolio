@@ -58,11 +58,7 @@ export function BoardEditor({
 
   // A saved item is keyed by its id; an unsaved one by the key it was created
   // with. Both survive the new object that every edit produces.
-  const keyOf = useCallback(
-    (item: BoardItem, index: number) =>
-      item.id ?? item.localKey ?? `index-${index}`,
-    []
-  );
+  const keyOf = useCallback((item: BoardItem) => item.id, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +90,7 @@ export function BoardEditor({
   const save = useCallback(async () => {
     setIsSaving(true);
     try {
-      const saved = await boardsApi.update(boardId, {
+      await boardsApi.update(boardId, {
         // The first image on the board becomes its cover, so the list has
         // something to show without asking anyone to choose.
         coverUrl:
@@ -103,8 +99,9 @@ export function BoardEditor({
           )?.imageUrl ?? undefined,
         items,
       });
-      // Adopt the server's ids so the next save updates rather than re-inserts.
-      setItems(saved.items ?? []);
+      // Deliberately does not adopt saved.items. The canvas is the source of
+      // truth while it is open, and replacing state here discarded anything
+      // typed or dragged while the request was in flight.
       setIsDirty(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save board");
@@ -184,10 +181,9 @@ export function BoardEditor({
         creditName: null,
         creditUrl: null,
         height: kind === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_TEXT_HEIGHT,
-        id: null,
+        id: crypto.randomUUID(),
         imageUrl: null,
         kind,
-        localKey: crypto.randomUUID(),
         photoId: null,
         thumbUrl: null,
         width: kind === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_TEXT_WIDTH,
@@ -207,10 +203,9 @@ export function BoardEditor({
         creditName: null,
         creditUrl: null,
         height: DEFAULT_IMAGE_HEIGHT,
-        id: null,
+        id: crypto.randomUUID(),
         imageUrl: photo.url,
         kind: "photo",
-        localKey: crypto.randomUUID(),
         photoId: photo.id,
         thumbUrl: photo.url,
         width: DEFAULT_IMAGE_WIDTH,

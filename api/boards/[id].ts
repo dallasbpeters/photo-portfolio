@@ -70,7 +70,7 @@ async function handleGet(
  * Anything absent from the payload was deleted on the canvas.
  */
 async function replaceItems(sql: Sql, boardId: string, items: IncomingItem[]) {
-  const keptIds = items.map((i) => i.id).filter((i): i is string => i !== null);
+  const keptIds = items.map((i) => i.id);
 
   // Delete first so an item dragged out is gone even if nothing is re-inserted.
   if (keptIds.length > 0) {
@@ -83,30 +83,30 @@ async function replaceItems(sql: Sql, boardId: string, items: IncomingItem[]) {
   }
 
   for (const item of items) {
-    if (item.id) {
-      // Only geometry is updatable; an item's identity and source never change,
-      // so a compromised payload cannot repoint an item at another photograph.
-      // biome-ignore lint/performance/noAwaitInLoops: the HTTP driver has no multi-statement batch, and a board is bounded at MAX_ITEMS
-      await sql`
-        UPDATE board_items
-        SET x = ${item.x}, y = ${item.y},
-            width = ${item.width}, height = ${item.height},
-            z_index = ${item.z}, body = ${item.body}
-        WHERE id = ${item.id} AND board_id = ${boardId}
-      `;
-    } else {
-      // Sequential for the same reason as the update above.
-      await sql`
-        INSERT INTO board_items (
-          board_id, kind, photo_id, image_url, thumb_url,
-          credit_name, credit_url, body, x, y, width, height, z_index
-        ) VALUES (
-          ${boardId}, ${item.kind}, ${item.photoId}, ${item.imageUrl},
-          ${item.thumbUrl}, ${item.creditName}, ${item.creditUrl}, ${item.body},
-          ${item.x}, ${item.y}, ${item.width}, ${item.height}, ${item.z}
-        )
-      `;
-    }
+    // One upsert covers both cases because the client owns identity. Having the
+    // server mint ids meant the canvas had to adopt them from the response,
+    // which overwrote whatever had been typed while the request was in flight.
+    //
+    // Only geometry and body are updatable: an item's kind and source never
+    // change, so a payload cannot repoint an existing item at another
+    // photograph. The board_id guard means an id belonging to a different board
+    // updates nothing rather than being stolen into this one.
+    // biome-ignore lint/performance/noAwaitInLoops: the HTTP driver has no multi-statement batch, and a board is bounded at MAX_ITEMS
+    await sql`
+      INSERT INTO board_items (
+        id, board_id, kind, photo_id, image_url, thumb_url,
+        credit_name, credit_url, body, x, y, width, height, z_index
+      ) VALUES (
+        ${item.id}, ${boardId}, ${item.kind}, ${item.photoId}, ${item.imageUrl},
+        ${item.thumbUrl}, ${item.creditName}, ${item.creditUrl}, ${item.body},
+        ${item.x}, ${item.y}, ${item.width}, ${item.height}, ${item.z}
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET x = EXCLUDED.x, y = EXCLUDED.y,
+          width = EXCLUDED.width, height = EXCLUDED.height,
+          z_index = EXCLUDED.z_index, body = EXCLUDED.body
+      WHERE board_items.board_id = ${boardId}
+    `;
   }
 }
 

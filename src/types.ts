@@ -81,18 +81,17 @@ export interface BoardItem {
   creditName: string | null;
   creditUrl: string | null;
   height: number;
-  id: string | null;
+  /**
+   * Generated on the client the moment an item is placed.
+   *
+   * The client owning identity is what lets a save be fire-and-forget: there is
+   * no server-assigned id to adopt afterwards, so a response landing mid-edit
+   * cannot overwrite what has just been typed.
+   */
+  id: string;
   imageUrl: string | null;
   kind: BoardItemKind;
-  /**
-   * Client-only identity for an item that has not been saved yet.
-   *
-   * Every edit produces a new item object, so React keys cannot be derived from
-   * object identity — doing that remounts the field on each keystroke and drops
-   * focus after one character. The server never sees this; it decides insert
-   * versus update from `id`.
-   */
-  localKey?: string;
+
   photoId: string | null;
   thumbUrl: string | null;
   width: number;

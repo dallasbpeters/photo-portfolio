@@ -130,13 +130,16 @@ export const isBoardItemKind = (value: unknown): value is BoardItemKind =>
   value === "note" ||
   value === "text";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** One item as accepted from the client, already validated and clamped. */
 export interface IncomingItem {
   body: string | null;
   creditName: string | null;
   creditUrl: string | null;
   height: number;
-  id: string | null;
+  id: string;
   imageUrl: string | null;
   kind: BoardItemKind;
   photoId: string | null;
@@ -171,9 +174,19 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
     return null;
   }
 
+  // The client generates ids, so an item arrives already identified. Anything
+  // that is not a uuid is refused rather than coerced.
+  const id = typeof o.id === "string" && UUID_RE.test(o.id) ? o.id : null;
+  if (!id) {
+    return null;
+  }
+
   const photoId = typeof o.photoId === "string" ? o.photoId : null;
   const imageUrl = text(o.imageUrl, 2000);
-  const body = text(o.body, 2000);
+  // Notes and text keep an empty body. One is placed before it is written in,
+  // and dropping it as malformed made a freshly placed note vanish on the next
+  // save. Only a non-string is missing.
+  const body = typeof o.body === "string" ? o.body.slice(0, 2000) : null;
 
   // Mirrors the CHECK constraint, so a bad item is refused here with the rest
   // of the save intact rather than aborting the whole transaction.
@@ -183,8 +196,9 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
   if (o.kind === "reference" && !imageUrl) {
     return null;
   }
-  // A note and a plain text item both carry their content in `body`.
-  if ((o.kind === "note" || o.kind === "text") && !body) {
+  // A note and a plain text item both carry their content in `body`, which may
+  // legitimately be empty.
+  if ((o.kind === "note" || o.kind === "text") && body === null) {
     return null;
   }
 
@@ -196,7 +210,7 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
     creditName: text(o.creditName, 200),
     creditUrl: text(o.creditUrl, 2000),
     height,
-    id: typeof o.id === "string" && o.id ? o.id : null,
+    id,
     imageUrl,
     kind: o.kind,
     photoId,

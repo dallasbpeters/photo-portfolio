@@ -10,8 +10,8 @@ import { useCanvasViewport } from "./useCanvasViewport";
 
 interface BoardCanvasProps {
   items: BoardItem[];
-  /** Stable per-item key, since a new item has no id yet. */
-  keyOf: (item: BoardItem, index: number) => string;
+  /** Stable per-item React key. */
+  keyOf: (item: BoardItem) => string;
   onChange: (items: BoardItem[]) => void;
 }
 
@@ -170,7 +170,7 @@ export function BoardCanvas({ items, onChange, keyOf }: BoardCanvasProps) {
               index={index}
               isSelected={selected === index}
               item={item}
-              key={keyOf(item, index)}
+              key={keyOf(item)}
               onDelete={() => onChange(items.filter((_, i) => i !== index))}
               onEditBody={(body) =>
                 onChange(
