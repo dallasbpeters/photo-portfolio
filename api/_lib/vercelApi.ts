@@ -17,8 +17,39 @@ export interface VercelProject {
   createdAt?: number;
   framework?: string | null;
   id: string;
+  /** Git repository the project deploys from, when it has one. */
+  link?: { org?: string; repo?: string; type?: string } | null;
   name: string;
 }
+
+/**
+ * The repository whose projects this application manages.
+ *
+ * Every site is a deployment of this same repo, so the repo is what separates
+ * "a site" from the unrelated projects that share the account. Resolved from
+ * the environment rather than hardcoded so a fork does not have to edit code.
+ */
+export const managedRepo = (): string | null => {
+  const explicit = process.env.SITES_REPO?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  const owner = process.env.VERCEL_GIT_REPO_OWNER?.trim();
+  const slug = process.env.VERCEL_GIT_REPO_SLUG?.trim();
+  return owner && slug ? `${owner}/${slug}` : null;
+};
+
+/** True when a project deploys from the repository this app manages. */
+export const isManagedProject = (
+  project: VercelProject,
+  repo: string
+): boolean => {
+  const { link } = project;
+  if (!(link?.org && link.repo)) {
+    return false;
+  }
+  return `${link.org}/${link.repo}`.toLowerCase() === repo.toLowerCase();
+};
 
 export interface EnvVar {
   key: string;

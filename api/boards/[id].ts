@@ -10,6 +10,7 @@ import {
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
+import { slugify } from "../_lib/pages.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 type Sql = ReturnType<typeof getSql>;
@@ -42,9 +43,13 @@ async function handleGet(
   id: string,
   res: VercelResponse
 ) {
+  // The admin addresses a board by id; a published link addresses it by slug.
+  // UUIDs and slugs cannot collide, so one lookup serves both.
   const rows = (await sql`
     SELECT id, title, cover_url, is_public, slug, created_at, updated_at
-    FROM boards WHERE id = ${id} LIMIT 1
+    FROM boards
+    WHERE id::text = ${id} OR slug = ${id}
+    LIMIT 1
   `) as BoardRow[];
 
   const [board] = rows;
@@ -57,7 +62,7 @@ async function handleGet(
     return res.status(404).json({ error: "Board not found" });
   }
 
-  const items = await loadItems(sql, id);
+  const items = await loadItems(sql, board.id);
   return res.status(200).json(rowToBoardDto(board, items));
 }
 
@@ -126,7 +131,7 @@ async function handlePatch(
 
   const body = parseJsonBody(req.body);
   const exists = (await sql`
-    SELECT id FROM boards WHERE id = ${id} LIMIT 1
+    SELECT id FROM boards WHERE id::text = ${id} LIMIT 1
   `) as { id: string }[];
   if (exists.length === 0) {
     return res.status(404).json({ error: "Board not found" });
@@ -156,13 +161,41 @@ async function handlePatch(
       ? sanitizeText(body.coverUrl).slice(0, 2000)
       : null;
 
+  // A board is only reachable publicly once it has a slug, so publishing mints
+  // one. Existing slugs are kept: changing it would break a link already shared.
+  let slug: string | null = null;
+  if (isPublic === true) {
+    const current = (await sql`
+      SELECT slug, title FROM boards WHERE id::text = ${id} LIMIT 1
+    `) as { slug: string | null; title: string }[];
+
+    if (!current[0]?.slug) {
+      const base = slugify(title ?? current[0]?.title ?? "board") || "board";
+
+      // Every slug that could collide, fetched at once — a suffix loop that
+      // queried per attempt would be a round trip per clash.
+      const taken = (await sql`
+        SELECT slug FROM boards
+        WHERE slug = ${base} OR slug LIKE ${`${base}-%`}
+      `) as { slug: string | null }[];
+      const used = new Set(taken.map((row) => row.slug));
+
+      slug = base;
+      // Suffix until free rather than failing the publish on a title clash.
+      for (let n = 2; used.has(slug); n += 1) {
+        slug = `${base}-${n}`;
+      }
+    }
+  }
+
   const rows = (await sql`
     UPDATE boards
     SET title = COALESCE(${title}, title),
+        slug = COALESCE(${slug}, slug),
         is_public = COALESCE(${isPublic}, is_public),
         cover_url = COALESCE(${coverUrl}, cover_url),
         updated_at = now()
-    WHERE id = ${id}
+    WHERE id::text = ${id}
     RETURNING id, title, cover_url, is_public, slug, created_at, updated_at
   `) as BoardRow[];
 

@@ -1,0 +1,279 @@
+import { Globe, Plus } from "iconoir-react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  type ProvisionResult,
+  sitesApi,
+  type VercelProjectSummary,
+} from "../../services/portfolioService";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+
+/** The server refuses non-owners with 403; the service surfaces it as text. */
+const FORBIDDEN = /forbidden/i;
+
+/** Every site is this same repository with a different SITE. */
+const DEFAULT_REPO = "dallasbpeters/photo-portfolio";
+
+const labelClass = "text-[10px] uppercase tracking-widest text-white/90";
+const inputClass =
+  "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
+
+interface Field {
+  hint?: string;
+  key: keyof FormState;
+  label: string;
+  required?: boolean;
+}
+
+interface FormState {
+  domain: string;
+  emailFrom: string;
+  heroTitle: string;
+  name: string;
+  ownerName: string;
+  repo: string;
+  shortName: string;
+  siteKey: string;
+  siteName: string;
+  tagline: string;
+}
+
+const FIELDS: Field[] = [
+  {
+    hint: "Vercel project name — lowercase, hyphens",
+    key: "name",
+    label: "Project name",
+    required: true,
+  },
+  {
+    hint: "The SITE value this deployment runs as",
+    key: "siteKey",
+    label: "Site key",
+    required: true,
+  },
+  { hint: "owner/name on GitHub", key: "repo", label: "Repository" },
+  { hint: "Apex domain, no scheme", key: "domain", label: "Domain" },
+  {
+    hint: "Browser title and install prompt",
+    key: "siteName",
+    label: "Site name",
+  },
+  { hint: "Under ~12 characters", key: "shortName", label: "Short name" },
+  {
+    hint: "Photographer's display name",
+    key: "ownerName",
+    label: "Owner name",
+  },
+  { hint: "Wordmark on the gallery", key: "heroTitle", label: "Hero wordmark" },
+  { hint: "Line under the footer wordmark", key: "tagline", label: "Tagline" },
+  {
+    hint: "Domain must be verified in Resend",
+    key: "emailFrom",
+    label: "Email from",
+  },
+];
+
+const EMPTY: FormState = {
+  domain: "",
+  emailFrom: "",
+  heroTitle: "",
+  name: "",
+  ownerName: "",
+  repo: DEFAULT_REPO,
+  shortName: "",
+  siteKey: "",
+  siteName: "",
+  tagline: "",
+};
+
+/**
+ * Creates a new site as its own Vercel project.
+ *
+ * Only additive: there is no delete here, because a Vercel token cannot be
+ * scoped below a team and would reach every project on the account.
+ */
+export function SitesPanel() {
+  const [projects, setProjects] = useState<VercelProjectSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  /**
+   * Whether this account may manage sites.
+   *
+   * Not decided here: the panel asks the server and hides itself if refused, so
+   * there is one rule in one place. Duplicating the owner's address into the
+   * bundle would be a second rule that could disagree with the first.
+   */
+  const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [result, setResult] = useState<ProvisionResult | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setProjects(await sitesApi.listProjects());
+      setIsAllowed(true);
+      setError(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not load projects";
+      if (FORBIDDEN.test(message)) {
+        setIsAllowed(false);
+        return;
+      }
+      setIsAllowed(true);
+      // Shown inline rather than as a toast: without a token this panel simply
+      // cannot work, and that is worth stating where it is.
+      setError(message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const set = (key: keyof FormState, value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+    setResult(null);
+    try {
+      const created = await sitesApi.create({
+        domain: form.domain || undefined,
+        emailFrom: form.emailFrom || undefined,
+        heroTitle: form.heroTitle || undefined,
+        name: form.name,
+        ownerName: form.ownerName || undefined,
+        repo: form.repo,
+        shortName: form.shortName || undefined,
+        siteKey: form.siteKey,
+        siteName: form.siteName || undefined,
+        tagline: form.tagline || undefined,
+      });
+      setResult(created);
+      setForm(EMPTY);
+      setIsOpen(false);
+      toast.success(`Created ${created.name}`);
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create site");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Nothing is rendered until the answer is known, so the panel does not appear
+  // and then vanish for everyone who is not the owner.
+  if (isAllowed !== true) {
+    return null;
+  }
+
+  return (
+    <Card className="border-white/10 bg-white/2">
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+          <Globe aria-hidden height={16} width={16} />
+          Sites
+        </CardTitle>
+        <Button
+          className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+          onClick={() => setIsOpen((v) => !v)}
+          type="button"
+          variant="outline"
+        >
+          <Plus aria-hidden height={14} width={14} />
+          New site
+        </Button>
+      </CardHeader>
+
+      <CardContent className="space-y-5">
+        {error ? (
+          <p className="text-[12px] text-amber-300/80 leading-relaxed">
+            {error}
+          </p>
+        ) : null}
+
+        {projects.length === 0 && !error ? (
+          <p className="text-[12px] text-white/60 leading-relaxed">
+            No sites created here yet. Sites that predate this panel are not
+            listed — it shows projects deployed from this repository.
+          </p>
+        ) : null}
+
+        {projects.length > 0 ? (
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <li
+                className="rounded border border-white/10 bg-black/30 px-3 py-2"
+                key={project.id}
+              >
+                <p className="truncate text-[13px] text-white/90">
+                  {project.name}
+                </p>
+                <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
+                  {project.framework ?? "no framework"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {isOpen ? (
+          <form className="space-y-4" onSubmit={(e) => void submit(e)}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {FIELDS.map((field) => (
+                <div className="space-y-2" key={field.key}>
+                  <Label className={labelClass} htmlFor={`site-${field.key}`}>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </Label>
+                  <Input
+                    className={inputClass}
+                    id={`site-${field.key}`}
+                    onChange={(e) => set(field.key, e.target.value)}
+                    required={field.required}
+                    value={form[field.key]}
+                  />
+                  {field.hint ? (
+                    <p className="text-[10px] text-white/60">{field.hint}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+              disabled={isCreating}
+              type="submit"
+              variant="outline"
+            >
+              {isCreating ? "Creating…" : "Create project"}
+            </Button>
+          </form>
+        ) : null}
+
+        {result ? (
+          <div className="space-y-2 rounded border border-white/10 bg-black/40 p-3">
+            <p className="text-[12px] text-white/90">
+              Created <strong>{result.name}</strong>. Still to do:
+            </p>
+            <ul className="space-y-1">
+              {result.remaining.map((step) => (
+                <li
+                  className="text-[11px] text-white/60 leading-relaxed"
+                  key={step}
+                >
+                  • {step}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

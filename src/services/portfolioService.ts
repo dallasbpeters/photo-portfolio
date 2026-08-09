@@ -938,3 +938,54 @@ export const aiApi = {
     return (await res.json()) as GeneratedImage;
   },
 };
+
+export interface VercelProjectSummary {
+  framework: string | null;
+  id: string;
+  name: string;
+}
+
+export interface ProvisionInput {
+  domain?: string;
+  emailFrom?: string;
+  heroTitle?: string;
+  name: string;
+  ownerName?: string;
+  repo: string;
+  shortName?: string;
+  siteKey: string;
+  siteName?: string;
+  tagline?: string;
+}
+
+export interface ProvisionResult {
+  id: string;
+  name: string;
+  /** What provisioning could not do, stated rather than implied. */
+  remaining: string[];
+}
+
+const provisionPath = (): string => `${apiBase()}/api/sites/provision`;
+
+export const sitesApi = {
+  create: async (input: ProvisionInput): Promise<ProvisionResult> => {
+    const res = await fetch(provisionPath(), {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not create the site"));
+    }
+    return (await res.json()) as ProvisionResult;
+  },
+
+  listProjects: async (): Promise<VercelProjectSummary[]> => {
+    const res = await fetch(provisionPath(), { headers: jsonHeaders() });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load projects"));
+    }
+    const data = (await res.json()) as { projects: VercelProjectSummary[] };
+    return data.projects;
+  },
+};

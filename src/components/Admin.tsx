@@ -33,6 +33,7 @@ import { ForgotPasswordForm } from "./admin/ForgotPasswordForm";
 import { GoogleSignInButton } from "./admin/GoogleSignInButton";
 import { PagesPanel } from "./admin/PagesPanel";
 import { SiteSettingsPanel } from "./admin/SiteSettingsPanel";
+import { SitesPanel } from "./admin/SitesPanel";
 import { OptimizedImage } from "./OptimizedImage";
 import { PhotoEditor } from "./PhotoEditor";
 import { Button } from "./ui/button";
@@ -895,6 +896,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           photo={editingPhoto}
         />
       ) : null}
+
+      <SitesPanel />
 
       <BoardsPanel />
 
