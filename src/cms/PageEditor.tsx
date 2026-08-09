@@ -1,4 +1,3 @@
-import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
@@ -23,6 +22,11 @@ import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
+import {
+  FormattedImage,
+  IMAGE_ALIGNMENTS,
+  IMAGE_WIDTHS,
+} from "./imageAttributes";
 
 interface PageEditorProps {
   onChange: (doc: unknown) => void;
@@ -57,7 +61,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         // The page renders its own title, so a top-level H1 in the body would
         // compete with it.
       }),
-      Image.configure({
+      FormattedImage.configure({
         HTMLAttributes: { class: "rounded max-w-full h-auto" },
       }),
       Link.configure({
@@ -253,6 +257,56 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         ref={fileInputRef}
         type="file"
       />
+
+      {/* Only while an image is selected: these controls are meaningless
+          otherwise, and a permanently visible row of them implies they apply to
+          whatever the cursor is in. */}
+      {editor.isActive("image") ? (
+        <div className="flex flex-wrap items-center gap-1 border-white/10 border-b bg-white/2 px-2 py-1">
+          <span className="px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
+            Image
+          </span>
+          {IMAGE_ALIGNMENTS.map((align) => (
+            <ToolButton
+              editor={editor}
+              isActive={editor.isActive("image", { align })}
+              key={align}
+              label={`Image ${align}`}
+              onClick={() =>
+                editor
+                  .chain()
+                  .focus()
+                  .updateAttributes("image", { align })
+                  .run()
+              }
+            >
+              <span className="text-[10px] uppercase tracking-widest">
+                {align}
+              </span>
+            </ToolButton>
+          ))}
+
+          <Divider />
+
+          {IMAGE_WIDTHS.map((width) => (
+            <ToolButton
+              editor={editor}
+              isActive={editor.isActive("image", { width })}
+              key={width}
+              label={`Image width ${width}%`}
+              onClick={() =>
+                editor
+                  .chain()
+                  .focus()
+                  .updateAttributes("image", { width })
+                  .run()
+              }
+            >
+              <span className="text-[10px] tabular-nums">{width}%</span>
+            </ToolButton>
+          ))}
+        </div>
+      ) : null}
 
       <EditorContent className="cms-editor" editor={editor} />
     </div>

@@ -5,6 +5,7 @@ import {
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
 import type { BoardItem } from "../types";
+import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
 import { useCanvasViewport } from "./useCanvasViewport";
 
@@ -16,6 +17,15 @@ interface BoardCanvasProps {
   keyOf: (item: BoardItem) => string;
   onChange: (items: BoardItem[]) => void;
 }
+
+/**
+ * Snap distance, in screen pixels.
+ *
+ * Screen rather than canvas units so it feels the same at every zoom: the same
+ * few pixels of pointer movement, whether the board is fit to the window or
+ * magnified.
+ */
+const SNAP_PX = 6;
 
 type Gesture =
   | { kind: "none" }
@@ -56,6 +66,7 @@ export function BoardCanvas({
   // Selecting and editing are separate: one click picks an item up, typing
   // needs a second. Without that split a note could never be dragged.
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [guides, setGuides] = useState<Guides>(NO_GUIDES);
 
   useEffect(() => {
     if (autoEditId) {
@@ -121,20 +132,42 @@ export function BoardCanvas({
       const dx = p.x - g.startX;
       const dy = p.y - g.startY;
 
+      if (g.kind === "move") {
+        const item = items[g.index];
+        if (!item) {
+          return;
+        }
+        // Snapping compares against every other item, so the dragged one is
+        // excluded — it would otherwise align to itself and never move.
+        const snapped = snapToGuides(
+          {
+            height: item.height,
+            width: item.width,
+            x: g.originX + dx,
+            y: g.originY + dy,
+          },
+          items.filter((_, i) => i !== g.index),
+          SNAP_PX / view.viewport.scale
+        );
+        setGuides(snapped.guides);
+        onChange(
+          items.map((it, i) =>
+            i === g.index ? { ...it, x: snapped.x, y: snapped.y } : it
+          )
+        );
+        return;
+      }
+
       onChange(
-        items.map((it, i) => {
-          if (i !== g.index) {
-            return it;
-          }
-          if (g.kind === "move") {
-            return { ...it, x: g.originX + dx, y: g.originY + dy };
-          }
-          return {
-            ...it,
-            height: Math.max(MIN_ITEM_SIZE, g.originH + dy),
-            width: Math.max(MIN_ITEM_SIZE, g.originW + dx),
-          };
-        })
+        items.map((it, i) =>
+          i === g.index
+            ? {
+                ...it,
+                height: Math.max(MIN_ITEM_SIZE, g.originH + dy),
+                width: Math.max(MIN_ITEM_SIZE, g.originW + dx),
+              }
+            : it
+        )
       );
     },
     [items, onChange, view]
@@ -147,17 +180,35 @@ export function BoardCanvas({
         return;
       }
       gesture.current = { kind: "none" };
+      setGuides(NO_GUIDES);
     },
     [view]
   );
 
+  /**
+   * The dot grid, drawn on the unscaled viewport rather than on the board.
+   *
+   * On the scaled layer it zoomed with everything else: dots turned into
+   * boulders zoomed in and vanished zoomed out. Here the spacing is in screen
+   * pixels, so it is identical at every zoom level. It still slides with the
+   * pan, which is what keeps the movement legible — background-position moves
+   * the pattern without resizing it.
+   */
   const dotGridStyle = {
-    background:
-      "linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), var(--dot-color)",
+    backgroundColor: "var(--dot-color)",
+    backgroundImage:
+      "linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%), linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%)",
+    backgroundPosition: `${view.viewport.tx}px ${view.viewport.ty}px`,
+    backgroundSize: "var(--dot-space) var(--dot-space)",
   };
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-neutral-950">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={dotGridStyle}
+      />
       <div
         className={`h-full w-full touch-none ${view.isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         onPointerCancel={endGesture}
@@ -174,14 +225,44 @@ export function BoardCanvas({
         ref={containerRef}
       >
         <div
-          className="relative origin-top-left shadow-[0_0_120px_rgba(0,0,0,0.6)]"
+          className="relative origin-top-left shadow-[0_0_120px_rgba(0,0,0,0.6)] outline outline-white/5"
           style={{
             height: CANVAS_HEIGHT,
             transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,
             width: CANVAS_WIDTH,
-            ...dotGridStyle,
           }}
         >
+          {guides.vertical.map((guide) => (
+            <div
+              className="pointer-events-none absolute bg-sky-400"
+              key={`v-${guide.position}-${guide.from}`}
+              style={{
+                height: guide.to - guide.from,
+                left: guide.position,
+                // Hairline at any zoom, and pulled back by half its own width
+                // so it sits centred on the edge it marks.
+                marginLeft: -0.5 / view.viewport.scale,
+                top: guide.from,
+                width: 1 / view.viewport.scale,
+                zIndex: 9999,
+              }}
+            />
+          ))}
+          {guides.horizontal.map((guide) => (
+            <div
+              className="pointer-events-none absolute bg-sky-400"
+              key={`h-${guide.position}-${guide.from}`}
+              style={{
+                height: 1 / view.viewport.scale,
+                left: guide.from,
+                marginTop: -0.5 / view.viewport.scale,
+                top: guide.position,
+                width: guide.to - guide.from,
+                zIndex: 9999,
+              }}
+            />
+          ))}
+
           {items.map((item, index) => (
             <BoardItemView
               index={index}

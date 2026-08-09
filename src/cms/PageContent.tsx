@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { OptimizedImage } from "../components/OptimizedImage";
+import { imageLayout, isImageAlign } from "./imageAttributes";
 
 /**
  * Renders a TipTap document.
@@ -177,8 +178,16 @@ const renderNode = (node: Node, key: string): ReactNode => {
         return null;
       }
       const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
+      // Alignment and width are set in the editor; without honouring them here
+      // the page would ignore the formatting the writer just applied.
+      const align = isImageAlign(node.attrs?.align)
+        ? node.attrs.align
+        : "center";
+      const width =
+        typeof node.attrs?.width === "number" ? node.attrs.width : null;
+      const layout = imageLayout(align, width);
       return (
-        <figure className="my-8">
+        <figure className={`my-8 ${layout.className}`} style={layout.style}>
           {/* Routed through image optimization like the gallery, so page media
               is not served at full resolution either. */}
           <OptimizedImage
