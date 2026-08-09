@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => {
           // Follows the same PORT as scripts/dev-stack.mjs so the two cannot drift.
           target:
             process.env.VITE_API_PROXY_TARGET ||
-            `http://127.0.0.1:${process.env.PORT || 3002}`,
+            `http://127.0.0.1:${process.env.PORT || 3006}`,
         },
       },
     },

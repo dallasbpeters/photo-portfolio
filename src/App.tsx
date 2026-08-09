@@ -23,6 +23,9 @@ const ResetPasswordPage = lazy(() =>
 const PhotoPage = lazy(() =>
   import("./pages/PhotoPage").then((m) => ({ default: m.PhotoPage }))
 );
+const BoardPage = lazy(() =>
+  import("./pages/BoardPage").then((m) => ({ default: m.BoardPage }))
+);
 const ContentPage = lazy(() =>
   import("./pages/ContentPage").then((m) => ({ default: m.ContentPage }))
 );
@@ -40,6 +43,9 @@ export default function App() {
           <Routes>
             <Route element={<HomePage />} path="/" />
             <Route element={<AdminPage />} path="/admin" />
+            {/* Before /:slug, and more specific than /admin, so a board keeps
+                its own URL and survives a reload. */}
+            <Route element={<BoardPage />} path="/admin/boards/:boardId" />
             <Route element={<ResetPasswordPage />} path="/reset-password" />
             <Route element={<PhotoPage />} path="/photo/:id" />
             {/* Last: a CMS slug must never shadow a built-in route. The API also

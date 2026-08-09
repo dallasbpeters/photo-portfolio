@@ -15,7 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** API port. Overridable so this can run alongside other local apps. */
-const PORT = Number(process.env.PORT) || 3002;
+const PORT = Number(process.env.PORT) || 3006;
 
 // Only ports this stack owns — killing an arbitrary PORT the user set is the
 // point, but the Vite range is fixed by vercel dev's devCommand.

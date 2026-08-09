@@ -1,5 +1,7 @@
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
 import type {
+  Board,
+  BoardItem,
   Category,
   DailyChallengeHistoryEntry,
   DailyChallengeJournal,
@@ -11,6 +13,7 @@ const TRAILING_SLASH = /\/$/;
 const DOCTYPE_TAG = /<!DOCTYPE/i;
 const HTML_TAG = /<html[\s>]/i;
 const UNAUTHORIZED = /unauthor/i;
+const EMAIL_LOCAL_SEPARATORS = /[._-]+/;
 
 const apiBase = (): string => {
   // Dev: always same-origin. Vite proxies /api → vercel dev :3000.
@@ -91,9 +94,29 @@ const writeStoredToken = (token: string | null): void => {
 const getAuthToken = (): string | null => readStoredToken();
 
 export interface AuthenticatedUser {
+  /**
+   * A human-readable name for the signed-in admin.
+   *
+   * Derived from the address because the token carries no name field — there is
+   * nowhere else to get one without adding a column and a settings screen. Note
+   * this is the *person signed in*, which is not the same as the site owner in
+   * site settings: one person may administer either site.
+   */
+  displayName: string;
   email: string;
   id: string;
 }
+
+/** "dallas.peters@example.com" → "Dallas Peters". */
+const nameFromEmail = (email: string): string => {
+  const local = email.split("@")[0] ?? "";
+  const words = local
+    .split(EMAIL_LOCAL_SEPARATORS)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+  // An address with nothing usable before the @ still needs to render something.
+  return words.join(" ") || email;
+};
 
 const getStoredUser = (): AuthenticatedUser | null => {
   const token = getAuthToken();
@@ -119,7 +142,11 @@ const getStoredUser = (): AuthenticatedUser | null => {
     ) {
       return null;
     }
-    return { email: decoded.email, id: decoded.sub };
+    return {
+      displayName: nameFromEmail(decoded.email),
+      email: decoded.email,
+      id: decoded.sub,
+    };
   } catch {
     return null;
   }
@@ -538,7 +565,7 @@ export const authApi = {
       });
     } catch (cause) {
       throw new Error(
-        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3002), or check VITE_API_BASE_URL.`,
+        `Could not reach ${url}. Run \`pnpm dev\` and use the Vercel URL (e.g. http://localhost:3006), or check VITE_API_BASE_URL.`,
         { cause }
       );
     }
@@ -562,7 +589,7 @@ export const authApi = {
       let detail = " Is the API running?";
       if (looksHtml && base === "") {
         detail =
-          " The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3002 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`.";
+          " The body was HTML (typical when you opened the Vite port instead of Vercel, or the API is down). Run `pnpm dev` and use http://localhost:3006 (see CLI). For Vite-only + separate API, set `VITE_API_PROXY_TARGET`.";
       } else if (looksHtml) {
         detail =
           " The body was HTML instead of JSON. Confirm `VITE_API_BASE_URL` points at a host that serves `POST /api/auth/login`.";
@@ -748,5 +775,94 @@ export const pagesApi = {
       throw new Error(await readPageError(res, "Could not save page"));
     }
     return (await res.json()) as PageRecord;
+  },
+};
+
+const boardsPath = (): string => `${apiBase()}/api/boards`;
+
+const boardUrl = (id: string): string =>
+  `${boardsPath()}/${encodeURIComponent(id)}`;
+
+export const boardsApi = {
+  create: async (title: string): Promise<Board> => {
+    const res = await fetch(boardsPath(), {
+      body: JSON.stringify({ title }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not create board"));
+    }
+    return (await res.json()) as Board;
+  },
+
+  /**
+   * Saves on the way out of the page.
+   *
+   * keepalive lets the request outlive the document; a normal fetch is
+   * cancelled the instant the page goes away, which is precisely when the last
+   * unsaved second of work needs to survive.
+   */
+  flush: (id: string, items: BoardItem[]): void => {
+    const token = getAuthToken();
+    if (!token) {
+      return;
+    }
+    void fetch(boardUrl(id), {
+      body: JSON.stringify({ items }),
+      headers: jsonHeaders(),
+      keepalive: true,
+      method: "PATCH",
+    }).catch(() => undefined);
+  },
+
+  get: async (id: string): Promise<Board> => {
+    const res = await fetch(boardUrl(id), { headers: jsonHeaders() });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load board"));
+    }
+    return (await res.json()) as Board;
+  },
+
+  list: async (): Promise<Board[]> => {
+    const res = await fetch(boardsPath(), { headers: jsonHeaders() });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load boards"));
+    }
+    return (await res.json()) as Board[];
+  },
+
+  remove: async (id: string): Promise<void> => {
+    const res = await fetch(boardUrl(id), {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not delete board"));
+    }
+  },
+
+  /**
+   * Saves the board. Passing `items` replaces the whole arrangement, so the
+   * canvas must send every item it still has — anything omitted is deleted.
+   */
+  update: async (
+    id: string,
+    input: {
+      title?: string;
+      isPublic?: boolean;
+      coverUrl?: string;
+      items?: BoardItem[];
+    }
+  ): Promise<Board> => {
+    const res = await fetch(boardUrl(id), {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save board"));
+    }
+    return (await res.json()) as Board;
   },
 };

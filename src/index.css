@@ -46,6 +46,10 @@
   --color-f-contrast: contrast-color(var(--color-f));
   --color-g-contrast: contrast-color(var(--color-g));
   --color-m-contrast: contrast-color(var(--color-m));
+  --dot-bg: black;
+  --dot-color: white;
+  --dot-size: 2px;
+  --dot-space: 28px;
 }
 
 @keyframes stack-in {

@@ -25,6 +25,7 @@ import {
 } from "../hooks/usePhotoSelection";
 import type { Photo } from "../types";
 import { BatchUploader } from "./admin/BatchUploader";
+import { BoardsPanel } from "./admin/BoardsPanel";
 import { CategoriesManageDialog } from "./admin/CategoriesManageDialog";
 import { CategoryPicker } from "./admin/CategoryPicker";
 import { DailyChallengePanel } from "./admin/DailyChallengePanel";
@@ -894,6 +895,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           photo={editingPhoto}
         />
       ) : null}
+
+      <BoardsPanel />
 
       <PagesPanel />
 

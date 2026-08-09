@@ -1,0 +1,220 @@
+import { useCallback, useRef, useState } from "react";
+import {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  MIN_ITEM_SIZE,
+} from "../../config/canvas.js";
+import type { BoardItem } from "../types";
+import { BoardItemView } from "./BoardItemView";
+import { useCanvasViewport } from "./useCanvasViewport";
+
+interface BoardCanvasProps {
+  items: BoardItem[];
+  /** Stable per-item key, since a new item has no id yet. */
+  keyOf: (item: BoardItem, index: number) => string;
+  onChange: (items: BoardItem[]) => void;
+}
+
+type Gesture =
+  | { kind: "none" }
+  | {
+      index: number;
+      kind: "move";
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+    }
+  | {
+      index: number;
+      kind: "resize";
+      startX: number;
+      startY: number;
+      originW: number;
+      originH: number;
+    };
+
+/**
+ * The board surface: a fixed canvas you pan and zoom, with items dragged
+ * directly on it.
+ *
+ * Item gestures are handled here rather than inside each item so that dragging
+ * one item cannot be interrupted by the pointer crossing another — the whole
+ * gesture belongs to the surface, and the surface knows which item owns it.
+ */
+export function BoardCanvas({ items, onChange, keyOf }: BoardCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const view = useCanvasViewport(containerRef);
+  const [selected, setSelected] = useState<number | null>(null);
+  const gesture = useRef<Gesture>({ kind: "none" });
+
+  const topZ = items.reduce((max, i) => Math.max(max, i.z), 0);
+
+  const beginMove = useCallback(
+    (index: number, clientX: number, clientY: number) => {
+      const item = items[index];
+      if (!item) {
+        return;
+      }
+      const p = view.toCanvas(clientX, clientY);
+      gesture.current = {
+        index,
+        kind: "move",
+        originX: item.x,
+        originY: item.y,
+        startX: p.x,
+        startY: p.y,
+      };
+      setSelected(index);
+      // Raise on grab: the thing you are touching should be the thing on top.
+      onChange(
+        items.map((it, i) => (i === index ? { ...it, z: topZ + 1 } : it))
+      );
+    },
+    [items, onChange, topZ, view]
+  );
+
+  const beginResize = useCallback(
+    (index: number, clientX: number, clientY: number) => {
+      const item = items[index];
+      if (!item) {
+        return;
+      }
+      const p = view.toCanvas(clientX, clientY);
+      gesture.current = {
+        index,
+        kind: "resize",
+        originH: item.height,
+        originW: item.width,
+        startX: p.x,
+        startY: p.y,
+      };
+      setSelected(index);
+    },
+    [items, view]
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const g = gesture.current;
+      if (g.kind === "none") {
+        view.onPointerMove(e);
+        return;
+      }
+      const p = view.toCanvas(e.clientX, e.clientY);
+      const dx = p.x - g.startX;
+      const dy = p.y - g.startY;
+
+      onChange(
+        items.map((it, i) => {
+          if (i !== g.index) {
+            return it;
+          }
+          if (g.kind === "move") {
+            return { ...it, x: g.originX + dx, y: g.originY + dy };
+          }
+          return {
+            ...it,
+            height: Math.max(MIN_ITEM_SIZE, g.originH + dy),
+            width: Math.max(MIN_ITEM_SIZE, g.originW + dx),
+          };
+        })
+      );
+    },
+    [items, onChange, view]
+  );
+
+  const endGesture = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (gesture.current.kind === "none") {
+        view.onPointerUp(e);
+        return;
+      }
+      gesture.current = { kind: "none" };
+    },
+    [view]
+  );
+
+  const dotGridStyle = {
+    background:
+      "linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), var(--dot-color)",
+  };
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-neutral-950">
+      <div
+        className={`h-full w-full touch-none ${view.isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+        onPointerCancel={endGesture}
+        onPointerDown={(e) => {
+          // Landing on the background clears the selection and starts a pan.
+          if (e.target === e.currentTarget || gesture.current.kind === "none") {
+            setSelected(null);
+            view.onPointerDown(e);
+          }
+        }}
+        onPointerMove={onPointerMove}
+        onPointerUp={endGesture}
+        ref={containerRef}
+      >
+        <div
+          className="relative origin-top-left shadow-[0_0_120px_rgba(0,0,0,0.6)]"
+          style={{
+            height: CANVAS_HEIGHT,
+            transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,
+            width: CANVAS_WIDTH,
+            ...dotGridStyle,
+          }}
+        >
+          {items.map((item, index) => (
+            <BoardItemView
+              index={index}
+              isSelected={selected === index}
+              item={item}
+              key={keyOf(item, index)}
+              onDelete={() => onChange(items.filter((_, i) => i !== index))}
+              onEditBody={(body) =>
+                onChange(
+                  items.map((it, i) => (i === index ? { ...it, body } : it))
+                )
+              }
+              onResizeStart={beginResize}
+              onSelect={beginMove}
+              scale={view.viewport.scale}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute right-4 bottom-4 flex items-center gap-2">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
+          <button
+            aria-label="Zoom out"
+            className="min-h-9 min-w-9 text-white/70 text-xs uppercase tracking-widest hover:text-white"
+            onClick={() => view.zoomBy(1 / 1.25)}
+            type="button"
+          >
+            −
+          </button>
+          <span className="w-12 text-center text-[10px] text-white/50 tabular-nums">
+            {Math.round(view.viewport.scale * 100)}%
+          </span>
+          <button
+            aria-label="Zoom in"
+            className="min-h-9 min-w-9 text-white/70 text-xs uppercase tracking-widest hover:text-white"
+            onClick={() => view.zoomBy(1.25)}
+            type="button"
+          >
+            +
+          </button>
+          <button
+            className="min-h-9 px-2 text-[10px] text-white/70 uppercase tracking-widest hover:text-white"
+            onClick={view.fit}
+            type="button"
+          >
+            Fit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
