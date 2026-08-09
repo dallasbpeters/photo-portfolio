@@ -37,8 +37,13 @@ export interface SiteConfig {
   heroTitle: string;
   instagramHandle: string;
   instagramUrl: string;
-  /** Stable identifier — matches the VITE_SITE / SITE env value. */
-  key: SiteKey;
+  /**
+   * Stable identifier — matches the VITE_SITE / SITE env value.
+   *
+   * Typed as a plain string rather than SiteKey because a site created from the
+   * admin is not in this file: its key is whatever the deployment was given.
+   */
+  key: string;
   /** Full product name: browser title, PWA name, install prompt. */
   name: string;
   /** Every origin the API accepts cross-origin requests from. */
@@ -101,5 +106,60 @@ export const isSiteKey = (value: string | undefined): value is SiteKey =>
  */
 export const resolveSite = (value: string | undefined): SiteConfig => {
   const key = value?.trim();
-  return isSiteKey(key) ? SITES[key] : SITES[DEFAULT_SITE];
+  if (isSiteKey(key)) {
+    return SITES[key];
+  }
+  // An unknown key means a site added after this file was compiled. Keeping the
+  // key rather than silently becoming the default matters: falling back
+  // wholesale would serve the new deployment as a copy of another site, with
+  // its CORS origins and its transactional email address.
+  return key ? { ...SITES[DEFAULT_SITE], key } : SITES[DEFAULT_SITE];
+};
+
+/** Env var carrying a comma-separated list. */
+const splitList = (value: string): string[] =>
+  value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+/**
+ * Layers SITE_* environment variables over a compiled site.
+ *
+ * This is how a site that does not exist in this file gets its identity: the
+ * values travel as environment variables on its own deployment rather than
+ * requiring a code change and a release to add a site. Anything unset keeps the
+ * compiled value, so existing sites are unaffected.
+ *
+ * Takes the environment as an argument rather than reading process.env, since
+ * this module has to stay usable from the browser bundle too.
+ */
+export const applySiteOverrides = (
+  base: SiteConfig,
+  env: Record<string, string | undefined>
+): SiteConfig => {
+  const text = (name: string): string | undefined => {
+    const value = env[name]?.trim();
+    return value ? value : undefined;
+  };
+
+  const origins = text("SITE_ORIGINS");
+
+  return {
+    ...base,
+    analyticsHost: text("SITE_ANALYTICS_HOST") ?? base.analyticsHost,
+    defaultAdminEmail:
+      text("SITE_DEFAULT_ADMIN_EMAIL") ?? base.defaultAdminEmail,
+    domain: text("SITE_DOMAIN") ?? base.domain,
+    emailFrom: text("SITE_EMAIL_FROM") ?? base.emailFrom,
+    heroTitle: text("SITE_HERO_TITLE") ?? base.heroTitle,
+    instagramHandle: text("SITE_INSTAGRAM_HANDLE") ?? base.instagramHandle,
+    instagramUrl: text("SITE_INSTAGRAM_URL") ?? base.instagramUrl,
+    name: text("SITE_NAME") ?? base.name,
+    origins: origins ? splitList(origins) : base.origins,
+    ownerName: text("SITE_OWNER_NAME") ?? base.ownerName,
+    shortName: text("SITE_SHORT_NAME") ?? base.shortName,
+    tagline: text("SITE_TAGLINE") ?? base.tagline,
+    themeColor: text("SITE_THEME_COLOR") ?? base.themeColor,
+  };
 };

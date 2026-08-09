@@ -225,7 +225,7 @@ export function BoardCanvas({
         ref={containerRef}
       >
         <div
-          className="relative origin-top-left shadow-[0_0_120px_rgba(0,0,0,0.6)] outline outline-white/5"
+          className="relative origin-top-left outline outline-white/5"
           style={{
             height: CANVAS_HEIGHT,
             transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,
