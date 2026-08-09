@@ -4,12 +4,22 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { loadEnv } from "./loadEnv";
 
+/**
+ * Captured before loadEnv, which loads .env.local with override: true.
+ *
+ * Without this, `DATABASE_URL=… pnpm db:migrate` silently migrated whatever
+ * .env.local pointed at instead of the database named on the command line —
+ * so a migration aimed at one database landed on another.
+ */
+const explicitDatabaseUrl = process.env.DATABASE_URL?.trim();
+
 loadEnv();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 
 const connectionString =
+  explicitDatabaseUrl ||
   process.env.DATABASE_URL?.trim() ||
   process.env.POSTGRES_URL?.trim() ||
   process.env.POSTGRES_PRISMA_URL?.trim();
