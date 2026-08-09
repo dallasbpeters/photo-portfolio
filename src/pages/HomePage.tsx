@@ -232,7 +232,7 @@ export const HomePage = () => {
 
       <section
         aria-label="Portfolio grid"
-        className="mx-auto max-w-450 scroll-mt-6 px-4 py-24 md:px-8"
+        className="mx-auto scroll-mt-6 px-4 py-24 md:px-8"
         id="portfolio-grid"
         ref={gridSectionRef}
       >
