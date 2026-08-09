@@ -9,6 +9,8 @@
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
 
@@ -30,6 +32,7 @@ export interface BoardItemRow {
   created_at: string | Date;
   credit_name: string | null;
   credit_url: string | null;
+  font_size?: number | string | null;
   height: number | string;
   id: string;
   image_url: string | null;
@@ -48,6 +51,8 @@ export interface BoardItemDto {
   body: string | null;
   creditName: string | null;
   creditUrl: string | null;
+  /** Null means "use the default for this kind". */
+  fontSize: number | null;
   height: number;
   id: string;
   imageUrl: string | null;
@@ -93,6 +98,10 @@ export const rowToItemDto = (row: BoardItemRow): BoardItemDto => ({
   body: row.body,
   creditName: row.credit_name,
   creditUrl: row.credit_url,
+  fontSize:
+    row.font_size === null || row.font_size === undefined
+      ? null
+      : num(row.font_size, 0) || null,
   height: num(row.height, 240),
   id: row.id,
   // A photo item resolves its URL through the join, so moving or re-uploading
@@ -138,6 +147,7 @@ export interface IncomingItem {
   body: string | null;
   creditName: string | null;
   creditUrl: string | null;
+  fontSize: number | null;
   height: number;
   id: string;
   imageUrl: string | null;
@@ -205,10 +215,18 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
   const width = clamp(num(o.width, 320), MIN_ITEM_SIZE, CANVAS_WIDTH);
   const height = clamp(num(o.height, 240), MIN_ITEM_SIZE, CANVAS_HEIGHT);
 
+  // Clamped rather than trusted: the size is dragged from a control, and a NaN
+  // or an absurd value would render text that cannot be read or selected.
+  const fontSize =
+    o.fontSize === null || o.fontSize === undefined
+      ? null
+      : clamp(num(o.fontSize, MIN_FONT_SIZE), MIN_FONT_SIZE, MAX_FONT_SIZE);
+
   return {
     body,
     creditName: text(o.creditName, 200),
     creditUrl: text(o.creditUrl, 2000),
+    fontSize,
     height,
     id,
     imageUrl,

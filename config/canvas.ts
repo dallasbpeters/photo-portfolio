@@ -34,5 +34,18 @@ export const DEFAULT_NOTE_HEIGHT = 160;
 export const DEFAULT_TEXT_WIDTH = 420;
 export const DEFAULT_TEXT_HEIGHT = 90;
 
+/**
+ * Text size bounds, in canvas units.
+ *
+ * Generous at the top end: a heading on a 4000-unit canvas is legitimately
+ * enormous compared with body text on a page.
+ */
+export const MIN_FONT_SIZE = 8;
+export const MAX_FONT_SIZE = 400;
+
+/** Defaults when an item has no explicit size. */
+export const DEFAULT_NOTE_FONT_SIZE = 15;
+export const DEFAULT_TEXT_FONT_SIZE = 22;
+
 export const clampScale = (scale: number): number =>
   Math.min(Math.max(scale, MIN_SCALE), MAX_SCALE);

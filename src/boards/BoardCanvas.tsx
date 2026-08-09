@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
@@ -9,6 +9,8 @@ import { BoardItemView } from "./BoardItemView";
 import { useCanvasViewport } from "./useCanvasViewport";
 
 interface BoardCanvasProps {
+  /** Item to open for typing as soon as it appears — a just-placed note. */
+  autoEditId?: string | null;
   items: BoardItem[];
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
@@ -42,10 +44,24 @@ type Gesture =
  * one item cannot be interrupted by the pointer crossing another — the whole
  * gesture belongs to the surface, and the surface knows which item owns it.
  */
-export function BoardCanvas({ items, onChange, keyOf }: BoardCanvasProps) {
+export function BoardCanvas({
+  items,
+  onChange,
+  keyOf,
+  autoEditId,
+}: BoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const view = useCanvasViewport(containerRef);
   const [selected, setSelected] = useState<number | null>(null);
+  // Selecting and editing are separate: one click picks an item up, typing
+  // needs a second. Without that split a note could never be dragged.
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (autoEditId) {
+      setEditingId(autoEditId);
+    }
+  }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
 
   const topZ = items.reduce((max, i) => Math.max(max, i.z), 0);
@@ -149,6 +165,7 @@ export function BoardCanvas({ items, onChange, keyOf }: BoardCanvasProps) {
           // Landing on the background clears the selection and starts a pan.
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
             setSelected(null);
+            setEditingId(null);
             view.onPointerDown(e);
           }
         }}
@@ -168,13 +185,20 @@ export function BoardCanvas({ items, onChange, keyOf }: BoardCanvasProps) {
           {items.map((item, index) => (
             <BoardItemView
               index={index}
+              isEditing={editingId === item.id}
               isSelected={selected === index}
               item={item}
               key={keyOf(item)}
+              onBeginEdit={() => setEditingId(item.id)}
               onDelete={() => onChange(items.filter((_, i) => i !== index))}
               onEditBody={(body) =>
                 onChange(
                   items.map((it, i) => (i === index ? { ...it, body } : it))
+                )
+              }
+              onFontSize={(fontSize) =>
+                onChange(
+                  items.map((it, i) => (i === index ? { ...it, fontSize } : it))
                 )
               }
               onResizeStart={beginResize}

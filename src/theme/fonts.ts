@@ -8,12 +8,16 @@ import type { FontId } from "../../config/theme";
 const FONT_LOADERS: Record<FontId, () => Promise<unknown>> = {
   "cormorant-garamond": () =>
     import("@fontsource-variable/cormorant-garamond/index.css"),
+  figtree: () => import("@fontsource-variable/figtree/index.css"),
   fraunces: () => import("@fontsource-variable/fraunces/index.css"),
   geist: () => import("@fontsource-variable/geist/index.css"),
   inter: () => import("@fontsource-variable/inter/index.css"),
   manrope: () => import("@fontsource-variable/manrope/index.css"),
+  mulish: () => import("@fontsource-variable/mulish/index.css"),
   "playfair-display": () =>
     import("@fontsource-variable/playfair-display/index.css"),
+  "plus-jakarta-sans": () =>
+    import("@fontsource-variable/plus-jakarta-sans/index.css"),
   "space-grotesk": () => import("@fontsource-variable/space-grotesk/index.css"),
 };
 

@@ -80,6 +80,8 @@ export interface BoardItem {
   /** Required wherever an Unsplash reference is displayed. */
   creditName: string | null;
   creditUrl: string | null;
+  /** Text size in canvas units; null uses the default for the kind. */
+  fontSize: number | null;
   height: number;
   /**
    * Generated on the client the moment an item is placed.

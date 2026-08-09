@@ -1,12 +1,27 @@
-import { Trash } from "iconoir-react";
+import { Minus, Plus, Trash } from "iconoir-react";
+import { type RefObject, useEffect, useRef } from "react";
+import {
+  DEFAULT_NOTE_FONT_SIZE,
+  DEFAULT_TEXT_FONT_SIZE,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+} from "../../config/canvas.js";
 import type { BoardItem } from "../types";
+
+/** One press changes the size by this much, in canvas units. */
+const FONT_STEP = 4;
 
 interface BoardItemViewProps {
   index: number;
+  /** True while this item's text is being typed into. */
+  isEditing: boolean;
   isSelected: boolean;
   item: BoardItem;
+  /** Enters text editing — a second click, or a double click. */
+  onBeginEdit: () => void;
   onDelete: () => void;
   onEditBody: (body: string) => void;
+  onFontSize: (fontSize: number) => void;
   onResizeStart: (index: number, clientX: number, clientY: number) => void;
   onSelect: (index: number, clientX: number, clientY: number) => void;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
@@ -14,19 +29,127 @@ interface BoardItemViewProps {
 }
 
 /**
- * One item on the board.
+ * Keeps the caret in the item's field whenever editing begins.
+ *
+ * Entering edit mode has to move focus as well as unlock the field; without
+ * this, double-clicking a note made it editable but keystrokes went nowhere.
+ */
+function useEditingCaret(
+  isEditing: boolean
+): RefObject<HTMLTextAreaElement | null> {
+  const fieldRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Deferred by a frame on purpose. Double-click is how you enter editing, and
+  // the browser follows it by selecting the word under the pointer — so placing
+  // the caret synchronously loses to that, and the first keystroke replaces a
+  // word instead of appending. Running after the native selection wins.
+  useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+    // Focus at once, so a keystroke arriving before the next frame still
+    // reaches the field rather than the document.
+    fieldRef.current?.focus();
+
+    const frame = requestAnimationFrame(() => {
+      const field = fieldRef.current;
+      field?.focus();
+      const caret = field?.value.length ?? 0;
+      field?.setSelectionRange(caret, caret);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isEditing]);
+
+  return fieldRef;
+}
+
+interface BoardItemBodyProps {
+  fieldRef: RefObject<HTMLTextAreaElement | null>;
+  fontSize: number;
+  isEditing: boolean;
+  item: BoardItem;
+  onEditBody: (body: string) => void;
+}
+
+/**
+ * What the item actually shows: an editable field for a note or text, and
+ * otherwise the image with its credit.
  *
  * Images are deliberately not <OptimizedImage>: an item is resized freely on
  * the canvas, so there is no stable render width to request, and re-requesting
  * a new size mid-drag would flicker. The board is an admin surface, so the cost
  * is paid by one person rather than every visitor.
  */
+function BoardItemBody({
+  fieldRef,
+  fontSize,
+  isEditing,
+  item,
+  onEditBody,
+}: BoardItemBodyProps) {
+  const isNote = item.kind === "note";
+
+  if (isNote || item.kind === "text") {
+    return (
+      <textarea
+        className={
+          isNote
+            ? "h-full w-full resize-none bg-amber-100/95 p-3 text-neutral-900 outline-none"
+            : // Plain text: no card, no background — just words on the board.
+              "h-full w-full resize-none border-0 bg-transparent p-1 font-light text-white outline-none placeholder:text-white/30"
+        }
+        onChange={(e) => onEditBody(e.target.value)}
+        placeholder={isNote ? "Note…" : "Type…"}
+        // A note is covered edge to edge by its field, so while it is not
+        // being edited the field must let pointers through — otherwise there
+        // is nowhere on the item to grab, and it can never be dragged,
+        // selected, or resized.
+        readOnly={!isEditing}
+        ref={fieldRef}
+        style={{
+          fontSize,
+          // Follows the text rather than the browser default, which would
+          // leave lines overlapping at large sizes.
+          lineHeight: 1.25,
+          pointerEvents: isEditing ? "auto" : "none",
+        }}
+        value={item.body ?? ""}
+      />
+    );
+  }
+
+  return (
+    <figure className="h-full w-full">
+      <img
+        alt=""
+        className="h-full w-full object-cover"
+        draggable={false}
+        height={item.height}
+        src={item.imageUrl ?? ""}
+        width={item.width}
+      />
+      {/* Unsplash's licence requires the photographer be credited wherever
+          the image appears, so the credit renders with the item rather than
+          living only in the database. */}
+      {item.creditName ? (
+        <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-2 py-1 text-[10px] text-white/80">
+          {item.creditName}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+/** One item on the board. */
 export function BoardItemView({
   index,
+  isEditing,
   isSelected,
+  onBeginEdit,
   item,
   onDelete,
   onEditBody,
+  onFontSize,
   onResizeStart,
   onSelect,
   scale,
@@ -41,22 +164,34 @@ export function BoardItemView({
   // at every zoom level.
   const chromeScale = { transform: `scale(${1 / scale})` };
 
+  const fontSize =
+    item.fontSize ?? (isNote ? DEFAULT_NOTE_FONT_SIZE : DEFAULT_TEXT_FONT_SIZE);
+
+  const stepFont = (delta: number) =>
+    onFontSize(
+      Math.min(Math.max(fontSize + delta, MIN_FONT_SIZE), MAX_FONT_SIZE)
+    );
+
+  const fieldRef = useEditingCaret(isEditing);
+
   return (
     <div
       className={`group absolute ${isText ? "" : "select-none"} ${
         isSelected ? "ring-2 ring-white/80" : "ring-1 ring-white/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
       onPointerDown={(e) => {
-        // A textarea must keep the pointer so focus and caret placement work.
-        // Stopping propagation matters as much as returning: otherwise the
-        // canvas below captures the pointer and the field never focuses — which
-        // is exactly what made notes impossible to type in.
-        if ((e.target as HTMLElement).tagName === "TEXTAREA") {
+        // While editing, the press belongs to the field — placing a caret or
+        // selecting text must not start a drag, and must not reach the
+        // background handler, which would clear the selection and pan.
+        if (isEditing) {
           e.stopPropagation();
           return;
         }
-        e.stopPropagation();
         onSelect(index, e.clientX, e.clientY);
+        // Already selected, so this is the second press: start typing.
+        if (isWritable && isSelected) {
+          onBeginEdit();
+        }
       }}
       style={{
         height: item.height,
@@ -66,44 +201,19 @@ export function BoardItemView({
         zIndex: item.z,
       }}
     >
-      {isWritable ? (
-        <textarea
-          className={
-            isNote
-              ? "h-full w-full resize-none bg-amber-100/95 p-3 text-[15px] text-neutral-900 leading-snug outline-none"
-              : // Plain text: no card, no background — just words on the board.
-                "h-full w-full resize-none border-0 bg-transparent p-1 font-light text-[22px] text-white leading-tight outline-none placeholder:text-white/30"
-          }
-          onChange={(e) => onEditBody(e.target.value)}
-          placeholder={isNote ? "Note…" : "Type…"}
-          value={item.body ?? ""}
-        />
-      ) : (
-        <figure className="h-full w-full">
-          <img
-            alt=""
-            className="h-full w-full object-cover"
-            draggable={false}
-            height={item.height}
-            src={item.imageUrl ?? ""}
-            width={item.width}
-          />
-          {/* Unsplash's licence requires the photographer be credited wherever
-              the image appears, so the credit renders with the item rather than
-              living only in the database. */}
-          {item.creditName ? (
-            <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-2 py-1 text-[10px] text-white/80">
-              {item.creditName}
-            </figcaption>
-          ) : null}
-        </figure>
-      )}
+      <BoardItemBody
+        fieldRef={fieldRef}
+        fontSize={fontSize}
+        isEditing={isEditing}
+        item={item}
+        onEditBody={onEditBody}
+      />
 
       {/* Revealed on hover, and kept visible while selected so it does not
           vanish mid-interaction on a touch screen, which has no hover. */}
       <button
         aria-label="Remove from board"
-        className={`absolute top-0 right-0 flex size-8 origin-top-right items-center justify-center rounded-full border border-white/20 bg-black text-white/80 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100 ${
+        className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-white/20 bg-black text-white/80 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100 ${
           isSelected ? "opacity-100" : "opacity-0"
         }`}
         onClick={onDelete}
@@ -113,6 +223,35 @@ export function BoardItemView({
       >
         <Trash height={14} width={14} />
       </button>
+
+      {isSelected && isWritable ? (
+        <div
+          className="absolute bottom-full left-0 flex origin-bottom-left items-center gap-1 rounded-full border border-white/20 bg-black/90 p-1"
+          style={chromeScale}
+        >
+          <button
+            aria-label="Smaller text"
+            className="flex size-7 items-center justify-center text-white/70 hover:text-white"
+            onClick={() => stepFont(-FONT_STEP)}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            <Minus height={13} width={13} />
+          </button>
+          <span className="min-w-6 text-center text-[10px] text-white/50 tabular-nums">
+            {Math.round(fontSize)}
+          </span>
+          <button
+            aria-label="Larger text"
+            className="flex size-7 items-center justify-center text-white/70 hover:text-white"
+            onClick={() => stepFont(FONT_STEP)}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            <Plus height={13} width={13} />
+          </button>
+        </div>
+      ) : null}
 
       {isSelected ? (
         <div

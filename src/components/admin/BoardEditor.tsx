@@ -50,11 +50,13 @@ export function BoardEditor({
   const [isPicking, setIsPicking] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [autoEditId, setAutoEditId] = useState<string | null>(null);
 
   // Read once: the signed-in admin cannot change while the board is open.
-  const [displayName] = useState(
-    () => authStorage.getUser()?.displayName ?? "You"
-  );
+  const [displayName] = useState(() => {
+    const user = authStorage.getUser();
+    return user ? user.displayName : "You";
+  });
 
   // A saved item is keyed by its id; an unsaved one by the key it was created
   // with. Both survive the new object that every edit produces.
@@ -174,14 +176,16 @@ export function BoardEditor({
    */
   const addWritable = (kind: "note" | "text") => {
     const p = dropPoint(items.length);
+    const id = crypto.randomUUID();
     change([
       ...items,
       {
         body: "",
         creditName: null,
         creditUrl: null,
+        fontSize: null,
         height: kind === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_TEXT_HEIGHT,
-        id: crypto.randomUUID(),
+        id,
         imageUrl: null,
         kind,
         photoId: null,
@@ -192,6 +196,8 @@ export function BoardEditor({
         z: items.length + 1,
       },
     ]);
+    // Placed to be written in, so it opens for typing immediately.
+    setAutoEditId(id);
   };
 
   const addPhoto = (photo: Photo) => {
@@ -202,6 +208,7 @@ export function BoardEditor({
         body: null,
         creditName: null,
         creditUrl: null,
+        fontSize: null,
         height: DEFAULT_IMAGE_HEIGHT,
         id: crypto.randomUUID(),
         imageUrl: photo.url,
@@ -285,7 +292,12 @@ export function BoardEditor({
       </header>
 
       <div className="relative min-h-0 flex-1">
-        <BoardCanvas items={items} keyOf={keyOf} onChange={change} />
+        <BoardCanvas
+          autoEditId={autoEditId}
+          items={items}
+          keyOf={keyOf}
+          onChange={change}
+        />
 
         {isPicking ? (
           <div className="absolute inset-y-0 right-0 z-10 w-72 overflow-y-auto border-white/10 border-l bg-black/95 p-3 backdrop-blur">

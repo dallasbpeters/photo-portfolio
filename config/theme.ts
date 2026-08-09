@@ -10,6 +10,9 @@ export type FontId =
   | "geist"
   | "inter"
   | "space-grotesk"
+  | "mulish"
+  | "plus-jakarta-sans"
+  | "figtree"
   | "manrope"
   | "playfair-display"
   | "fraunces"
@@ -34,6 +37,24 @@ export interface FontChoice {
  * never shipping a broken font.
  */
 export const FONT_CHOICES: FontChoice[] = [
+  {
+    category: "sans",
+    id: "figtree",
+    label: "Figtree",
+    stack: '"Figtree", ui-sans-serif, system-ui, sans-serif',
+  },
+  {
+    category: "sans",
+    id: "plus-jakarta-sans",
+    label: "Plus Jakarta Sans",
+    stack: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
+  },
+  {
+    category: "sans",
+    id: "mulish",
+    label: "Mulish",
+    stack: '"Mulish Variable", ui-sans-serif, system-ui, sans-serif',
+  },
   {
     category: "sans",
     id: "geist",
