@@ -20,6 +20,32 @@ const ALL_TARGETS: EnvVar["target"] = ["production", "preview", "development"];
 
 const POSTGRES_URL = /^postgres(ql)?:\/\//i;
 
+/**
+ * Credentials every site shares, copied from this deployment's own environment.
+ *
+ * They cannot be read back off another Vercel project — the API returns an
+ * encrypted blob or nothing at all — but the admin doing the provisioning is
+ * itself a site and already holds them, so it passes on what it has.
+ *
+ * Google is the reason this matters most: the sign-in button renders nothing
+ * without VITE_GOOGLE_CLIENT_ID, so a new site silently has no Google login.
+ * One OAuth client serves every site; what it cannot do is authorise the new
+ * domain, which has no API and stays a manual step in Google Cloud Console.
+ *
+ * Deliberately excludes anything per-site: DATABASE_URL, the blob variables,
+ * JWT_SECRET and SITE_* all belong to one deployment and must never be shared.
+ */
+const SHARED_ENV = [
+  "GOOGLE_CLIENT_ID",
+  "VITE_GOOGLE_CLIENT_ID",
+  "RESEND_API_KEY",
+  "VITE_POSTHOG_KEY",
+  "VITE_POSTHOG_HOST",
+  "UNSPLASH_ACCESS_KEY",
+  "FAL_API_KEY",
+  "MAGNIFIC_API_KEY",
+];
+
 /** 32 bytes, well past the 16-character minimum the API enforces. */
 const newSecret = (): string => randomBytes(32).toString("base64url");
 
@@ -179,6 +205,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       done.push("Generated JWT_SECRET");
     }
 
+    // Existing values are never overwritten: a site may legitimately have been
+    // pointed at its own Resend or PostHog account.
+    for (const key of SHARED_ENV) {
+      const value = process.env[key]?.trim();
+      if (value && !existing.has(key)) {
+        vars.push({ key, target: ALL_TARGETS, value });
+        done.push(`Copied ${key}`);
+      }
+    }
+
     await ensureDatabase(
       { databaseUrl, existing, projectId },
       { done, remaining, vars }
@@ -200,6 +236,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // disk, so they stay a command rather than something claimed to be done.
     remaining.push(
       "Run the migrations: DATABASE_URL='…' pnpm db:migrate",
+      // Google has no API for this, so it cannot be automated however much of
+      // the rest is.
+      "Add the site's domain to Authorized JavaScript origins in Google Cloud Console",
       "Redeploy so the new variables take effect"
     );
 
