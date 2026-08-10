@@ -1,11 +1,19 @@
+import { falModelInput } from "../../config/nodeTypes.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
- * Image generation through fal.ai, running Google's Nano Banana models.
+ * Image generation through fal.ai.
  *
- * Two models, because they do different jobs: the pro model writes an image
- * from a prompt, and the edit model rewrites an image you already have. The
- * edit endpoint takes an array of source images even when there is only one.
+ * The two constants below are the *automatic* choice, and they do different
+ * jobs: the pro model writes an image from a prompt, the edit model rewrites
+ * one you already have, and the edit endpoint takes an array of source images
+ * even when there is only one.
+ *
+ * A caller may instead name any model on the allowlist in
+ * config/nodeTypes.ts — including Recraft's vector models, which is why the
+ * request body is built from the model's declared input shape rather than from
+ * whether an image happens to be present. Those endpoints disagree about their
+ * parameters, and fal only says so after the call has been billed.
  */
 const TEXT_TO_IMAGE_MODEL = "fal-ai/nano-banana-pro";
 const EDIT_MODEL = "fal-ai/nano-banana/edit";
@@ -45,17 +53,46 @@ export const isFalConfigured = (): boolean => falKey() !== null;
  */
 export const generateImage = async (
   prompt: string,
-  sourceImageUrl?: string | null
+  sourceImageUrl?: string | null,
+  /**
+   * An explicit fal model id, or null/"auto" to keep choosing by whether a
+   * source image is present.
+   *
+   * Callers pass a value already checked against the allowlist in
+   * config/nodeTypes.ts — this is handed straight to fal, so an arbitrary
+   * string reaching here would be a paid request to a model that may not exist.
+   */
+  requestedModel?: string | null
 ): Promise<GeneratedImage> => {
   const key = falKey();
   if (!key) {
     throw new Error("Image generation is not configured");
   }
 
-  const model = sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
-  const body = sourceImageUrl
-    ? { image_urls: [sourceImageUrl], prompt }
-    : { prompt };
+  const auto = sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
+  const model =
+    requestedModel && requestedModel !== "auto" ? requestedModel : auto;
+
+  // The body has to match the endpoint, and fal only says otherwise after the
+  // request has been made and billed. The shape comes from the model's entry in
+  // config/nodeTypes.ts rather than from whether an image happens to be present.
+  const shape = falModelInput(requestedModel ?? "auto");
+  let body: Record<string, unknown>;
+  if (shape === "image") {
+    // A vectoriser traces an image; it has no prompt to speak of.
+    if (!sourceImageUrl) {
+      throw new Error("This model needs an image wired into it");
+    }
+    body = { image_url: sourceImageUrl };
+  } else if (shape === "prompt") {
+    // Text-to-image and text-to-vector. Any wired image is deliberately not
+    // sent — these endpoints do not take one.
+    body = { prompt };
+  } else {
+    body = sourceImageUrl
+      ? { image_urls: [sourceImageUrl], prompt }
+      : { prompt };
+  }
 
   const res = await fetch(`https://fal.run/${model}`, {
     body: JSON.stringify(body),

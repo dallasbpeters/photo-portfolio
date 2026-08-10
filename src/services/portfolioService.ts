@@ -3,12 +3,35 @@ import type { ResolvedSiteSettings } from "../../config/siteSettings";
 import type {
   Board,
   BoardItem,
+  BoardItemResult,
+  BoardSource,
+  BoardWire,
   Category,
   DailyChallengeHistoryEntry,
   DailyChallengeJournal,
   DailyChallengeResponse,
   Photo,
+  PhotoExifData,
+  RunState,
 } from "../types";
+
+/** What one node run comes back with. */
+export interface RunNodeResponse {
+  itemId: string;
+  result: BoardItemResult | null;
+  runError: string | null;
+  runState: RunState;
+  /** True when nothing had changed, so the stored result was returned as-is. */
+  skipped: boolean;
+  /**
+   * How many variations this node's wiring and settings describe.
+   *
+   * The client discovers the batch size from the first response rather than
+   * computing it, so the server stays the one authority on how many paid runs
+   * a node amounts to.
+   */
+  variationCount?: number;
+}
 
 const TRAILING_SLASH = /\/$/;
 const DOCTYPE_TAG = /<!DOCTYPE/i;
@@ -388,6 +411,24 @@ export const portfolioService = {
     return data as DailyChallengeResponse;
   },
 
+  /**
+   * Saves a new order for the photographs given, and only those.
+   *
+   * Sends ids rather than positions because the server permutes them through
+   * the slots they already hold — see api/photos/reorder.ts.
+   */
+  reorderPhotos: async (photoIds: string[]): Promise<void> => {
+    const res = await fetch(`${photosPath()}/reorder`, {
+      body: JSON.stringify({ photoIds }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error || "Could not save the new order");
+    }
+  },
+
   saveDailyChallengeJournal: async (
     body: string
   ): Promise<DailyChallengeJournal> => {
@@ -433,7 +474,20 @@ export const portfolioService = {
 
   updatePhoto: async (
     id: string,
-    data: { title: string; categoryId: string; order: number; url?: string }
+    data: {
+      title: string;
+      categoryId: string;
+      order: number;
+      url?: string;
+      /**
+       * Omit to leave the stored EXIF alone; null clears it. Sent only when the
+       * caller is actually editing it, so renaming a photo cannot wipe the
+       * shooting details read off the file.
+       */
+      exif?: PhotoExifData | null;
+      /** Omit to leave the photograph's visibility as it is. */
+      isPublished?: boolean;
+    }
   ): Promise<Photo> => {
     const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
       body: JSON.stringify({
@@ -441,6 +495,10 @@ export const portfolioService = {
         order: data.order,
         title: data.title,
         ...(data.url ? { url: data.url } : {}),
+        ...(data.exif === undefined ? {} : { exif: data.exif }),
+        ...(data.isPublished === undefined
+          ? {}
+          : { isPublished: data.isPublished }),
       }),
       headers: jsonHeaders(),
       method: "PATCH",
@@ -804,13 +862,13 @@ export const boardsApi = {
    * cancelled the instant the page goes away, which is precisely when the last
    * unsaved second of work needs to survive.
    */
-  flush: (id: string, items: BoardItem[]): void => {
+  flush: (id: string, items: BoardItem[], wires: BoardWire[] = []): void => {
     const token = getAuthToken();
     if (!token) {
       return;
     }
     void fetch(boardUrl(id), {
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, wires }),
       headers: jsonHeaders(),
       keepalive: true,
       method: "PATCH",
@@ -844,8 +902,46 @@ export const boardsApi = {
   },
 
   /**
+   * Runs one node and returns what it produced.
+   *
+   * One request per node, orchestrated by the canvas, because a single
+   * generation already budgets close to two minutes against a serverless
+   * ceiling — a whole graph could never fit in one call. `signal` is how a
+   * cancelled board run abandons the request in flight.
+   */
+  runNode: async (
+    boardId: string,
+    itemId: string,
+    options: {
+      force?: boolean;
+      signal?: AbortSignal;
+      /** Which variation of a batch to produce; one request each. */
+      variation?: number;
+    } = {}
+  ): Promise<RunNodeResponse> => {
+    const res = await fetch(`${boardUrl(boardId)}/run`, {
+      body: JSON.stringify({
+        force: options.force ?? false,
+        itemId,
+        variation: options.variation ?? 0,
+      }),
+      headers: jsonHeaders(),
+      method: "POST",
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not run this node"));
+    }
+    return (await res.json()) as RunNodeResponse;
+  },
+
+  /**
    * Saves the board. Passing `items` replaces the whole arrangement, so the
    * canvas must send every item it still has — anything omitted is deleted.
+   * `wires` works the same way.
+   *
+   * Run results are deliberately not sent back: the server owns them, and a
+   * save in flight when a generation lands must not overwrite what arrived.
    */
   update: async (
     id: string,
@@ -854,6 +950,8 @@ export const boardsApi = {
       isPublic?: boolean;
       coverUrl?: string;
       items?: BoardItem[];
+      sources?: BoardSource[];
+      wires?: BoardWire[];
     }
   ): Promise<Board> => {
     const res = await fetch(boardUrl(id), {
@@ -926,6 +1024,55 @@ export interface GeneratedIcon {
   isVector: boolean;
   url: string;
 }
+
+/** A pin, reduced to what a board item needs. */
+export interface PinResult {
+  altText: string | null;
+  creditName: string | null;
+  /** The pin itself, so the board links back to where the image came from. */
+  creditUrl: string;
+  imageUrl: string;
+  thumbUrl: string | null;
+}
+
+/** A whole board, as its RSS feed lists it. */
+export interface BoardResult {
+  pins: PinResult[];
+  title: string | null;
+}
+
+export const pinterestApi = {
+  /**
+   * Every pin a board publishes, from its public RSS feed.
+   *
+   * A feed carries a page of recent pins rather than the whole history, so a
+   * long board comes back partial. Reading past that needs an approved app.
+   */
+  board: async (url: string): Promise<BoardResult> => {
+    const res = await fetch(`${apiBase()}/api/pinterest/board`, {
+      body: JSON.stringify({ url }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not read that board"));
+    }
+    return (await res.json()) as BoardResult;
+  },
+
+  /** Resolves a single pasted pin link. */
+  resolve: async (url: string): Promise<PinResult> => {
+    const res = await fetch(`${apiBase()}/api/pinterest/pin`, {
+      body: JSON.stringify({ url }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not read that pin"));
+    }
+    return (await res.json()) as PinResult;
+  },
+};
 
 export const aiApi = {
   /**

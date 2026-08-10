@@ -43,7 +43,7 @@ export function BoardViewPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-[12px] text-white/60 uppercase tracking-[0.2em]">
           {error}
         </p>
@@ -52,7 +52,7 @@ export function BoardViewPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-black">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-white/10 border-b px-4 py-3">
         <div className="min-w-0">
           <h1 className="truncate font-light text-sm text-white/90 uppercase tracking-[0.2em]">
@@ -80,6 +80,11 @@ export function BoardViewPage() {
           // the canvas is shared with the editor.
           onChange={() => undefined}
           readOnly
+          // Wires render for a visitor too. On a graph they are the account of
+          // how the images were made, which is most of the reason to publish
+          // one — and `readOnly` is what keeps them un-draggable. Running is
+          // refused by the API regardless of what this page offers.
+          wires={board?.wires ?? []}
         />
       </div>
     </div>

@@ -8,15 +8,19 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
+import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
+import { newItemId } from "../../boards/newItemId";
 import {
   aiApi,
   type GeneratedIcon,
   type GeneratedImage,
+  type PinResult,
+  pinterestApi,
   type UnsplashResult,
   unsplashApi,
 } from "../../services/portfolioService";
-import type { Photo } from "../../types";
+import type { BoardSource, Photo } from "../../types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
@@ -31,19 +35,32 @@ export interface ExternalImage {
 
 interface BoardInsertPanelProps {
   onAddExternal: (image: ExternalImage) => void;
+  /** Places an operation node on the canvas, carrying the prompt with it. */
+  onAddNode: (nodeType: NodeTypeId, config: Record<string, unknown>) => void;
   onAddPhoto: (photo: Photo) => void;
+  /** Remembers a place this board pulls references from. */
+  onAttachSource: (source: BoardSource) => void;
   onClose: () => void;
+  onDetachSource: (id: string) => void;
   photos: Photo[];
+  sources: BoardSource[];
 }
 
-type Tab = "yours" | "unsplash" | "ai" | "icon";
+type Tab = "yours" | "unsplash" | "pinterest" | "ai" | "icon";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "yours", label: "Yours" },
   { id: "unsplash", label: "Unsplash" },
+  { id: "pinterest", label: "Pinterest" },
   { id: "ai", label: "Generate" },
   { id: "icon", label: "Icon" },
 ];
+
+/** A pin link carries /pin/<id>/; anything else on the domain is a board. */
+const PIN_PATH = /\/pin\//;
+
+/** Leaves just the board path, which is the readable part of a pin URL. */
+const SCHEME_AND_HOST = /^https?:\/\/[^/]+\//;
 
 const tabClass = (isActive: boolean) =>
   `min-h-9 flex-1 text-[10px] uppercase tracking-[0.18em] transition-colors ${
@@ -60,9 +77,13 @@ const tabClass = (isActive: boolean) =>
  */
 export function BoardInsertPanel({
   onAddExternal,
+  onAddNode,
   onAddPhoto,
+  onAttachSource,
   onClose,
+  onDetachSource,
   photos,
+  sources,
 }: BoardInsertPanelProps) {
   const [tab, setTab] = useState<Tab>("yours");
 
@@ -75,6 +96,11 @@ export function BoardInsertPanel({
   const [source, setSource] = useState<UnsplashResult | null>(null);
   const [generated, setGenerated] = useState<GeneratedImage | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const [pinUrl, setPinUrl] = useState("");
+  const [pins, setPins] = useState<PinResult[]>([]);
+  const [boardTitle, setBoardTitle] = useState<string | null>(null);
+  const [isResolvingPin, setIsResolvingPin] = useState(false);
 
   const [iconPrompt, setIconPrompt] = useState("");
   const [iconStyle, setIconStyle] = useState<IconStyle>(ICON_STYLES[0]);
@@ -128,6 +154,47 @@ export function BoardInsertPanel({
       toast.error(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  /**
+   * One field for both shapes.
+   *
+   * A pin link has /pin/<id>/ in it and anything else on pinterest.com is a
+   * board, so the distinction is free — asking someone to say which they
+   * pasted would be asking them to tell us what we can already see.
+   */
+  const loadPinterest = async (override?: string) => {
+    const url = (override ?? pinUrl).trim();
+    if (!url) {
+      return;
+    }
+    setIsResolvingPin(true);
+    setPins([]);
+    setBoardTitle(null);
+    try {
+      if (PIN_PATH.test(url)) {
+        setPins([await pinterestApi.resolve(url)]);
+      } else {
+        const board = await pinterestApi.board(url);
+        setPins(board.pins);
+        setBoardTitle(board.title);
+        // Remembered as soon as it resolves, not when a pin is added: the
+        // point is to be able to come back to it, which is true whether or not
+        // anything was taken from it this time.
+        onAttachSource({
+          id: newItemId(),
+          provider: "pinterest",
+          title: board.title,
+          url,
+        });
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not read that link"
+      );
+    } finally {
+      setIsResolvingPin(false);
     }
   };
 
@@ -267,6 +334,37 @@ export function BoardInsertPanel({
           </>
         ) : null}
 
+        {tab === "pinterest" ? (
+          <PinterestTab
+            boardTitle={boardTitle}
+            isResolving={isResolvingPin}
+            onAdd={(chosen) => {
+              for (const pin of chosen) {
+                onAddExternal({
+                  altText: pin.altText,
+                  // Pinterest grants no licence of its own — most pins are
+                  // someone else's work — so the link back to the pin travels
+                  // with the item as the only provenance there is.
+                  creditName: pin.creditName ?? "Via Pinterest",
+                  creditUrl: pin.creditUrl,
+                  imageUrl: pin.imageUrl,
+                  thumbUrl: pin.thumbUrl,
+                });
+              }
+            }}
+            onDetach={onDetachSource}
+            onOpenSource={(sourceUrl: string) => {
+              setPinUrl(sourceUrl);
+              void loadPinterest(sourceUrl);
+            }}
+            onResolve={() => void loadPinterest()}
+            onUrlChange={setPinUrl}
+            pins={pins}
+            sources={sources.filter((s) => s.provider === "pinterest")}
+            url={pinUrl}
+          />
+        ) : null}
+
         {tab === "ai" ? (
           <div className="space-y-3">
             {source ? (
@@ -303,15 +401,31 @@ export function BoardInsertPanel({
               value={prompt}
             />
 
+            {/* The node is the better answer and is offered first.
+                Generating here pins a flat image and throws the prompt away
+                when this panel closes; a node keeps the prompt on the board,
+                re-runnable, and able to feed the next node along. */}
             <Button
               className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+              onClick={() => {
+                onAddNode("generate", { prompt });
+                onClose();
+              }}
+              type="button"
+              variant="outline"
+            >
+              <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+              Add as a node
+            </Button>
+
+            <Button
+              className="min-h-11 w-full border-white/10 text-[10px] text-white/60 uppercase tracking-[0.18em] hover:bg-white/10"
               disabled={isGenerating}
               onClick={() => void generate()}
               type="button"
               variant="outline"
             >
-              <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
-              {isGenerating ? "Generating…" : "Generate"}
+              {isGenerating ? "Generating…" : "Generate a one-off instead"}
             </Button>
 
             {generated ? (
@@ -374,6 +488,153 @@ export function BoardInsertPanel({
           />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+interface PinterestTabProps {
+  boardTitle: string | null;
+  isResolving: boolean;
+  onAdd: (pins: PinResult[]) => void;
+  onDetach: (id: string) => void;
+  onOpenSource: (url: string) => void;
+  onResolve: () => void;
+  onUrlChange: (url: string) => void;
+  pins: PinResult[];
+  /** Boards already attached to this moodboard, so they can be reopened. */
+  sources: BoardSource[];
+  url: string;
+}
+
+/**
+ * Pulling a board — or a single pin — onto the canvas from its link.
+ *
+ * Both come from surfaces Pinterest publishes for other sites to read: a
+ * board's RSS feed and a pin's oEmbed/OpenGraph data. A board feed carries a
+ * page of recent pins rather than the whole history, which is said on the panel
+ * rather than left to be discovered by counting.
+ */
+function PinterestTab({
+  boardTitle,
+  isResolving,
+  onAdd,
+  onDetach,
+  onOpenSource,
+  onResolve,
+  onUrlChange,
+  pins,
+  sources,
+  url,
+}: PinterestTabProps) {
+  return (
+    <div className="space-y-3">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onResolve();
+        }}
+      >
+        <Input
+          className="min-h-10 border-white/10 bg-black/40 text-base"
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="Paste a board or pin link…"
+          value={url}
+        />
+        <Button
+          aria-label="Load from Pinterest"
+          className="min-h-10 border-white/20"
+          disabled={isResolving}
+          type="submit"
+          variant="outline"
+        >
+          <HugeiconsIcon icon={Search01Icon} size={14} />
+        </Button>
+      </form>
+
+      {/* Boards this moodboard already draws on, kept so one can be reopened
+          and pulled from again without hunting for the link. */}
+      {sources.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {sources.map((source) => (
+            <span
+              className="flex items-center gap-1 rounded-full border border-white/15 py-1 pr-1 pl-2 text-[10px] text-white/60"
+              key={source.id}
+            >
+              <button
+                className="max-w-36 truncate hover:text-white"
+                onClick={() => onOpenSource(source.url)}
+                type="button"
+              >
+                {source.title ?? source.url.replace(SCHEME_AND_HOST, "")}
+              </button>
+              <button
+                aria-label={`Detach ${source.title ?? "board"}`}
+                className="text-white/30 hover:text-white"
+                onClick={() => onDetach(source.id)}
+                type="button"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {isResolving ? (
+        <p className="text-[11px] text-white/50 uppercase tracking-widest">
+          Reading…
+        </p>
+      ) : null}
+
+      {pins.length > 0 ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-[10px] text-white/50 uppercase tracking-[0.18em]">
+              {boardTitle ?? "Pinterest"} · {pins.length}
+            </p>
+            {pins.length > 1 ? (
+              <button
+                className="shrink-0 text-[10px] text-white/70 uppercase tracking-[0.14em] hover:text-white"
+                onClick={() => onAdd(pins)}
+                type="button"
+              >
+                Add all
+              </button>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {pins.map((pin) => (
+              <button
+                className="overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
+                key={pin.creditUrl}
+                onClick={() => onAdd([pin])}
+                type="button"
+              >
+                <img
+                  alt={pin.altText ?? "Pin"}
+                  className="aspect-square w-full object-cover"
+                  height={160}
+                  loading="lazy"
+                  src={pin.thumbUrl ?? pin.imageUrl}
+                  width={160}
+                />
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {/* Said plainly rather than buried: Pinterest grants no licence of its
+          own, and most pins are someone else's photograph. A link back to the
+          pin travels with the item, but that is provenance, not permission. */}
+      <p className="text-[10px] text-white/30 leading-relaxed">
+        A board link pulls the pins its public feed lists — recent ones, not the
+        whole board. Pins are hot-linked and keep a link back. Most are someone
+        else's work: fine as private reference, worth checking before you
+        publish a board or sell anything made from one.
+      </p>
     </div>
   );
 }
