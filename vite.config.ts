@@ -2,8 +2,9 @@ import path from "node:path";
 import posthog from "@posthog/rollup-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { config } from "dotenv";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { resolveSite } from "./config/sites";
+import { applySiteOverrides, resolveSite } from "./config/sites";
 
 /**
  * Substitutes the %SITE_*% placeholders in index.html so one codebase produces
@@ -13,7 +14,12 @@ import { resolveSite } from "./config/sites";
  * runtime from site_settings; the manifest is served by api/manifest.ts.
  */
 const siteBranding = (siteKey: string | undefined): Plugin => {
-  const site = resolveSite(siteKey);
+  // The SITE_* overrides are applied here as well as on the server. A site that
+  // is not compiled into config/sites.ts carries its identity in environment
+  // variables, and without this the tab title and install prompt fell back to
+  // whichever site the fallback names — so a correctly configured deployment
+  // still introduced itself as somebody else.
+  const site = applySiteOverrides(resolveSite(siteKey), process.env);
 
   return {
     name: "site-branding",
@@ -82,7 +88,24 @@ const sourcemapUpload = (): Plugin[] => {
 };
 
 export default defineConfig(({ mode }) => {
-  process.env = { ...process.env, ...loadEnv(mode, process.cwd(), "") };
+  const cwd = process.cwd();
+  process.env = { ...process.env, ...loadEnv(mode, cwd, "") };
+
+  // Then the site's own file, `.env.<site>.local`, which wins.
+  //
+  // One checkout serves several sites, and each has its own database, blob
+  // store and keys — so which env file to read follows from which site is being
+  // run, not from the mode. `pnpm dev` sets VITE_SITE, and this is what makes
+  // that selection reach the variables rather than only the branding.
+  //
+  // dotenv rather than another loadEnv: loadEnv lets the real environment beat
+  // the files it reads, and the line above has just copied `.env.local` into
+  // the environment — so a second loadEnv would be overruled by the very file
+  // this one exists to override.
+  const site = process.env.VITE_SITE?.trim();
+  if (site) {
+    config({ override: true, path: path.resolve(cwd, `.env.${site}.local`) });
+  }
   return {
     plugins: [
       react(),

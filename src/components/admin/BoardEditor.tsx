@@ -1,4 +1,11 @@
-import { Check, Journal, MediaImage, Text, Xmark } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Cancel01Icon,
+  Image01Icon,
+  NotebookIcon,
+  TextIcon,
+  Tick02Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -22,6 +29,9 @@ import type { Board, BoardItem, Photo } from "../../types";
 import { Button } from "../ui/button";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCurstor";
+
+/** Strips the scheme so the shared link reads as a plain address. */
+const SCHEME = /^https?:\/\//;
 
 /** How long after the last change before the board saves itself. */
 const AUTOSAVE_DELAY_MS = 1200;
@@ -53,6 +63,29 @@ export function BoardEditor({
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  /**
+   * Publishing mints the slug server-side, so the link only exists once the
+   * response comes back — there is nothing to show optimistically.
+   */
+  const publish = async (isPublic: boolean) => {
+    setIsPublishing(true);
+    try {
+      const saved = await boardsApi.update(boardId, { isPublic });
+      setBoard(saved);
+      toast.success(isPublic ? "Board published" : "Board unpublished");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not publish");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const publicUrl =
+    board?.isPublic && board.slug
+      ? `${window.location.origin}/board/${board.slug}`
+      : null;
 
   // Read once: the signed-in admin cannot change while the board is open.
   const [displayName] = useState(() => {
@@ -272,7 +305,7 @@ export function BoardEditor({
             {!isSaving && isDirty ? "Unsaved changes" : null}
             {isSaving || isDirty ? null : (
               <span className="flex items-center gap-1">
-                <Check aria-hidden height={11} width={11} />
+                <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
                 Saved
               </span>
             )}
@@ -286,7 +319,7 @@ export function BoardEditor({
             type="button"
             variant="ghost"
           >
-            <Journal aria-hidden height={14} width={14} />
+            <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
             Note
           </Button>
           <Button
@@ -295,7 +328,7 @@ export function BoardEditor({
             type="button"
             variant="ghost"
           >
-            <Text aria-hidden height={14} width={14} />
+            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
             Text
           </Button>
           <Button
@@ -304,8 +337,29 @@ export function BoardEditor({
             type="button"
             variant="ghost"
           >
-            <MediaImage aria-hidden height={14} width={14} />
+            <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
             Photo
+          </Button>
+          {publicUrl ? (
+            <button
+              className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
+              onClick={() => {
+                void navigator.clipboard.writeText(publicUrl);
+                toast.success("Link copied");
+              }}
+              type="button"
+            >
+              {publicUrl.replace(SCHEME, "")}
+            </button>
+          ) : null}
+          <Button
+            className="min-h-11 text-[10px] text-white/80 uppercase tracking-[0.18em] hover:text-white"
+            disabled={isPublishing}
+            onClick={() => void publish(!board?.isPublic)}
+            type="button"
+            variant="ghost"
+          >
+            {board?.isPublic ? "Unpublish" : "Publish"}
           </Button>
           <Button
             aria-label="Close board"
@@ -314,7 +368,7 @@ export function BoardEditor({
             type="button"
             variant="ghost"
           >
-            <Xmark height={18} width={18} />
+            <HugeiconsIcon icon={Cancel01Icon} size={18} />
           </Button>
         </div>
       </header>

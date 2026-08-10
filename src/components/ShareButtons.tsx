@@ -1,4 +1,11 @@
-import { Copy, Facebook, Pinterest, ShareIos, X } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Copy01Icon,
+  Facebook01Icon,
+  NewTwitterIcon,
+  PinterestIcon,
+  Share01Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { toast } from "sonner";
 import posthog from "../lib/posthog";
@@ -73,19 +80,19 @@ export function ShareButtons({
       // Pinterest builds the pin from the media parameter, so a photograph
       // without one silently pins the page thumbnail instead.
       href: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(absolute(imageUrl ?? ""))}&description=${encodeURIComponent(text)}`,
-      Icon: Pinterest,
+      icon: PinterestIcon,
       label: "Pinterest",
       name: "pinterest",
     },
     {
       href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`,
-      Icon: X,
+      icon: NewTwitterIcon,
       label: "X",
       name: "x",
     },
     {
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
-      Icon: Facebook,
+      icon: Facebook01Icon,
       label: "Facebook",
       name: "facebook",
     },
@@ -105,12 +112,12 @@ export function ShareButtons({
           onClick={() => void nativeShare()}
           type="button"
         >
-          <ShareIos height={13} width={13} />
+          <HugeiconsIcon icon={Share01Icon} size={13} />
           Share
         </button>
       ) : null}
 
-      {targets.map(({ href, Icon, label, name }) => (
+      {targets.map(({ href, icon, label, name }) => (
         <a
           aria-label={`Share on ${label}`}
           className={`transition-colors ${tone}`}
@@ -121,7 +128,7 @@ export function ShareButtons({
           target="_blank"
           title={`Share on ${label}`}
         >
-          <Icon height={14} width={14} />
+          <HugeiconsIcon icon={icon} size={14} />
         </a>
       ))}
 
@@ -132,7 +139,7 @@ export function ShareButtons({
         title="Copy link"
         type="button"
       >
-        <Copy height={14} width={14} />
+        <HugeiconsIcon icon={Copy01Icon} size={14} />
       </button>
     </div>
   );

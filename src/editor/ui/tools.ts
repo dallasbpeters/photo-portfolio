@@ -1,30 +1,32 @@
+import type { IconSvgElement } from "@hugeicons/react";
 import {
-  ColorFilter,
-  Crop,
-  Download,
-  Eye,
-  MediaImage,
-  Palette,
-  SunLight,
-} from "iconoir-react";
+  ColorsIcon,
+  CropIcon,
+  Download01Icon,
+  EyeIcon,
+  Image01Icon,
+  PaintBoardIcon,
+  Sun01Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import type { AdjustmentGroupId } from "../adjustments";
 
 /** Panels in the left rail. Adjustment groups share their id with the group. */
 export type ToolId = AdjustmentGroupId | "looks" | "export";
 
 export interface Tool {
-  Icon: typeof SunLight;
+  /** Drawing data for HugeiconsIcon, not a component. */
+  Icon: IconSvgElement;
   id: ToolId;
   label: string;
 }
 
 /** Ordered the way a photographer works: look, then light, then finish. */
 export const TOOLS: Tool[] = [
-  { Icon: ColorFilter, id: "looks", label: "Looks" },
-  { Icon: SunLight, id: "tone", label: "Light" },
-  { Icon: Palette, id: "color", label: "Colour" },
-  { Icon: Crop, id: "presence", label: "Detail" },
-  { Icon: MediaImage, id: "film", label: "Film" },
-  { Icon: Eye, id: "finishing", label: "Finish" },
-  { Icon: Download, id: "export", label: "Export" },
+  { Icon: ColorsIcon, id: "looks", label: "Looks" },
+  { Icon: Sun01Icon, id: "tone", label: "Light" },
+  { Icon: PaintBoardIcon, id: "color", label: "Colour" },
+  { Icon: CropIcon, id: "presence", label: "Detail" },
+  { Icon: Image01Icon, id: "film", label: "Film" },
+  { Icon: EyeIcon, id: "finishing", label: "Finish" },
+  { Icon: Download01Icon, id: "export", label: "Export" },
 ];

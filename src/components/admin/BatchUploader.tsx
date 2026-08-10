@@ -1,4 +1,10 @@
-import { Check, Upload, WarningTriangle, Xmark } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Alert02Icon,
+  Cancel01Icon,
+  Tick02Icon,
+  Upload01Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -297,11 +303,11 @@ export function BatchUploader({
           }}
           type="button"
         >
-          <Upload
+          <HugeiconsIcon
             aria-hidden
             className="text-white/90"
-            height={20}
-            width={20}
+            icon={Upload01Icon}
+            size={20}
           />
           <p className="text-[11px] text-white/90 uppercase tracking-[0.18em]">
             Drop photos here
@@ -332,17 +338,17 @@ export function BatchUploader({
                 <li className="flex items-center gap-3 py-2.5" key={item.id}>
                   <span className="w-5 shrink-0">
                     {item.status === "done" ? (
-                      <Check
+                      <HugeiconsIcon
                         className="text-emerald-400/80"
-                        height={14}
-                        width={14}
+                        icon={Tick02Icon}
+                        size={14}
                       />
                     ) : null}
                     {item.status === "error" ? (
-                      <WarningTriangle
+                      <HugeiconsIcon
                         className="text-red-400/80"
-                        height={14}
-                        width={14}
+                        icon={Alert02Icon}
+                        size={14}
                       />
                     ) : null}
                   </span>
@@ -392,7 +398,7 @@ export function BatchUploader({
                       }
                       type="button"
                     >
-                      <Xmark height={13} width={13} />
+                      <HugeiconsIcon icon={Cancel01Icon} size={13} />
                     </button>
                   ) : null}
                 </li>

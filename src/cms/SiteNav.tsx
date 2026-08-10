@@ -1,10 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "react-router-dom";
 import type { PageSummary } from "../services/portfolioService";
 import { ICON_COMPONENTS, type IconComponent } from "./iconMap";
 
 /**
- * Resolves an Iconoir component by name, since the icon is stored as free text
- * in the database and may not match anything in the pack.
+ * Resolves an icon's drawing data by name, since the icon is stored as free
+ * text in the database and may not match anything in the pack.
  */
 export const resolveIcon = (
   name: string | null | undefined
@@ -50,7 +51,7 @@ export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
             key={page.id}
             to={`/${page.slug}`}
           >
-            {Icon && <Icon height={12} width={12} />}
+            {Icon && <HugeiconsIcon icon={Icon} size={12} />}
             <span className="relative">
               {page.title}
               <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-current transition-all duration-300 group-hover:w-full" />

@@ -16,6 +16,11 @@ interface BoardCanvasProps {
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
   onChange: (items: BoardItem[]) => void;
+  /**
+   * Viewing rather than editing. Pan and zoom remain, since a published board
+   * is still something you explore; selection, dragging and the item chrome go.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -26,6 +31,24 @@ interface BoardCanvasProps {
  * magnified.
  */
 const SNAP_PX = 6;
+
+/**
+ * The rectangle the items occupy, or null for an empty board.
+ *
+ * This is what the view is framed on: the arrangement usually fills a small
+ * part of the 4000×3000 canvas, so framing the canvas itself leaves the board
+ * off to one side and too small to read.
+ */
+const contentBounds = (items: BoardItem[]) => {
+  if (items.length === 0) {
+    return null;
+  }
+  const left = Math.min(...items.map((i) => i.x));
+  const top = Math.min(...items.map((i) => i.y));
+  const right = Math.max(...items.map((i) => i.x + i.width));
+  const bottom = Math.max(...items.map((i) => i.y + i.height));
+  return { height: bottom - top, width: right - left, x: left, y: top };
+};
 
 type Gesture =
   | { kind: "none" }
@@ -59,9 +82,12 @@ export function BoardCanvas({
   onChange,
   keyOf,
   autoEditId,
+  readOnly = false,
 }: BoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const view = useCanvasViewport(containerRef);
+  // The viewport frames itself on the items, and keeps doing so as the
+  // container settles, until the board is panned, zoomed or rearranged.
+  const view = useCanvasViewport(containerRef, () => contentBounds(items));
   const [selected, setSelected] = useState<number | null>(null);
   // Selecting and editing are separate: one click picks an item up, typing
   // needs a second. Without that split a note could never be dragged.
@@ -77,12 +103,31 @@ export function BoardCanvas({
 
   const topZ = items.reduce((max, i) => Math.max(max, i.z), 0);
 
+  // Frames the arrangement the first time the board has one. A published board
+  // arrives from the API well after the canvas has been laid out, so nothing
+  // else tells the viewport that there is finally something to look at.
+  //
+  // Pulled out of `view`, whose identity changes every render; `frameContent`
+  // itself is stable, so this runs only when the items change, and it declines
+  // to do anything once the board has been framed or taken hold of.
+  const { frameContent } = view;
+  useEffect(() => {
+    // An empty board has nothing to frame, and the viewport already centres the
+    // bare canvas on its own.
+    if (items.length > 0) {
+      frameContent();
+    }
+  }, [items, frameContent]);
+
   const beginMove = useCallback(
     (index: number, clientX: number, clientY: number) => {
       const item = items[index];
       if (!item) {
         return;
       }
+      // Rearranging the board counts as taking hold of it: the view must stay
+      // put from here on, rather than re-framing on the next container resize.
+      view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
       gesture.current = {
         index,
@@ -107,6 +152,7 @@ export function BoardCanvas({
       if (!item) {
         return;
       }
+      view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
       gesture.current = {
         index,
@@ -266,11 +312,15 @@ export function BoardCanvas({
           {items.map((item, index) => (
             <BoardItemView
               index={index}
-              isEditing={editingId === item.id}
-              isSelected={selected === index}
+              isEditing={!readOnly && editingId === item.id}
+              isSelected={!readOnly && selected === index}
               item={item}
               key={keyOf(item)}
-              onBeginEdit={() => setEditingId(item.id)}
+              onBeginEdit={() => {
+                if (!readOnly) {
+                  setEditingId(item.id);
+                }
+              }}
               onDelete={() => onChange(items.filter((_, i) => i !== index))}
               onEditBody={(body) =>
                 onChange(
@@ -282,8 +332,9 @@ export function BoardCanvas({
                   items.map((it, i) => (i === index ? { ...it, fontSize } : it))
                 )
               }
-              onResizeStart={beginResize}
-              onSelect={beginMove}
+              onResizeStart={readOnly ? () => undefined : beginResize}
+              onSelect={readOnly ? () => undefined : beginMove}
+              readOnly={readOnly}
               scale={view.viewport.scale}
             />
           ))}

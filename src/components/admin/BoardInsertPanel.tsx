@@ -1,9 +1,17 @@
-import { MagicWand, Search, Sparks, Xmark } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Cancel01Icon,
+  MagicWand01Icon,
+  Search01Icon,
+  SparklesIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import { defaultPrompt } from "../../boards/defaultPrompt";
 import {
   aiApi,
+  type GeneratedIcon,
   type GeneratedImage,
   type UnsplashResult,
   unsplashApi,
@@ -28,12 +36,13 @@ interface BoardInsertPanelProps {
   photos: Photo[];
 }
 
-type Tab = "yours" | "unsplash" | "ai";
+type Tab = "yours" | "unsplash" | "ai" | "icon";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "yours", label: "Yours" },
   { id: "unsplash", label: "Unsplash" },
   { id: "ai", label: "Generate" },
+  { id: "icon", label: "Icon" },
 ];
 
 const tabClass = (isActive: boolean) =>
@@ -66,6 +75,11 @@ export function BoardInsertPanel({
   const [source, setSource] = useState<UnsplashResult | null>(null);
   const [generated, setGenerated] = useState<GeneratedImage | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const [iconPrompt, setIconPrompt] = useState("");
+  const [iconStyle, setIconStyle] = useState<IconStyle>(ICON_STYLES[0]);
+  const [icon, setIcon] = useState<GeneratedIcon | null>(null);
+  const [isDrawingIcon, setIsDrawingIcon] = useState(false);
 
   const search = async () => {
     const term = query.trim();
@@ -117,8 +131,26 @@ export function BoardInsertPanel({
     }
   };
 
+  const drawIcon = async () => {
+    const text = iconPrompt.trim();
+    if (!text) {
+      return;
+    }
+    setIsDrawingIcon(true);
+    setIcon(null);
+    try {
+      setIcon(await aiApi.generateIcon(text, iconStyle));
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not draw an icon"
+      );
+    } finally {
+      setIsDrawingIcon(false);
+    }
+  };
+
   return (
-    <div className="absolute inset-y-0 right-0 z-10 flex w-80 flex-col border-white/10 border-l bg-black/95 backdrop-blur">
+    <div className="absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-white/10 border-l bg-black/95 backdrop-blur">
       <div className="flex items-center gap-1 border-white/10 border-b px-2">
         {TABS.map((t) => (
           <button
@@ -136,7 +168,7 @@ export function BoardInsertPanel({
           onClick={onClose}
           type="button"
         >
-          <Xmark height={16} width={16} />
+          <HugeiconsIcon icon={Cancel01Icon} size={16} />
         </button>
       </div>
 
@@ -189,7 +221,7 @@ export function BoardInsertPanel({
                 type="submit"
                 variant="outline"
               >
-                <Search height={14} width={14} />
+                <HugeiconsIcon icon={Search01Icon} size={14} />
               </Button>
             </form>
 
@@ -226,7 +258,7 @@ export function BoardInsertPanel({
                     onClick={() => makeVersions(result)}
                     type="button"
                   >
-                    <MagicWand height={11} width={11} />
+                    <HugeiconsIcon icon={MagicWand01Icon} size={11} />
                     Make versions
                   </button>
                 </div>
@@ -260,7 +292,7 @@ export function BoardInsertPanel({
                   onClick={() => setSource(null)}
                   type="button"
                 >
-                  <Xmark height={14} width={14} />
+                  <HugeiconsIcon icon={Cancel01Icon} size={14} />
                 </button>
               </div>
             ) : null}
@@ -278,7 +310,7 @@ export function BoardInsertPanel({
               type="button"
               variant="outline"
             >
-              <Sparks aria-hidden height={14} width={14} />
+              <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
               {isGenerating ? "Generating…" : "Generate"}
             </Button>
 
@@ -317,7 +349,142 @@ export function BoardInsertPanel({
             </p>
           </div>
         ) : null}
+
+        {tab === "icon" ? (
+          <IconTab
+            icon={icon}
+            isDrawing={isDrawingIcon}
+            onAdd={() => {
+              if (icon) {
+                onAddExternal({
+                  altText: iconPrompt.slice(0, 200),
+                  // Generated, so there is no one to credit.
+                  creditName: null,
+                  creditUrl: null,
+                  imageUrl: icon.url,
+                  thumbUrl: icon.url,
+                });
+              }
+            }}
+            onDraw={() => void drawIcon()}
+            onPrompt={setIconPrompt}
+            onStyle={setIconStyle}
+            prompt={iconPrompt}
+            style={iconStyle}
+          />
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+interface IconTabProps {
+  icon: GeneratedIcon | null;
+  isDrawing: boolean;
+  onAdd: () => void;
+  onDraw: () => void;
+  onPrompt: (prompt: string) => void;
+  onStyle: (style: IconStyle) => void;
+  prompt: string;
+  style: IconStyle;
+}
+
+/**
+ * Drawing an icon from a description.
+ *
+ * Its own component, but its state belongs to the panel: switching to Unsplash
+ * and back must not discard an icon that has just been paid for.
+ */
+function IconTab({
+  icon,
+  isDrawing,
+  onAdd,
+  onDraw,
+  onPrompt,
+  onStyle,
+  prompt,
+  style,
+}: IconTabProps) {
+  return (
+    <div className="space-y-3">
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onDraw();
+        }}
+      >
+        <Input
+          className="min-h-10 border-white/10 bg-black/40 text-base"
+          onChange={(e) => onPrompt(e.target.value)}
+          placeholder="Describe an icon…"
+          value={prompt}
+        />
+
+        <div className="flex flex-wrap gap-1">
+          {ICON_STYLES.map((option) => (
+            <button
+              className={`min-h-8 px-2 text-[10px] uppercase tracking-[0.14em] transition-colors ${
+                style === option
+                  ? "bg-white/10 text-white"
+                  : "text-white/40 hover:text-white/80"
+              }`}
+              key={option}
+              onClick={() => onStyle(option)}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+          disabled={isDrawing}
+          type="submit"
+          variant="outline"
+        >
+          <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+          {isDrawing ? "Drawing…" : "Draw icon"}
+        </Button>
+      </form>
+
+      {icon ? (
+        <div className="space-y-2">
+          {/* Pale backing: a solid icon is usually dark, and against the
+              panel's black it would look like an empty box. */}
+          <div className="flex items-center justify-center rounded border border-white/10 bg-white/90 p-4">
+            <img
+              alt="Generated icon"
+              className="h-24 w-24 object-contain"
+              height={96}
+              src={icon.url}
+              width={96}
+            />
+          </div>
+          <Button
+            className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+            onClick={onAdd}
+            type="button"
+            variant="outline"
+          >
+            Add to board
+          </Button>
+        </div>
+      ) : null}
+
+      {icon && !icon.isVector ? (
+        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+          Magnific's vectoriser was unavailable, so this came back as a PNG
+          rather than an SVG. It still works on the board; it will not stay
+          sharp all the way in.
+        </p>
+      ) : null}
+
+      <p className="text-[10px] text-white/30 leading-relaxed">
+        Icons are drawn as SVG so they stay sharp at any zoom, falling back to
+        PNG when the vectoriser is down. Simple shapes vectorise best.
+      </p>
     </div>
   );
 }

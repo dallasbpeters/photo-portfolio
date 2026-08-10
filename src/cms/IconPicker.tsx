@@ -1,4 +1,8 @@
-import { NavArrowDown, Prohibition } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowDown01Icon,
+  UnavailableIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import { ICON_GROUPS } from "./icons";
 import { resolveIcon } from "./SiteNav";
@@ -12,7 +16,7 @@ interface IconPickerProps {
 /**
  * Visual icon chooser for a page's nav link.
  *
- * Replaces a free-text field that required knowing an exact Iconoir export
+ * Replaces a free-text field that required knowing an exact icon-pack export
  * name — every option here is picked from a verified set, so a selection always
  * renders.
  */
@@ -54,7 +58,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
         <span className="flex items-center gap-2 text-sm text-white/80">
           {Selected ? (
             <>
-              <Selected height={16} width={16} />
+              <HugeiconsIcon icon={Selected} size={16} />
               <span className="text-[11px] text-white/90 uppercase tracking-[0.14em]">
                 {value}
               </span>
@@ -65,10 +69,10 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
             </span>
           )}
         </span>
-        <NavArrowDown
+        <HugeiconsIcon
           className={`shrink-0 text-white/90 transition-transform ${open ? "rotate-180" : ""}`}
-          height={14}
-          width={14}
+          icon={ArrowDown01Icon}
+          size={14}
         />
       </button>
 
@@ -89,7 +93,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
             role="option"
             type="button"
           >
-            <Prohibition height={14} width={14} />
+            <HugeiconsIcon icon={UnavailableIcon} size={14} />
             No icon
           </button>
 
@@ -121,7 +125,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
                       title={name}
                       type="button"
                     >
-                      <Icon height={16} width={16} />
+                      <HugeiconsIcon icon={Icon} size={16} />
                     </button>
                   );
                 })}

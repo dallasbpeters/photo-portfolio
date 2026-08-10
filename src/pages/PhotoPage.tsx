@@ -1,4 +1,8 @@
-import { NavArrowLeft, NavArrowRight } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -166,7 +170,7 @@ export function PhotoPage() {
                     className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
                     to={`/photo/${previous.id}`}
                   >
-                    <NavArrowLeft height={13} width={13} />
+                    <HugeiconsIcon icon={ArrowLeft01Icon} size={13} />
                     Prev
                   </Link>
                 ) : (
@@ -181,7 +185,7 @@ export function PhotoPage() {
                     to={`/photo/${next.id}`}
                   >
                     Next
-                    <NavArrowRight height={13} width={13} />
+                    <HugeiconsIcon icon={ArrowRight01Icon} size={13} />
                   </Link>
                 ) : (
                   <span className="text-[10px] text-white/15 uppercase tracking-[0.18em]">

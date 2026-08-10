@@ -12,3 +12,4 @@ coverage/
 Icon.icon/
 watermarked-photos-backup.json
 .env.local
+photos/

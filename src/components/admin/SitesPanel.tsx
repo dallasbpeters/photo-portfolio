@@ -1,4 +1,5 @@
-import { Globe, Plus } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, GlobeIcon } from "@hugeicons-pro/core-stroke-standard";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -242,7 +243,7 @@ export function SitesPanel() {
     <Card className="border-white/10 bg-white/2">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-          <Globe aria-hidden height={16} width={16} />
+          <HugeiconsIcon aria-hidden icon={GlobeIcon} size={16} />
           Sites
         </CardTitle>
         <Button
@@ -251,7 +252,7 @@ export function SitesPanel() {
           type="button"
           variant="outline"
         >
-          <Plus aria-hidden height={14} width={14} />
+          <HugeiconsIcon aria-hidden icon={Add01Icon} size={14} />
           New site
         </Button>
       </CardHeader>

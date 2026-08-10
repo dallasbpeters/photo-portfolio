@@ -1,27 +1,30 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Image01Icon,
+  LeftToRightListBulletIcon,
+  LeftToRightListNumberIcon,
+  Link01Icon,
+  QuoteDownIcon,
+  RedoIcon,
+  TextAlignCenterIcon,
+  TextAlignLeftIcon,
+  TextAlignRightIcon,
+  TextBoldIcon,
+  TextIcon,
+  TextItalicIcon,
+  TextStrikethroughIcon,
+  UndoIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
-import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Italic,
-  Link as LinkIcon,
-  ListSelect,
-  MediaImage,
-  NumberedListLeft,
-  Quote,
-  Redo,
-  Strikethrough,
-  Text as TextIcon,
-  Undo,
-} from "iconoir-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
+import type { ImageAlign } from "./imageAttributes";
 import {
   FormattedImage,
   IMAGE_ALIGNMENTS,
@@ -74,6 +77,49 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
     onUpdate: ({ editor: e }) => onChange(e.getJSON()),
   });
 
+  /**
+   * Everything the toolbar renders from, recomputed on each editor transaction.
+   *
+   * `useEditor` does not re-render this component when the editor changes —
+   * moving the caret is a transaction, not a React state update — so reading
+   * `editor.isActive(…)` straight in the markup gave whatever was true on the
+   * first render and never changed. That is why clicking an image never
+   * revealed its controls, and why no toolbar button ever lit up.
+   *
+   * `useEditorState` subscribes properly and compares the selected values, so
+   * this re-renders when one of them actually changes rather than on every
+   * keystroke. It has to be called before the loading branch below, since a
+   * hook cannot run conditionally; the selector handles the null editor.
+   */
+  const toolbar = useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      if (!e) {
+        return null;
+      }
+      // Only meaningful when an image is selected, and read together with
+      // isImage so the width and alignment buttons agree with what is shown.
+      const image = e.getAttributes("image");
+      return {
+        imageAlign: (image.align ?? null) as ImageAlign | null,
+        imageWidth: (image.width ?? null) as number | null,
+        isBlockquote: e.isActive("blockquote"),
+        isBold: e.isActive("bold"),
+        isBulletList: e.isActive("bulletList"),
+        isHeading: e.isActive("heading", { level: 2 }),
+        isImage: e.isActive("image"),
+        isItalic: e.isActive("italic"),
+        isLink: e.isActive("link"),
+        isOrderedList: e.isActive("orderedList"),
+        isStrike: e.isActive("strike"),
+        textAlign:
+          (["left", "center", "right"] as const).find((align) =>
+            e.isActive({ textAlign: align })
+          ) ?? null,
+      };
+    },
+  });
+
   const uploadImage = useCallback(
     async (file: File) => {
       if (!editor) {
@@ -93,7 +139,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
     [editor]
   );
 
-  if (!editor) {
+  if (!(editor && toolbar)) {
     return (
       <div className="min-h-95 border border-white/10 bg-black/40 p-5 text-[11px] text-white/80 uppercase tracking-[0.2em]">
         Loading editor…
@@ -124,83 +170,83 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       <div className="flex flex-wrap items-center gap-px border-white/[0.07] border-b bg-white/3 p-1">
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("heading", { level: 2 })}
+          isActive={toolbar.isHeading}
           label="Heading"
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
         >
-          <TextIcon height={14} width={14} />
+          <HugeiconsIcon icon={TextIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("bold")}
+          isActive={toolbar.isBold}
           label="Bold"
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
-          <Bold height={14} width={14} />
+          <HugeiconsIcon icon={TextBoldIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("italic")}
+          isActive={toolbar.isItalic}
           label="Italic"
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
-          <Italic height={14} width={14} />
+          <HugeiconsIcon icon={TextItalicIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("strike")}
+          isActive={toolbar.isStrike}
           label="Strikethrough"
           onClick={() => editor.chain().focus().toggleStrike().run()}
         >
-          <Strikethrough height={14} width={14} />
+          <HugeiconsIcon icon={TextStrikethroughIcon} size={14} />
         </ToolButton>
 
         <Divider />
 
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("bulletList")}
+          isActive={toolbar.isBulletList}
           label="Bulleted list"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
-          <ListSelect height={14} width={14} />
+          <HugeiconsIcon icon={LeftToRightListBulletIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("orderedList")}
+          isActive={toolbar.isOrderedList}
           label="Numbered list"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
-          <NumberedListLeft height={14} width={14} />
+          <HugeiconsIcon icon={LeftToRightListNumberIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("blockquote")}
+          isActive={toolbar.isBlockquote}
           label="Quote"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
         >
-          <Quote height={14} width={14} />
+          <HugeiconsIcon icon={QuoteDownIcon} size={14} />
         </ToolButton>
 
         <Divider />
 
         {(
           [
-            ["left", AlignLeft],
-            ["center", AlignCenter],
-            ["right", AlignRight],
+            ["left", TextAlignLeftIcon],
+            ["center", TextAlignCenterIcon],
+            ["right", TextAlignRightIcon],
           ] as const
-        ).map(([align, Icon]) => (
+        ).map(([align, icon]) => (
           <ToolButton
             editor={editor}
-            isActive={editor.isActive({ textAlign: align })}
+            isActive={toolbar.textAlign === align}
             key={align}
             label={`Align ${align}`}
             onClick={() => editor.chain().focus().setTextAlign(align).run()}
           >
-            <Icon height={14} width={14} />
+            <HugeiconsIcon icon={icon} size={14} />
           </ToolButton>
         ))}
 
@@ -208,11 +254,11 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
 
         <ToolButton
           editor={editor}
-          isActive={editor.isActive("link")}
+          isActive={toolbar.isLink}
           label="Link"
           onClick={() => void setLink()}
         >
-          <LinkIcon height={14} width={14} />
+          <HugeiconsIcon icon={Link01Icon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
@@ -220,7 +266,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           label="Image"
           onClick={() => fileInputRef.current?.click()}
         >
-          <MediaImage height={14} width={14} />
+          <HugeiconsIcon icon={Image01Icon} size={14} />
         </ToolButton>
 
         <div className="flex-1" />
@@ -231,7 +277,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           label="Undo"
           onClick={() => editor.chain().focus().undo().run()}
         >
-          <Undo height={14} width={14} />
+          <HugeiconsIcon icon={UndoIcon} size={14} />
         </ToolButton>
         <ToolButton
           editor={editor}
@@ -239,7 +285,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           label="Redo"
           onClick={() => editor.chain().focus().redo().run()}
         >
-          <Redo height={14} width={14} />
+          <HugeiconsIcon icon={RedoIcon} size={14} />
         </ToolButton>
       </div>
 
@@ -261,7 +307,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       {/* Only while an image is selected: these controls are meaningless
           otherwise, and a permanently visible row of them implies they apply to
           whatever the cursor is in. */}
-      {editor.isActive("image") ? (
+      {toolbar.isImage ? (
         <div className="flex flex-wrap items-center gap-1 border-white/10 border-b bg-white/2 px-2 py-1">
           <span className="px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
             Image
@@ -269,7 +315,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           {IMAGE_ALIGNMENTS.map((align) => (
             <ToolButton
               editor={editor}
-              isActive={editor.isActive("image", { align })}
+              isActive={toolbar.imageAlign === align}
               key={align}
               label={`Image ${align}`}
               onClick={() =>
@@ -291,7 +337,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           {IMAGE_WIDTHS.map((width) => (
             <ToolButton
               editor={editor}
-              isActive={editor.isActive("image", { width })}
+              isActive={toolbar.imageWidth === width}
               key={width}
               label={`Image width ${width}%`}
               onClick={() =>

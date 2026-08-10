@@ -1,4 +1,9 @@
-import { Frame, Plus, Trash } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Add01Icon,
+  Delete02Icon,
+  FrameIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -79,7 +84,7 @@ export function BoardsPanel() {
     <Card className="border-white/10 bg-white/2">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-          <Frame aria-hidden height={16} width={16} />
+          <HugeiconsIcon aria-hidden icon={FrameIcon} size={16} />
           Moodboards
         </CardTitle>
         <Button
@@ -88,7 +93,7 @@ export function BoardsPanel() {
           type="button"
           variant="outline"
         >
-          <Plus aria-hidden height={14} width={14} />
+          <HugeiconsIcon aria-hidden icon={Add01Icon} size={14} />
           New board
         </Button>
       </CardHeader>
@@ -127,11 +132,11 @@ export function BoardsPanel() {
                         width={400}
                       />
                     ) : (
-                      <Frame
+                      <HugeiconsIcon
                         aria-hidden
                         className="text-white/15"
-                        height={32}
-                        width={32}
+                        icon={FrameIcon}
+                        size={32}
                       />
                     )}
                   </div>
@@ -152,7 +157,7 @@ export function BoardsPanel() {
                   onClick={() => void remove(board)}
                   type="button"
                 >
-                  <Trash height={14} width={14} />
+                  <HugeiconsIcon icon={Delete02Icon} size={14} />
                 </button>
               </div>
             </li>

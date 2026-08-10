@@ -1,15 +1,16 @@
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  FilePenLine,
-  Layers,
-  LayoutGrid,
-  LogIn,
-  Pencil,
-  Plus,
-  Shield,
-  Tags,
-  Trash2,
-  Upload,
-} from "lucide-react";
+  Add01Icon,
+  Delete02Icon,
+  FileEditIcon,
+  GridTableIcon,
+  Layers01Icon,
+  Login02Icon,
+  PencilEdit01Icon,
+  Shield01Icon,
+  TagsIcon,
+  Upload02Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { type AdminDataResult, useAdminData } from "../hooks/useAdminData";
 import { type AdminLoginResult, useAdminLogin } from "../hooks/useAdminLogin";
@@ -72,7 +73,7 @@ const LoginScreen = ({
 }: LoginScreenProps) => (
   <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
     <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-      <Shield aria-hidden className="size-10 text-white/90 sm:size-12" />
+      <HugeiconsIcon icon={Shield01Icon} size={72} />
     </div>
     <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
       Admin Access
@@ -125,7 +126,7 @@ const LoginScreen = ({
         type="submit"
         variant="outline"
       >
-        <LogIn aria-hidden size={16} />
+        <HugeiconsIcon icon={Login02Icon} size={16} />
         {login.isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
       <button
@@ -186,7 +187,7 @@ const AddItemForm = ({
             />
             {newPhoto.uploadDraftFile ? (
               <p className="flex items-center gap-1 text-[10px] text-white/90">
-                <Upload aria-hidden className="shrink-0 opacity-70" size={12} />
+                <HugeiconsIcon icon={Upload02Icon} size={12} />
                 <span className="truncate">
                   {newPhoto.uploadDraftFile.name}
                 </span>
@@ -251,7 +252,7 @@ const AddItemForm = ({
           }
           type="submit"
         >
-          <Plus aria-hidden size={16} />
+          <HugeiconsIcon icon={Add01Icon} size={16} />
           {newPhoto.isUploading ? "Uploading…" : "Add Item"}
         </Button>
       </form>
@@ -278,9 +279,9 @@ const ViewToggleButton = ({ onToggle, stackedView }: ViewToggleButtonProps) => (
     variant="outline"
   >
     {stackedView ? (
-      <LayoutGrid aria-hidden size={13} />
+      <HugeiconsIcon icon={GridTableIcon} size={13} />
     ) : (
-      <Layers aria-hidden size={13} />
+      <HugeiconsIcon icon={Layers01Icon} size={13} />
     )}
     {stackedView ? "Grid" : "Stack"}
   </Button>
@@ -341,7 +342,7 @@ const BatchActions = ({
         type="button"
         variant="outline"
       >
-        <Trash2 aria-hidden className="mr-1 inline" size={14} />
+        <HugeiconsIcon icon={Delete02Icon} size={14} />
         {selection.isBatchDeleting ? "Deleting…" : "Delete"}
       </Button>
       <Button
@@ -533,7 +534,7 @@ const PhotoCard = ({
             type="button"
             variant="ghost"
           >
-            <FilePenLine aria-hidden size={18} />
+            <HugeiconsIcon icon={FileEditIcon} size={18} />
           </Button>
           <Button
             aria-label={`Open image editor for ${photo.title}`}
@@ -543,7 +544,7 @@ const PhotoCard = ({
             type="button"
             variant="ghost"
           >
-            <Pencil aria-hidden size={18} />
+            <HugeiconsIcon icon={PencilEdit01Icon} size={18} />
           </Button>
           <Button
             aria-label={`Delete ${photo.title}`}
@@ -553,7 +554,7 @@ const PhotoCard = ({
             type="button"
             variant="ghost"
           >
-            <Trash2 aria-hidden size={18} />
+            <HugeiconsIcon icon={Delete02Icon} size={18} />
           </Button>
         </div>
 
@@ -640,7 +641,7 @@ const ItemsCard = ({
           type="button"
           variant="outline"
         >
-          <Tags aria-hidden size={13} />
+          <HugeiconsIcon icon={TagsIcon} size={13} />
           Categories
         </Button>
         <ViewToggleButton

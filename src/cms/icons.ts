@@ -2,8 +2,8 @@
  * The icons offered in the page editor.
  *
  * A curated set rather than the full 1,600-icon pack: the field used to be free
- * text, which meant knowing an exact Iconoir export name. Every entry here is
- * verified to exist in iconoir-react, so a chosen icon always renders.
+ * text, which meant knowing an exact icon-pack export name. Every entry here
+ * has an entry in ./iconMap.ts, so a chosen icon always renders.
  *
  * Grouped so the picker can show headings instead of one undifferentiated wall.
  */

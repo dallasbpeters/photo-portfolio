@@ -1,4 +1,5 @@
-import { Xmark } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { TOOLS, type Tool, type ToolId } from "./tools";
 
 interface EditorRailProps {
@@ -17,7 +18,7 @@ export function EditorRail({ active, onSelect, onClose }: EditorRailProps) {
         onClick={onClose}
         type="button"
       >
-        <Xmark height={16} width={16} />
+        <HugeiconsIcon icon={Cancel01Icon} size={16} />
       </button>
 
       {TOOLS.map((tool: Tool) => (
@@ -37,7 +38,7 @@ export function EditorRail({ active, onSelect, onClose }: EditorRailProps) {
           {active === tool.id ? (
             <span aria-hidden className="absolute left-0 h-4 w-px bg-white" />
           ) : null}
-          <tool.Icon height={16} width={16} />
+          <HugeiconsIcon icon={tool.Icon} size={16} />
         </button>
       ))}
     </nav>

@@ -2,9 +2,16 @@ import bcrypt from "bcryptjs";
 import pg from "pg";
 import { loadEnv } from "./loadEnv";
 
+/**
+ * Captured before loadEnv, which loads .env.local with override: true — so an
+ * inline DATABASE_URL would otherwise be replaced and the account created on
+ * whichever database that file points at.
+ */
+const explicitDatabaseUrl = process.env.DATABASE_URL?.trim();
+
 loadEnv();
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = explicitDatabaseUrl || process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL is required");
 }

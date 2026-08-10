@@ -1,4 +1,5 @@
-import { Eye } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { EyeIcon } from "@hugeicons-pro/core-stroke-standard";
 
 interface EditorCanvasProps {
   /** Disabled when the edit is neutral — there is nothing to compare against. */
@@ -46,7 +47,7 @@ export function EditorCanvas({
             title="Hold to compare  (\)"
             type="button"
           >
-            <Eye height={13} width={13} />
+            <HugeiconsIcon icon={EyeIcon} size={13} />
             {showOriginal ? "Original" : "Compare"}
           </button>
         </div>

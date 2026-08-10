@@ -53,6 +53,12 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.72.0(react@19.2.4))
+      '@hugeicons-pro/core-stroke-standard':
+        specifier: ^4.2.3
+        version: 4.2.3
+      '@hugeicons/react':
+        specifier: ^1.1.9
+        version: 1.1.9(react@19.2.4)
       '@neondatabase/serverless':
         specifier: ^1.0.0
         version: 1.0.2
@@ -116,9 +122,6 @@ importers:
       exifr:
         specifier: ^7.1.3
         version: 7.1.3
-      iconoir-react:
-        specifier: ^7.11.0
-        version: 7.11.0(react@19.2.4)
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.3
@@ -1054,6 +1057,14 @@ packages:
     resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
     peerDependencies:
       react-hook-form: ^7.55.0
+
+  '@hugeicons-pro/core-stroke-standard@4.2.3':
+    resolution: {integrity: sha512-6CTmLft5TeUnIYT3srYthrba41iVgcYc1hgMhWqfYnm2sgYWO6IhsRZ91YsCo4gxDHgKjmzd1cXiMjQYwO7liQ==}
+
+  '@hugeicons/react@1.1.9':
+    resolution: {integrity: sha512-O+lWSWjbijoAvMCxn4K2bQWCGN5+mP1y5j+X99j23mXMj+s0X25fs71T6t9YJLaBodwmZdaewD27dzS/PiboQw==}
+    peerDependencies:
+      react: '>=16.0.0'
 
   '@iarna/toml@2.2.5':
     resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
@@ -3072,11 +3083,6 @@ packages:
   human-signals@8.0.1:
     resolution: {integrity: sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ==}
     engines: {node: '>=18.18.0'}
-
-  iconoir-react@7.11.0:
-    resolution: {integrity: sha512-uvTKtnHYwbbTsmQ6HCcliYd50WK0GbjP497RwdISxKzfS01x4cK1Mn/F2mT/t2roSaJQ0I+KnHxMcyvmNMXWsQ==}
-    peerDependencies:
-      react: 18 || 19
 
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -5249,6 +5255,12 @@ snapshots:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.72.0(react@19.2.4)
 
+  '@hugeicons-pro/core-stroke-standard@4.2.3': {}
+
+  '@hugeicons/react@1.1.9(react@19.2.4)':
+    dependencies:
+      react: 19.2.4
+
   '@iarna/toml@2.2.5': {}
 
   '@icons/material@0.2.4(react@19.2.4)':
@@ -7267,10 +7279,6 @@ snapshots:
   human-signals@2.1.0: {}
 
   human-signals@8.0.1: {}
-
-  iconoir-react@7.11.0(react@19.2.4):
-    dependencies:
-      react: 19.2.4
 
   iconv-lite@0.4.24:
     dependencies:

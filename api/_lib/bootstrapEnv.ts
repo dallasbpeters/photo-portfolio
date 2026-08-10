@@ -24,7 +24,20 @@ export const bootstrapEnv = (): void => {
   // `vercel dev` — Vercel often injects a different DB URL than the one in
   // .env.development.local, causing connections to the wrong host.
   const cwd = process.cwd();
-  for (const name of [".env", ".env.local", ".env.development.local"]) {
+  const names = [".env", ".env.local", ".env.development.local"];
+
+  // Last, and so winning: the file belonging to the site being run.
+  //
+  // Each site has its own database, blob store and keys, and they all live in
+  // one checkout — so running dallas locally has to read dallas's variables
+  // rather than whatever `.env.local` was last pulled. `pnpm dev` sets
+  // VITE_SITE; SITE is the fallback for anything started by hand.
+  const site = (process.env.VITE_SITE ?? process.env.SITE)?.trim();
+  if (site) {
+    names.push(`.env.${site}.local`);
+  }
+
+  for (const name of names) {
     const path = resolve(cwd, name);
     if (existsSync(path)) {
       config({ override: true, path });

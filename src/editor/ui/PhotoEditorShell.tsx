@@ -1,4 +1,5 @@
-import { Restart } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { RefreshIcon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useState } from "react";
 import { isNeutral } from "../adjustments";
 import { fitWithin } from "../engine/export";
@@ -143,7 +144,7 @@ export function PhotoEditorShell({
             onClick={reset}
             type="button"
           >
-            <Restart height={13} width={13} />
+            <HugeiconsIcon icon={RefreshIcon} size={13} />
             Reset
           </button>
           <div className="flex-1" />

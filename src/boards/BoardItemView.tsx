@@ -1,4 +1,9 @@
-import { Minus, Plus, Trash } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Add01Icon,
+  Delete02Icon,
+  MinusSignIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { type RefObject, useEffect, useRef } from "react";
 import {
   DEFAULT_NOTE_FONT_SIZE,
@@ -24,6 +29,8 @@ interface BoardItemViewProps {
   onFontSize: (fontSize: number) => void;
   onResizeStart: (index: number, clientX: number, clientY: number) => void;
   onSelect: (index: number, clientX: number, clientY: number) => void;
+  /** Viewing a published board: no controls at all, not merely disabled ones. */
+  readOnly?: boolean;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
   scale: number;
 }
@@ -118,11 +125,21 @@ function BoardItemBody({
     );
   }
 
+  // A photograph is cropped to fill its frame, which is what you want when the
+  // frame is the composition. A generated icon is a shape on a transparent
+  // ground, and cropping one just cuts the glyph in half — so icons are fitted
+  // inside the frame instead.
+  //
+  // Keyed on where the file is stored rather than on the extension: an icon
+  // comes back as a PNG whenever the vectoriser is unavailable, and it needs
+  // fitting just as much as the SVG would have.
+  const isIcon = item.imageUrl?.includes("/boards/icons/") ?? false;
+
   return (
     <figure className="h-full w-full">
       <img
         alt=""
-        className="h-full w-full object-cover"
+        className={`h-full w-full ${isIcon ? "object-contain" : "object-cover"}`}
         draggable={false}
         height={item.height}
         src={item.imageUrl ?? ""}
@@ -152,6 +169,7 @@ export function BoardItemView({
   onFontSize,
   onResizeStart,
   onSelect,
+  readOnly = false,
   scale,
 }: BoardItemViewProps) {
   const isNote = item.kind === "note";
@@ -210,21 +228,25 @@ export function BoardItemView({
       />
 
       {/* Revealed on hover, and kept visible while selected so it does not
-          vanish mid-interaction on a touch screen, which has no hover. */}
-      <button
-        aria-label="Remove from board"
-        className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-white/20 bg-black text-white/80 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100 ${
-          isSelected ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={onDelete}
-        onPointerDown={(e) => e.stopPropagation()}
-        style={chromeScale}
-        type="button"
-      >
-        <Trash height={14} width={14} />
-      </button>
+          vanish mid-interaction on a touch screen, which has no hover. Absent
+          entirely when viewing: the API refuses the call anyway, but offering a
+          control that cannot work is its own bug. */}
+      {readOnly ? null : (
+        <button
+          aria-label="Remove from board"
+          className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-white/20 bg-black text-white/80 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100 ${
+            isSelected ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={onDelete}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={chromeScale}
+          type="button"
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={14} />
+        </button>
+      )}
 
-      {isSelected && isWritable ? (
+      {isSelected && isWritable && !readOnly ? (
         <div
           className="absolute bottom-full left-0 flex origin-bottom-left items-center gap-1 rounded-full border border-white/20 bg-black/90 p-1"
           style={chromeScale}
@@ -236,7 +258,7 @@ export function BoardItemView({
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
           >
-            <Minus height={13} width={13} />
+            <HugeiconsIcon icon={MinusSignIcon} size={13} />
           </button>
           <span className="min-w-6 text-center text-[10px] text-white/50 tabular-nums">
             {Math.round(fontSize)}
@@ -248,12 +270,12 @@ export function BoardItemView({
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
           >
-            <Plus height={13} width={13} />
+            <HugeiconsIcon icon={Add01Icon} size={13} />
           </button>
         </div>
       ) : null}
 
-      {isSelected ? (
+      {isSelected && !readOnly ? (
         <div
           className="absolute right-0 bottom-0 size-6 origin-bottom-right cursor-nwse-resize rounded-sm border border-white/40 bg-white/90"
           onPointerDown={(e) => {

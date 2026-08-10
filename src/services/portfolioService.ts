@@ -1,3 +1,4 @@
+import type { IconStyle } from "../../config/iconStyles";
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
 import type {
   Board,
@@ -916,6 +917,16 @@ export interface GeneratedImage {
   width: number | null;
 }
 
+export interface GeneratedIcon {
+  /**
+   * False when Magnific's vectoriser was unavailable and the icon came back as
+   * a raster instead. Worth saying out loud rather than silently handing over
+   * something other than what was asked for.
+   */
+  isVector: boolean;
+  url: string;
+}
+
 export const aiApi = {
   /**
    * Generates an image, or a variation of `sourceImageUrl` when given one.
@@ -936,6 +947,29 @@ export const aiApi = {
       throw new Error(await readPageError(res, "Could not generate an image"));
     }
     return (await res.json()) as GeneratedImage;
+  },
+
+  /**
+   * Generates an SVG icon.
+   *
+   * Separate from `generate` rather than a flag on it: this is a different
+   * service, produces vector rather than raster, and takes a style instead of a
+   * source image. The URL is already on our own blob host, since Magnific signs
+   * its links with an expiry.
+   */
+  generateIcon: async (
+    prompt: string,
+    style: IconStyle
+  ): Promise<GeneratedIcon> => {
+    const res = await fetch(`${apiBase()}/api/ai/icon`, {
+      body: JSON.stringify({ prompt, style }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not generate an icon"));
+    }
+    return (await res.json()) as GeneratedIcon;
   },
 };
 

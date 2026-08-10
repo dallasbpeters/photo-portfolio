@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { persistGenerated } from "./persistGenerated.js";
 
 /**
  * Image generation through fal.ai, running Google's Nano Banana models.
@@ -36,32 +36,6 @@ interface FalResponse {
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
-
-/**
- * Copies a generated image into Blob storage and returns the durable URL.
- *
- * fal serves results from a temporary host, so an image pinned to a board would
- * quietly 404 later. Boards are meant to be kept, so the bytes have to be ours.
- */
-const persist = async (sourceUrl: string): Promise<string> => {
-  const res = await fetch(sourceUrl);
-  if (!res.ok) {
-    throw new Error(`Could not download the generated image (${res.status})`);
-  }
-  const bytes = await res.arrayBuffer();
-  const type = res.headers.get("content-type") ?? "image/jpeg";
-  const extension = type.includes("png") ? "png" : "jpg";
-
-  const blob = await put(
-    `boards/ai/${crypto.randomUUID()}.${extension}`,
-    bytes,
-    {
-      access: "public",
-      contentType: type,
-    }
-  );
-  return blob.url;
-};
 
 /**
  * Generates an image, or a variation of one, and stores it.
@@ -111,7 +85,7 @@ export const generateImage = async (
     description: json.description ?? null,
     // The pro model omits dimensions, so these are genuinely optional.
     height: typeof image.height === "number" ? image.height : null,
-    url: await persist(image.url),
+    url: await persistGenerated(image.url, "boards/ai"),
     width: typeof image.width === "number" ? image.width : null,
   };
 };

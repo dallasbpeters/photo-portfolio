@@ -1,4 +1,5 @@
-import { OpenNewWindow } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ExternalLinkIcon } from "@hugeicons-pro/core-stroke-standard";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
@@ -109,7 +110,7 @@ export function Lightbox({
               to={`/photo/${currentPhoto.id}`}
             >
               Open photo page
-              <OpenNewWindow height={12} width={12} />
+              <HugeiconsIcon icon={ExternalLinkIcon} size={12} />
             </Link>
 
             <ShareButtons

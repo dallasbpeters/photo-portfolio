@@ -1,4 +1,5 @@
-import { Instagram } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InstagramIcon } from "@hugeicons-pro/core-stroke-standard";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -300,7 +301,7 @@ export const HomePage = () => {
                 className="transition-colors hover:text-white/90"
                 href={settings.instagramUrl}
               >
-                <Instagram height={20} width={20} />
+                <HugeiconsIcon icon={InstagramIcon} size={20} />
               </a>
             </div>
           </div>

@@ -1,4 +1,5 @@
-import { NavArrowRight } from "iconoir-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -109,13 +110,13 @@ export function ContentPage() {
                   </Link>
                 </li>
                 <li aria-hidden className="flex items-center">
-                  <NavArrowRight height={11} width={11} />
+                  <HugeiconsIcon icon={ArrowRight01Icon} size={11} />
                 </li>
                 <li
                   aria-current="page"
                   className="flex items-center gap-1.5 text-white/90"
                 >
-                  {Icon && <Icon height={11} width={11} />}
+                  {Icon && <HugeiconsIcon icon={Icon} size={11} />}
                   {page.title}
                 </li>
               </ol>
