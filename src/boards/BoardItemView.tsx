@@ -4,8 +4,9 @@ import {
   Delete02Icon,
   MinusSignIcon,
   ResizeFieldIcon,
+  Settings01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_NOTE_FONT_SIZE,
   DEFAULT_TEXT_FONT_SIZE,
@@ -17,6 +18,14 @@ import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import type { BoardItem } from "../types";
 import { OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
+import { ShaderControls } from "./ShaderControls";
+import { ShaderView } from "./ShaderView";
+import {
+  DEFAULT_SOURCE,
+  isShaderConfig,
+  newLayerId,
+  type ShaderConfig,
+} from "./shaderConfig";
 
 /** One press changes the size by this much, in canvas units. */
 const FONT_STEP = 4;
@@ -42,6 +51,8 @@ export interface PortHandlers {
 interface BoardItemViewProps {
   /** True when an operation node's prompt arrives down a wire. */
   hasWiredPrompt?: boolean;
+  /** A picture wired into this item's image input, if it has one. */
+  imageUrl?: string | null;
   index: number;
   /** True while this item's text is being typed into. */
   isEditing: boolean;
@@ -345,11 +356,103 @@ function FrameBody({
   );
 }
 
+/**
+ * A shader on the board: the effect running live, with its parameters behind a
+ * toggle.
+ *
+ * The controls are hidden until asked for because a shader is something you
+ * look at — 1,668 parameters across the library means the panel would otherwise
+ * bury the thing it configures.
+ */
+function ShaderItem({
+  imageUrl,
+  isSelected,
+  item,
+  onConfigChange,
+  readOnly,
+}: {
+  imageUrl?: string | null;
+  isSelected: boolean;
+  item: BoardItem;
+  onConfigChange?: (config: Record<string, unknown>) => void;
+  readOnly: boolean;
+}) {
+  // Selecting a shader is the act of saying "I want to work on this one", so
+  // the controls come with it. The gear stays as a way to fold them away while
+  // keeping the item selected — a shader is a picture, and sometimes the point
+  // is to look at it. Collapsing is remembered only until the selection moves.
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isEditing = isSelected && !isCollapsed;
+
+  useEffect(() => {
+    if (!isSelected) {
+      setIsCollapsed(false);
+    }
+  }, [isSelected]);
+  // A stack saved before layers carried identity gets one here, so the panel
+  // has a stable key to work from without the server having to be involved.
+  const config: ShaderConfig = isShaderConfig(item.config)
+    ? {
+        ...item.config,
+        layers: item.config.layers.map((layer, index) => ({
+          ...layer,
+          id: layer.id ?? `legacy-${index}-${layer.name}`,
+        })),
+      }
+    : { layers: [] };
+
+  return (
+    <div className="relative h-full w-full">
+      <ShaderView
+        config={config}
+        imageUrl={imageUrl}
+        onAddSource={
+          readOnly
+            ? undefined
+            : () =>
+                onConfigChange?.({
+                  ...config,
+                  layers: [
+                    ...config.layers,
+                    { id: newLayerId(), name: DEFAULT_SOURCE, props: {} },
+                  ],
+                } as unknown as Record<string, unknown>)
+        }
+      />
+
+      {readOnly || !isSelected ? null : (
+        <button
+          aria-label={isEditing ? "Hide shader settings" : "Shader settings"}
+          className="absolute top-1 right-1 rounded bg-black/60 p-1 text-white/60 backdrop-blur hover:text-white"
+          onClick={() => setIsCollapsed((folded) => !folded)}
+          onPointerDown={(e) => e.stopPropagation()}
+          type="button"
+        >
+          <HugeiconsIcon icon={Settings01Icon} size={13} />
+        </button>
+      )}
+
+      {isEditing && !readOnly ? (
+        <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto border-white/10 border-t bg-black/90 p-2 backdrop-blur">
+          <ShaderControls
+            config={config}
+            onChange={(next) =>
+              onConfigChange?.(next as unknown as Record<string, unknown>)
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 interface ItemContentProps {
   fieldRef: RefObject<HTMLTextAreaElement | null>;
   fontSize: number;
   hasWiredPrompt: boolean;
+  imageUrl?: string | null;
   isEditing: boolean;
+  isSelected: boolean;
   item: BoardItem;
   onConfigChange?: (config: Record<string, unknown>) => void;
   onEditBody: (body: string) => void;
@@ -368,7 +471,9 @@ function ItemContent({
   fieldRef,
   fontSize,
   hasWiredPrompt,
+  imageUrl,
   isEditing,
+  isSelected,
   item,
   onConfigChange,
   onEditBody,
@@ -378,6 +483,17 @@ function ItemContent({
   if (item.kind === "frame") {
     return (
       <FrameBody item={item} onEditBody={onEditBody} readOnly={readOnly} />
+    );
+  }
+  if (item.kind === "shader") {
+    return (
+      <ShaderItem
+        imageUrl={imageUrl}
+        isSelected={isSelected}
+        item={item}
+        onConfigChange={onConfigChange}
+        readOnly={readOnly}
+      />
     );
   }
   if (item.kind === "op") {
@@ -405,6 +521,7 @@ function ItemContent({
 /** One item on the board. */
 export function BoardItemView({
   hasWiredPrompt = false,
+  imageUrl,
   index,
   isEditing,
   isSelected,
@@ -476,7 +593,9 @@ export function BoardItemView({
         fieldRef={fieldRef}
         fontSize={fontSize}
         hasWiredPrompt={hasWiredPrompt}
+        imageUrl={imageUrl}
         isEditing={isEditing}
+        isSelected={isSelected}
         item={item}
         onConfigChange={onConfigChange}
         onEditBody={onEditBody}

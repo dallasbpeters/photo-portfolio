@@ -27,6 +27,7 @@ import {
   isSourceItemKind,
   nodeTypeFor,
   type Port,
+  SHADER_INPUTS,
   SOURCE_PORTS,
 } from "./nodeTypes.js";
 
@@ -69,6 +70,9 @@ export const outputPortsFor = (item: GraphItem): readonly Port[] => {
 export const inputPortsFor = (item: GraphItem): readonly InputPort[] => {
   if (item.kind === "frame") {
     return FRAME_INPUTS;
+  }
+  if (item.kind === "shader") {
+    return SHADER_INPUTS;
   }
   if (item.kind !== "op") {
     return NO_INPUTS;

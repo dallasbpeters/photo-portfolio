@@ -9,6 +9,7 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
+import { outputImageOf } from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { useCanvasViewport } from "./useCanvasViewport";
@@ -37,6 +38,13 @@ interface BoardCanvasProps {
     sourcePort: string,
     target: PortTarget
   ) => void;
+  /**
+   * Image files dragged onto the board, with the canvas point they landed on.
+   *
+   * The canvas is the only place that can turn a screen coordinate into a board
+   * one, so it reports where; the editor uploads and mints the items.
+   */
+  onDropFiles?: (files: File[], point: { x: number; y: number }) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
   onRun?: (itemId: string, force: boolean) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
@@ -111,6 +119,7 @@ export function BoardCanvas({
   onChange,
   onConfigChange,
   onCreateFromPort,
+  onDropFiles,
   onRun,
   onWiresChange,
   keyOf,
@@ -175,6 +184,26 @@ export function BoardCanvas({
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
   );
+
+  /**
+   * The picture feeding an item's image input, for the kinds that render one
+   * themselves rather than being run on the server.
+   *
+   * A shader restyles its input live in the browser, so the URL has to reach
+   * the component; nothing is written to the item, which keeps the wire the
+   * single source of truth for what is being shown.
+   */
+  const wiredImageFor = (itemId: string): string | null => {
+    const wire = wires.find(
+      (candidate) =>
+        candidate.targetItemId === itemId && candidate.targetPort === "image"
+    );
+    if (!wire) {
+      return null;
+    }
+    const source = items.find((item) => item.id === wire.sourceItemId);
+    return source ? outputImageOf(source) : null;
+  };
 
   /**
    * Removes an item and everything attached to it.
@@ -422,8 +451,35 @@ export function BoardCanvas({
         className="pointer-events-none absolute inset-0"
         style={dotGridStyle}
       />
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the pan/zoom surface is scenery, not a control — keyboard users reach the items themselves, which are focusable */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: same — this element exists to receive pointer gestures and file drops aimed at the board as a whole */}
       <div
         className={`h-full w-full touch-none ${view.isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+        onDragOver={
+          onDropFiles
+            ? (e) => {
+                // Without this the browser treats the drop as navigation and
+                // replaces the board with the image.
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }
+            : undefined
+        }
+        onDrop={
+          onDropFiles
+            ? (e) => {
+                const files = [...e.dataTransfer.files].filter((file) =>
+                  file.type.startsWith("image/")
+                );
+                if (files.length === 0) {
+                  return;
+                }
+                e.preventDefault();
+                // Dropped where it was let go of, not where a counter says.
+                onDropFiles(files, view.toCanvas(e.clientX, e.clientY));
+              }
+            : undefined
+        }
         onPointerCancel={endGesture}
         onPointerDown={(e) => {
           // A press that began on a port is already a wire drag; the surface
@@ -500,6 +556,7 @@ export function BoardCanvas({
           {items.map((item, index) => (
             <BoardItemView
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
+              imageUrl={wiredImageFor(item.id)}
               index={index}
               isEditing={!readOnly && editingId === item.id}
               isSelected={!readOnly && selected === index}
@@ -548,7 +605,6 @@ export function BoardCanvas({
           ))}
         </div>
       </div>
-
       {portMenu ? (
         <PortMenu
           onChoose={(target) => {
@@ -560,7 +616,6 @@ export function BoardCanvas({
           portType={portMenu.portType}
         />
       ) : null}
-
       <div className="pointer-events-none absolute right-4 bottom-4 flex items-center gap-2">
         <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
           <button

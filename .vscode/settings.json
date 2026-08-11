@@ -50,5 +50,12 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
     "source.organizeImports.biome": "explicit"
-  }
+  },
+  // Tailwind v4 puts its configuration in CSS: @theme, @custom-variant, @apply
+  // and @utility are not at-rules the editor's own CSS parser knows, so it
+  // reports every one of them as an error. Biome lints and formats CSS here,
+  // and it understands them, so the built-in check is only noise.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore"
 }

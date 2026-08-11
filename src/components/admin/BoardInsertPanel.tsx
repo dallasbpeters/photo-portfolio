@@ -11,6 +11,7 @@ import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
 import { newItemId } from "../../boards/newItemId";
+import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
   aiApi,
   type GeneratedIcon,
@@ -38,6 +39,8 @@ interface BoardInsertPanelProps {
   /** Places an operation node on the canvas, carrying the prompt with it. */
   onAddNode: (nodeType: NodeTypeId, config: Record<string, unknown>) => void;
   onAddPhoto: (photo: Photo) => void;
+  /** Places a shader on the canvas, chosen from the package's registry. */
+  onAddShader: (name: string) => void;
   /** Remembers a place this board pulls references from. */
   onAttachSource: (source: BoardSource) => void;
   onClose: () => void;
@@ -46,7 +49,7 @@ interface BoardInsertPanelProps {
   sources: BoardSource[];
 }
 
-type Tab = "yours" | "unsplash" | "pinterest" | "ai" | "icon";
+type Tab = "yours" | "unsplash" | "pinterest" | "ai" | "icon" | "shader";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "yours", label: "Yours" },
@@ -54,6 +57,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "pinterest", label: "Pinterest" },
   { id: "ai", label: "Generate" },
   { id: "icon", label: "Icon" },
+  { id: "shader", label: "Shaders" },
 ];
 
 /** A pin link carries /pin/<id>/; anything else on the domain is a board. */
@@ -79,6 +83,7 @@ export function BoardInsertPanel({
   onAddExternal,
   onAddNode,
   onAddPhoto,
+  onAddShader,
   onAttachSource,
   onClose,
   onDetachSource,
@@ -342,10 +347,13 @@ export function BoardInsertPanel({
               for (const pin of chosen) {
                 onAddExternal({
                   altText: pin.altText,
-                  // Pinterest grants no licence of its own — most pins are
-                  // someone else's work — so the link back to the pin travels
-                  // with the item as the only provenance there is.
-                  creditName: pin.creditName ?? "Via Pinterest",
+                  // No invented caption. Unsplash's licence requires the
+                  // photographer be named wherever the photo appears, which is
+                  // why creditName paints over the image; Pinterest grants no
+                  // licence and names no photographer, so a "Via Pinterest"
+                  // watermark would be decoration on someone's board rather
+                  // than attribution. The link below is the provenance.
+                  creditName: pin.creditName,
                   creditUrl: pin.creditUrl,
                   imageUrl: pin.imageUrl,
                   thumbUrl: pin.thumbUrl,
@@ -464,6 +472,8 @@ export function BoardInsertPanel({
           </div>
         ) : null}
 
+        {tab === "shader" ? <ShaderTab onAdd={onAddShader} /> : null}
+
         {tab === "icon" ? (
           <IconTab
             icon={icon}
@@ -487,6 +497,69 @@ export function BoardInsertPanel({
             style={iconStyle}
           />
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The shader picker.
+ *
+ * Built entirely from the installed package's registry — 189 effects across ten
+ * categories, none of them listed here. A package update changes what this
+ * offers without a line of code changing, which is the whole reason the
+ * registry is worth leaning on.
+ */
+function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
+  const [category, setCategory] = useState<string>(SHADER_CATEGORIES[0] ?? "");
+  const shown = ALL_SHADERS.filter((shader) => shader.category === category);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1">
+        {SHADER_CATEGORIES.map((name) => (
+          <button
+            className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
+              category === name
+                ? "bg-white/10 text-white"
+                : "text-white/40 hover:text-white/80"
+            }`}
+            key={name}
+            onClick={() => setCategory(name)}
+            type="button"
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        {shown.map((shader) => (
+          <button
+            className="block w-full rounded border border-white/10 px-2 py-2 text-left transition-colors hover:border-white/40"
+            key={shader.name}
+            onClick={() => onAdd(shader.name)}
+            type="button"
+          >
+            <span className="flex items-center justify-between gap-2">
+              <span className="truncate text-[12px] text-white/85">
+                {shader.name}
+              </span>
+              {/* Half the library transforms whatever sits inside it rather
+                  than drawing alone, and that changes how it is used. */}
+              {shader.requiresChild ? (
+                <span className="shrink-0 text-[9px] text-sky-300/60 uppercase tracking-widest">
+                  wraps
+                </span>
+              ) : null}
+            </span>
+            {shader.description ? (
+              <span className="mt-0.5 block truncate text-[10px] text-white/35">
+                {shader.description}
+              </span>
+            ) : null}
+          </button>
+        ))}
       </div>
     </div>
   );

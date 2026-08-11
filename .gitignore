@@ -12,4 +12,11 @@ coverage/
 Icon.icon/
 watermarked-photos-backup.json
 .env.local
-photos/
+# Anchored to the repo root on purpose. Unanchored, "photos/" matches a
+# directory of that name at any depth — it was quietly excluding api/photos/,
+# where the endpoints live, and api/photos/reorder.ts had already gone missing
+# from the repo because of it.
+/photos/
+/specs/
+.claude/
+.specify/

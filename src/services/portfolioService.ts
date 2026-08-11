@@ -522,7 +522,13 @@ export const portfolioService = {
    */
   uploadImageFile: async (
     file: File,
-    onProgress?: (percent: number) => void
+    onProgress?: (percent: number) => void,
+    /**
+     * Folder in the blob store. Board drops pass "boards/uploads" so working
+     * material is not filed among the portfolio's own photographs — a board
+     * upload is a reference, not something the site publishes.
+     */
+    prefix = "portfolio"
   ): Promise<{ url: string }> => {
     const allowed = [
       "image/jpeg",
@@ -543,7 +549,7 @@ export const portfolioService = {
     const { upload } = await import("@vercel/blob/client");
 
     try {
-      const blob = await upload(`portfolio/${file.name || "image"}`, file, {
+      const blob = await upload(`${prefix}/${file.name || "image"}`, file, {
         access: "public",
         // The upload helper posts straight to the handler, so the session token
         // rides along here instead of in an Authorization header.

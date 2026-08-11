@@ -397,6 +397,27 @@ export const FRAME_INPUTS: readonly InputPort[] = [
   },
 ];
 
+/**
+ * A shader takes one picture and restyles it.
+ *
+ * Input only, and deliberately so: the effects run as WebGL on the client, so
+ * there is no rendered file for a downstream node to consume without capturing
+ * the canvas. A shader is somewhere a picture ends up, not something another
+ * node reads from.
+ *
+ * Single-arity, because the stack has one source slot. Wiring a second image in
+ * replaces the first, which is the behaviour withWire already gives "one".
+ */
+export const SHADER_INPUTS: readonly InputPort[] = [
+  {
+    arity: "one",
+    key: "image",
+    label: "Image",
+    required: false,
+    type: "image",
+  },
+];
+
 export const isSourceItemKind = (value: unknown): value is SourceItemKind =>
   value === "note" ||
   value === "photo" ||

@@ -51,13 +51,25 @@ export const CategoryPicker = ({
       return;
     }
     setQuery(selected?.label ?? "");
+    setIsSearching(false);
   }, [selected?.label, open]);
 
   const trimmed = query.trim();
   const qLower = trimmed.toLowerCase();
 
+  /**
+   * Whether the text in the box is something being typed, or just the name of
+   * what is already chosen.
+   *
+   * The field doubles as the value display and the search box, so after a pick
+   * it holds that category's label. Filtering on it regardless meant reopening
+   * the list showed only the category already selected, and every other one
+   * looked as though it had vanished.
+   */
+  const [isSearching, setIsSearching] = useState(false);
+
   const filtered = useMemo(() => {
-    if (!trimmed) {
+    if (!(isSearching && trimmed)) {
       return categories;
     }
     return categories.filter(
@@ -65,14 +77,16 @@ export const CategoryPicker = ({
         c.label.toLowerCase().includes(qLower) ||
         c.slug.toLowerCase().includes(qLower)
     );
-  }, [categories, trimmed, qLower]);
+  }, [categories, isSearching, trimmed, qLower]);
 
   const hasExactLabel = useMemo(
     () => categories.some((c) => c.label.toLowerCase() === qLower),
     [categories, qLower]
   );
 
-  const showAddNew = Boolean(trimmed) && !hasExactLabel;
+  // Only while typing: browsing the list is not a request to create anything,
+  // and offering to add the category already selected reads as a mistake.
+  const showAddNew = isSearching && Boolean(trimmed) && !hasExactLabel;
 
   const pick = useCallback(
     (cat: Category) => {

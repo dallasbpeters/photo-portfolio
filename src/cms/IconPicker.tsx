@@ -7,6 +7,20 @@ import { useEffect, useRef, useState } from "react";
 import { ICON_GROUPS } from "./icons";
 import { resolveIcon } from "./SiteNav";
 
+/** Where a capital or a digit starts a new word. */
+const WORD_BREAK = /(?<=[a-z])(?=[A-Z0-9])/g;
+const ICON_SUFFIX = /Icon$/;
+
+/**
+ * "Camera01Icon" → "Camera 01".
+ *
+ * The stored value is the pack's export name, which is what has to go in the
+ * database, but showing it raw makes the field read like a variable rather
+ * than a choice.
+ */
+const labelFor = (name: string): string =>
+  name.replace(ICON_SUFFIX, "").replace(WORD_BREAK, " ").trim();
+
 interface IconPickerProps {
   id?: string;
   onChange: (icon: string | null) => void;
@@ -22,6 +36,7 @@ interface IconPickerProps {
  */
 export function IconPicker({ value, onChange, id }: IconPickerProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click and on Escape, the way a native select behaves.
@@ -45,6 +60,21 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
 
   const Selected = resolveIcon(value);
 
+  // Match on icon name or group label, so "nature" and "leaf" both land.
+  const needle = query.trim().toLowerCase();
+  const matches = needle
+    ? ICON_GROUPS.map((group) =>
+        group.label.toLowerCase().includes(needle)
+          ? group
+          : {
+              ...group,
+              icons: group.icons.filter((name) =>
+                name.toLowerCase().includes(needle)
+              ),
+            }
+      ).filter((group) => group.icons.length > 0)
+    : ICON_GROUPS;
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -60,7 +90,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
             <>
               <HugeiconsIcon icon={Selected} size={16} />
               <span className="text-[11px] text-white/90 uppercase tracking-[0.14em]">
-                {value}
+                {labelFor(value ?? "")}
               </span>
             </>
           ) : (
@@ -81,6 +111,18 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
           className="absolute z-50 mt-1 max-h-72 w-full min-w-70 overflow-y-auto border border-white/15 bg-black shadow-2xl"
           role="listbox"
         >
+          {/* Sticky so the field stays reachable while scrolling 185 icons. */}
+          <div className="sticky top-0 z-10 border-white/10 border-b bg-black p-2">
+            <input
+              autoFocus
+              className="min-h-9 w-full border border-white/10 bg-black/60 px-2 text-[12px] text-white/90 outline-none focus:border-white/40"
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search icons…"
+              type="search"
+              value={query}
+            />
+          </div>
+
           <button
             aria-selected={value === null}
             className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[11px] uppercase tracking-[0.14em] transition-colors hover:bg-white/6 ${
@@ -97,7 +139,13 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
             No icon
           </button>
 
-          {ICON_GROUPS.map((group) => (
+          {matches.length === 0 ? (
+            <p className="px-3 py-3 text-[11px] text-white/50">
+              Nothing matches “{query.trim()}”.
+            </p>
+          ) : null}
+
+          {matches.map((group) => (
             <div className="border-white/6 border-t" key={group.label}>
               <p className="px-3 pt-3 pb-1.5 text-[9px] text-white/80 uppercase tracking-[0.22em]">
                 {group.label}
@@ -122,7 +170,7 @@ export function IconPicker({ value, onChange, id }: IconPickerProps) {
                         setOpen(false);
                       }}
                       role="option"
-                      title={name}
+                      title={labelFor(name)}
                       type="button"
                     >
                       <HugeiconsIcon icon={Icon} size={16} />

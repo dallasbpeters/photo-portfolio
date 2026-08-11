@@ -24,14 +24,19 @@ import {
   DEFAULT_NODE_WIDTH,
   DEFAULT_NOTE_HEIGHT,
   DEFAULT_NOTE_WIDTH,
+  DEFAULT_SHADER_HEIGHT,
+  DEFAULT_SHADER_WIDTH,
   DEFAULT_TEXT_HEIGHT,
   DEFAULT_TEXT_WIDTH,
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { BoardCanvas } from "../../boards/BoardCanvas";
+import { InsertPalette } from "../../boards/InsertPalette";
 import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
+import { findFreeSpot } from "../../boards/placement";
+import { newShaderConfig } from "../../boards/shaderConfig";
 import { useGraphRun } from "../../boards/useGraphRun";
 import {
   authStorage,
@@ -62,10 +67,27 @@ const PORT_SPAWN_GAP = 120;
 /** Breathing room inside a frame when it tidies collected results. */
 const FRAME_PAD = 40;
 
-const dropPoint = (count: number) => ({
-  x: CANVAS_WIDTH / 2 - 240 + (count % 6) * 40,
-  y: CANVAS_HEIGHT / 2 - 160 + (count % 6) * 40,
-});
+/**
+ * Where the next item goes.
+ *
+ * Asks for a genuinely free spot rather than nudging by a counter: the old rule
+ * offset by how many items existed, which said nothing about where any of them
+ * were, so anything added to a busy board landed on top of it.
+ */
+/** Offset between images dropped together, so they do not land in one pile. */
+const DROP_FAN = 28;
+
+const dropPoint = (
+  items: BoardItem[],
+  width: number,
+  height: number
+): { x: number; y: number } =>
+  findFreeSpot({
+    height,
+    items,
+    origin: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 },
+    width,
+  });
 
 /**
  * The fields every item carries whatever its kind, all empty.
@@ -122,6 +144,7 @@ export function BoardEditor({
    */
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isInserting, setIsInserting] = useState(false);
 
   /**
    * Publishing mints the slug server-side, so the link only exists once the
@@ -283,6 +306,24 @@ export function BoardEditor({
       document.removeEventListener("visibilitychange", onHidden);
     };
   }, [boardId]);
+
+  /**
+   * ⌘/ opens the insert palette.
+   *
+   * The header has run out of room — notes, text, images, three node types, a
+   * frame and 189 shaders do not fit on a toolbar — and searching is faster
+   * than hunting a button even when they do.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setIsInserting((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const change = useCallback((next: BoardItem[]) => {
     setItems(next);
@@ -467,17 +508,19 @@ export function BoardEditor({
    * an empty card left on the board is noise, not content.
    */
   const addWritable = (kind: "note" | "text") => {
-    const p = dropPoint(items.length);
+    const width = kind === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_TEXT_WIDTH;
+    const height = kind === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_TEXT_HEIGHT;
+    const p = dropPoint(items, width, height);
     const id = newItemId();
     change([
       ...items,
       {
         ...BLANK_ITEM,
         body: "",
-        height: kind === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_TEXT_HEIGHT,
+        height,
         id,
         kind,
-        width: kind === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_TEXT_WIDTH,
+        width,
         x: p.x,
         y: p.y,
         z: items.length + 1,
@@ -497,7 +540,7 @@ export function BoardEditor({
     nodeType: NodeTypeId,
     config: Record<string, unknown> = {}
   ) => {
-    const p = dropPoint(items.length);
+    const p = dropPoint(items, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT);
     change([
       ...items,
       {
@@ -524,7 +567,7 @@ export function BoardEditor({
    * z 0 so it sits under everything.
    */
   const addFrame = () => {
-    const p = dropPoint(items.length);
+    const p = dropPoint(items, DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT);
     change([
       ...items,
       {
@@ -541,8 +584,35 @@ export function BoardEditor({
     ]);
   };
 
+  /**
+   * Places a shader on the canvas.
+   *
+   * Only the effect's name is stored. Its parameters stay absent until one is
+   * changed, so the package's own defaults keep applying — a package update
+   * improves an existing board rather than being overridden by values copied
+   * out of it at the moment it was placed.
+   */
+  const addShader = (name: string) => {
+    const p = dropPoint(items, DEFAULT_SHADER_WIDTH, DEFAULT_SHADER_HEIGHT);
+    change([
+      ...items,
+      {
+        ...BLANK_ITEM,
+        config: newShaderConfig(name) as unknown as Record<string, unknown>,
+        height: DEFAULT_SHADER_HEIGHT,
+        id: newItemId(),
+        kind: "shader",
+        width: DEFAULT_SHADER_WIDTH,
+        x: p.x,
+        y: p.y,
+        z: items.length + 1,
+      },
+    ]);
+    setIsPicking(false);
+  };
+
   const addPhoto = (photo: Photo) => {
-    const p = dropPoint(items.length);
+    const p = dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT);
     change([
       ...items,
       {
@@ -564,7 +634,7 @@ export function BoardEditor({
 
   /** An Unsplash reference or a generated image. */
   const addExternal = (image: ExternalImage) => {
-    const p = dropPoint(items.length);
+    const p = dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT);
     change([
       ...items,
       {
@@ -584,6 +654,64 @@ export function BoardEditor({
         z: items.length + 1,
       },
     ]);
+  };
+
+  /**
+   * Images dragged onto the board.
+   *
+   * These are working material — a reference shot, a sketch, something to feed
+   * a node — so they are stored and pinned to the board and nothing else. The
+   * site's gallery is a separate act: a photograph appears there only when a
+   * row is written to `photos`, which this deliberately never does. Uploading
+   * and publishing stay different decisions.
+   */
+  const dropFiles = async (files: File[], point: { x: number; y: number }) => {
+    const toastId = toast.loading(
+      files.length === 1 ? "Uploading image…" : `Uploading ${files.length}…`
+    );
+    // Transferred together rather than one after another: the bytes go straight
+    // to blob storage and never touch a function, so several at once is the
+    // normal case and a queue would only make a folder of images slower.
+    const results = await Promise.allSettled(
+      files.map((file) =>
+        portfolioService.uploadImageFile(file, undefined, "boards/uploads")
+      )
+    );
+
+    const added: BoardItem[] = [];
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const reason: unknown = result.reason;
+        toast.error(
+          reason instanceof Error
+            ? reason.message
+            : `Could not upload ${files[index]?.name ?? "image"}`
+        );
+        return;
+      }
+      const { url } = result.value;
+      added.push({
+        ...BLANK_ITEM,
+        height: DEFAULT_IMAGE_HEIGHT,
+        id: newItemId(),
+        imageUrl: url,
+        kind: "reference",
+        thumbUrl: url,
+        width: DEFAULT_IMAGE_WIDTH,
+        // Fanned out from the drop so several files do not land in a stack.
+        x: Math.round(point.x - DEFAULT_IMAGE_WIDTH / 2 + index * DROP_FAN),
+        y: Math.round(point.y - DEFAULT_IMAGE_HEIGHT / 2 + index * DROP_FAN),
+        z: items.length + index + 1,
+      });
+    });
+
+    toast.dismiss(toastId);
+    if (added.length > 0) {
+      change([...items, ...added]);
+      toast.success(
+        added.length === 1 ? "Image added" : `${added.length} images added`
+      );
+    }
   };
 
   const close = async () => {
@@ -730,16 +858,40 @@ export function BoardEditor({
           onChange={change}
           onConfigChange={changeConfig}
           onCreateFromPort={createFromPort}
+          onDropFiles={(files, point) => void dropFiles(files, point)}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
           onWiresChange={changeWires}
           wires={wires}
         />
+
+        {isInserting ? (
+          <InsertPalette
+            onChoose={(action) => {
+              setIsInserting(false);
+              if (action.kind === "writable") {
+                addWritable(action.writable);
+              } else if (action.kind === "frame") {
+                addFrame();
+              } else if (action.kind === "node") {
+                addNode(action.nodeType);
+              } else if (action.kind === "shader") {
+                addShader(action.name);
+              } else {
+                // Images need a source chosen, so the palette hands over to the
+                // panel that can ask rather than guessing one.
+                setIsPicking(true);
+              }
+            }}
+            onDismiss={() => setIsInserting(false)}
+          />
+        ) : null}
 
         {isPicking ? (
           <BoardInsertPanel
             onAddExternal={addExternal}
             onAddNode={addNode}
             onAddPhoto={addPhoto}
+            onAddShader={addShader}
             onAttachSource={attachSource}
             onClose={() => setIsPicking(false)}
             onDetachSource={detachSource}

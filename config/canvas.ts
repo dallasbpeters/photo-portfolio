@@ -53,6 +53,9 @@ export const PORT_RADIUS_PX = 7;
 export const WIRE_STROKE_PX = 2;
 export const WIRE_HIT_PX = 14;
 
+/** Radius of the remove button that appears on a hovered wire, in screen pixels. */
+export const WIRE_BADGE_PX = 9;
+
 /** Default size for a newly dropped image and note, in canvas units. */
 export const DEFAULT_IMAGE_WIDTH = 480;
 export const DEFAULT_IMAGE_HEIGHT = 320;
@@ -79,6 +82,15 @@ export const DEFAULT_NODE_HEIGHT = 460;
  * One that has to be resized before anything fits inside is a frame you have
  * to think about before you can use it.
  */
+/**
+ * A shader arrives at a size worth looking at.
+ *
+ * Wider than tall because most of the library is backdrops and gradients,
+ * which read as bands rather than as squares.
+ */
+export const DEFAULT_SHADER_WIDTH = 640;
+export const DEFAULT_SHADER_HEIGHT = 400;
+
 export const DEFAULT_FRAME_WIDTH = 1200;
 export const DEFAULT_FRAME_HEIGHT = 900;
 

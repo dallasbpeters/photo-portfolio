@@ -30,16 +30,49 @@ export interface GeneratedImage {
 }
 
 interface FalImage {
+  /** What fal says it made — often truer than the header it serves it with. */
+  content_type?: string | null;
   height?: number | null;
   url?: string;
   width?: number | null;
 }
 
+/** One entry of fal's validation-error array. */
+interface FalDetail {
+  msg?: string;
+}
+
 interface FalResponse {
   description?: string;
   detail?: unknown;
+  /** Single-output models — the vectoriser among them — answer with one. */
+  image?: FalImage;
   images?: FalImage[];
 }
+
+/**
+ * The readable part of a fal error.
+ *
+ * `detail` is a string for some failures and an array of validation objects for
+ * others — the shape FastAPI produces. Only the string form was ever read, so
+ * every rejected Recraft call surfaced as a bare "status 422" and the actual
+ * reason ("Unsupported image format", "Failed to load the image") was thrown
+ * away. That silence is what made these calls so hard to diagnose.
+ */
+const falDetail = (json: FalResponse, status: number): string => {
+  if (typeof json.detail === "string") {
+    return json.detail;
+  }
+  if (Array.isArray(json.detail)) {
+    const messages = (json.detail as FalDetail[])
+      .map((entry) => entry?.msg)
+      .filter((msg): msg is string => typeof msg === "string");
+    if (messages.length > 0) {
+      return messages.join("; ");
+    }
+  }
+  return `status ${status}`;
+};
 
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
@@ -106,14 +139,14 @@ export const generateImage = async (
 
   const json = (await res.json().catch(() => ({}))) as FalResponse;
   if (!res.ok) {
-    // fal reports validation problems in `detail`; surface something readable
-    // rather than a bare status.
-    const detail =
-      typeof json.detail === "string" ? json.detail : `status ${res.status}`;
-    throw new Error(`Image generation failed (${detail})`);
+    throw new Error(`Image generation failed (${falDetail(json, res.status)})`);
   }
 
-  const image = json.images?.[0];
+  // Two response shapes, because fal has two: models that can produce several
+  // return `images`, and single-output ones — Recraft's vectoriser, for
+  // instance — return `image`. Reading only the list made a perfectly good
+  // 200 look like a model that produced nothing.
+  const image = json.images?.[0] ?? json.image;
   if (!image?.url) {
     throw new Error("The model returned no image");
   }
@@ -122,7 +155,7 @@ export const generateImage = async (
     description: json.description ?? null,
     // The pro model omits dimensions, so these are genuinely optional.
     height: typeof image.height === "number" ? image.height : null,
-    url: await persistGenerated(image.url, "boards/ai"),
+    url: await persistGenerated(image.url, "boards/ai", image.content_type),
     width: typeof image.width === "number" ? image.width : null,
   };
 };

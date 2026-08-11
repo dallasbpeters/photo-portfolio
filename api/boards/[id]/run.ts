@@ -34,6 +34,9 @@ type Sql = ReturnType<typeof getSql>;
 /** An explicit scheme, as api/ai/generate.ts requires for the same reason. */
 const HTTP_SCHEME = /^https?:\/\//i;
 
+/** Matches an SVG by extension, ignoring any query string. */
+const SVG_URL = /\.svg(\?|$)/i;
+
 /**
  * Runs exactly one node on a board.
  *
@@ -104,6 +107,16 @@ const singleOutputOf = (row: BoardItemRow): string | null => {
     return typeof text === "string" && text.trim() ? text : null;
   }
   const result = asObject(row.result);
+  // A node that has had a version picked hands that one downstream: choosing a
+  // version is choosing the node's output, not merely what it displays.
+  const history = Array.isArray(result.history)
+    ? (result.history as { url?: string }[])
+    : [];
+  const selected = Number(asObject(row.config).selectedVersion);
+  const chosen = Number.isFinite(selected) ? history[selected]?.url : undefined;
+  if (typeof chosen === "string") {
+    return chosen;
+  }
   return typeof result.url === "string" ? result.url : null;
 };
 
@@ -262,6 +275,36 @@ const jobsFor = (
   return jobs;
 };
 
+/**
+ * How many past images a node keeps.
+ *
+ * Every one is a paid generation and worth keeping, but a node that has been
+ * iterated on for months should not carry an unbounded list into every board
+ * load. The blobs outlive this — only the reference is trimmed.
+ */
+const MAX_HISTORY = 40;
+
+/**
+ * What a node has made before this run.
+ *
+ * Appended to rather than replaced, so altering a prompt adds to the gallery
+ * instead of discarding the images the previous prompt produced — they are
+ * still in blob storage and still worth looking at. Seeded from whatever shape
+ * the node already had, so switching history on does not strand the results
+ * that predate it.
+ */
+const priorHistoryOf = (previous: Record<string, unknown>): Variation[] => {
+  if (Array.isArray(previous.history)) {
+    return previous.history as Variation[];
+  }
+  if (Array.isArray(previous.variations)) {
+    return (previous.variations as Variation[]).filter(Boolean);
+  }
+  return typeof previous.url === "string"
+    ? [previous as unknown as Variation]
+    : [];
+};
+
 /** One image in a node's result. Mirrors BoardItemVariation in src/types.ts. */
 interface Variation {
   description: string | null;
@@ -366,10 +409,23 @@ const unmetRequirement = (
   values: Record<string, string[] | undefined>
 ): Record<string, unknown> | null => {
   if (shape === "image") {
-    if ((values.image?.length ?? 0) === 0) {
+    const images = values.image ?? [];
+    if (images.length === 0) {
       const label = falModelFor(model)?.label ?? "This model";
       return {
         error: `${label} traces an existing image; wire one into it.`,
+        missingPort: "image",
+      };
+    }
+    // A tracer reads pixels, and fal accepts only .png/.jpg/.jpeg/.webp. The
+    // trap is that the other two Recraft models both *emit* SVG, so wiring one
+    // into this one — the obvious thing to try — is a request that can only
+    // fail. Refused here rather than at fal, because fal bills first.
+    const vector = images.find((url) => SVG_URL.test(url));
+    if (vector) {
+      return {
+        error:
+          "This model traces a raster image (PNG, JPEG or WebP). Its input is an SVG, which is already vector art — wire in a photo or a generated image instead.",
         missingPort: "image",
       };
     }
@@ -671,15 +727,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      const history = [...priorHistoryOf(previous), produced].slice(
+        -MAX_HISTORY
+      );
+
       const result = {
         description: produced.description,
         fingerprint,
         height: produced.height,
+        // The first image is what a wire carries downstream: a wire moves one
+        // image, so the rest of a batch is for looking at, not for feeding on.
+        history,
         isVector: produced.isVector,
         kind: "image" as const,
         ranAt: new Date().toISOString(),
-        // The first image is what a wire carries downstream: a wire moves one
-        // image, so the rest of a batch is for looking at, not for feeding on.
         url: primaryUrl,
         variations,
         width: produced.width,

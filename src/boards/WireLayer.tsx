@@ -1,6 +1,8 @@
+import { useState } from "react";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
+  WIRE_BADGE_PX,
   WIRE_HIT_PX,
   WIRE_STROKE_PX,
 } from "../../config/canvas.js";
@@ -56,9 +58,11 @@ export function WireLayer({
   scale,
   wires,
 }: WireLayerProps) {
+  const [hovered, setHovered] = useState<string | null>(null);
   const byId = new Map(items.map((item) => [item.id, item]));
   const stroke = WIRE_STROKE_PX / scale;
   const hit = WIRE_HIT_PX / scale;
+  const badge = WIRE_BADGE_PX / scale;
 
   return (
     <svg
@@ -84,27 +88,72 @@ export function WireLayer({
         }
         const d = wirePath(from, to);
 
+        const isHovered = hovered === wire.id;
+        // Both control points sit level with their own endpoint, so the curve's
+        // midpoint is exactly the average of the two ends.
+        const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+
         return (
           <g key={wire.id}>
             <title>{`${source.kind} → ${target.kind}`}</title>
-            <path d={d} stroke="rgb(56 189 248 / 0.55)" strokeWidth={stroke} />
+            <path
+              className="transition-all duration-300"
+              d={d}
+              stroke={
+                isHovered ? "rgb(248 113 113 / 0.95)" : "rgb(56 189 248 / 0.55)"
+              }
+              strokeWidth={isHovered ? stroke * 1.5 : stroke}
+            />
             {/* A 2px curve is nearly impossible to hit with a pointer and
                 hopeless with a thumb, so a wide invisible band carries the
                 interaction. Only present when the board can be edited. */}
             {readOnly ? null : (
               <path
-                className="pointer-events-stroke cursor-pointer"
                 d={d}
+                onPointerEnter={() => setHovered(wire.id)}
+                onPointerLeave={() => setHovered(null)}
+                stroke="transparent"
+                strokeWidth={hit}
+                // An inline style, not a class: `pointer-events-stroke` was
+                // never a Tailwind utility — it emits only -none and -auto — so
+                // this path silently inherited `none` from the SVG and no wire
+                // has ever received a pointer event.
+                style={{ pointerEvents: "stroke" }}
+              />
+            )}
+            {isHovered && !readOnly ? (
+              // biome-ignore lint/a11y/useSemanticElements: SVG has no button element, and an HTML one cannot be placed on a curve inside the canvas transform without being projected out of it
+              <g
+                className="cursor-pointer"
                 onPointerDown={(e) => {
-                  // The surface would otherwise read this as a background
-                  // press and start panning the board.
+                  // The surface would otherwise read this as a background press
+                  // and start panning the board.
                   e.stopPropagation();
                   onDelete?.(wire.id);
                 }}
-                stroke="transparent"
-                strokeWidth={hit}
-              />
-            )}
+                onPointerEnter={() => setHovered(wire.id)}
+                onPointerLeave={() => setHovered(null)}
+                role="button"
+                // Same reason as the hit path: the SVG above it is inert.
+                style={{ pointerEvents: "all" }}
+              >
+                <title>Remove this connection</title>
+                <circle
+                  cx={mid.x}
+                  cy={mid.y}
+                  fill="rgb(24 24 27)"
+                  r={badge}
+                  stroke="rgb(248 113 113 / 0.95)"
+                  strokeWidth={stroke}
+                />
+                <path
+                  d={`M ${mid.x - badge / 3} ${mid.y - badge / 3} L ${mid.x + badge / 3} ${mid.y + badge / 3} M ${mid.x + badge / 3} ${mid.y - badge / 3} L ${mid.x - badge / 3} ${mid.y + badge / 3}`}
+                  stroke="rgb(248 113 113 / 0.95)"
+                  strokeLinecap="round"
+                  strokeWidth={stroke}
+                />
+              </g>
+            ) : null}
           </g>
         );
       })}

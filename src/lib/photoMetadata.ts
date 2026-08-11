@@ -58,6 +58,37 @@ export const formatShutter = (
   return `1/${Math.round(1 / seconds)}`;
 };
 
+/** Trailing "s", as in "2s". */
+const SECONDS_SUFFIX = /s$/i;
+/** The seconds mark, as in 2". */
+const INCH_MARK = /"/g;
+/** "1/250", with or without spaces around the slash. */
+const SHUTTER_FRACTION = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/;
+
+/**
+ * Reads a shutter speed the way a photographer writes one.
+ *
+ * Accepts "1/250", "0.004" and "2s", because the stored unit is seconds but
+ * nobody thinks in seconds above 1/1 — the field would otherwise demand mental
+ * arithmetic to correct a value the camera got wrong.
+ */
+export const parseShutter = (input: string): number | undefined => {
+  const raw = input.trim().replace(SECONDS_SUFFIX, "").replace(INCH_MARK, "");
+  if (!raw) {
+    return;
+  }
+
+  const fraction = raw.match(SHUTTER_FRACTION);
+  if (fraction) {
+    const top = Number(fraction[1]);
+    const bottom = Number(fraction[2]);
+    return bottom > 0 && top > 0 ? top / bottom : undefined;
+  }
+
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+};
+
 export const formatExif = (exif: PhotoExif | null | undefined): string[] => {
   if (!exif) {
     return [];

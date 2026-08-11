@@ -1,6 +1,16 @@
-import { Eye, EyeOff, FileText, Plus, Save, Trash2, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Delete02Icon,
+  Edit02Icon,
+  EyeIcon,
+  FileEmpty02Icon,
+  FloppyDiskIcon,
+  ViewOffIcon,
+} from "@hugeicons-pro/core-stroke-standard";
+import { Plus, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { IconPicker } from "../../cms/IconPicker";
 import { PageEditor } from "../../cms/PageEditor";
@@ -10,7 +20,13 @@ import {
   pagesApi,
 } from "../../services/portfolioService";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useConfirm } from "./ConfirmProvider";
@@ -29,6 +45,11 @@ const slugify = (title: string): string =>
 
 export function PagesPanel() {
   const { confirm } = useConfirm();
+  const navigate = useNavigate();
+  // The address says which page is open, rather than a piece of state: editing
+  // is a place you can link someone to, and Back returns to the list instead of
+  // leaving the admin entirely.
+  const { slug: editingSlug } = useParams<{ slug: string }>();
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [editing, setEditing] = useState<PageRecord | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -65,7 +86,7 @@ export function PagesPanel() {
       setNewTitle("");
       setIsCreating(false);
       await reload();
-      setEditing(created);
+      openPage(created.slug);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not create page");
     } finally {
@@ -73,12 +94,46 @@ export function PagesPanel() {
     }
   };
 
-  const openPage = async (slug: string): Promise<void> => {
-    try {
-      setEditing(await pagesApi.get(slug));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not open page");
+  /**
+   * Loads whichever page the address names.
+   *
+   * Driven by the URL so a reload, a pasted link and the Back button all land
+   * in the same place. `editing` is cleared first, so moving between two pages
+   * cannot briefly show the previous one's content in the editor.
+   */
+  useEffect(() => {
+    if (!editingSlug) {
+      setEditing(null);
+      return;
     }
+    let cancelled = false;
+    setEditing(null);
+    void (async () => {
+      try {
+        const page = await pagesApi.get(editingSlug);
+        if (!cancelled) {
+          setEditing(page);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(
+            err instanceof Error ? err.message : "Could not open page"
+          );
+          navigate("/admin/pages", { replace: true });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editingSlug, navigate]);
+
+  const openPage = (slug: string): void => {
+    navigate(`/admin/pages/${encodeURIComponent(slug)}`);
+  };
+
+  const closeEditor = (): void => {
+    navigate("/admin/pages");
   };
 
   const handleDelete = async (page: PageSummary): Promise<void> => {
@@ -95,8 +150,8 @@ export function PagesPanel() {
     try {
       await pagesApi.remove(page.slug);
       toast.success("Page deleted");
-      if (editing?.slug === page.slug) {
-        setEditing(null);
+      if (editingSlug === page.slug) {
+        closeEditor();
       }
       await reload();
     } catch (err) {
@@ -107,7 +162,7 @@ export function PagesPanel() {
   if (editing) {
     return (
       <PageEditorPanel
-        onClose={() => setEditing(null)}
+        onClose={closeEditor}
         onSaved={async () => {
           await reload();
         }}
@@ -117,12 +172,12 @@ export function PagesPanel() {
   }
 
   return (
-    <Card className="border-white/10 bg-white/[0.02]">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-          <FileText aria-hidden size={16} />
+    <div className="grid w-full max-w-7xl grid-cols-1 gap-4 border-white/10">
+      <div className="flex flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+          <HugeiconsIcon icon={FileEmpty02Icon} size={16} />
           Pages
-        </CardTitle>
+        </div>
         <Button
           className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
           onClick={() => setIsCreating((v) => !v)}
@@ -132,24 +187,22 @@ export function PagesPanel() {
           {isCreating ? <X size={14} /> : <Plus size={14} />}
           {isCreating ? "Cancel" : "New page"}
         </Button>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-5">
-        {isCreating ? (
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(e) => void handleCreate(e)}
-          >
-            <div className="min-w-[220px] flex-1 space-y-2">
-              <Label className={labelClass} htmlFor="new-page-title">
-                Page title
-              </Label>
+      {isCreating ? (
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => void handleCreate(e)}
+        >
+          <Card className="w-full border-white bg-white/2">
+            <CardHeader className={labelClass}>Page title</CardHeader>
+            <CardContent>
               <Input
                 autoFocus
                 className={inputClass}
                 id="new-page-title"
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="About"
+                placeholder="Page Title"
                 value={newTitle}
               />
               {newTitle.trim() ? (
@@ -157,59 +210,73 @@ export function PagesPanel() {
                   /{slugify(newTitle)}
                 </p>
               ) : null}
-            </div>
-            <Button
-              className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-              disabled={isBusy || !newTitle.trim()}
-              type="submit"
-              variant="outline"
-            >
-              Create draft
-            </Button>
-          </form>
-        ) : null}
+            </CardContent>
+            <CardFooter className="flex items-center justify-end gap-3">
+              <Button
+                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+                disabled={isBusy || !newTitle.trim()}
+                type="submit"
+                variant="outline"
+              >
+                Create draft
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
+      ) : null}
 
-        {pages.length === 0 ? (
-          <p className="text-[11px] text-white/80 uppercase tracking-[0.15em]">
-            No pages yet. Create one and it appears under the site title once
-            published.
-          </p>
-        ) : (
-          <ul className="divide-y divide-white/[0.06]">
-            {pages.map((page) => (
-              <li className="flex items-center gap-3 py-3" key={page.id}>
-                <button
-                  className="flex-1 text-left"
-                  onClick={() => void openPage(page.slug)}
-                  type="button"
-                >
-                  <span className="text-sm text-white/85">{page.title}</span>
-                  <span className="ml-2 font-mono text-[10px] text-white/80">
-                    /{page.slug}
-                  </span>
-                </button>
-                <a
-                  className="text-[10px] text-white/90 uppercase tracking-[0.16em] transition-colors hover:text-white"
-                  href={`/${page.slug}`}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  View
-                </a>
-                <button
-                  aria-label={`Delete ${page.title}`}
-                  className="text-white/80 transition-colors hover:text-red-400"
-                  onClick={() => void handleDelete(page)}
-                  type="button"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+      {pages.length === 0 ? (
+        <p className="text-[11px] text-white/80 uppercase tracking-[0.15em]">
+          No pages yet. Create one and it appears under the site title once
+          published.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 divide-y divide-white/6">
+          {pages.map((page) => (
+            <Card className="border-white bg-white/2" key={page.id}>
+              <CardContent>
+                <li className="flex items-center gap-3 py-3">
+                  <button
+                    className="flex-1 text-left"
+                    onClick={() => openPage(page.slug)}
+                    type="button"
+                  >
+                    <span className="text-sm text-white/85">{page.title}</span>
+                    <span className="ml-2 font-mono text-[10px] text-white/80">
+                      /{page.slug}
+                    </span>
+                  </button>
+                  <a
+                    className="text-[10px] text-white/90 uppercase tracking-[0.16em] transition-colors hover:text-white"
+                    href={`/${page.slug}`}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    View
+                  </a>
+                  <button
+                    aria-label={`Edit ${page.title}`}
+                    className="text-white/80 transition-colors hover:text-blue-400"
+                    onClick={() => openPage(page.slug)}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={Edit02Icon} size={14} />
+                  </button>
+                  <button
+                    aria-label={`Delete ${page.title}`}
+                    className="text-white/80 transition-colors hover:text-red-400"
+                    onClick={() => void handleDelete(page)}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  </button>
+                </li>
+              </CardContent>
+            </Card>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -250,10 +317,10 @@ function PageEditorPanel({
   };
 
   return (
-    <Card className="border-white/10 bg-white/[0.02]">
+    <Card className="w-full max-w-7xl border-white/10 bg-white/2">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-          <FileText aria-hidden size={16} />
+          <HugeiconsIcon aria-hidden icon={FileEmpty02Icon} size={16} />
           {draft.title}
         </CardTitle>
         <Button
@@ -316,7 +383,7 @@ function PageEditorPanel({
             type="button"
             variant="outline"
           >
-            <Save size={14} />
+            <HugeiconsIcon icon={FloppyDiskIcon} size={14} />
             {isSaving ? "Saving…" : "Save"}
           </Button>
 
@@ -332,9 +399,9 @@ function PageEditorPanel({
             variant="ghost"
           >
             {draft.status === "published" ? (
-              <EyeOff size={14} />
+              <HugeiconsIcon icon={EyeIcon} size={14} />
             ) : (
-              <Eye size={14} />
+              <HugeiconsIcon icon={ViewOffIcon} size={14} />
             )}
             {draft.status === "published" ? "Unpublish" : "Publish"}
           </Button>

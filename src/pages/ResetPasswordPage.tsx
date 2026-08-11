@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-black font-sans text-white">
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
       <Toaster position="top-center" theme="dark" />
       <nav className="border-white/10 border-b bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
         <div className="mx-auto flex min-h-16 items-center px-4 sm:min-h-20 sm:px-6">

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { extractPhotoMetadata } from "../lib/photoMetadata";
 import posthog from "../lib/posthog";
 import { portfolioService } from "../services/portfolioService";
-import type { Category } from "../types";
+import type { Category, Photo } from "../types";
 
 interface PhotoForm {
   categoryId: string;
@@ -24,7 +24,7 @@ export interface NewPhotoResult {
 
 export const useNewPhoto = (
   categories: Category[],
-  reload: () => Promise<void>
+  onAdded: (photo: Photo) => void
 ): NewPhotoResult => {
   const [form, setForm] = useState<PhotoForm>({ categoryId: "", title: "" });
   const [uploadDraftFile, setUploadDraftFile] = useState<File | null>(null);
@@ -82,7 +82,7 @@ export const useNewPhoto = (
         url,
         width: meta.width,
       });
-      await reload();
+      onAdded(added);
       setUploadDraftFile(null);
       // biome-ignore lint/suspicious/noUnnecessaryConditions: React assigns ref.current through the ref prop, which the checker cannot see — the guard is required before mount
       if (imageFileInputRef.current) {

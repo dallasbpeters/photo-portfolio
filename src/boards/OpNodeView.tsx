@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert02Icon,
+  Download01Icon,
   PlayIcon,
   RefreshIcon,
   SparklesIcon,
@@ -12,6 +13,8 @@ import {
   type SettingDef,
 } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
+import { downloadImage } from "./downloadImage";
+import { pickImages, selectedIndex } from "./itemOutput";
 
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
@@ -127,22 +130,86 @@ function SettingField({
  *
  * A grid because comparing them is the entire reason for asking for several.
  */
-function ResultImages({ images }: { images: BoardItemVariation[] }) {
+function ResultImages({
+  images,
+  onSelect,
+  selected,
+}: {
+  images: BoardItemVariation[];
+  onSelect: (index: number) => void;
+  selected: number;
+}) {
   if (images.length === 0) {
     return null;
   }
+  const hero = images[Math.min(selected, images.length - 1)] ?? images[0];
+
   return (
-    <div className={images.length > 1 ? "grid grid-cols-2 gap-1" : "block"}>
-      {images.map((variation, index) => (
-        <img
-          alt={variation.description ?? `Variation ${index + 1}`}
-          className="h-auto w-full rounded border border-white/10 object-contain"
-          height={variation.height ?? undefined}
-          key={variation.url}
-          src={variation.url}
-          width={variation.width ?? undefined}
-        />
-      ))}
+    <div className="space-y-1">
+      {hero ? (
+        <div className="group relative">
+          <img
+            alt={hero.description ?? "Result"}
+            className="h-auto w-full rounded border border-white/10 object-contain"
+            height={hero.height ?? undefined}
+            src={hero.url}
+            width={hero.width ?? undefined}
+          />
+          {/* Saving the picture is the point of having made it, and there was
+              no way to get one off the board short of a right-click. Sits on
+              the image rather than in the footer so it always refers to the
+              version being looked at. */}
+          <button
+            aria-label="Download this version"
+            className="absolute top-1 right-1 rounded bg-black/70 p-1.5 text-white/70 opacity-0 backdrop-blur transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+            onClick={() => {
+              void downloadImage(hero.url, hero.description ?? "generated");
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            <HugeiconsIcon icon={Download01Icon} size={13} />
+          </button>
+        </div>
+      ) : null}
+
+      {/* The gallery: everything this node has made, not just the last one.
+          Shown from the first image rather than the second, so it is visibly
+          the place versions collect instead of appearing only once there
+          happen to be two. */}
+      {images.length > 0 ? (
+        <div className="space-y-1">
+          <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+            {images.length === 1 ? "1 version" : `${images.length} versions`}
+          </p>
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {images.map((variation, index) => (
+              <button
+                aria-label={`Version ${index + 1}`}
+                aria-pressed={index === selected}
+                className={`shrink-0 overflow-hidden rounded border transition-colors ${
+                  index === selected
+                    ? "border-sky-300"
+                    : "border-white/10 hover:border-white/40"
+                }`}
+                key={variation.url}
+                onClick={() => onSelect(index)}
+                onPointerDown={(e) => e.stopPropagation()}
+                type="button"
+              >
+                <img
+                  alt={variation.description ?? `Version ${index + 1}`}
+                  className="size-12 object-cover"
+                  height={48}
+                  loading="lazy"
+                  src={variation.url}
+                  width={48}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -176,6 +243,31 @@ function RunningGlow() {
  * point of the graph is that what produced an image travels with the image
  * instead of being discarded when a side panel closes.
  */
+/**
+ * What a node looks like on a published board: the picture, and nothing else.
+ */
+function PublishedResult({
+  images,
+  selected,
+}: {
+  images: BoardItemVariation[];
+  selected: number;
+}) {
+  const shown = images[Math.min(selected, images.length - 1)];
+  if (!shown) {
+    return null;
+  }
+  return (
+    <img
+      alt={shown.description ?? ""}
+      className="h-full w-full object-contain"
+      height={shown.height ?? undefined}
+      src={shown.url}
+      width={shown.width ?? undefined}
+    />
+  );
+}
+
 export function OpNodeView({
   hasWiredPrompt,
   item,
@@ -187,6 +279,15 @@ export function OpNodeView({
   const state = item.runState ?? "idle";
   const config = item.config ?? {};
   const isRunning = state === "running";
+  const stored = item.result;
+  const images = pickImages(stored).filter((v) => Boolean(v?.url));
+
+  // On a published board a node is not a node: it is whatever it produced.
+  // The header, the state, the prompt and the version strip are all working
+  // material, and a visitor came to look at the picture.
+  if (readOnly) {
+    return <PublishedResult images={images} selected={selectedIndex(config)} />;
+  }
 
   if (!type) {
     return (
@@ -202,22 +303,6 @@ export function OpNodeView({
   const isSource = !type.capability;
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
-
-  /**
-   * Every image this node has to show.
-   *
-   * `variations` arrived with batching; results saved before it have only a
-   * single `url`, and reading the array alone left those images sitting in the
-   * database undrawn. The nulls are real too — a sparse array serialises its
-   * holes, so a batch that has filled slot 2 but not slot 1 round-trips as
-   * [null, {...}].
-   */
-  const stored = item.result;
-  const images = (
-    stored?.variations?.length
-      ? stored.variations.filter((v) => Boolean(v?.url))
-      : ((stored?.url ? [stored] : []) as BoardItemVariation[])
-  ) as BoardItemVariation[];
 
   return (
     <>
@@ -245,7 +330,13 @@ export function OpNodeView({
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
           {/* A batch lays its variations out as a grid so they can be compared
               at a glance, which is the entire reason for asking for several. */}
-          <ResultImages images={images} />
+          <ResultImages
+            images={images}
+            onSelect={(index) =>
+              onConfigChange({ ...config, selectedVersion: index })
+            }
+            selected={selectedIndex(config)}
+          />
 
           {/* A prompt arriving down a wire wins over one typed here, so saying
               so is better than leaving a field that looks live but is ignored. */}

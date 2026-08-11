@@ -26,7 +26,8 @@ export type BoardItemKind =
   | "note"
   | "text"
   | "op"
-  | "frame";
+  | "frame"
+  | "shader";
 
 export interface BoardRow {
   cover_url: string | null;
@@ -187,7 +188,12 @@ export const rowToItemDto = (
   options: ItemDtoOptions = {}
 ): BoardItemDto => ({
   body: row.body,
-  config: jsonObject(row.config),
+  // An operation node's settings are its prompt and its model — the working
+  // notes behind a picture rather than the picture. A published board shows
+  // what was made, not how, so they do not travel to an anonymous reader.
+  // A shader's settings are the artwork itself and must stay.
+  config:
+    options.isPublicReader && row.kind === "op" ? null : jsonObject(row.config),
   creditName: row.credit_name,
   creditUrl: row.credit_url,
   fontSize:
@@ -261,7 +267,8 @@ export const isBoardItemKind = (value: unknown): value is BoardItemKind =>
   value === "note" ||
   value === "text" ||
   value === "op" ||
-  value === "frame";
+  value === "frame" ||
+  value === "shader";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -333,6 +340,18 @@ const parseNodeConfig = (
   >;
 
   const config: Record<string, unknown> = {};
+
+  // Which stored version the node is showing and handing downstream. Not a
+  // node-type setting — it belongs to the results rather than to the recipe —
+  // but it lives in the same object, so it has to survive the filter that keeps
+  // unknown keys out.
+  const selected = Number(
+    (raw as Record<string, unknown> | null)?.selectedVersion
+  );
+  if (Number.isFinite(selected) && selected >= 0) {
+    config.selectedVersion = Math.trunc(selected);
+  }
+
   for (const setting of type.settings) {
     const value = source[setting.key];
     if (setting.kind === "text") {
@@ -359,6 +378,68 @@ const parseNodeConfig = (
         : setting.default;
   }
   return config;
+};
+
+/**
+ * A shader item's configuration: an ordered stack of effects and their values.
+ *
+ * Shape only, deliberately. The parameter schema lives in the `shaders` package
+ * registry, which is a browser dependency — importing 189 shaders' metadata
+ * into a serverless function that never renders anything would be weight for
+ * nothing. These values also reach no third party, no query and no generator:
+ * the worst a bad one can do is render badly, for the one person who typed it.
+ * So this bounds the payload and drops anything malformed, and the controls
+ * that produced the values are what keep them in range.
+ */
+const MAX_SHADER_LAYERS = 12;
+const MAX_SHADER_PROPS = 80;
+
+const parseShaderConfig = (raw: unknown): Record<string, unknown> | null => {
+  if (typeof raw !== "object" || raw === null) {
+    return null;
+  }
+  const { layers } = raw as { layers?: unknown };
+  if (!Array.isArray(layers)) {
+    return null;
+  }
+  const parsed = layers
+    .slice(0, MAX_SHADER_LAYERS)
+    .map((layer) => {
+      const o = layer as { id?: unknown; name?: unknown; props?: unknown };
+      const name = text(o.name, 80);
+      if (!name) {
+        return null;
+      }
+      // Assigned here when absent so a stack saved before layers had identity
+      // gains it, rather than the canvas having to invent one every render.
+      const id =
+        text(o.id, 40) ?? `l${Math.random().toString(36).slice(2, 10)}`;
+      const props: Record<string, unknown> = {};
+      const source =
+        typeof o.props === "object" && o.props !== null
+          ? (o.props as Record<string, unknown>)
+          : {};
+      for (const [key, value] of Object.entries(source).slice(
+        0,
+        MAX_SHADER_PROPS
+      )) {
+        // Primitives, plus the small objects and arrays the position and
+        // gradient controls produce. Anything deeper is not a shader parameter.
+        props[key] = value;
+      }
+      return { id, name, props };
+    })
+    .filter(
+      (
+        layer
+      ): layer is {
+        id: string;
+        name: string;
+        props: Record<string, unknown>;
+      } => layer !== null
+    );
+
+  return parsed.length > 0 ? { layers: parsed } : null;
 };
 
 /**
@@ -417,6 +498,7 @@ const hasRequiredContent = (
   kind: BoardItemKind,
   content: {
     body: string | null;
+    config: Record<string, unknown> | null;
     imageUrl: string | null;
     nodeType: string | null;
     photoId: string | null;
@@ -436,6 +518,10 @@ const hasRequiredContent = (
       return content.body !== null;
     case "op":
       return Boolean(content.nodeType);
+    // A shader is defined entirely by its config; without one there is nothing
+    // to render. Mirrors board_items_shape.
+    case "shader":
+      return content.config !== null;
     default:
       return true;
   }
@@ -476,7 +562,18 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
   // instead of reaching a dispatch that has no branch for it.
   const nodeType = isNodeTypeId(o.nodeType) ? o.nodeType : null;
 
-  if (!hasRequiredContent(o.kind, { body, imageUrl, nodeType, photoId })) {
+  // Node settings and shader stacks share the column but not the schema: one is
+  // checked against the node registry, the other only for shape.
+  let config: Record<string, unknown> | null = null;
+  if (o.kind === "shader") {
+    config = parseShaderConfig(o.config);
+  } else if (nodeType) {
+    config = parseNodeConfig(nodeType, o.config);
+  }
+
+  if (
+    !hasRequiredContent(o.kind, { body, config, imageUrl, nodeType, photoId })
+  ) {
     return null;
   }
 
@@ -492,7 +589,7 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
 
   return {
     body,
-    config: nodeType ? parseNodeConfig(nodeType, o.config) : null,
+    config,
     creditName: text(o.creditName, 200),
     creditUrl: text(o.creditUrl, 2000),
     fontSize,

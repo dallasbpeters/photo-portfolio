@@ -81,14 +81,14 @@ export function BoardsPanel() {
   };
 
   return (
-    <Card className="border-white/10 bg-white/2">
+    <Card className="w-full border-white/10 bg-white/2">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
           <HugeiconsIcon aria-hidden icon={FrameIcon} size={16} />
           Moodboards
         </CardTitle>
         <Button
-          className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+          className="min-h-11 border-white/20 text-[10px] text-white uppercase tracking-[0.18em] hover:bg-white hover:text-black"
           onClick={() => void create()}
           type="button"
           variant="outline"
@@ -113,7 +113,7 @@ export function BoardsPanel() {
           </p>
         ) : null}
 
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {boards.map((board) => (
             <li key={board.id}>
               <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40">

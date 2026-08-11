@@ -78,7 +78,8 @@ export type BoardItemKind =
   | "note"
   | "text"
   | "op"
-  | "frame";
+  | "frame"
+  | "shader";
 
 /** One image a run produced. A batch produces several. */
 export interface BoardItemVariation {
@@ -103,6 +104,14 @@ export interface BoardItemResult {
    */
   fingerprint: string;
   height: number | null;
+  /**
+   * Every image this node has ever produced, oldest first.
+   *
+   * Append-only and capped, so changing a prompt adds to the gallery rather
+   * than replacing it. This is what the node's version strip shows, and what a
+   * selection indexes into.
+   */
+  history?: BoardItemVariation[];
   /** False when an icon fell back to a raster because the vectoriser was down. */
   isVector: boolean | null;
   kind: "image";

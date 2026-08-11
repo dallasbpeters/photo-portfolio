@@ -101,7 +101,7 @@ export const HomePage = () => {
   const filteredPhotos = photos.filter(
     (p) => viewMode === "all" || p.category === viewMode
   );
-  const heroPhotos = photos.slice(0, 5);
+  const heroPhotos = photos.slice(0, 8);
 
   const handleNextHero = useCallback(() => {
     if (heroPhotos.length === 0) {
@@ -139,7 +139,7 @@ export const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-black font-sans text-white selection:bg-white selection:text-black">
+    <div className="min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-white selection:text-black">
       <Toaster position="top-center" theme="dark" />
 
       {isLoadingPhotos ? (
@@ -164,15 +164,21 @@ export const HomePage = () => {
         </div>
       ) : null}
 
+      <header className="absolute top-0 right-0 left-0 z-50 px-12 pt-12 md:px-24">
+        <h1 className="font-bold text-3xl text-accent uppercase tracking-widest">
+          {settings.heroTitle}
+        </h1>
+        <SiteNav pages={pages} />
+      </header>
       <section className="relative flex h-screen w-full items-center overflow-hidden">
-        <div className="pointer-events-none absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:w-[70%] md:px-24">
-          <div className="pointer-events-auto space-y-1 md:space-y-2">
+        <div className="absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:w-[70%] md:px-24">
+          <div className="space-y-1 md:space-y-2">
             {heroPhotos.map((photo, i) => (
               <button
-                className={`group flex items-start gap-2 text-left transition-all duration-1000 ${
+                className={`group flex cursor-pointer items-start gap-2 text-left transition-all duration-1000 ${
                   heroIndex === i
-                    ? "text-white opacity-100"
-                    : "text-white/90 hover:text-white/90"
+                    ? "text-white opacity-100 hover:text-accent"
+                    : "text-white/90 hover:text-accent"
                 }`}
                 key={photo.id}
                 onClick={() => setHeroIndex(i)}
@@ -198,7 +204,7 @@ export const HomePage = () => {
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
                 key={heroIndex}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
               >
                 <OptimizedImage
                   alt={
@@ -206,7 +212,7 @@ export const HomePage = () => {
                     heroPhotos[heroIndex]?.title ||
                     ""
                   }
-                  className="h-full w-full object-cover"
+                  className="h-auto w-full object-cover"
                   fetchPriority="high"
                   loading="eager"
                   lqip={heroPhotos[heroIndex]?.lqip}
@@ -222,13 +228,6 @@ export const HomePage = () => {
             <div aria-hidden className="absolute inset-0 bg-neutral-950" />
           )}
         </div>
-
-        <div className="absolute top-12 left-8 z-50 md:left-24">
-          <h1 className="font-bold text-3xl text-accent uppercase tracking-widest">
-            {settings.heroTitle}
-          </h1>
-          <SiteNav pages={pages} />
-        </div>
       </section>
 
       <section
@@ -243,7 +242,7 @@ export const HomePage = () => {
               className="group aspect-video overflow-hidden bg-white/5 md:aspect-square"
               initial={{ opacity: 0 }}
               key={photo.id}
-              transition={{ duration: 1 }}
+              transition={{ duration: 0.5 }}
               viewport={{ once: true }}
               whileInView={{ opacity: 1 }}
             >
@@ -286,7 +285,7 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <footer className="border-white/5 border-t bg-black px-4 py-24 md:px-8">
+      <footer className="border-white/5 border-t bg-background px-4 py-24 md:px-8">
         <div className="mx-auto flex max-w-10xl flex-col items-end justify-between gap-12 md:flex-row">
           <div className="space-y-6">
             <h2 className="font-bold text-3xl uppercase tracking-widest">

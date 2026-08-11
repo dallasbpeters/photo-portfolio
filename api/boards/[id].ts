@@ -93,11 +93,14 @@ async function handleGet(
     return res.status(404).json({ error: "Board not found" });
   }
 
-  const [items, wires, sources] = await Promise.all([
+  const [items, allWires, sources] = await Promise.all([
     loadItems(sql, board.id),
     loadWires(sql, board.id),
     loadSources(sql, board.id),
   ]);
+  // Wires are the machinery. A visitor gets the results the board arrived at,
+  // not the pipeline that produced them.
+  const wires = user ? allWires : [];
   // An anonymous visitor gets the graph but not the upstream error text — see
   // ItemDtoOptions for why the prompt stays and the error does not. Sources are
   // withheld from them entirely by rowToBoardDto.
