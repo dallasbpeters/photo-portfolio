@@ -394,6 +394,74 @@ const parseNodeConfig = (
 const MAX_SHADER_LAYERS = 12;
 const MAX_SHADER_PROPS = 80;
 
+interface ShaderLayerDto {
+  children?: ShaderLayerDto[];
+  id: string;
+  name: string;
+  props: Record<string, unknown>;
+}
+
+/**
+ * How deep a stack of effects may nest.
+ *
+ * An effect holds what it applies to, so nesting is the structure rather than a
+ * flourish — but it is also user-supplied and recursive, and this function has
+ * to terminate on a payload written by hand. Well past anything legible.
+ */
+const MAX_SHADER_DEPTH = 6;
+
+/**
+ * Shape only, never values.
+ *
+ * The registry that knows what a parameter means is a browser dependency, and
+ * has no business inside a function that renders nothing. The client is trusted
+ * to send sensible values; the server's job is that it cannot send something
+ * unbounded or malformed.
+ */
+const parseLayers = (raw: unknown, depth: number): ShaderLayerDto[] => {
+  if (!Array.isArray(raw) || depth >= MAX_SHADER_DEPTH) {
+    return [];
+  }
+  const parsed: ShaderLayerDto[] = [];
+  for (const layer of raw.slice(0, MAX_SHADER_LAYERS)) {
+    const o = layer as {
+      children?: unknown;
+      id?: unknown;
+      name?: unknown;
+      props?: unknown;
+    };
+    const name = text(o.name, 80);
+    if (!name) {
+      continue;
+    }
+    // Assigned here when absent so a stack saved before layers had identity
+    // gains it, rather than the canvas having to invent one every render.
+    const id = text(o.id, 40) ?? `l${Math.random().toString(36).slice(2, 10)}`;
+    const props: Record<string, unknown> = {};
+    const source =
+      typeof o.props === "object" && o.props !== null
+        ? (o.props as Record<string, unknown>)
+        : {};
+    for (const [key, value] of Object.entries(source).slice(
+      0,
+      MAX_SHADER_PROPS
+    )) {
+      // Primitives, plus the small objects and arrays the position and gradient
+      // controls produce. Anything deeper is not a shader parameter.
+      props[key] = value;
+    }
+    const entry: ShaderLayerDto = { id, name, props };
+    // Only carried when present: an absent `children` is what marks a source,
+    // and writing an empty array onto every layer would make each one look like
+    // an effect that someone had emptied.
+    if (Array.isArray(o.children)) {
+      entry.children = parseLayers(o.children, depth + 1);
+    }
+    parsed.push(entry);
+  }
+  return parsed;
+};
+
 const parseShaderConfig = (raw: unknown): Record<string, unknown> | null => {
   if (typeof raw !== "object" || raw === null) {
     return null;
@@ -402,43 +470,7 @@ const parseShaderConfig = (raw: unknown): Record<string, unknown> | null => {
   if (!Array.isArray(layers)) {
     return null;
   }
-  const parsed = layers
-    .slice(0, MAX_SHADER_LAYERS)
-    .map((layer) => {
-      const o = layer as { id?: unknown; name?: unknown; props?: unknown };
-      const name = text(o.name, 80);
-      if (!name) {
-        return null;
-      }
-      // Assigned here when absent so a stack saved before layers had identity
-      // gains it, rather than the canvas having to invent one every render.
-      const id =
-        text(o.id, 40) ?? `l${Math.random().toString(36).slice(2, 10)}`;
-      const props: Record<string, unknown> = {};
-      const source =
-        typeof o.props === "object" && o.props !== null
-          ? (o.props as Record<string, unknown>)
-          : {};
-      for (const [key, value] of Object.entries(source).slice(
-        0,
-        MAX_SHADER_PROPS
-      )) {
-        // Primitives, plus the small objects and arrays the position and
-        // gradient controls produce. Anything deeper is not a shader parameter.
-        props[key] = value;
-      }
-      return { id, name, props };
-    })
-    .filter(
-      (
-        layer
-      ): layer is {
-        id: string;
-        name: string;
-        props: Record<string, unknown>;
-      } => layer !== null
-    );
-
+  const parsed = parseLayers(layers, 0);
   return parsed.length > 0 ? { layers: parsed } : null;
 };
 

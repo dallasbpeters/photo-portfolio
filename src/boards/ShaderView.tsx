@@ -1,20 +1,28 @@
-import { createElement, Fragment, type ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 // biome-ignore lint/performance/noNamespaceImport: layers name their effect at runtime, and there are 189 of them — a named-import list would be a second registry to keep in step with the real one
 import * as ShaderComponents from "shaders/react";
-import type { ShaderConfig } from "./shaderConfig";
-import { shaderMeta } from "./shaderConfig";
+import {
+  isEffect,
+  normalizeLayers,
+  type ShaderConfig,
+  type ShaderLayer,
+} from "./shaderConfig";
 
 /**
- * A stack of shader effects, rendered live on the canvas.
+ * A stack of shaders, rendered live on the canvas.
  *
- * Effects compose by nesting, not by stacking. Roughly half the library
- * "requires a child": it transforms whatever is inside it rather than drawing
- * on its own — a Dither wrapping a Plasma, not a Dither beside one. So a
- * wrapping effect takes everything below it in the stack as its children, and
- * effects that draw for themselves sit as siblings:
+ * The library has two kinds of thing in it. A **source** draws a picture — a
+ * texture, a gradient, a shape. An **effect** changes a picture that already
+ * exists — a blur, a dither, an adjustment — so it has to be given something to
+ * work on, which it holds as its children:
  *
- *   [Dither, Plasma, WaveDistortion]
- *     → <Dither><Plasma /><WaveDistortion /></Dither>
+ *   Dither
+ *     └─ Plasma          → <Dither><Plasma /></Dither>
+ *
+ * That containment is stored explicitly. It used to be implied by position in a
+ * flat list, where an effect took everything after it, and that could only ever
+ * mean "all of the rest" — so Group, whose whole purpose is to hold a chosen
+ * few, had nothing to hold.
  *
  * Components are looked up by name rather than imported one by one: there are
  * 189 of them, and an import list would be a second registry to keep in step
@@ -31,139 +39,140 @@ const isRenderable = (component: unknown): boolean =>
   (typeof component === "object" && component !== null);
 
 /**
- * Renders layers from `index` down.
+ * Renders sibling layers, each with whatever it contains.
  *
- * A wrapping effect consumes the rest of the stack; anything else renders in
- * place and the walk continues, so no layer is dropped whatever the order.
+ * An effect renders its own children and nothing else, so it covers exactly
+ * what was put inside it.
  */
-const buildChain = (
-  layers: ShaderConfig["layers"],
-  index: number
-): ReactNode => {
-  if (index >= layers.length) {
-    return null;
-  }
-  const layer = layers[index];
-  if (!layer) {
-    return null;
-  }
+const renderLayers = (layers: ShaderLayer[]): ReactNode =>
+  layers.map((layer, index) => {
+    const component = componentFor(layer.name);
+    // A name the installed package does not know — an effect removed upstream,
+    // or a board written by a newer version. Skipped rather than thrown: one
+    // unknown layer should not blank the whole item.
+    if (!isRenderable(component)) {
+      return null;
+    }
+    const key = layer.id || `${layer.name}-${index}`;
+    const children = layer.children?.length
+      ? renderLayers(layer.children)
+      : null;
+    return createElement(component as never, { key, ...layer.props }, children);
+  });
 
-  const component = componentFor(layer.name);
-  // A name the installed package does not know — an effect removed upstream, or
-  // a board written by a newer version. Skipped rather than thrown: one unknown
-  // layer should not blank the whole item.
-  if (!isRenderable(component)) {
-    return buildChain(layers, index + 1);
-  }
+/** The library's own image source: a shader that draws a picture. */
+const IMAGE_LAYER = "ImageTexture";
 
-  const key = `${layer.name}-${index}`;
-  const props = { key, ...layer.props };
-
-  if (shaderMeta(layer.name)?.requiresChild) {
-    return createElement(
-      component as never,
-      props,
-      buildChain(layers, index + 1)
-    );
-  }
-
-  return createElement(
-    Fragment,
-    { key },
-    createElement(component as never, { ...layer.props }),
-    buildChain(layers, index + 1)
+const hasImageLayer = (layers: ShaderLayer[]): boolean =>
+  layers.some(
+    (layer) => layer.name === IMAGE_LAYER || hasImageLayer(layer.children ?? [])
   );
+
+const bindImage = (layers: ShaderLayer[], url: string): ShaderLayer[] =>
+  layers.map((layer) =>
+    layer.name === IMAGE_LAYER
+      ? { ...layer, props: { ...layer.props, url } }
+      : { ...layer, children: bindImage(layer.children ?? [], url) }
+  );
+
+/**
+ * Puts the image where an effect will actually reach it: innermost.
+ *
+ * Following the last layer inwards lands inside every effect wrapping it, which
+ * is what someone dragging a picture into a stack of effects means — restyle
+ * this, not sit beside it.
+ */
+const insertImage = (layers: ShaderLayer[], url: string): ShaderLayer[] => {
+  const last = layers.at(-1);
+  const image = {
+    id: `wired-${IMAGE_LAYER}`,
+    name: IMAGE_LAYER,
+    props: { url },
+  };
+  if (!(last && isEffect(last.name))) {
+    return [...layers, image];
+  }
+  return [
+    ...layers.slice(0, -1),
+    { ...last, children: insertImage(last.children ?? [], url) },
+  ];
+};
+
+/**
+ * The stack as it should render, with a wired image bound into it.
+ *
+ * Done here rather than written into the item's config, so the picture stays a
+ * property of the wire: unplug it and the stack is exactly what it was, with no
+ * stale URL left behind in the saved board. An explicit ImageTexture layer is
+ * filled in wherever it sits, which lets the image be placed deliberately.
+ */
+const withImage = (
+  layers: ShaderLayer[],
+  imageUrl: string | null | undefined
+): ShaderLayer[] => {
+  if (!imageUrl) {
+    return layers;
+  }
+  return hasImageLayer(layers)
+    ? bindImage(layers, imageUrl)
+    : insertImage(layers, imageUrl);
+};
+
+/** The first effect found with nothing inside it, or null. */
+const emptyEffect = (layers: ShaderLayer[]): ShaderLayer | null => {
+  for (const layer of layers) {
+    if (isEffect(layer.name) && !layer.children?.length) {
+      return layer;
+    }
+    const nested = emptyEffect(layer.children ?? []);
+    if (nested) {
+      return nested;
+    }
+  }
+  return null;
 };
 
 interface ShaderViewProps {
   config: ShaderConfig;
   /** A picture wired into this shader, bound in at render time. */
   imageUrl?: string | null;
-  /** Appends a default source when the stack has nothing left to transform. */
-  onAddSource?: () => void;
+  /** Fills an empty effect with a source, from the canvas rather than a panel. */
+  onAddSource?: (layerId: string) => void;
 }
 
-/**
- * True when the stack ends on an effect that transforms a picture, leaving it
- * nothing to transform.
- *
- * New stacks are built so this cannot happen, but removing the source layer or
- * dragging a wrapper to the bottom gets there, and the result is an empty box
- * that looks like a bug rather than a stack that is one layer short.
- */
-const lacksSource = (layers: ShaderConfig["layers"]): boolean => {
-  const last = layers.at(-1);
-  return last ? shaderMeta(last.name)?.requiresChild === true : false;
-};
-
-/** The library's own image source: a shader that draws a picture. */
-const IMAGE_LAYER = "ImageTexture";
-
-/**
- * The stack as it should actually render, with a wired image bound into it.
- *
- * Done here rather than written into the item's config, so the picture stays a
- * property of the wire: unplug it and the stack is exactly what it was, with no
- * stale URL left behind in the saved board.
- *
- * An explicit ImageTexture layer is filled in wherever it sits, which lets the
- * image be layered deliberately. Without one it is appended, and the bottom of
- * the stack is what every effect above it transforms — the thing someone
- * dragging a wire into a shader plainly means.
- */
-const withImage = (
-  layers: ShaderConfig["layers"],
-  imageUrl: string | null | undefined
-): ShaderConfig["layers"] => {
-  if (!imageUrl) {
-    return layers;
-  }
-  const bound = layers.map((layer) =>
-    layer.name === IMAGE_LAYER
-      ? { ...layer, props: { ...layer.props, url: imageUrl } }
-      : layer
-  );
-  if (bound.some((layer) => layer.name === IMAGE_LAYER)) {
-    return bound;
-  }
-  return [
-    ...bound,
-    { id: `wired-${IMAGE_LAYER}`, name: IMAGE_LAYER, props: { url: imageUrl } },
-  ];
-};
-
 export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
-  const layers = withImage(config.layers, imageUrl);
+  const layers = withImage(normalizeLayers(config.layers), imageUrl);
   const Shader = componentFor("Shader");
-
-  if (layers.length > 0 && lacksSource(layers)) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-neutral-900 p-3 text-center">
-        <p className="text-[11px] text-white/50">
-          “{layers.at(-1)?.name}” transforms whatever is beneath it, and there
-          is nothing beneath it yet.
-        </p>
-        {/* The fix offered where the problem is seen. Telling someone to add a
-            layer is useless if the only way to do it is a panel they have to
-            know exists. */}
-        {onAddSource ? (
-          <button
-            className="rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 transition-colors hover:border-white/50 hover:text-white"
-            onClick={onAddSource}
-            onPointerDown={(e) => e.stopPropagation()}
-            type="button"
-          >
-            Add something to transform
-          </button>
-        ) : null}
-      </div>
-    );
-  }
 
   if (layers.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-[11px] text-white/40">
         No shader chosen
+      </div>
+    );
+  }
+
+  // An effect holding nothing renders as an empty box, which reads as a broken
+  // shader rather than an unfinished one. Say which effect, in the terms the
+  // panel uses, and offer the fix here rather than pointing at a panel.
+  const empty = emptyEffect(layers);
+  if (empty) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-neutral-900 p-3 text-center">
+        <p className="text-[11px] text-white/50">
+          <span className="text-white/80">{empty.name}</span> is an effect — it
+          changes a picture, and it is empty.
+        </p>
+        {onAddSource ? (
+          <button
+            className="rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 transition-colors hover:border-white/50 hover:text-white"
+            onClick={() => onAddSource(empty.id)}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            Put something in it
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -181,7 +190,7 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
       {createElement(
         Shader as never,
         { style: { height: "100%", width: "100%" } },
-        buildChain(layers, 0)
+        renderLayers(layers)
       )}
     </div>
   );

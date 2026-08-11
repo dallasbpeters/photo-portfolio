@@ -23,12 +23,30 @@ import { ShaderView } from "./ShaderView";
 import {
   DEFAULT_SOURCE,
   isShaderConfig,
-  newLayerId,
+  newLayer,
+  normalizeLayers,
   type ShaderConfig,
+  type ShaderLayer,
 } from "./shaderConfig";
 
 /** One press changes the size by this much, in canvas units. */
 const FONT_STEP = 4;
+
+/**
+ * Drops a default source into the named empty effect.
+ *
+ * Recursive because the effect that needs filling may be nested — an empty
+ * Group two levels down is exactly the case the canvas button exists for.
+ */
+const fillEmptyEffect = (
+  layers: ShaderLayer[],
+  layerId: string
+): ShaderLayer[] =>
+  layers.map((layer) =>
+    layer.id === layerId
+      ? { ...layer, children: [newLayer(DEFAULT_SOURCE)] }
+      : { ...layer, children: fillEmptyEffect(layer.children ?? [], layerId) }
+  );
 
 /**
  * Everything the item needs to take part in a wire drag.
@@ -409,13 +427,13 @@ function ShaderItem({
         onAddSource={
           readOnly
             ? undefined
-            : () =>
+            : (layerId) =>
                 onConfigChange?.({
                   ...config,
-                  layers: [
-                    ...config.layers,
-                    { id: newLayerId(), name: DEFAULT_SOURCE, props: {} },
-                  ],
+                  layers: fillEmptyEffect(
+                    normalizeLayers(config.layers),
+                    layerId
+                  ),
                 } as unknown as Record<string, unknown>)
         }
       />
@@ -433,7 +451,9 @@ function ShaderItem({
       )}
 
       {isEditing && !readOnly ? (
-        <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto border-white/10 border-t bg-black/90 p-2 backdrop-blur">
+        // overscroll-contain so reaching the end of the settings does not hand
+        // the wheel back to the canvas and start zooming mid-scroll.
+        <div className="absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto overscroll-contain border-white/10 border-t bg-black/90 p-2 backdrop-blur">
           <ShaderControls
             config={config}
             onChange={(next) =>

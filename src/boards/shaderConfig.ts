@@ -58,8 +58,18 @@ export interface ShaderMeta {
   requiresChild: boolean;
 }
 
-/** One effect in a stack, with the parameters that have been changed from default. */
+/** One entry in a stack, with the parameters changed from their defaults. */
 export interface ShaderLayer {
+  /**
+   * What this effect applies to.
+   *
+   * Present on effects, absent on sources. This is what makes the stack a tree
+   * rather than a list, and it exists because a list cannot say *which* layers
+   * an effect covers — it can only mean "everything below me". Group is the
+   * plainest case: a container with no parameters at all, whose entire purpose
+   * is to hold a chosen few so one effect can treat them as a unit.
+   */
+  children?: ShaderLayer[];
   /**
    * Stable identity for a layer.
    *
@@ -193,28 +203,81 @@ export const newLayerId = (): string =>
   `l${Math.random().toString(36).slice(2, 10)}`;
 
 /**
- * What a wrapping effect gets to transform when it is picked on its own.
+ * What an effect gets to work on when it is picked on its own.
  *
  * Chosen for being obviously *there*: a plasma moves and has colour, so an
- * effect layered over it reads immediately. A flat fill would leave several
- * effects still looking broken.
+ * effect over it reads immediately. A flat fill would leave several effects
+ * still looking broken.
  */
 export const DEFAULT_SOURCE = "Plasma";
 
-export const newShaderConfig = (name: string): ShaderConfig => {
-  const layer = { id: newLayerId(), name, props: {} };
+/**
+ * The two kinds of shader, which is the only distinction anyone needs.
+ *
+ * A **source** draws a picture — a texture, a gradient, a shape, an image. An
+ * **effect** changes a picture that already exists — a blur, a dither, an
+ * adjustment. The registry records this as `requiresChild`, which is accurate
+ * and completely opaque; every category falls cleanly on one side or the other,
+ * so the split is worth naming plainly rather than explaining.
+ */
+export const isEffect = (name: string): boolean =>
+  shaderMeta(name)?.requiresChild === true;
 
-  // Slightly more than half the library transforms a picture rather than
-  // drawing one, and such an effect alone has nothing to work on — it renders
-  // an empty box, which reads as "this shader is broken" rather than "this
-  // shader needs something underneath". So it arrives with something to chew
-  // on, and the source can be swapped or removed afterwards.
-  if (shaderMeta(name)?.requiresChild) {
-    return {
-      layers: [layer, { id: newLayerId(), name: DEFAULT_SOURCE, props: {} }],
-    };
+export const SOURCE_SHADERS: ShaderMeta[] = ALL_SHADERS.filter(
+  (shader) => !shader.requiresChild
+);
+
+export const EFFECT_SHADERS: ShaderMeta[] = ALL_SHADERS.filter(
+  (shader) => shader.requiresChild
+);
+
+const categoriesOf = (shaders: ShaderMeta[]): string[] => [
+  ...new Set(shaders.map((shader) => shader.category)),
+];
+
+export const SOURCE_CATEGORIES: string[] = categoriesOf(SOURCE_SHADERS);
+export const EFFECT_CATEGORIES: string[] = categoriesOf(EFFECT_SHADERS);
+
+export const newLayer = (name: string): ShaderLayer => {
+  const layer: ShaderLayer = { id: newLayerId(), name, props: {} };
+  // An effect with nothing inside it renders an empty box, which reads as a
+  // broken shader rather than an unfinished one. It arrives holding something,
+  // and the source can be swapped or removed afterwards.
+  if (isEffect(name)) {
+    layer.children = [{ id: newLayerId(), name: DEFAULT_SOURCE, props: {} }];
   }
-  return { layers: [layer] };
+  return layer;
+};
+
+export const newShaderConfig = (name: string): ShaderConfig => ({
+  layers: [newLayer(name)],
+});
+
+/**
+ * Reads a stack saved before nesting existed.
+ *
+ * The old shape was a flat list in which an effect implicitly took everything
+ * after it. That is exactly the chain this folds it back into, so an existing
+ * board looks the same as it did — it simply becomes editable in ways it was
+ * not. Detected by absence: a layer that already has `children` is new-shape,
+ * and a flat list of pure sources means the same thing under either reading.
+ */
+export const normalizeLayers = (layers: ShaderLayer[]): ShaderLayer[] => {
+  if (layers.some((layer) => Array.isArray(layer.children))) {
+    return layers;
+  }
+  const fold = (index: number): ShaderLayer[] => {
+    const layer = layers[index];
+    if (!layer) {
+      return [];
+    }
+    const rest = fold(index + 1);
+    if (isEffect(layer.name)) {
+      return [{ ...layer, children: rest }];
+    }
+    return [layer, ...rest];
+  };
+  return fold(0);
 };
 
 export const isShaderConfig = (value: unknown): value is ShaderConfig => {
