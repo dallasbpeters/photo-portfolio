@@ -11,7 +11,7 @@
  * handlers over this.
  */
 
-import { sanitizeText } from "./httpUrl.js";
+import { hostMatches, sanitizeText } from "./httpUrl.js";
 
 /**
  * Hosts this will fetch from.
@@ -68,13 +68,6 @@ const DISPLAY_SIZE = "736x";
 /** The small rendition RSS hands back, kept as the thumbnail. */
 export const upgradeSize = (url: string): string =>
   url.replace(PIN_SIZE_SEGMENT, `/${DISPLAY_SIZE}/`);
-
-const hostMatches = (host: string, allowed: string[]): boolean => {
-  const lower = host.toLowerCase();
-  return allowed.some(
-    (candidate) => lower === candidate || lower.endsWith(`.${candidate}`)
-  );
-};
 
 /** A Pinterest URL we are willing to fetch, or null. */
 export const parsePinterestUrl = (raw: string): URL | null => {

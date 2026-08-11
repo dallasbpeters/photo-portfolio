@@ -5,7 +5,7 @@ import {
   Search01Icon,
   SparklesIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
@@ -14,6 +14,8 @@ import { newItemId } from "../../boards/newItemId";
 import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
   aiApi,
+  type FalLibraryItem,
+  falLibraryApi,
   type GeneratedIcon,
   type GeneratedImage,
   type PinResult,
@@ -49,10 +51,18 @@ interface BoardInsertPanelProps {
   sources: BoardSource[];
 }
 
-type Tab = "yours" | "unsplash" | "pinterest" | "ai" | "icon" | "shader";
+type Tab =
+  | "yours"
+  | "library"
+  | "unsplash"
+  | "pinterest"
+  | "ai"
+  | "icon"
+  | "shader";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "yours", label: "Yours" },
+  { id: "library", label: "fal library" },
   { id: "unsplash", label: "Unsplash" },
   { id: "pinterest", label: "Pinterest" },
   { id: "ai", label: "Generate" },
@@ -472,6 +482,8 @@ export function BoardInsertPanel({
           </div>
         ) : null}
 
+        {tab === "library" ? <FalLibraryTab onAdd={onAddExternal} /> : null}
+
         {tab === "shader" ? <ShaderTab onAdd={onAddShader} /> : null}
 
         {tab === "icon" ? (
@@ -510,6 +522,147 @@ export function BoardInsertPanel({
  * offers without a line of code changing, which is the whole reason the
  * registry is worth leaning on.
  */
+/** The vendor prefix every fal model id carries, which only costs width. */
+const FAL_PREFIX = /^fal-ai\//;
+
+/** "fal-ai/recraft/v4.1/text-to-vector" → "recraft/v4.1/text-to-vector". */
+const shortEndpoint = (endpoint: string): string =>
+  endpoint.replace(FAL_PREFIX, "");
+
+/**
+ * Everything the fal account has already generated.
+ *
+ * A second source rather than a duplicate of the boards: it lists work done in
+ * fal's own playground too, which this app never saw and has no other way to
+ * reach.
+ *
+ * Adding one copies the bytes into our storage first. fal serves output from a
+ * scratch host, so pinning its URL straight onto a board would leave a broken
+ * image behind once the link lapses — the copy is what makes it ours.
+ */
+function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
+  const [items, setItems] = useState<FalLibraryItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [adopting, setAdopting] = useState<string | null>(null);
+
+  const load = useCallback(async (next: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await falLibraryApi.list(next);
+      // Appended rather than replaced, so paging builds one long roll instead
+      // of making you hold the previous page in your head.
+      setItems((current) =>
+        next === 1 ? result.items : [...current, ...result.items]
+      );
+      setHasMore(result.hasMore);
+      setPage(next);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not read your library"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load(1);
+  }, [load]);
+
+  const adopt = async (item: FalLibraryItem) => {
+    setAdopting(item.id);
+    try {
+      const url = await falLibraryApi.adopt(item);
+      onAdd({
+        altText: item.prompt,
+        // No credit: this is the account's own generated output, so there is
+        // nobody to attribute it to.
+        creditName: null,
+        creditUrl: null,
+        imageUrl: url,
+        thumbUrl: url,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add that");
+    } finally {
+      setAdopting(null);
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] text-amber-300/80">{error}</p>
+        <p className="text-[10px] text-white/35 leading-relaxed">
+          fal's history endpoint is undocumented and still marked alpha, so it
+          may simply have moved. Everything else on this panel is unaffected.
+        </p>
+        <Button onClick={() => void load(1)} type="button" variant="ghost">
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.length === 0 && !isLoading ? (
+        <p className="text-[11px] text-white/40">
+          Nothing generated on this fal account in the last 90 days.
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((item) => (
+          <button
+            className="group relative overflow-hidden rounded border border-white/10 hover:border-white/40 disabled:opacity-40"
+            disabled={adopting !== null}
+            key={item.id}
+            onClick={() => void adopt(item)}
+            title={item.prompt ?? shortEndpoint(item.endpoint)}
+            type="button"
+          >
+            <img
+              alt={item.prompt ?? "Generated image"}
+              className="aspect-square w-full bg-neutral-900 object-cover"
+              // Square by CSS regardless of the real aspect, so the grid stays
+              // a grid; the intrinsic size is only a hint against layout shift.
+              height={160}
+              loading="lazy"
+              src={item.url}
+              width={160}
+            />
+            <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] text-white/60">
+              {adopting === item.id ? "Saving…" : shortEndpoint(item.endpoint)}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <p className="text-[10px] text-white/40 uppercase tracking-[0.18em]">
+          Loading…
+        </p>
+      ) : null}
+
+      {hasMore && !isLoading ? (
+        <Button
+          className="w-full"
+          onClick={() => void load(page + 1)}
+          type="button"
+          variant="ghost"
+        >
+          Load more
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
   const [category, setCategory] = useState<string>(SHADER_CATEGORIES[0] ?? "");
   const shown = ALL_SHADERS.filter((shader) => shader.category === category);

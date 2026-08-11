@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import { createElement, type ReactNode, useMemo, useRef } from "react";
 // biome-ignore lint/performance/noNamespaceImport: layers name their effect at runtime, and there are 189 of them — a named-import list would be a second registry to keep in step with the real one
 import * as ShaderComponents from "shaders/react";
 import {
@@ -7,6 +7,7 @@ import {
   type ShaderConfig,
   type ShaderLayer,
 } from "./shaderConfig";
+import { useIsOnScreen } from "./useIsOnScreen";
 
 /**
  * A stack of shaders, rendered live on the canvas.
@@ -141,11 +142,24 @@ interface ShaderViewProps {
 }
 
 export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
-  const layers = withImage(normalizeLayers(config.layers), imageUrl);
+  const frame = useRef<HTMLDivElement>(null);
+  const isOnScreen = useIsOnScreen(frame);
+  // Recomputing these on a render that only toggles visibility is wasted, and
+  // both walk the whole tree.
+  const layers = useMemo(
+    () => withImage(normalizeLayers(config.layers), imageUrl),
+    [config.layers, imageUrl]
+  );
   const Shader = componentFor("Shader");
 
+  const framed = (content: ReactNode) => (
+    <div className="h-full w-full" ref={frame}>
+      {content}
+    </div>
+  );
+
   if (layers.length === 0) {
-    return (
+    return framed(
       <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-[11px] text-white/40">
         No shader chosen
       </div>
@@ -157,7 +171,7 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
   // panel uses, and offer the fix here rather than pointing at a panel.
   const empty = emptyEffect(layers);
   if (empty) {
-    return (
+    return framed(
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-neutral-900 p-3 text-center">
         <p className="text-[11px] text-white/50">
           <span className="text-white/80">{empty.name}</span> is an effect — it
@@ -178,20 +192,26 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
   }
 
   if (typeof Shader !== "function") {
-    return (
+    return framed(
       <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-[11px] text-red-300">
         Shader runtime unavailable
       </div>
     );
   }
 
-  return (
+  return framed(
     <div className="h-full w-full overflow-hidden bg-black">
-      {createElement(
-        Shader as never,
-        { style: { height: "100%", width: "100%" } },
-        renderLayers(layers)
-      )}
+      {/* Unmounted while off screen, which is the only way to stop it: the
+          library's root component takes no `paused` prop, so a mounted shader
+          animates on a GPU frame loop forever whether or not anyone can see
+          it. On a large board that was every shader at once, always. */}
+      {isOnScreen
+        ? createElement(
+            Shader as never,
+            { style: { height: "100%", width: "100%" } },
+            renderLayers(layers)
+          )
+        : null}
     </div>
   );
 }

@@ -1,6 +1,15 @@
 import type { BoardItem, BoardItemVariation } from "../types";
 
 /**
+ * Drag-and-drop type for an image pulled off a node.
+ *
+ * Board-specific so the canvas can tell it apart from a file dropped in from
+ * the desktop, which is a different act with a different cost — one uploads,
+ * the other already lives in our own storage and only needs pinning.
+ */
+export const BOARD_IMAGE_TYPE = "application/x-board-image";
+
+/**
  * What an item shows, and what it hands down a wire.
  *
  * Shared rather than kept inside the node view, because two places now need it

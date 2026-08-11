@@ -1047,6 +1047,58 @@ export interface BoardResult {
   title: string | null;
 }
 
+/** One picture the fal account has already made. */
+export interface FalLibraryItem {
+  contentType: string | null;
+  createdAt: string;
+  endpoint: string;
+  id: string;
+  prompt: string | null;
+  url: string;
+}
+
+export interface FalLibraryPage {
+  hasMore: boolean;
+  items: FalLibraryItem[];
+}
+
+/**
+ * The fal account's own generation history, as a library to pull from.
+ *
+ * Everything made with the key, including work done in fal's own playground —
+ * so it reaches things this app never saw. Reading it needs the key, which is
+ * why it goes through our server rather than straight to fal.
+ */
+export const falLibraryApi = {
+  /**
+   * Adopts a picture into our storage and returns the durable URL.
+   *
+   * Not optional: fal serves output from a scratch host, so pinning its URL to
+   * a board would leave a broken image behind once the link lapses.
+   */
+  adopt: async (item: FalLibraryItem): Promise<string> => {
+    const res = await fetch(`${apiBase()}/api/fal/library`, {
+      body: JSON.stringify({ contentType: item.contentType, url: item.url }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save that image"));
+    }
+    return ((await res.json()) as { url: string }).url;
+  },
+
+  list: async (page = 1): Promise<FalLibraryPage> => {
+    const res = await fetch(`${apiBase()}/api/fal/library?page=${page}`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not read your library"));
+    }
+    return (await res.json()) as FalLibraryPage;
+  },
+};
+
 export const pinterestApi = {
   /**
    * Every pin a board publishes, from its public RSS feed.

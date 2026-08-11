@@ -714,6 +714,35 @@ export function BoardEditor({
     }
   };
 
+  /**
+   * A result dragged off a node and dropped on the canvas.
+   *
+   * Nothing is uploaded and nothing is copied: the picture already lives in our
+   * blob storage, so this pins the URL where it landed. The node keeps its own
+   * copy in its history — pulling one out is taking a print, not moving the
+   * original.
+   */
+  const dropImage = (
+    image: { url: string },
+    point: { x: number; y: number }
+  ) => {
+    change([
+      ...items,
+      {
+        ...BLANK_ITEM,
+        height: DEFAULT_IMAGE_HEIGHT,
+        id: newItemId(),
+        imageUrl: image.url,
+        kind: "reference",
+        thumbUrl: image.url,
+        width: DEFAULT_IMAGE_WIDTH,
+        x: Math.round(point.x - DEFAULT_IMAGE_WIDTH / 2),
+        y: Math.round(point.y - DEFAULT_IMAGE_HEIGHT / 2),
+        z: items.length + 1,
+      },
+    ]);
+  };
+
   const close = async () => {
     if (isDirty) {
       await save();
@@ -859,6 +888,7 @@ export function BoardEditor({
           onConfigChange={changeConfig}
           onCreateFromPort={createFromPort}
           onDropFiles={(files, point) => void dropFiles(files, point)}
+          onDropImage={dropImage}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
           onWiresChange={changeWires}
           wires={wires}

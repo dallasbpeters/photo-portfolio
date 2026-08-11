@@ -9,7 +9,7 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
-import { outputImageOf } from "./itemOutput";
+import { BOARD_IMAGE_TYPE, outputImageOf } from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { useCanvasViewport } from "./useCanvasViewport";
@@ -17,6 +17,9 @@ import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
 const NO_WIRES: BoardWire[] = [];
+
+/** A pasted address worth treating as an image. No whitespace: one URL, not prose. */
+const HTTP_URL = /^https?:\/\/\S+$/i;
 
 interface BoardCanvasProps {
   /** Item to open for typing as soon as it appears — a just-placed note. */
@@ -45,6 +48,18 @@ interface BoardCanvasProps {
    * one, so it reports where; the editor uploads and mints the items.
    */
   onDropFiles?: (files: File[], point: { x: number; y: number }) => void;
+  /**
+   * An image that arrives already hosted — dragged off a node, or pasted as an
+   * address.
+   *
+   * Separate from a file drop because there is nothing to upload: only a URL to
+   * pin where it landed. Typed as the URL alone, since that is all this needs to
+   * know; where it came from is the editor's business.
+   */
+  onDropImage?: (
+    image: { url: string },
+    point: { x: number; y: number }
+  ) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
   onRun?: (itemId: string, force: boolean) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
@@ -120,6 +135,7 @@ export function BoardCanvas({
   onConfigChange,
   onCreateFromPort,
   onDropFiles,
+  onDropImage,
   onRun,
   onWiresChange,
   keyOf,
@@ -150,6 +166,77 @@ export function BoardCanvas({
     }
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
+
+  /**
+   * Where something arriving without a pointer position should go: the middle of
+   * what is currently on screen.
+   *
+   * A paste has no coordinates, and the centre of the *canvas* is the wrong
+   * answer — on a board panned somewhere else it would put the image out of
+   * sight. The centre of the view is where you are looking.
+   */
+  const viewCentre = useCallback((): { x: number; y: number } => {
+    // The ref really can be null — tsc insists, and it is right, even though
+    // the paste handler that calls this cannot fire before mount. Read through
+    // an optional chain so the fallback is a value rather than a branch the
+    // linter reads as dead.
+    const rect = containerRef.current?.getBoundingClientRect();
+    return rect
+      ? view.toCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2)
+      : { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
+  }, [view]);
+
+  /**
+   * Pasting an image onto the board.
+   *
+   * The same act as dropping a file, and it goes down the same path — a
+   * screenshot is the commonest way an image reaches a moodboard, and having to
+   * save it to disk first only to drag it back in is a detour.
+   *
+   * Listens on the window rather than an element because paste is not delivered
+   * to something merely hovered; it goes to whatever has focus, which on a board
+   * you are just looking at is the document.
+   */
+  useEffect(() => {
+    if (readOnly || !(onDropFiles || onDropImage)) {
+      return;
+    }
+    const onPaste = (e: ClipboardEvent) => {
+      // A paste aimed at a note, a prompt or any other field belongs to that
+      // field. Only a paste with nowhere else to go lands on the board.
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable)
+      ) {
+        return;
+      }
+      const files = [...(e.clipboardData?.files ?? [])].filter((file) =>
+        file.type.startsWith("image/")
+      );
+      if (files.length > 0 && onDropFiles) {
+        e.preventDefault();
+        onDropFiles(files, viewCentre());
+        return;
+      }
+
+      // No bitmap, but an address is the other way an image gets copied —
+      // "copy image address" from a browser puts only text on the clipboard.
+      // Any http(s) URL is accepted rather than only ones ending in .jpg:
+      // plenty of image URLs carry no extension at all, and a link pasted onto
+      // a board with nothing focused can only mean "put this here". A URL that
+      // turns out not to be an image shows as a broken item and can be deleted,
+      // which is a smaller cost than silently ignoring a valid one.
+      const text = e.clipboardData?.getData("text/plain")?.trim();
+      if (text && onDropImage && HTTP_URL.test(text)) {
+        e.preventDefault();
+        onDropImage({ url: text }, viewCentre());
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [onDropFiles, onDropImage, readOnly, viewCentre]);
 
   const topZ = items.reduce((max, i) => Math.max(max, i.z), 0);
 
@@ -456,7 +543,7 @@ export function BoardCanvas({
       <div
         className={`h-full w-full touch-none ${view.isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         onDragOver={
-          onDropFiles
+          onDropFiles || onDropImage
             ? (e) => {
                 // Without this the browser treats the drop as navigation and
                 // replaces the board with the image.
@@ -466,17 +553,32 @@ export function BoardCanvas({
             : undefined
         }
         onDrop={
-          onDropFiles
+          onDropFiles || onDropImage
             ? (e) => {
+                const point = view.toCanvas(e.clientX, e.clientY);
+
+                // An image pulled off a node: already ours, already stored, so
+                // it only needs pinning where it landed.
+                const pulled = e.dataTransfer.getData(BOARD_IMAGE_TYPE);
+                if (pulled && onDropImage) {
+                  e.preventDefault();
+                  try {
+                    onDropImage(JSON.parse(pulled) as { url: string }, point);
+                  } catch {
+                    // Malformed payload — nothing worth interrupting for.
+                  }
+                  return;
+                }
+
                 const files = [...e.dataTransfer.files].filter((file) =>
                   file.type.startsWith("image/")
                 );
-                if (files.length === 0) {
+                if (files.length === 0 || !onDropFiles) {
                   return;
                 }
                 e.preventDefault();
                 // Dropped where it was let go of, not where a counter says.
-                onDropFiles(files, view.toCanvas(e.clientX, e.clientY));
+                onDropFiles(files, point);
               }
             : undefined
         }

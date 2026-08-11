@@ -14,7 +14,7 @@ import {
 } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
 import { downloadImage } from "./downloadImage";
-import { pickImages, selectedIndex } from "./itemOutput";
+import { BOARD_IMAGE_TYPE, pickImages, selectedIndex } from "./itemOutput";
 
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
@@ -126,6 +126,30 @@ function SettingField({
 }
 
 /**
+ * Starts dragging a result off the node.
+ *
+ * A version sitting in a node's gallery is one of several; pulling one onto the
+ * canvas is how it becomes a thing in its own right — pinned where you put it,
+ * and able to feed something else without dragging the whole node along.
+ *
+ * The URL travels as a board-specific type so the canvas can tell it from a
+ * file drop, and as text/uri-list as well, so dropping it into another
+ * application still hands over something meaningful.
+ */
+const beginImageDrag = (
+  e: React.DragEvent,
+  image: BoardItemVariation
+): void => {
+  // The canvas would otherwise read the press underneath as "pick this node up
+  // and move it", leaving the node adrift when the drag ends elsewhere.
+  e.stopPropagation();
+  e.dataTransfer.effectAllowed = "copy";
+  e.dataTransfer.setData(BOARD_IMAGE_TYPE, JSON.stringify(image));
+  e.dataTransfer.setData("text/uri-list", image.url);
+  e.dataTransfer.setData("text/plain", image.url);
+};
+
+/**
  * What a node produced: one image, or a batch laid out as a grid.
  *
  * A grid because comparing them is the entire reason for asking for several.
@@ -148,10 +172,13 @@ function ResultImages({
     <div className="space-y-1">
       {hero ? (
         <div className="group relative">
+          {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: dragstart is the browser's own drag affordance on an image, not a bespoke click handler — the picture is also reachable via the download button beside it */}
           <img
             alt={hero.description ?? "Result"}
-            className="h-auto w-full rounded border border-white/10 object-contain"
+            className="h-auto w-full cursor-grab rounded border border-white/10 object-contain"
+            draggable
             height={hero.height ?? undefined}
+            onDragStart={(e) => beginImageDrag(e, hero)}
             src={hero.url}
             width={hero.width ?? undefined}
           />
@@ -197,11 +224,14 @@ function ResultImages({
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
               >
+                {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — native image drag, and the surrounding button already carries the keyboard-reachable action */}
                 <img
                   alt={variation.description ?? `Version ${index + 1}`}
-                  className="size-12 object-cover"
+                  className="size-12 cursor-grab object-cover"
+                  draggable
                   height={48}
                   loading="lazy"
+                  onDragStart={(e) => beginImageDrag(e, variation)}
                   src={variation.url}
                   width={48}
                 />
