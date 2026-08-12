@@ -19,6 +19,7 @@
     "dev:dallas-images": "cross-env VITE_SITE=dallas-images node scripts/dev-stack.mjs",
     "fix": "npx ultracite fix --claude",
     "lint": "tsc --noEmit",
+    "lora:upload": "tsx scripts/upload-lora.ts",
     "preview": "vite preview",
     "ultracite": "npx ultracite fix",
     "vercel:blob:create": "vercel blob create-store",

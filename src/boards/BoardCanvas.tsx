@@ -9,6 +9,7 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
+import { frameBoardTitle, frameSummary } from "./copyToBoard";
 import {
   boundsOf,
   CORNER_RADIUS,
@@ -20,6 +21,7 @@ import {
   pathFor,
   toUnitSpace,
 } from "./drawing";
+import { FrameMenu } from "./FrameMenu";
 import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
@@ -61,6 +63,13 @@ interface BoardCanvasProps {
   onChange: (items: BoardItem[]) => void;
   /** Settings edited on an operation node. */
   onConfigChange?: (itemId: string, config: Record<string, unknown>) => void;
+  /**
+   * Copies a frame and its contents onto a board of their own.
+   *
+   * Same division as onCreateFromPort: the canvas knows which frame was asked
+   * for, and the editor is the only thing that can talk to the API.
+   */
+  onCopyFrame?: (frame: BoardItem, title: string) => void;
   /**
    * Creates the thing a clicked port should feed, already wired to it.
    *
@@ -183,6 +192,7 @@ export function BoardCanvas({
   items,
   onChange,
   onConfigChange,
+  onCopyFrame,
   onCreateFromPort,
   drawTool = null,
   drawStyle,
@@ -226,6 +236,11 @@ export function BoardCanvas({
     point: { x: number; y: number };
     portKey: string;
     portType: PortType;
+  } | null>(null);
+  /** A frame was right-clicked; it is offering to become a board. */
+  const [frameMenu, setFrameMenu] = useState<{
+    item: BoardItem;
+    point: { x: number; y: number };
   } | null>(null);
 
   useEffect(() => {
@@ -546,6 +561,31 @@ export function BoardCanvas({
     [items]
   );
 
+  /**
+   * The frame under a canvas point, topmost first.
+   *
+   * Only frames, and searched from the end because later items sit above
+   * earlier ones — a frame dropped on top of another should be the one that
+   * answers. Hit-testing here rather than putting a handler on every item
+   * keeps the cost to the one right-click that asks.
+   */
+  const frameAt = useCallback(
+    (point: Point): BoardItem | null =>
+      // Copied before reversing, since reverse() mutates in place and this is
+      // the live item list. The allocation is per right-click, not per render.
+      [...items]
+        .reverse()
+        .find(
+          (item) =>
+            item.kind === "frame" &&
+            point.x >= item.x &&
+            point.x <= item.x + item.width &&
+            point.y >= item.y &&
+            point.y <= item.y + item.height
+        ) ?? null,
+    [items]
+  );
+
   /** Everything the swept rectangle touches, by index. */
   const finishMarquee = useCallback(
     (box: { from: Point; to: Point }, add: boolean) => {
@@ -802,6 +842,22 @@ export function BoardCanvas({
             ? "cursor-crosshair"
             : (view.isPanning && "cursor-grabbing") || "cursor-grab"
         }`}
+        onContextMenu={(e) => {
+          if (readOnly || !onCopyFrame) {
+            return;
+          }
+          const frame = frameAt(view.toCanvas(e.clientX, e.clientY));
+          if (!frame) {
+            // Anywhere else keeps the browser's own menu, which is still how
+            // an image gets saved or a link copied.
+            return;
+          }
+          e.preventDefault();
+          setFrameMenu({
+            item: frame,
+            point: { x: e.clientX, y: e.clientY },
+          });
+        }}
         onDragOver={
           onDropFiles || onDropImage
             ? (e) => {
@@ -1092,6 +1148,19 @@ export function BoardCanvas({
           ))}
         </div>
       </div>
+      {frameMenu ? (
+        <FrameMenu
+          count={frameSummary(frameMenu.item, items, wires).count}
+          defaultTitle={frameBoardTitle(frameMenu.item)}
+          onCopy={(title) => {
+            onCopyFrame?.(frameMenu.item, title);
+            setFrameMenu(null);
+          }}
+          onDismiss={() => setFrameMenu(null)}
+          point={frameMenu.point}
+          severed={frameSummary(frameMenu.item, items, wires).severed}
+        />
+      ) : null}
       {portMenu ? (
         <PortMenu
           onChoose={(target) => {

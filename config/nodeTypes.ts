@@ -313,6 +313,23 @@ export const FAL_MODELS = [
     vector: false,
   },
   {
+    id: "lora/telegram-sticker",
+    input: "prompt-or-image",
+    label: "Sticker (Telegram)",
+    lora: {
+      // Ours, so it lives in blob storage rather than on Hugging Face. Trained
+      // on 627 images at flux-1-dev/lora — see scripts/upload-lora.ts for how
+      // the URL is minted, and re-run it to replace the weights after a
+      // retrain without editing this line.
+      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/loras/telegram-sticker-flux.safetensors",
+      scale: 0.9,
+      // Every one of the 627 training images carried this tag, along with
+      // "sticker art" and a white outline. The bare token is the style.
+      trigger: "telesticker, sticker art, white outline",
+    },
+    vector: false,
+  },
+  {
     id: "lora/bubblegum-sticker",
     input: "prompt-or-image",
     label: "Bubblegum sticker",

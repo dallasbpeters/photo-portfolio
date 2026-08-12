@@ -29,3 +29,8 @@ watermarked-photos-backup.json
 # straight through.
 /*.zip
 /datasets/
+
+# Model weights. Tens of megabytes each and not source; they live in blob
+# storage, where fal fetches them from. See scripts/upload-lora.ts.
+loras/
+*.safetensors

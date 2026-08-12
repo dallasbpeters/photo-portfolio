@@ -16,6 +16,7 @@ import {
   Tick02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   CANVAS_HEIGHT,
@@ -37,6 +38,7 @@ import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
 import { BoardDrawTools } from "../../boards/BoardDrawTools";
+import { copyOfFrame } from "../../boards/copyToBoard";
 import type { DrawStyle } from "../../boards/DrawToolbar";
 import {
   DEFAULT_STROKE,
@@ -163,6 +165,7 @@ export function BoardEditor({
   boardId: string;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const [board, setBoard] = useState<Board | null>(null);
   const [items, setItems] = useState<BoardItem[]>([]);
   const [wires, setWires] = useState<BoardWire[]>([]);
@@ -844,6 +847,44 @@ export function BoardEditor({
   };
 
   /**
+   * A frame, and everything sitting on it, copied to a board of its own.
+   *
+   * Two calls rather than one: boards are created empty, so the arrangement
+   * follows in the save that every board already uses. If that second call
+   * fails the board still exists — empty — which is why the error says so
+   * rather than claiming nothing happened.
+   *
+   * Nothing here touches this board. A copy that also deleted would be a move,
+   * and a mis-aimed right-click would then cost work.
+   */
+  const copyFrameToBoard = async (frame: BoardItem, title: string) => {
+    const copy = copyOfFrame(frame, items, wires);
+    const toastId = toast.loading(`Creating "${title}"…`);
+    try {
+      const created = await boardsApi.create(title);
+      await boardsApi.update(created.id, {
+        items: copy.items,
+        wires: copy.wires,
+      });
+      toast.dismiss(toastId);
+      toast.success(
+        `Copied ${copy.items.length} item${copy.items.length === 1 ? "" : "s"} to "${title}"`,
+        {
+          action: {
+            label: "Open",
+            onClick: () => navigate(`/admin/boards/${created.id}`),
+          },
+        }
+      );
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(
+        err instanceof Error ? err.message : "Could not copy to a new board"
+      );
+    }
+  };
+
+  /**
    * A result dragged off a node and dropped on the canvas.
    *
    * Nothing is uploaded and nothing is copied: the picture already lives in our
@@ -1170,6 +1211,7 @@ export function BoardEditor({
           onCancel={graphRun.cancel}
           onChange={change}
           onConfigChange={changeConfig}
+          onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
           onCreateFromPort={createFromPort}
           onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
