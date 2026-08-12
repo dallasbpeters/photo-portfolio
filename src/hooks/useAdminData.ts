@@ -11,15 +11,33 @@ const sortCategories = (list: Category[]): Category[] =>
   );
 
 export interface AdminDataResult {
+  /**
+   * Puts one photograph back after an edit, in place.
+   *
+   * The alternative — refetching the library after every change — repainted
+   * every card, dropped scroll position and made the admin flicker on each
+   * rename. The server has already returned the saved row, so the list can
+   * simply take it.
+   */
+  applyPhotoUpdate: (photo: Photo) => void;
   categories: Category[];
   createCategoryFromLabel: (label: string) => Promise<string | null>;
   handleDeleteCategory: (cat: Category) => Promise<void>;
+  /** Adds a freshly uploaded photograph without refetching. */
+  insertPhoto: (photo: Photo) => void;
   isLoadingCategories: boolean;
   isLoadingPhotos: boolean;
   isSavingCategory: boolean;
   photos: Photo[];
   /** Reload both photos and categories, then fire change notifications. */
   reload: () => Promise<void>;
+  /** Drops deleted photographs from the list. */
+  removePhotos: (ids: string[]) => void;
+  /**
+   * Replaces the whole list, for a change that touches many rows at once —
+   * a reorder, or moving a selection to another category.
+   */
+  replacePhotos: (photos: Photo[]) => void;
 }
 
 export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
@@ -65,6 +83,40 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
     portfolioService.notifyPhotosChanged();
     portfolioService.notifyCategoriesChanged();
   }, [loadPhotos, loadCategories]);
+
+  /**
+   * Local edits to the list, used instead of a full reload.
+   *
+   * Deliberately silent: `notifyPhotosChanged` is a same-document CustomEvent
+   * that this hook itself listens for, so announcing a change here would call
+   * loadPhotos and refetch the whole library — precisely the reload these
+   * exist to avoid. It cannot reach another tab either, and the public gallery
+   * is not mounted inside the admin, so there is nobody else to tell.
+   */
+  const applyPhotoUpdate = useCallback((photo: Photo) => {
+    setPhotos((current) => current.map((p) => (p.id === photo.id ? photo : p)));
+  }, []);
+
+  const insertPhoto = useCallback((photo: Photo) => {
+    // Newest first, and every other position moved up one, because that is
+    // exactly what the API did: it runs `sort_order = sort_order + 1` over the
+    // whole table before inserting at 0 (api/photos/index.ts). Without the
+    // shift the new photograph appears in the right place while every card
+    // below it shows a position one lower than the server holds.
+    setPhotos((current) => [
+      photo,
+      ...current.map((p) => ({ ...p, order: p.order + 1 })),
+    ]);
+  }, []);
+
+  const removePhotos = useCallback((ids: string[]) => {
+    const gone = new Set(ids);
+    setPhotos((current) => current.filter((p) => !gone.has(p.id)));
+  }, []);
+
+  const replacePhotos = useCallback((next: Photo[]) => {
+    setPhotos(next);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -137,13 +189,17 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
   };
 
   return {
+    applyPhotoUpdate,
     categories,
     createCategoryFromLabel,
     handleDeleteCategory,
+    insertPhoto,
     isLoadingCategories,
     isLoadingPhotos,
     isSavingCategory,
     photos,
     reload,
+    removePhotos,
+    replacePhotos,
   };
 };

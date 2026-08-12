@@ -1,6 +1,14 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/biome/core", "ultracite/biome/react"],
+  "files": {
+    // The pre-commit hook runs `ultracite fix` across the whole repo, so
+    // anything checked in that is not our source gets linted too. logo-creator
+    // is a vendored skill: its example SVGs and preview template are assets it
+    // ships with, and they raised 119 accessibility errors that blocked every
+    // commit. Not ours to fix, and not code we run.
+    "includes": ["!logo-creator"]
+  },
   "linter": {
     "rules": {
       "performance": {

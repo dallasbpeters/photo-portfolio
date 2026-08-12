@@ -4,6 +4,8 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   clampScale,
+  START_VIEW_HEIGHT,
+  START_VIEW_WIDTH,
 } from "../../config/canvas.js";
 
 export interface Viewport {
@@ -55,6 +57,47 @@ export interface CanvasViewport {
   /** Zooms about the container's centre — for on-screen buttons. */
   zoomBy: (factor: number) => void;
 }
+
+const SCROLLABLE = /(auto|scroll)/;
+
+/**
+ * The scrollable element under the pointer that could still take this wheel, or
+ * null when the gesture belongs to the canvas.
+ *
+ * Walks from the event target up to the canvas container. "Could still take it"
+ * matters as much as "is scrollable": a list already at its bottom should hand
+ * the wheel back rather than swallow it, so reaching the end of a panel goes on
+ * to zoom instead of stopping dead.
+ */
+const scrollableUnder = (
+  target: EventTarget | null,
+  stop: Element,
+  e: WheelEvent
+): Element | null => {
+  let node = target instanceof Element ? target : null;
+  while (node && node !== stop) {
+    const style = getComputedStyle(node);
+    const vertical =
+      SCROLLABLE.test(style.overflowY) &&
+      node.scrollHeight > node.clientHeight &&
+      // Room left in the direction being scrolled, with a pixel of tolerance
+      // for the fractional scroll offsets a zoomed canvas produces.
+      (e.deltaY < 0
+        ? node.scrollTop > 0
+        : node.scrollTop + node.clientHeight < node.scrollHeight - 1);
+    const horizontal =
+      SCROLLABLE.test(style.overflowX) &&
+      node.scrollWidth > node.clientWidth &&
+      (e.deltaX < 0
+        ? node.scrollLeft > 0
+        : node.scrollLeft + node.clientWidth < node.scrollWidth - 1);
+    if (vertical || horizontal) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+};
 
 /** How much one wheel notch zooms. */
 const WHEEL_SENSITIVITY = 0.0015;
@@ -120,12 +163,16 @@ export const useCanvasViewport = (
     const { width, height } = el.getBoundingClientRect();
     // A little breathing room so the edges are not flush with the frame.
     const scale = clampScale(
-      Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT) * 0.92
+      Math.min(width / START_VIEW_WIDTH, height / START_VIEW_HEIGHT) * 0.92
     );
+    // The opening screenful sits in the middle of the canvas, which is also
+    // where an item with nowhere else to go is dropped — see dropPoint.
+    const left = (CANVAS_WIDTH - START_VIEW_WIDTH) / 2;
+    const top = (CANVAS_HEIGHT - START_VIEW_HEIGHT) / 2;
     setViewport({
       scale,
-      tx: (width - CANVAS_WIDTH * scale) / 2,
-      ty: (height - CANVAS_HEIGHT * scale) / 2,
+      tx: (width - START_VIEW_WIDTH * scale) / 2 - left * scale,
+      ty: (height - START_VIEW_HEIGHT * scale) / 2 - top * scale,
     });
   }, [containerRef]);
 
@@ -272,6 +319,13 @@ export const useCanvasViewport = (
       return;
     }
     const onWheel = (e: WheelEvent) => {
+      // A panel inside the canvas gets the wheel first. Without this the zoom
+      // handler swallowed every scroll on the board, so no scrollable thing
+      // living on the canvas — a shader's settings, a long list of versions —
+      // could be scrolled at all.
+      if (scrollableUnder(e.target, el, e)) {
+        return;
+      }
       e.preventDefault();
       markUserMoved();
       // A trackpad pinch arrives as ctrlKey+wheel; both should zoom.

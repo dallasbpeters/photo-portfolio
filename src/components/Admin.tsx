@@ -2,6 +2,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   Delete02Icon,
+  EyeIcon,
+  EyeOffIcon,
   FileEditIcon,
   GridTableIcon,
   Layers01Icon,
@@ -11,12 +13,14 @@ import {
   TagsIcon,
   Upload02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { type AdminDataResult, useAdminData } from "../hooks/useAdminData";
 import { type AdminLoginResult, useAdminLogin } from "../hooks/useAdminLogin";
 import { type AdminViewResult, useAdminView } from "../hooks/useAdminView";
 import { type NewPhotoResult, useNewPhoto } from "../hooks/useNewPhoto";
 import {
+  type ExifForm,
   type PhotoDetailsResult,
   usePhotoDetails,
 } from "../hooks/usePhotoDetails";
@@ -24,17 +28,14 @@ import {
   type PhotoSelectionResult,
   usePhotoSelection,
 } from "../hooks/usePhotoSelection";
+import { portfolioService } from "../services/portfolioService";
 import type { Photo } from "../types";
 import { BatchUploader } from "./admin/BatchUploader";
-import { BoardsPanel } from "./admin/BoardsPanel";
 import { CategoriesManageDialog } from "./admin/CategoriesManageDialog";
 import { CategoryPicker } from "./admin/CategoryPicker";
 import { DailyChallengePanel } from "./admin/DailyChallengePanel";
 import { ForgotPasswordForm } from "./admin/ForgotPasswordForm";
 import { GoogleSignInButton } from "./admin/GoogleSignInButton";
-import { PagesPanel } from "./admin/PagesPanel";
-import { SiteSettingsPanel } from "./admin/SiteSettingsPanel";
-import { SitesPanel } from "./admin/SitesPanel";
 import { OptimizedImage } from "./OptimizedImage";
 import { PhotoEditor } from "./PhotoEditor";
 import { Button } from "./ui/button";
@@ -49,12 +50,6 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-
-interface AdminProps {
-  isAuthenticated: boolean;
-  onLogin: () => void;
-  onLogout: () => void;
-}
 
 type CategoryGroup = AdminViewResult["categorizedPhotos"][number];
 
@@ -244,13 +239,15 @@ const AddItemForm = ({
         />
 
         <Button
-          className="flex min-h-11 w-full items-center justify-center gap-2 bg-[#52ffd4] text-[12px] text-black uppercase tracking-widest transition-colors hover:bg-white/80 lg:col-span-1"
+          className="min-h-11"
           disabled={
             categoryOptionsDisabled ||
             newPhoto.isUploading ||
             !newPhoto.uploadDraftFile
           }
+          size="lg"
           type="submit"
+          variant="default"
         >
           <HugeiconsIcon icon={Add01Icon} size={16} />
           {newPhoto.isUploading ? "Uploading…" : "Add Item"}
@@ -467,24 +464,53 @@ const StackedView = ({ groups, selection }: StackedViewProps) => (
 // ── Grid view ─────────────────────────────────────────────────────────────────
 
 interface PhotoCardProps {
+  isDragging: boolean;
   isNew: boolean;
+  onDragEnd: () => void;
+  onDragOver: () => void;
+  onDragStart: () => void;
   onEditDetails: (photo: Photo) => void;
   onEditImage: (photo: Photo) => void;
+  onTogglePublished: (photo: Photo) => void;
   photo: Photo;
   selection: PhotoSelectionResult;
 }
 
 const PhotoCard = ({
+  isDragging,
   isNew,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
   onEditDetails,
   onEditImage,
+  onTogglePublished,
   photo,
   selection,
 }: PhotoCardProps) => {
   const selected = selection.selectedIds.includes(photo.id);
   return (
-    <article
-      className={`group relative aspect-3/4 rounded-lg p-0.5 ${isNew ? "animate-photo-enter" : ""}`}
+    // Only a drag source, never a button: it wraps the checkbox and the edit
+    // controls, so a real button here would nest interactive elements, and
+    // there is no keyboard reorder for a focus stop to operate.
+    //
+    // Reordering by keyboard is the Order field in Edit details, which sets a
+    // position directly — so dragging is a shortcut for people who can, not
+    // the only way in.
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: HTML5 drag needs its handlers on the dragged element itself
+    // biome-ignore lint/a11y/noStaticElementInteractions: as above — the keyboard path is the Order field
+    <div
+      className={`group relative aspect-3/4 rounded-lg p-0.5 transition-opacity ${isNew ? "animate-photo-enter" : ""} ${isDragging ? "opacity-40" : ""}`}
+      draggable
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        // Both are needed: without preventDefault the browser refuses the drop
+        // and animates the card snapping back to where it started.
+        e.preventDefault();
+        onDragOver();
+      }}
+      onDragStart={onDragStart}
+      onDrop={(e) => e.preventDefault()}
     >
       <div
         aria-hidden
@@ -547,6 +573,24 @@ const PhotoCard = ({
             <HugeiconsIcon icon={PencilEdit01Icon} size={18} />
           </Button>
           <Button
+            aria-label={
+              photo.isPublished
+                ? `Hide ${photo.title} from the site`
+                : `Show ${photo.title} on the site`
+            }
+            aria-pressed={!photo.isPublished}
+            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
+            onClick={() => onTogglePublished(photo)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon
+              icon={photo.isPublished ? EyeIcon : EyeOffIcon}
+              size={18}
+            />
+          </Button>
+          <Button
             aria-label={`Delete ${photo.title}`}
             className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-red-500/20 hover:text-red-300"
             onClick={() => void selection.deletePhoto(photo.id)}
@@ -568,9 +612,15 @@ const PhotoCard = ({
           <p className="mt-0.5 font-mono text-[9px] text-white/55 drop-shadow">
             #{photo.order}
           </p>
+          {photo.isPublished ? null : (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-200 uppercase tracking-wider">
+              <HugeiconsIcon icon={EyeOffIcon} size={10} />
+              Hidden
+            </p>
+          )}
         </div>
       </div>
-    </article>
+    </div>
   );
 };
 
@@ -578,6 +628,9 @@ interface PhotoGridProps {
   newlyAddedPhotoId: string | null;
   onEditDetails: (photo: Photo) => void;
   onEditImage: (photo: Photo) => void;
+  /** The ids in their new order, once a drag settles. */
+  onReorder: (photoIds: string[]) => void;
+  onTogglePublished: (photo: Photo) => void;
   photos: Photo[];
   selection: PhotoSelectionResult;
 }
@@ -586,24 +639,85 @@ const PhotoGrid = ({
   newlyAddedPhotoId,
   onEditDetails,
   onEditImage,
+  onReorder,
+  onTogglePublished,
   photos,
   selection,
-}: PhotoGridProps) => (
-  <div className="p-2 sm:p-3">
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-      {photos.map((photo) => (
-        <PhotoCard
-          isNew={photo.id === newlyAddedPhotoId}
-          key={photo.id}
-          onEditDetails={onEditDetails}
-          onEditImage={onEditImage}
-          photo={photo}
-          selection={selection}
-        />
-      ))}
+}: PhotoGridProps) => {
+  // A local copy so the grid rearranges under the pointer. Dragging against
+  // the server's copy would mean a round trip per card crossed, and the photo
+  // snapping back each time until the save landed.
+  const [order, setOrder] = useState(photos);
+  const dragId = useRef<string | null>(null);
+
+  // Re-synced whenever the library changes underneath — a save, a delete, a
+  // new upload — but not while a drag is in flight, which would yank the card
+  // out from under the pointer.
+  useEffect(() => {
+    if (dragId.current === null) {
+      setOrder(photos);
+    }
+  }, [photos]);
+
+  const moveBefore = (targetId: string) => {
+    const held = dragId.current;
+    if (held === null || held === targetId) {
+      return;
+    }
+    setOrder((current) => {
+      const from = current.findIndex((p) => p.id === held);
+      const to = current.findIndex((p) => p.id === targetId);
+      if (from === -1 || to === -1) {
+        return current;
+      }
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      if (moved) {
+        next.splice(to, 0, moved);
+      }
+      return next;
+    });
+  };
+
+  const commit = () => {
+    dragId.current = null;
+    // Compared against the incoming order rather than tracked with a flag: a
+    // drag that ends where it started is not a change, and should not spend a
+    // request or churn the library.
+    const before = photos.map((p) => p.id).join();
+    const after = order.map((p) => p.id).join();
+    if (before !== after) {
+      onReorder(order.map((p) => p.id));
+    }
+  };
+
+  return (
+    <div className="p-2 sm:p-3">
+      <p className="px-1 pb-2 text-[10px] text-white/40 uppercase tracking-[0.18em]">
+        Drag to reorder
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {order.map((photo) => (
+          <PhotoCard
+            isDragging={dragId.current === photo.id}
+            isNew={photo.id === newlyAddedPhotoId}
+            key={photo.id}
+            onDragEnd={commit}
+            onDragOver={() => moveBefore(photo.id)}
+            onDragStart={() => {
+              dragId.current = photo.id;
+            }}
+            onEditDetails={onEditDetails}
+            onEditImage={onEditImage}
+            onTogglePublished={onTogglePublished}
+            photo={photo}
+            selection={selection}
+          />
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── Current items ─────────────────────────────────────────────────────────────
 
@@ -614,6 +728,8 @@ interface ItemsCardProps {
   onEditDetails: (photo: Photo) => void;
   onEditImage: (photo: Photo) => void;
   onManageCategories: () => void;
+  onReorder: (photoIds: string[]) => void;
+  onTogglePublished: (photo: Photo) => void;
   selection: PhotoSelectionResult;
   view: AdminViewResult;
 }
@@ -625,6 +741,8 @@ const ItemsCard = ({
   onEditDetails,
   onEditImage,
   onManageCategories,
+  onReorder,
+  onTogglePublished,
   selection,
   view,
 }: ItemsCardProps) => (
@@ -696,6 +814,8 @@ const ItemsCard = ({
               newlyAddedPhotoId={newPhoto.newlyAddedPhotoId}
               onEditDetails={onEditDetails}
               onEditImage={onEditImage}
+              onReorder={onReorder}
+              onTogglePublished={onTogglePublished}
               photos={data.photos}
               selection={selection}
             />
@@ -707,6 +827,45 @@ const ItemsCard = ({
 );
 
 // ── Edit details dialog ───────────────────────────────────────────────────────
+
+interface ExifFieldConfig {
+  inputMode?: "decimal" | "numeric" | "text";
+  label: string;
+  name: keyof ExifForm;
+  placeholder: string;
+  type?: "datetime-local" | "text";
+}
+
+const EXIF_FIELDS: ExifFieldConfig[] = [
+  { label: "Make", name: "make", placeholder: "Leica" },
+  { label: "Model", name: "model", placeholder: "M6" },
+  { label: "Lens", name: "lens", placeholder: "35mm Summicron" },
+  {
+    inputMode: "decimal",
+    label: "Focal length",
+    name: "focalLength",
+    placeholder: "35",
+  },
+  {
+    inputMode: "decimal",
+    label: "Aperture",
+    name: "aperture",
+    placeholder: "2",
+  },
+  {
+    inputMode: "text",
+    label: "Shutter",
+    name: "shutter",
+    placeholder: "1/250",
+  },
+  { inputMode: "numeric", label: "ISO", name: "iso", placeholder: "400" },
+  {
+    label: "Taken at",
+    name: "takenAt",
+    placeholder: "",
+    type: "datetime-local",
+  },
+];
 
 interface DetailsDialogProps {
   categoryOptionsDisabled: boolean;
@@ -783,6 +942,46 @@ const DetailsDialog = ({
             value={details.detailsOrder}
           />
         </div>
+
+        {/* Read off the file at upload, and wrong often enough to need
+            correcting: adapted lenses report nothing, scans carry the
+            scanner's date, and a borrowed body stamps someone else's make. */}
+        <fieldset className="space-y-3 border-white/10 border-t pt-4">
+          <legend className="sr-only">Shooting details</legend>
+          <p className="text-[10px] text-white/90 uppercase tracking-widest">
+            Shooting details
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {EXIF_FIELDS.map((field) => (
+              <div className="space-y-2" key={field.name}>
+                <Label
+                  className="text-[10px] text-white/60 uppercase tracking-widest"
+                  htmlFor={`details-exif-${field.name}`}
+                >
+                  {field.label}
+                </Label>
+                <Input
+                  className="border-white/10 bg-black/40 focus:border-white/40"
+                  id={`details-exif-${field.name}`}
+                  inputMode={field.inputMode}
+                  onChange={(e) =>
+                    details.setDetailsExifField(field.name, e.target.value)
+                  }
+                  placeholder={field.placeholder}
+                  type={field.type ?? "text"}
+                  value={details.detailsExif[field.name]}
+                />
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10px] text-white/30 leading-relaxed">
+            Empty every box to remove the shooting details from this photograph
+            entirely.
+          </p>
+        </fieldset>
+
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button
             className="text-white/90 hover:text-white"
@@ -805,25 +1004,24 @@ const DetailsDialog = ({
   </Dialog>
 );
 
-export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
-  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
-  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+/**
+ * Signs the admin in, and shows nothing behind it until they are.
+ *
+ * A wrapper rather than a check inside each section: the admin is several
+ * pages now, and a gate copied four times is a gate that will eventually be
+ * four subtly different gates, one of which forgets to close.
+ */
+export const AdminGate = ({
+  children,
+  isAuthenticated,
+  onLogin,
+}: {
+  children: ReactNode;
+  isAuthenticated: boolean;
+  onLogin: () => void;
+}) => {
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
-
   const login = useAdminLogin(onLogin);
-  const data = useAdminData(isAuthenticated);
-  const view = useAdminView(data.photos);
-  const selection = usePhotoSelection(
-    data.photos,
-    data.categories,
-    data.reload
-  );
-  const details = usePhotoDetails(data.reload);
-  const newPhoto = useNewPhoto(data.categories, data.reload);
-
-  const categoryOptionsDisabled = data.categories.length === 0;
-
-  // ── Login screen ────────────────────────────────────────────────────────────
 
   if (!isAuthenticated && isRecoveringPassword) {
     return (
@@ -844,7 +1042,78 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
     );
   }
 
-  // ── Authenticated ────────────────────────────────────────────────────────────
+  return children;
+};
+
+/**
+ * The photo library: uploading, categorising, ordering and editing.
+ *
+ * Site settings, moodboards and CMS pages used to be stacked below this on the
+ * same endless page, which buried the thing the admin is actually for. They
+ * are their own routes now; this component is only ever the photographs.
+ */
+export const Admin = () => {
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+
+  // Always authenticated: AdminGate is what renders this.
+  const data = useAdminData(true);
+  const view = useAdminView(data.photos);
+  const selection = usePhotoSelection(data.photos, data.categories, {
+    removePhotos: data.removePhotos,
+    replacePhotos: data.replacePhotos,
+  });
+  const details = usePhotoDetails(data.applyPhotoUpdate);
+  const newPhoto = useNewPhoto(data.categories, data.insertPhoto);
+
+  const categoryOptionsDisabled = data.categories.length === 0;
+
+  /**
+   * Shows or hides a photograph on the public gallery.
+   *
+   * Title, category and order come back unchanged because the endpoint
+   * validates all three on every write; only `isPublished` is actually
+   * different.
+   */
+  const togglePublished = async (photo: Photo) => {
+    try {
+      const saved = await portfolioService.updatePhoto(photo.id, {
+        categoryId: photo.categoryId,
+        isPublished: !photo.isPublished,
+        order: photo.order,
+        title: photo.title,
+      });
+      data.applyPhotoUpdate(saved);
+      toast.success(photo.isPublished ? "Hidden from the site" : "Published");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not change visibility"
+      );
+    }
+  };
+
+  const reorderPhotos = async (photoIds: string[]) => {
+    // Kept so the list can be put back if the save fails.
+    const previous = data.photos;
+    const byId = new Map(previous.map((p) => [p.id, p]));
+    const moved = photoIds
+      .map((id) => byId.get(id))
+      .filter((p): p is Photo => p !== undefined);
+
+    // Applied before the request, not after: the grid has already animated
+    // into this order under the pointer, and refetching to confirm it would
+    // repaint every card to show what is on screen.
+    data.replacePhotos(moved);
+
+    try {
+      await portfolioService.reorderPhotos(photoIds);
+    } catch (error) {
+      data.replacePhotos(previous);
+      toast.error(
+        error instanceof Error ? error.message : "Could not save the new order"
+      );
+    }
+  };
 
   return (
     <div className="mx-auto w-full space-y-8 md:space-y-12">
@@ -877,6 +1146,8 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
         onEditDetails={details.open}
         onEditImage={setEditingPhoto}
         onManageCategories={() => setCategoriesModalOpen(true)}
+        onReorder={(photoIds) => void reorderPhotos(photoIds)}
+        onTogglePublished={(photo) => void togglePublished(photo)}
         selection={selection}
         view={view}
       />
@@ -897,14 +1168,6 @@ export const Admin = ({ isAuthenticated, onLogin }: AdminProps) => {
           photo={editingPhoto}
         />
       ) : null}
-
-      <SitesPanel />
-
-      <BoardsPanel />
-
-      <PagesPanel />
-
-      <SiteSettingsPanel />
     </div>
   );
 };

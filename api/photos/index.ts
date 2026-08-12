@@ -75,11 +75,17 @@ const parsePhotoFields = (body: Record<string, unknown>) => {
   };
 };
 
-const handleGet = async (sql: Sql, res: VercelResponse) => {
+const handleGet = async (req: VercelRequest, sql: Sql, res: VercelResponse) => {
+  // The admin needs to see what it has hidden in order to unhide it; a visitor
+  // must not. One endpoint serves both, so the token decides — an unpublished
+  // photograph is simply absent for anyone without one.
+  const isAdmin = Boolean(getBearerUser(req.headers.authorization));
+
   const rows = (await sql`
     SELECT ${sql.unsafe(PHOTO_COLUMNS)}
     FROM photos p
     INNER JOIN categories c ON c.id = p.category_id
+    WHERE ${isAdmin} OR p.is_published
     ORDER BY p.sort_order ASC, p.created_at ASC
   `) as PhotoRow[];
   return res.status(200).json(rows.map(rowToDto));
@@ -177,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = getSql();
 
     if (req.method === "GET") {
-      return await handleGet(sql, res);
+      return await handleGet(req, sql, res);
     }
 
     if (req.method === "POST") {

@@ -45,7 +45,11 @@ export default function App() {
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route element={<HomePage />} path="/" />
-            <Route element={<AdminPage />} path="/admin" />
+            {/* Splat: the admin routes its own sections (photos, moodboards,
+                pages, settings) so they share one shell and one login gate.
+                The board editor below still wins for /admin/boards/:id, which
+                ranks above a splat. */}
+            <Route element={<AdminPage />} path="/admin/*" />
             {/* Before /:slug, and more specific than /admin, so a board keeps
                 its own URL and survives a reload. */}
             <Route element={<BoardPage />} path="/admin/boards/:boardId" />

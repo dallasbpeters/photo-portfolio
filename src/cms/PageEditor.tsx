@@ -25,11 +25,7 @@ import { toast } from "sonner";
 import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
 import type { ImageAlign } from "./imageAttributes";
-import {
-  FormattedImage,
-  IMAGE_ALIGNMENTS,
-  IMAGE_WIDTHS,
-} from "./imageAttributes";
+import { FormattedImage, IMAGE_WIDTHS } from "./imageAttributes";
 
 interface PageEditorProps {
   onChange: (doc: unknown) => void;
@@ -55,7 +51,11 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
     editorProps: {
       attributes: {
         class:
-          "prose-invert max-w-none min-h-[320px] px-5 py-4 focus:outline-none text-white/85 leading-relaxed",
+          // max-w-2xl to match ContentPage's column. Authoring at the panel's
+          // full width made every image look enormous and every line of text
+          // twice as long as it publishes, so the width buttons were being
+          // judged against a measure the reader never sees.
+          "prose-invert mx-auto max-w-2xl min-h-[320px] px-5 py-4 focus:outline-none text-white/85 leading-relaxed",
       },
     },
     extensions: [
@@ -102,6 +102,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       const image = e.getAttributes("image");
       return {
         imageAlign: (image.align ?? null) as ImageAlign | null,
+        imageAlt: typeof image.alt === "string" ? image.alt : "",
         imageWidth: (image.width ?? null) as number | null,
         isBlockquote: e.isActive("blockquote"),
         isBold: e.isActive("bold"),
@@ -128,7 +129,10 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       const toastId = toast.loading("Uploading image…");
       try {
         const { url } = await portfolioService.uploadImageFile(file);
-        editor.chain().focus().setImage({ alt: file.name, src: url }).run();
+        // No alt by default. It used to be the filename, which the page then
+        // printed under the photograph as a caption — "DSC_4821.jpg" in the
+        // middle of an essay, with nowhere to change it.
+        editor.chain().focus().setImage({ src: url }).run();
         toast.success("Image added", { id: toastId });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Upload failed", {
@@ -312,7 +316,13 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
           <span className="px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
             Image
           </span>
-          {IMAGE_ALIGNMENTS.map((align) => (
+          {(
+            [
+              ["left", TextAlignLeftIcon],
+              ["center", TextAlignCenterIcon],
+              ["right", TextAlignRightIcon],
+            ] as const
+          ).map(([align, icon]) => (
             <ToolButton
               editor={editor}
               isActive={toolbar.imageAlign === align}
@@ -326,9 +336,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
                   .run()
               }
             >
-              <span className="text-[10px] uppercase tracking-widest">
-                {align}
-              </span>
+              <HugeiconsIcon icon={icon} size={14} />
             </ToolButton>
           ))}
 
@@ -351,6 +359,27 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
               <span className="text-[10px] tabular-nums">{width}%</span>
             </ToolButton>
           ))}
+
+          {/* The page prints this under the photograph, so it needs to be
+              typed rather than inherited from the upload. On its own line
+              because a caption is a sentence, not a toggle. */}
+          <label className="mt-1 flex w-full items-center gap-2">
+            <span className="shrink-0 px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
+              Caption
+            </span>
+            <input
+              className="min-h-8 flex-1 border border-white/10 bg-black/40 px-2 text-[12px] text-white/85 outline-none focus:border-white/40"
+              onChange={(e) =>
+                editor
+                  .chain()
+                  .focus()
+                  .updateAttributes("image", { alt: e.target.value })
+                  .run()
+              }
+              placeholder="Describe the photograph — shown beneath it, and read aloud to anyone who cannot see it"
+              value={toolbar.imageAlt}
+            />
+          </label>
         </div>
       ) : null}
 

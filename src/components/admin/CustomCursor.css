@@ -9,6 +9,19 @@ body.custom-cursor-active {
   cursor: none;
 }
 
+/*
+ * The real cursor, back again, wherever aiming precisely is the whole point.
+ *
+ * A colour picker is chosen by eye against a gradient: the drawn cursor is a
+ * large arrow with a name label beside it, and at z-index 9999 it sits over the
+ * picker and covers the very pixel being chosen. Hiding the native cursor as
+ * well left nothing to aim with at all.
+ */
+body.cursor-precise,
+body.cursor-precise * {
+  cursor: default;
+}
+
 .custom-cursor-container {
   position: fixed;
   top: 0;
@@ -37,4 +50,12 @@ body.custom-cursor-active {
   white-space: nowrap;
   border-radius: 4px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/*
+ * Last, so it wins over the container rule above rather than relying on
+ * specificity ordering the linter would object to.
+ */
+body.cursor-precise .custom-cursor-container {
+  display: none;
 }

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import type { PageSummary } from "../services/portfolioService";
 import { ICON_COMPONENTS, type IconComponent } from "./iconMap";
 
@@ -46,17 +46,24 @@ export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
       {pages.map((page) => {
         const Icon = resolveIcon(page.icon);
         return (
-          <Link
-            className={`group flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] transition-colors duration-300 ${base}`}
+          <NavLink
+            // The border stays on the box at all times and only changes
+            // colour, so the row does not jump by two pixels as you move
+            // between pages — dropping the border entirely would reflow it.
+            className={({ isActive }) =>
+              `group flex items-center gap-1.5 border-b-2 px-2 text-[0.9rem] text-shadow-2xs text-shadow-a-contrast leading-loose tracking-[0.2em] transition-colors duration-300 ${base} ${
+                isActive ? "border-white" : "border-transparent"
+              }`
+            }
             key={page.id}
             to={`/${page.slug}`}
           >
-            {Icon && <HugeiconsIcon icon={Icon} size={12} />}
+            {Icon && <HugeiconsIcon icon={Icon} size={20} />}
             <span className="relative">
               {page.title}
               <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-current transition-all duration-300 group-hover:w-full" />
             </span>
-          </Link>
+          </NavLink>
         );
       })}
     </nav>

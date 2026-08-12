@@ -26,7 +26,17 @@ export interface PhotoSelectionResult {
 export const usePhotoSelection = (
   photos: Photo[],
   categories: Category[],
-  reload: () => Promise<void>
+  /**
+   * Local edits to the library, in place of refetching it.
+   *
+   * Batch changes already know their outcome — which ids went, and which
+   * category the rest moved to — so the list can be brought up to date without
+   * the whole grid repainting.
+   */
+  edit: {
+    removePhotos: (ids: string[]) => void;
+    replacePhotos: (photos: Photo[]) => void;
+  }
 ): PhotoSelectionResult => {
   const { confirm } = useConfirm();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -91,7 +101,24 @@ export const usePhotoSelection = (
         selectedIds,
         batchCategoryId
       );
-      await reload();
+      // The endpoint answers with a count, but the destination category is
+      // already in hand, so the moved rows can be rewritten here.
+      const moved = new Set(selectedIds);
+      const target = categories.find((c) => c.id === batchCategoryId);
+      if (target) {
+        edit.replacePhotos(
+          photos.map((p) =>
+            moved.has(p.id)
+              ? {
+                  ...p,
+                  category: target.slug,
+                  categoryId: target.id,
+                  categoryLabel: target.label,
+                }
+              : p
+          )
+        );
+      }
       setSelectedIds([]);
       if (updated === 0) {
         toast.error("No photos were updated — check selections and try again.");
@@ -129,7 +156,7 @@ export const usePhotoSelection = (
     setIsBatchDeleting(true);
     try {
       const deleted = await portfolioService.batchDeletePhotos(selectedIds);
-      await reload();
+      edit.removePhotos(selectedIds);
       setSelectedIds([]);
       if (deleted === 0) {
         toast.error("No photos were deleted.");
@@ -162,7 +189,7 @@ export const usePhotoSelection = (
     }
     try {
       await portfolioService.deletePhoto(id);
-      await reload();
+      edit.removePhotos([id]);
       setSelectedIds((prev) => prev.filter((x) => x !== id));
       posthog.capture("photos_deleted", {
         deletion_method: "single",

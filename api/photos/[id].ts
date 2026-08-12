@@ -3,7 +3,7 @@ import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
-import { type PhotoRow, rowToDto } from "../_lib/photos.js";
+import { type PhotoRow, parseIncomingExif, rowToDto } from "../_lib/photos.js";
 
 async function handlePatch(
   req: VercelRequest,
@@ -25,6 +25,21 @@ async function handlePatch(
     typeof body.url === "string" && body.url.trim() ? body.url.trim() : null;
   const alt =
     typeof body.alt === "string" ? body.alt.trim().slice(0, 300) : null;
+
+  // Presence of the key, not its truthiness, decides whether EXIF is touched.
+  // Callers that only rename a photo omit it and keep whatever was read off the
+  // file; the details form sends it every time, and sending null clears it.
+  // Same presence test as EXIF below: a caller that says nothing about
+  // publishing must not accidentally republish a hidden photograph.
+  const isPublished =
+    typeof body.isPublished === "boolean" ? body.isPublished : null;
+
+  const hasExif = Object.hasOwn(body, "exif");
+  // Null rather than the string "null": the latter casts to a JSON null that
+  // sits in the column looking like data, where a cleared field should leave
+  // the column genuinely empty.
+  const parsedExif = hasExif ? parseIncomingExif(body.exif) : null;
+  const exifJson = parsedExif === null ? null : JSON.stringify(parsedExif);
 
   if (!(title && categoryId)) {
     return res.status(400).json({ error: "Invalid title or categoryId" });
@@ -49,13 +64,18 @@ async function handlePatch(
           UPDATE photos
           SET title = ${title}, category_id = ${categoryId}, sort_order = ${order},
             url = COALESCE(${url}, url),
-            alt = COALESCE(${alt}, alt)
+            alt = COALESCE(${alt}, alt),
+            is_published = COALESCE(${isPublished}, is_published),
+            -- COALESCE would make clearing impossible, since the cleared value
+            -- is itself NULL. The flag says whether the caller spoke about
+            -- EXIF at all; only then does this column change.
+            exif = CASE WHEN ${hasExif} THEN ${exifJson}::jsonb ELSE exif END
           WHERE id = ${id}
           RETURNING id, url, title, sort_order, created_at, category_id,
-            alt, width, height, lqip, exif
+            alt, width, height, lqip, exif, is_published
         )
         SELECT u.id, u.url, u.title, u.sort_order, u.created_at,
-          u.alt, u.width, u.height, u.lqip, u.exif,
+          u.alt, u.width, u.height, u.lqip, u.exif, u.is_published,
           c.id AS category_id, c.slug AS category_slug, c.label AS category_label
         FROM u
         JOIN categories c ON c.id = u.category_id

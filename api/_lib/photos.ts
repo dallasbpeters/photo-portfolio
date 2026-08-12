@@ -7,6 +7,8 @@ export interface PhotoRow {
   exif: unknown;
   height: number | null;
   id: string;
+  /** Null on databases where the publishing patch has not been applied yet. */
+  is_published: boolean | null;
   lqip: string | null;
   sort_order: number;
   title: string;
@@ -24,6 +26,8 @@ export interface PhotoDto {
   exif: unknown;
   height: number | null;
   id: string;
+  /** False hides it from the site while leaving it in the library. */
+  isPublished: boolean;
   lqip: string | null;
   order: number;
   title: string;
@@ -48,6 +52,9 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   exif: row.exif ?? null,
   height: row.height ?? null,
   id: row.id,
+  // Photographs predating the column have no value; they were visible then and
+  // must stay visible now.
+  isPublished: row.is_published ?? true,
   lqip: row.lqip ?? null,
   order: Number(row.sort_order),
   title: row.title,
@@ -55,7 +62,78 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   width: row.width ?? null,
 });
 
+/** The shooting details a photographer may correct by hand. */
+export interface IncomingExif {
+  aperture?: number;
+  exposureTime?: number;
+  focalLength?: number;
+  iso?: number;
+  lens?: string;
+  make?: string;
+  model?: string;
+  takenAt?: string;
+}
+
+/** A positive, finite number rounded to `places`, or undefined. */
+const positive = (value: unknown, places: number): number | undefined => {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!(Number.isFinite(n) && n > 0)) {
+    return;
+  }
+  const factor = 10 ** places;
+  return Math.round(n * factor) / factor;
+};
+
+const shortText = (value: unknown): string | undefined => {
+  const s = typeof value === "string" ? value.trim() : "";
+  // Matches the width the browser-side reader already truncates to, so a value
+  // typed by hand and one read from a file are bounded the same way.
+  return s === "" ? undefined : s.slice(0, 120);
+};
+
+/**
+ * Validates EXIF submitted from the editor.
+ *
+ * Every field is dropped rather than rejected when it does not make sense — a
+ * blanked box means "I do not know this", which is a legitimate state for a
+ * scan or a screenshot, and should not fail the whole save. Returns null when
+ * nothing usable is left, which clears the column.
+ *
+ * Rewritten rather than merged into what is already stored: the editor sends
+ * the complete set it is showing, so a field the photographer emptied has to
+ * come back empty instead of reverting to the value read off the file.
+ */
+export const parseIncomingExif = (value: unknown): IncomingExif | null => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+
+  const takenAtRaw = typeof raw.takenAt === "string" ? raw.takenAt.trim() : "";
+  const takenAtDate = takenAtRaw ? new Date(takenAtRaw) : null;
+
+  const exif: IncomingExif = {
+    aperture: positive(raw.aperture, 1),
+    exposureTime: positive(raw.exposureTime, 6),
+    focalLength: positive(raw.focalLength, 1),
+    iso: positive(raw.iso, 0),
+    lens: shortText(raw.lens),
+    make: shortText(raw.make),
+    model: shortText(raw.model),
+    takenAt:
+      takenAtDate && !Number.isNaN(takenAtDate.getTime())
+        ? takenAtDate.toISOString()
+        : undefined,
+  };
+
+  const kept = Object.fromEntries(
+    Object.entries(exif).filter(([, v]) => v !== undefined)
+  ) as IncomingExif;
+
+  return Object.keys(kept).length > 0 ? kept : null;
+};
+
 /** Columns every photo query needs, kept in one place so they cannot drift. */
 export const PHOTO_COLUMNS = `p.id, p.url, p.title, p.sort_order, p.created_at,
-  p.alt, p.width, p.height, p.lqip, p.exif,
+  p.alt, p.width, p.height, p.lqip, p.exif, p.is_published,
   c.id AS category_id, c.slug AS category_slug, c.label AS category_label`;

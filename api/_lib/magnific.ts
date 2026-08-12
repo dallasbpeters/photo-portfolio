@@ -108,7 +108,6 @@ const settle = async (task: IconTask, deadline: number): Promise<IconTask> => {
     }
     // biome-ignore lint/performance/noAwaitInLoops: polling is the point — each request depends on the last one's answer
     await sleep(POLL_INTERVAL_MS);
-    // biome-ignore lint/performance/noAwaitInLoops: as above
     current = await request(`/${encodeURIComponent(taskId)}`);
   }
   return current;

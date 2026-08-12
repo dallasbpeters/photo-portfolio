@@ -7,27 +7,114 @@ import { put } from "@vercel/blob";
  * scratch host, Magnific signs its CDN URLs with an expiry token — so an asset
  * pinned to a board would quietly 404 once that link lapsed. Boards are meant
  * to be kept, so the bytes have to become ours.
+ *
+ * The type is worked out from the bytes rather than taken from the response.
+ * fal serves Recraft's vector output as `application/octet-stream`, so trusting
+ * the header stored every SVG as a `.jpg` labelled `application/octet-stream` —
+ * and a browser will not render that, whatever it is called. The generation had
+ * worked and cost money; only the filing was wrong, which made it look like the
+ * model had failed.
  */
+
+/** Leading bytes that identify each format we accept. */
+const SIGNATURES: { prefix: number[]; type: string }[] = [
+  { prefix: [0x89, 0x50, 0x4e, 0x47], type: "image/png" },
+  { prefix: [0xff, 0xd8, 0xff], type: "image/jpeg" },
+  { prefix: [0x47, 0x49, 0x46, 0x38], type: "image/gif" },
+];
+
+const startsWith = (bytes: Uint8Array, prefix: number[]): boolean =>
+  prefix.every((byte, index) => bytes[index] === byte);
+
+/** RIFF....WEBP — the tag sits at offset 8, after the chunk size. */
+const isWebp = (bytes: Uint8Array): boolean =>
+  startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+  startsWith(bytes.subarray(8), [0x57, 0x45, 0x42, 0x50]);
+
+/** ....ftypavif — the brand sits at offset 4, after the box length. */
+const isAvif = (bytes: Uint8Array): boolean =>
+  startsWith(
+    bytes.subarray(4),
+    [0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66]
+  );
+
+/**
+ * SVG is text, so it has no magic number.
+ *
+ * It may open with an XML declaration, a doctype, or a comment before the root
+ * element ever appears, so the opening tag is looked for in the first stretch of
+ * the file rather than only at position zero.
+ */
+const SVG_TAG = /<svg[\s>]/i;
+
+const isSvg = (bytes: Uint8Array): boolean => {
+  const head = new TextDecoder("utf-8", { fatal: false }).decode(
+    bytes.subarray(0, 512)
+  );
+  return SVG_TAG.test(head);
+};
+
+const EXTENSIONS: Record<string, string> = {
+  "image/avif": "avif",
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+};
+
+/**
+ * The real type of the bytes, or null if they are not an image we know.
+ *
+ * Deliberately ignores what the server said: the whole reason this exists is
+ * that the server was wrong.
+ */
+const sniff = (bytes: Uint8Array): string | null => {
+  for (const { prefix, type } of SIGNATURES) {
+    if (startsWith(bytes, prefix)) {
+      return type;
+    }
+  }
+  if (isWebp(bytes)) {
+    return "image/webp";
+  }
+  if (isAvif(bytes)) {
+    return "image/avif";
+  }
+  if (isSvg(bytes)) {
+    return "image/svg+xml";
+  }
+  return null;
+};
+
 export const persistGenerated = async (
   sourceUrl: string,
   /** Folder under the blob store, e.g. "boards/ai" or "boards/icons". */
-  prefix: string
+  prefix: string,
+  /**
+   * The type the generator declared, used only when the bytes are unrecognised.
+   * fal reports one in its JSON that is more honest than the one it serves.
+   */
+  declaredType?: string | null
 ): Promise<string> => {
   const res = await fetch(sourceUrl);
   if (!res.ok) {
     throw new Error(`Could not download the generated file (${res.status})`);
   }
   const bytes = await res.arrayBuffer();
-  const type = res.headers.get("content-type") ?? "image/jpeg";
 
-  // SVG is deliberately recognised: an icon stored as .jpg would be served with
-  // the wrong type and would not render.
-  let extension = "jpg";
-  if (type.includes("svg")) {
-    extension = "svg";
-  } else if (type.includes("png")) {
-    extension = "png";
-  }
+  const served = res.headers.get("content-type");
+  const type =
+    sniff(new Uint8Array(bytes)) ??
+    // Only trusted once the bytes have failed to identify themselves, and only
+    // if it actually names an image — "application/octet-stream" is what got us
+    // here and must never be stored.
+    [declaredType, served].find((candidate) =>
+      candidate?.startsWith("image/")
+    ) ??
+    "image/jpeg";
+
+  const extension = EXTENSIONS[type.split(";")[0]?.trim() ?? ""] ?? "jpg";
 
   const blob = await put(
     `${prefix}/${crypto.randomUUID()}.${extension}`,
