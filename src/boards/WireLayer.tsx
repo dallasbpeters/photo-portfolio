@@ -67,7 +67,10 @@ export function WireLayer({
   return (
     <svg
       aria-hidden={wires.length === 0}
-      className="pointer-events-none absolute inset-0"
+      // overflow-visible because an SVG clips at its own viewport: a wire's
+      // control points reach half the horizontal distance beyond each end, so a
+      // curve between items near the canvas edge was cut off at the boundary.
+      className="pointer-events-none absolute inset-0 overflow-visible"
       fill="none"
       height={CANVAS_HEIGHT}
       role={wires.length === 0 ? undefined : "list"}

@@ -162,12 +162,29 @@ export function useGraphRun({
   const runNode = useCallback(
     async (itemId: string, force: boolean) => {
       await beforeRun();
+      // Registered here as well as in runBoard, so cancel() reaches a node run
+      // too. Without it a batch of eight started from a node's own button had
+      // no way to be stopped, and the Stop control on the node did nothing.
+      const controller = new AbortController();
+      abort.current = controller;
+      setIsRunning(true);
       try {
-        await runOne(itemId, force);
+        await runOne(itemId, force, controller.signal);
       } catch (e) {
-        const message =
-          e instanceof Error ? e.message : "Could not run this node";
-        onPatch(itemId, { runError: message, runState: "failed" });
+        // An abort is a choice, not a failure. Marking the node failed would
+        // leave a red error on something the person deliberately stopped.
+        if (controller.signal.aborted) {
+          onPatch(itemId, { runError: null, runState: "idle" });
+        } else {
+          const message =
+            e instanceof Error ? e.message : "Could not run this node";
+          onPatch(itemId, { runError: message, runState: "failed" });
+        }
+      } finally {
+        setIsRunning(false);
+        if (abort.current === controller) {
+          abort.current = null;
+        }
       }
     },
     [beforeRun, onPatch, runOne]

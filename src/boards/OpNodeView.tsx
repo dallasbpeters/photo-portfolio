@@ -6,6 +6,7 @@ import {
   PlayIcon,
   RefreshIcon,
   SparklesIcon,
+  StopIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import {
@@ -21,6 +22,8 @@ interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
   hasWiredPrompt: boolean;
   item: BoardItem;
+  /** Stops a run in flight. */
+  onCancel?: () => void;
   onConfigChange: (config: Record<string, unknown>) => void;
   /** Deletes one stored version for good. */
   onRemoveVersion?: (index: number) => void;
@@ -359,6 +362,7 @@ export function OpNodeView({
   hasWiredPrompt,
   wiredPrompt,
   item,
+  onCancel,
   onConfigChange,
   onRemoveVersion,
   onRun,
@@ -452,15 +456,21 @@ export function OpNodeView({
           // wider than the node below 100% — the button never fit its box.
           // Scaling with the node, like the prompt field above it, is correct.
           <footer className="flex shrink-0 items-center gap-1 border-white/10 border-t p-1">
+            {/* The same button stops what it started. A separate Stop would sit
+                disabled and useless most of the time, and a running generation
+                is exactly when the Run button has nothing else to offer. */}
             <button
-              className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded border border-white/20 text-[10px] text-white/80 uppercase tracking-[0.18em] hover:bg-white hover:text-black disabled:opacity-40"
-              disabled={isRunning}
-              onClick={() => onRun(false)}
+              className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded border border-white/20 text-[10px] text-white/80 uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+              onClick={() => (isRunning ? onCancel?.() : onRun(false))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
             >
-              <HugeiconsIcon aria-hidden icon={PlayIcon} size={12} />
-              {isRunning ? "Running…" : "Run"}
+              <HugeiconsIcon
+                aria-hidden
+                icon={isRunning ? StopIcon : PlayIcon}
+                size={12}
+              />
+              {isRunning ? "Stop" : "Run"}
             </button>
             {item.result ? (
               <button

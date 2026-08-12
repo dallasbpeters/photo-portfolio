@@ -55,6 +55,8 @@ interface BoardCanvasProps {
   items: BoardItem[];
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
+  /** Stops whatever run is in flight. */
+  onCancel?: () => void;
   onChange: (items: BoardItem[]) => void;
   /** Settings edited on an operation node. */
   onConfigChange?: (itemId: string, config: Record<string, unknown>) => void;
@@ -185,6 +187,7 @@ export function BoardCanvas({
   drawStyle,
   onDraw,
   onDropFiles,
+  onCancel,
   onDropImage,
   onRemoveVersion,
   onRun,
@@ -916,6 +919,7 @@ export function BoardCanvas({
                   setEditingId(item.id);
                 }
               }}
+              onCancel={onCancel}
               onConfigChange={(config) => onConfigChange?.(item.id, config)}
               onDelete={() => removeItem(index)}
               onEditBody={(body) =>

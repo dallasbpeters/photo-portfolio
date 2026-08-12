@@ -419,9 +419,23 @@ export function BoardEditor({
   const applyRun = useCallback(
     (itemId: string, patch: Partial<BoardItem>) => {
       setItems((current) => {
-        const next = current.map((item) =>
-          item.id === itemId ? { ...item, ...patch } : item
-        );
+        const next = current.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+          const merged = { ...item, ...patch };
+          // Show what was just made. The selection is what a node displays and
+          // what it hands downstream, so leaving it on an older version after a
+          // run means watching a generation finish and seeing nothing change.
+          const history = merged.result?.history;
+          if (patch.result && Array.isArray(history) && history.length > 0) {
+            merged.config = {
+              ...merged.config,
+              selectedVersion: history.length - 1,
+            };
+          }
+          return merged;
+        });
 
         // A node wired into a frame has said where its results belong, so a
         // finished run moves itself there rather than leaving the images piled
@@ -1060,6 +1074,7 @@ export function BoardEditor({
           drawTool={drawTool}
           items={items}
           keyOf={keyOf}
+          onCancel={graphRun.cancel}
           onChange={change}
           onConfigChange={changeConfig}
           onCreateFromPort={createFromPort}

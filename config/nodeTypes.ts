@@ -242,7 +242,7 @@ export const FAL_MODELS = [
   },
   {
     id: "lora/rolemodel-style",
-    input: "prompt",
+    input: "prompt-or-image",
     label: "RoleModel style",
     lora: {
       path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmstyle-v1.safetensors",
@@ -253,7 +253,7 @@ export const FAL_MODELS = [
   },
   {
     id: "lora/rolemodel-design",
-    input: "prompt",
+    input: "prompt-or-image",
     label: "RoleModel design",
     lora: {
       path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmdesign-v1.safetensors",
@@ -264,7 +264,7 @@ export const FAL_MODELS = [
   },
   {
     id: "lora/text-poster",
-    input: "prompt",
+    input: "prompt-or-image",
     label: "Typography poster",
     lora: {
       path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Text-Poster/resolve/main/FLUX-dev-lora-Text-Poster.safetensors",
@@ -276,7 +276,7 @@ export const FAL_MODELS = [
   },
   {
     id: "lora/logo-design",
-    input: "prompt",
+    input: "prompt-or-image",
     label: "Logo / mark",
     lora: {
       path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design/resolve/main/FLUX-dev-lora-Logo-Design.safetensors",
@@ -289,6 +289,15 @@ export const FAL_MODELS = [
 
 /** The fal endpoint every LoRA style runs on. */
 export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
+
+/**
+ * The same weights, applied to a picture rather than to a blank canvas.
+ *
+ * A LoRA is a style, and a style is as useful for reworking a photograph as for
+ * inventing one — so an image wired into a style model switches endpoint rather
+ * than being ignored, which is what "input: prompt" used to mean here.
+ */
+export const FLUX_LORA_IMAGE_ENDPOINT = "fal-ai/flux-lora/image-to-image";
 
 export const falModelLora = (
   value: unknown

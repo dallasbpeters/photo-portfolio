@@ -80,6 +80,8 @@ interface BoardItemViewProps {
   item: BoardItem;
   /** Enters text editing — a second click, or a double click. */
   onBeginEdit: () => void;
+  /** Stops a run in flight. */
+  onCancel?: () => void;
   onConfigChange?: (config: Record<string, unknown>) => void;
   onDelete: () => void;
   onEditBody: (body: string) => void;
@@ -482,6 +484,7 @@ interface ItemContentProps {
   isEditing: boolean;
   isSelected: boolean;
   item: BoardItem;
+  onCancel?: () => void;
   onConfigChange?: (config: Record<string, unknown>) => void;
   onEditBody: (body: string) => void;
   onRemoveVersion?: (index: number) => void;
@@ -508,6 +511,7 @@ function ItemContent({
   isEditing,
   isSelected,
   item,
+  onCancel,
   onConfigChange,
   onEditBody,
   onRemoveVersion,
@@ -546,6 +550,7 @@ function ItemContent({
       <OpNodeView
         hasWiredPrompt={hasWiredPrompt}
         item={item}
+        onCancel={onCancel}
         onConfigChange={onConfigChange ?? (() => undefined)}
         onRemoveVersion={onRemoveVersion}
         onRun={onRun ?? (() => undefined)}
@@ -571,6 +576,7 @@ function ItemContent({
 export function BoardItemView({
   hasWiredPrompt = false,
   imageUrl,
+  onCancel,
   onRemoveVersion,
   onSendVersions,
   outputText,
@@ -650,6 +656,7 @@ export function BoardItemView({
         isEditing={isEditing}
         isSelected={isSelected}
         item={item}
+        onCancel={onCancel}
         onConfigChange={onConfigChange}
         onEditBody={onEditBody}
         onRemoveVersion={onRemoveVersion}

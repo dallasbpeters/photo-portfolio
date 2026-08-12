@@ -1,6 +1,7 @@
 import {
   type FalModelInput,
   FLUX_LORA_ENDPOINT,
+  FLUX_LORA_IMAGE_ENDPOINT,
   falModelInput,
   falModelLora,
 } from "../../config/nodeTypes.js";
@@ -96,11 +97,16 @@ const bodyFor = (
     // The trigger token is prepended rather than left to be remembered. A LoRA
     // is trained against one, and a prompt without it quietly returns the base
     // model — which looks like the style simply not working.
+    const withTrigger = prompt
+      .toLowerCase()
+      .includes(lora.trigger.toLowerCase())
+      ? prompt
+      : `${lora.trigger}, ${prompt}`;
     return {
       loras: [{ path: lora.path, scale: lora.scale }],
-      prompt: prompt.toLowerCase().includes(lora.trigger.toLowerCase())
-        ? prompt
-        : `${lora.trigger}, ${prompt}`,
+      prompt: withTrigger,
+      // image_url only when there is one: the plain endpoint rejects it.
+      ...(sourceImageUrl ? { image_url: sourceImageUrl } : {}),
     };
   }
   if (shape === "image") {
@@ -164,7 +170,9 @@ export const generateImage = async (
   const auto = sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
   let model = auto;
   if (lora) {
-    model = FLUX_LORA_ENDPOINT;
+    // A wired image reworks rather than invents, so the style is applied to it
+    // through the image-to-image endpoint instead.
+    model = sourceImageUrl ? FLUX_LORA_IMAGE_ENDPOINT : FLUX_LORA_ENDPOINT;
   } else if (named) {
     model = named;
   }
