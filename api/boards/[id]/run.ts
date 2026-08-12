@@ -22,7 +22,11 @@ import { getBearerUser } from "../../_lib/auth.js";
 import type { BoardItemRow, BoardWireRow } from "../../_lib/boards.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
-import { generateImage, isFalConfigured } from "../../_lib/fal.js";
+import {
+  describeImage,
+  generateImage,
+  isFalConfigured,
+} from "../../_lib/fal.js";
 import { inputFingerprint } from "../../_lib/fingerprint.js";
 import { parsePublicHttpUrl } from "../../_lib/httpUrl.js";
 import { generateIcon, isMagnificConfigured } from "../../_lib/magnific.js";
@@ -33,6 +37,9 @@ type Sql = ReturnType<typeof getSql>;
 
 /** An explicit scheme, as api/ai/generate.ts requires for the same reason. */
 const HTTP_SCHEME = /^https?:\/\//i;
+
+/** A chain of Combine nodes longer than this is a mistake, not a design. */
+const MAX_JOIN_DEPTH = 8;
 
 /** Matches an SVG by extension, ignoring any query string. */
 const SVG_URL = /\.svg(\?|$)/i;
@@ -83,13 +90,56 @@ const loadWires = async (sql: Sql, boardId: string) =>
   `) as BoardWireRow[];
 
 /**
+ * A Combine node's value: whatever feeds it, joined.
+ *
+ * Its output is a function of its inputs rather than of anything stored on it,
+ * which is what makes it different from a Prompt node — so it is computed here
+ * on every read instead of being saved anywhere.
+ *
+ * The depth limit is a backstop only. hasCycle already refuses a graph that
+ * loops, and this recursion is bounded by that same acyclic structure.
+ */
+const joinedOutputOf = (
+  row: BoardItemRow,
+  rows: BoardItemRow[],
+  wires: GraphWire[],
+  depth: number
+): string | null => {
+  if (depth > MAX_JOIN_DEPTH) {
+    return null;
+  }
+  const parts = wires
+    .filter(
+      (wire) => wire.targetItemId === row.id && wire.targetPort === "text"
+    )
+    .map((wire) => rows.find((candidate) => candidate.id === wire.sourceItemId))
+    .map((source) =>
+      source ? singleOutputOf(source, rows, wires, depth + 1) : null
+    )
+    .filter((part): part is string => Boolean(part?.trim()));
+  if (parts.length === 0) {
+    return null;
+  }
+  const { separator } = asObject(row.config);
+  return parts.join(typeof separator === "string" ? separator : ", ");
+};
+
+/**
  * What an item hands to whatever it feeds.
  *
  * A photograph resolves through its join rather than a stored copy, so
  * re-uploading it keeps the graph correct — the same reasoning rowToItemDto
  * already applies for display.
  */
-const singleOutputOf = (row: BoardItemRow): string | null => {
+const singleOutputOf = (
+  row: BoardItemRow,
+  rows: BoardItemRow[],
+  wires: GraphWire[],
+  depth = 0
+): string | null => {
+  if (row.node_type === "join") {
+    return joinedOutputOf(row, rows, wires, depth);
+  }
   if (row.kind === "photo") {
     return row.photo_url ?? null;
   }
@@ -107,12 +157,18 @@ const singleOutputOf = (row: BoardItemRow): string | null => {
     return typeof text === "string" && text.trim() ? text : null;
   }
   const result = asObject(row.result);
+  // A node that produced words hands the words along. The port type decides
+  // what a string means, so text and a URL travel the same way.
+  if (typeof result.text === "string" && result.text.trim()) {
+    return result.text;
+  }
   // A node that has had a version picked hands that one downstream: choosing a
   // version is choosing the node's output, not merely what it displays.
   const history = Array.isArray(result.history)
     ? (result.history as { url?: string }[])
     : [];
-  const selected = Number(asObject(row.config).selectedVersion);
+  const { selectedVersion } = asObject(row.config);
+  const selected = Number(selectedVersion);
   const chosen = Number.isFinite(selected) ? history[selected]?.url : undefined;
   if (typeof chosen === "string") {
     return chosen;
@@ -127,16 +183,22 @@ const singleOutputOf = (row: BoardItemRow): string | null => {
  * it — one wire out of a frame is a dozen jobs. Everything else contributes at
  * most one, so the list is how both fit the same wire.
  */
-const outputsOf = (row: BoardItemRow, rows: BoardItemRow[]): string[] => {
+const outputsOf = (
+  row: BoardItemRow,
+  rows: BoardItemRow[],
+  wires: GraphWire[]
+): string[] => {
   if (row.kind !== "frame") {
-    const single = singleOutputOf(row);
+    const single = singleOutputOf(row, rows, wires);
     return single ? [single] : [];
   }
   // Resolved from geometry, exactly as the canvas resolves it — see
   // containedBy for why membership is computed rather than stored.
   return containedBy(toBox(row), rows.map(toBox))
     .map((box) => rows.find((candidate) => candidate.id === box.id))
-    .map((contained) => (contained ? singleOutputOf(contained) : null))
+    .map((contained) =>
+      contained ? singleOutputOf(contained, rows, wires) : null
+    )
     .filter((url): url is string => url !== null);
 };
 
@@ -199,7 +261,8 @@ const resolveInputs = (
 ): ResolvedInputs => {
   const type = nodeTypeFor(item.nodeType);
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const incoming = incomingByPort(toGraphWires(wires), item.id);
+  const graphWires = toGraphWires(wires);
+  const incoming = incomingByPort(graphWires, item.id);
 
   const values: Record<string, string[] | undefined> = {};
   let missingPort: string | null = null;
@@ -211,7 +274,7 @@ const resolveInputs = (
       // A wire from a node that has not run yet resolves to nothing. Those are
       // dropped rather than treated as jobs, so a half-built graph runs the
       // part that is ready instead of failing whole.
-      resolved.push(...(source ? outputsOf(source, rows) : []));
+      resolved.push(...(source ? outputsOf(source, rows, graphWires) : []));
     }
     // A single-value input keeps only the last wire, matching what the canvas
     // does when a new wire is dropped on an occupied port.
@@ -255,8 +318,16 @@ const promptFor = (
 const jobsFor = (
   item: RunnableItem,
   values: Record<string, string[] | undefined>,
-  shape: FalModelInput
+  shape: FalModelInput,
+  capability: NodeCapability
 ): (string | null)[] => {
+  // Analyse reads every wired image in one call and answers once, so its
+  // wiring describes a single run no matter how many references feed it.
+  // Fanning out here would bill one description per image and then throw all
+  // but the last away.
+  if (capability === "fal.describe") {
+    return [values.image?.[0] ?? null];
+  }
   const raw = Number(item.config.count);
   const count = Number.isFinite(raw)
     ? Math.min(Math.max(Math.trunc(raw), 1), MAX_BATCH_COUNT)
@@ -314,14 +385,25 @@ interface Variation {
   width: number | null;
 }
 
-interface Produced {
-  description: string | null;
-  height: number | null;
-  /** Null when the concept does not apply — every raster generator. */
-  isVector: boolean | null;
-  url: string;
-  width: number | null;
-}
+/**
+ * What a run produced.
+ *
+ * Two shapes, because not every node makes a picture. The Analyse node reads an
+ * image and writes words, and those words are the thing that travels down its
+ * wire — so a result is either an image or a piece of text, and everything
+ * downstream reads whichever it has.
+ */
+type Produced =
+  | {
+      description: string | null;
+      height: number | null;
+      /** Null when the concept does not apply — every raster generator. */
+      isVector: boolean | null;
+      kind: "image";
+      url: string;
+      width: number | null;
+    }
+  | { kind: "text"; text: string };
 
 /**
  * Dispatches to the generator a node type declares.
@@ -341,8 +423,24 @@ const produce = async (
     model: string | null;
     prompt: string;
     sourceImageUrl: string | null;
+    /** Every wired image, for the one capability that reads them together. */
+    sourceImageUrls: string[];
   }
 ): Promise<Produced> => {
+  if (capability === "fal.describe") {
+    if (args.sourceImageUrls.length === 0) {
+      throw new Error("Analyse needs an image wired into it");
+    }
+    const focus =
+      typeof args.item.config.focus === "string"
+        ? args.item.config.focus
+        : "style";
+    return {
+      kind: "text",
+      text: await describeImage(args.sourceImageUrls, focus, args.prompt),
+    };
+  }
+
   if (capability === "magnific.icon") {
     const style = isIconStyle(args.item.config.style)
       ? args.item.config.style
@@ -359,6 +457,7 @@ const produce = async (
       description: null,
       height: null,
       isVector: icon.isVector,
+      kind: "image",
       url: icon.url,
       width: null,
     };
@@ -376,8 +475,47 @@ const produce = async (
     // node shows a "came back as a raster" warning, and an SVG mislabelled as
     // raster would raise it for no reason.
     isVector: isVectorModel(args.model) ? true : null,
+    kind: "image",
     url: image.url,
     width: image.width,
+  };
+};
+
+/**
+ * The stored shape of an image run, with its history folded in.
+ *
+ * Pulled out of the handler when results stopped always being images: the two
+ * shapes are genuinely different and a single object with half its fields null
+ * would have been worse than two.
+ */
+const buildImageResult = (
+  produced: Extract<Produced, { kind: "image" }>,
+  variations: (Variation | undefined)[],
+  previous: Record<string, unknown>,
+  fingerprint: string
+) => {
+  // The first filled slot, found by hand: the array is sparse, and the
+  // narrowing on find() reads as though the result could never be missing.
+  let primaryUrl = produced.url;
+  for (const filled of variations) {
+    // The first image is what a wire carries downstream: a wire moves one
+    // image, so the rest of a batch is for looking at, not for feeding on.
+    if (filled) {
+      primaryUrl = filled.url;
+      break;
+    }
+  }
+  return {
+    description: produced.description,
+    fingerprint,
+    height: produced.height,
+    history: [...priorHistoryOf(previous), produced].slice(-MAX_HISTORY),
+    isVector: produced.isVector,
+    kind: "image" as const,
+    ranAt: new Date().toISOString(),
+    url: primaryUrl,
+    variations,
+    width: produced.width,
   };
 };
 
@@ -477,6 +615,8 @@ type Prepared =
         jobs: (string | null)[];
         model: string | null;
         prompt: string;
+        /** Every wired image, for the capability that reads them together. */
+        sourceImageUrls: string[];
       };
       status: null;
     };
@@ -570,7 +710,7 @@ const prepare = async (
 
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
-  const jobs = validatedJobs(jobsFor(item, values, shape));
+  const jobs = validatedJobs(jobsFor(item, values, shape, type.capability));
   if (jobs === null) {
     return refuse(422, {
       error: "A wired image is not a public http(s) URL",
@@ -623,6 +763,7 @@ const prepare = async (
       jobs,
       model,
       prompt,
+      sourceImageUrls: values.image ?? [],
     },
     status: null,
   };
@@ -674,8 +815,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (prepared.ready === null) {
       return res.status(prepared.status).json(prepared.body);
     }
-    const { capability, fingerprint, item, jobs, model, prompt } =
-      prepared.ready;
+    const {
+      capability,
+      fingerprint,
+      item,
+      jobs,
+      model,
+      prompt,
+      sourceImageUrls,
+    } = prepared.ready;
 
     if (variation >= jobs.length) {
       return res
@@ -691,60 +839,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model,
         prompt,
         sourceImageUrl: jobs[variation] ?? null,
+        sourceImageUrls,
       });
 
-      // Variations accumulate into one result rather than replacing it, so a
-      // batch fills in as it goes and a part-finished run still shows what it
-      // has. A stale array from an earlier, differently-shaped run is discarded
-      // — the fingerprint moving is what says the old images no longer belong.
       const previous = asObject(item.result);
-      // Sparse on purpose: a cancelled and resumed run can fill variation 3
-      // before 1, so the gaps are real and the type says so.
-      const kept: (Variation | undefined)[] =
-        previous.fingerprint === fingerprint &&
-        Array.isArray(previous.variations)
-          ? (previous.variations as (Variation | undefined)[]).slice(
-              0,
-              jobs.length
-            )
-          : [];
-      const variations: (Variation | undefined)[] = [...kept];
-      variations[variation] = {
-        description: produced.description,
-        height: produced.height,
-        isVector: produced.isVector,
-        url: produced.url,
-        width: produced.width,
-      };
 
-      // The first filled slot, found by hand: the array is sparse, and the
-      // narrowing on find() reads as though the result could never be missing.
-      let primaryUrl = produced.url;
-      for (const filled of variations) {
-        if (filled) {
-          primaryUrl = filled.url;
-          break;
-        }
+      // Words rather than a picture: an Analyse node's whole output is its
+      // text, so there is no batch, no history and nothing to pick between —
+      // the variation machinery below simply does not apply to it.
+      let result: Record<string, unknown>;
+      if (produced.kind === "text") {
+        result = {
+          fingerprint,
+          kind: "text",
+          ranAt: new Date().toISOString(),
+          text: produced.text,
+        };
+      } else {
+        // Variations accumulate into one result rather than replacing it, so a
+        // batch fills in as it goes and a part-finished run still shows what it
+        // has. A stale array from an earlier, differently-shaped run is
+        // discarded — the fingerprint moving is what says the old images no
+        // longer belong.
+        //
+        // Sparse on purpose: a cancelled and resumed run can fill variation 3
+        // before 1, so the gaps are real and the type says so.
+        const kept: (Variation | undefined)[] =
+          previous.fingerprint === fingerprint &&
+          Array.isArray(previous.variations)
+            ? (previous.variations as (Variation | undefined)[]).slice(
+                0,
+                jobs.length
+              )
+            : [];
+        const variations: (Variation | undefined)[] = [...kept];
+        variations[variation] = {
+          description: produced.description,
+          height: produced.height,
+          isVector: produced.isVector,
+          url: produced.url,
+          width: produced.width,
+        };
+        result = buildImageResult(produced, variations, previous, fingerprint);
       }
-
-      const history = [...priorHistoryOf(previous), produced].slice(
-        -MAX_HISTORY
-      );
-
-      const result = {
-        description: produced.description,
-        fingerprint,
-        height: produced.height,
-        // The first image is what a wire carries downstream: a wire moves one
-        // image, so the rest of a batch is for looking at, not for feeding on.
-        history,
-        isVector: produced.isVector,
-        kind: "image" as const,
-        ranAt: new Date().toISOString(),
-        url: primaryUrl,
-        variations,
-        width: produced.width,
-      };
 
       await sql`
         UPDATE board_items

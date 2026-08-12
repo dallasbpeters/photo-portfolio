@@ -1,4 +1,9 @@
-import { falModelInput } from "../../config/nodeTypes.js";
+import {
+  type FalModelInput,
+  FLUX_LORA_ENDPOINT,
+  falModelInput,
+  falModelLora,
+} from "../../config/nodeTypes.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
@@ -74,6 +79,45 @@ const falDetail = (json: FalResponse, status: number): string => {
   return `status ${status}`;
 };
 
+/**
+ * The request body for a model, which is not the same shape for any two of them.
+ *
+ * fal rejects a body that does not match its endpoint, and only after the call
+ * has been billed — so the shape comes from the model's declared input in
+ * config/nodeTypes.ts rather than from whether an image happens to be present.
+ */
+const bodyFor = (
+  lora: ReturnType<typeof falModelLora>,
+  shape: FalModelInput,
+  prompt: string,
+  sourceImageUrl?: string | null
+): Record<string, unknown> => {
+  if (lora) {
+    // The trigger token is prepended rather than left to be remembered. A LoRA
+    // is trained against one, and a prompt without it quietly returns the base
+    // model — which looks like the style simply not working.
+    return {
+      loras: [{ path: lora.path, scale: lora.scale }],
+      prompt: prompt.toLowerCase().includes(lora.trigger.toLowerCase())
+        ? prompt
+        : `${lora.trigger}, ${prompt}`,
+    };
+  }
+  if (shape === "image") {
+    // A vectoriser traces an image; it has no prompt to speak of.
+    if (!sourceImageUrl) {
+      throw new Error("This model needs an image wired into it");
+    }
+    return { image_url: sourceImageUrl };
+  }
+  if (shape === "prompt") {
+    // Text-to-image and text-to-vector. Any wired image is deliberately not
+    // sent — these endpoints do not take one.
+    return { prompt };
+  }
+  return sourceImageUrl ? { image_urls: [sourceImageUrl], prompt } : { prompt };
+};
+
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
@@ -102,30 +146,26 @@ export const generateImage = async (
     throw new Error("Image generation is not configured");
   }
 
+  // A LoRA style is not its own endpoint. They all run on fal-ai/flux-lora and
+  // differ only in the weights it loads, so the id chosen on the node is a
+  // style name rather than something fal would recognise.
+  const lora = falModelLora(requestedModel);
+  const named =
+    requestedModel && requestedModel !== "auto" ? requestedModel : null;
   const auto = sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
-  const model =
-    requestedModel && requestedModel !== "auto" ? requestedModel : auto;
-
-  // The body has to match the endpoint, and fal only says otherwise after the
-  // request has been made and billed. The shape comes from the model's entry in
-  // config/nodeTypes.ts rather than from whether an image happens to be present.
-  const shape = falModelInput(requestedModel ?? "auto");
-  let body: Record<string, unknown>;
-  if (shape === "image") {
-    // A vectoriser traces an image; it has no prompt to speak of.
-    if (!sourceImageUrl) {
-      throw new Error("This model needs an image wired into it");
-    }
-    body = { image_url: sourceImageUrl };
-  } else if (shape === "prompt") {
-    // Text-to-image and text-to-vector. Any wired image is deliberately not
-    // sent — these endpoints do not take one.
-    body = { prompt };
-  } else {
-    body = sourceImageUrl
-      ? { image_urls: [sourceImageUrl], prompt }
-      : { prompt };
+  let model = auto;
+  if (lora) {
+    model = FLUX_LORA_ENDPOINT;
+  } else if (named) {
+    model = named;
   }
+
+  const body = bodyFor(
+    lora,
+    falModelInput(requestedModel ?? "auto"),
+    prompt,
+    sourceImageUrl
+  );
 
   const res = await fetch(`https://fal.run/${model}`, {
     body: JSON.stringify(body),
@@ -158,4 +198,72 @@ export const generateImage = async (
     url: await persistGenerated(image.url, "boards/ai", image.content_type),
     width: typeof image.width === "number" ? image.width : null,
   };
+};
+
+/** Vision model used to read a picture back as words. Cheap and fast. */
+const VISION_MODEL = "google/gemini-flash-1.5";
+
+const FOCUS_BRIEF: Record<string, string> = {
+  both: "Describe both the subject and the visual style.",
+  style:
+    "Describe only the visual style. Never mention the specific subject, any people, or any text in the image.",
+  subject: "Describe the subject and composition, briefly noting the style.",
+};
+
+/**
+ * Reads a picture back as a prompt.
+ *
+ * A caption model would answer "a woman standing in a field", which tells a
+ * generator what to draw. What is wanted here is how to draw *anything* — so
+ * this asks a vision model for comma-separated phrases about medium, palette,
+ * light, composition and rendering, and by default forbids it from naming the
+ * subject at all. The result is meant to be wired straight into a prompt.
+ */
+export const describeImage = async (
+  imageUrls: string[],
+  focus: string,
+  /** What to look for, wired in or typed. Empty means the default reading. */
+  instruction: string
+): Promise<string> => {
+  const key = falKey();
+  if (!key) {
+    throw new Error("Image analysis is not configured");
+  }
+
+  const res = await fetch("https://fal.run/fal-ai/any-llm/vision", {
+    body: JSON.stringify({
+      image_urls: imageUrls,
+      model: VISION_MODEL,
+      prompt: [
+        imageUrls.length > 1
+          ? "These images share a visual style. Describe what they have in common, as one reusable image-generation prompt. Ignore anything true of only one of them."
+          : "Describe this image as a reusable image-generation prompt.",
+        // Appended rather than replacing the brief: the instruction says what
+        // to pay attention to, while the sentence above is what makes the
+        // answer a prompt rather than a paragraph about a picture.
+        instruction ? `Pay particular attention to: ${instruction}` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      system_prompt: `You describe images so their look can be reproduced by an image generator. Reply with a single paragraph of comma-separated descriptive phrases and nothing else — no preamble, no list, no quotation marks. Cover medium, palette, lighting, composition, texture, mood and rendering technique. ${FOCUS_BRIEF[focus] ?? FOCUS_BRIEF.style}`,
+    }),
+    headers: {
+      Authorization: `Key ${key}`,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as FalResponse & {
+    output?: string;
+  };
+  if (!res.ok) {
+    throw new Error(`Image analysis failed (${falDetail(json, res.status)})`);
+  }
+  const text = json.output?.trim();
+  if (!text) {
+    throw new Error("The model returned no description");
+  }
+  return text;
 };
