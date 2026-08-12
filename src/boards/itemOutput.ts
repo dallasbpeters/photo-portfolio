@@ -1,3 +1,4 @@
+import { DEFAULT_PLACEHOLDER } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
 
 /**
@@ -52,6 +53,54 @@ export const selectedIndex = (config: Record<string, unknown>): number =>
  */
 /** A chain of Combine nodes longer than this is a mistake, not a design. */
 const MAX_JOIN_DEPTH = 8;
+
+/**
+ * Every prompt an Iterate node describes.
+ *
+ * Mirrors iteratedOutputsOf on the server, which is the authority. This exists
+ * so the node can show what it will send before anything is run.
+ */
+export const iteratedTextOf = (
+  item: BoardItem,
+  graph: { items: BoardItem[]; wires: BoardWire[] },
+  depth = 0
+): string[] => {
+  if (depth > MAX_JOIN_DEPTH) {
+    return [];
+  }
+  const read = (port: string): string[] =>
+    graph.wires
+      .filter((w) => w.targetItemId === item.id && w.targetPort === port)
+      .map((w) => graph.items.find((i) => i.id === w.sourceItemId))
+      .map((source) => (source ? outputTextOf(source, graph, depth + 1) : null))
+      .filter((text): text is string => Boolean(text?.trim()));
+
+  const template = read("template").at(-1);
+  if (!template) {
+    return [];
+  }
+  const config = item.config ?? {};
+  const raw = config.placeholder;
+  const placeholder =
+    typeof raw === "string" && raw.trim() ? raw.trim() : DEFAULT_PLACEHOLDER;
+  const values = read("values").flatMap((text) =>
+    splitValues(text, config.split)
+  );
+  if (values.length === 0 || !template.includes(placeholder)) {
+    return [template];
+  }
+  return values.map((value) => template.split(placeholder).join(value));
+};
+
+const LINES = /\r?\n/;
+
+const splitValues = (raw: string, mode: unknown): string[] => {
+  if (mode === "whole") {
+    return [raw.trim()].filter(Boolean);
+  }
+  const parts = mode === "commas" ? raw.split(",") : raw.split(LINES);
+  return parts.map((part) => part.trim()).filter(Boolean);
+};
 
 export const outputTextOf = (
   item: BoardItem,

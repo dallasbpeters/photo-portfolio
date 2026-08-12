@@ -8,6 +8,7 @@ import {
 } from "../../../config/graph.js";
 import { ICON_STYLES, isIconStyle } from "../../../config/iconStyles.js";
 import {
+  DEFAULT_PLACEHOLDER,
   type FalModelInput,
   falModelFor,
   falModelInput,
@@ -37,6 +38,8 @@ type Sql = ReturnType<typeof getSql>;
 
 /** An explicit scheme, as api/ai/generate.ts requires for the same reason. */
 const HTTP_SCHEME = /^https?:\/\//i;
+
+const LINES = /\r?\n/;
 
 /** A chain of Combine nodes longer than this is a mistake, not a design. */
 const MAX_JOIN_DEPTH = 8;
@@ -88,6 +91,65 @@ const loadWires = async (sql: Sql, boardId: string) =>
     FROM board_wires
     WHERE board_id = ${boardId}
   `) as BoardWireRow[];
+
+/**
+ * Every prompt an Iterate node describes.
+ *
+ * The template with each value dropped into the placeholder. A value that would
+ * produce the same prompt twice is still run twice — repeats in the list are
+ * the author's business, not this function's.
+ */
+const iteratedOutputsOf = (
+  row: BoardItemRow,
+  rows: BoardItemRow[],
+  wires: GraphWire[],
+  depth: number
+): string[] => {
+  if (depth > MAX_JOIN_DEPTH) {
+    return [];
+  }
+  const read = (port: string): string[] =>
+    wires
+      .filter(
+        (wire) => wire.targetItemId === row.id && wire.targetPort === port
+      )
+      .map((wire) =>
+        rows.find((candidate) => candidate.id === wire.sourceItemId)
+      )
+      .flatMap((source) =>
+        source ? outputsOf(source, rows, wires, depth + 1) : []
+      )
+      .filter((text): text is string => Boolean(text?.trim()));
+
+  const template = read("template").at(-1);
+  if (!template) {
+    return [];
+  }
+  const config = asObject(row.config);
+  const placeholder =
+    typeof config.placeholder === "string" && config.placeholder.trim()
+      ? config.placeholder.trim()
+      : DEFAULT_PLACEHOLDER;
+  const values = read("values").flatMap((raw) =>
+    splitValues(raw, config.split)
+  );
+
+  // Without the placeholder the template is a constant, and repeating a
+  // constant is not iteration — one prompt is the honest answer.
+  if (values.length === 0 || !template.includes(placeholder)) {
+    return [template];
+  }
+  return values.map((value) => template.split(placeholder).join(value));
+};
+
+/** How one incoming text becomes one or several values. */
+const splitValues = (raw: string, mode: unknown): string[] => {
+  if (mode === "whole") {
+    return [raw.trim()].filter(Boolean);
+  }
+  const parts = mode === "commas" ? raw.split(",") : raw.split(LINES);
+  return parts.map((part) => part.trim()).filter(Boolean);
+};
 
 /**
  * A Combine node's value: whatever feeds it, joined.
@@ -186,8 +248,13 @@ const singleOutputOf = (
 const outputsOf = (
   row: BoardItemRow,
   rows: BoardItemRow[],
-  wires: GraphWire[]
+  wires: GraphWire[],
+  depth = 0
 ): string[] => {
+  // The one node whose output is plural by design.
+  if (row.node_type === "iterate") {
+    return iteratedOutputsOf(row, rows, wires, depth);
+  }
   if (row.kind !== "frame") {
     const single = singleOutputOf(row, rows, wires);
     return single ? [single] : [];
@@ -268,17 +335,23 @@ const resolveInputs = (
   let missingPort: string | null = null;
 
   for (const port of type?.inputs ?? []) {
-    const resolved: string[] = [];
+    // Grouped by wire, because arity counts wires rather than values. One wire
+    // can legitimately carry several — a frame hands over every image on it,
+    // and an Iterate node hands over every prompt it wrote — and slicing those
+    // down to one would silently discard most of a batch.
+    const perWire: string[][] = [];
     for (const wire of incoming.get(port.key) ?? []) {
       const source = byId.get(wire.sourceItemId);
       // A wire from a node that has not run yet resolves to nothing. Those are
       // dropped rather than treated as jobs, so a half-built graph runs the
       // part that is ready instead of failing whole.
-      resolved.push(...(source ? outputsOf(source, rows, graphWires) : []));
+      perWire.push(source ? outputsOf(source, rows, graphWires) : []);
     }
     // A single-value input keeps only the last wire, matching what the canvas
     // does when a new wire is dropped on an occupied port.
-    values[port.key] = port.arity === "many" ? resolved : resolved.slice(-1);
+    const kept = port.arity === "many" ? perWire : perWire.slice(-1);
+    const resolved = kept.flat();
+    values[port.key] = resolved;
     if (port.required && resolved.length === 0 && !missingPort) {
       missingPort = port.key;
     }
@@ -319,14 +392,15 @@ const jobsFor = (
   item: RunnableItem,
   values: Record<string, string[] | undefined>,
   shape: FalModelInput,
-  capability: NodeCapability
-): (string | null)[] => {
+  capability: NodeCapability,
+  typedPrompt: string
+): Job[] => {
   // Analyse reads every wired image in one call and answers once, so its
   // wiring describes a single run no matter how many references feed it.
   // Fanning out here would bill one description per image and then throw all
   // but the last away.
   if (capability === "fal.describe") {
-    return [values.image?.[0] ?? null];
+    return [{ image: values.image?.[0] ?? null, prompt: typedPrompt }];
   }
   const raw = Number(item.config.count);
   const count = Number.isFinite(raw)
@@ -334,13 +408,20 @@ const jobsFor = (
     : 1;
   // A prompt-only model has no use for wired images, so fanning out over them
   // would bill the same prompt several times for identical results.
-  const wired = shape === "prompt" ? [] : (values.image ?? []);
-  const images: (string | null)[] = wired.length > 0 ? wired : [null];
+  const wiredImages = shape === "prompt" ? [] : (values.image ?? []);
+  const images: (string | null)[] =
+    wiredImages.length > 0 ? wiredImages : [null];
+  // Several prompts is an Iterate node upstream: each one is its own run, the
+  // same way each wired reference is.
+  const wiredPrompts = (values.prompt ?? []).filter((text) => text.trim());
+  const prompts = wiredPrompts.length > 0 ? wiredPrompts : [typedPrompt];
 
-  const jobs: (string | null)[] = [];
-  for (const image of images) {
-    for (let n = 0; n < count; n += 1) {
-      jobs.push(image);
+  const jobs: Job[] = [];
+  for (const prompt of prompts) {
+    for (const image of images) {
+      for (let n = 0; n < count; n += 1) {
+        jobs.push({ image, prompt });
+      }
     }
   }
   return jobs;
@@ -377,6 +458,12 @@ const priorHistoryOf = (previous: Record<string, unknown>): Variation[] => {
 };
 
 /** One image in a node's result. Mirrors BoardItemVariation in src/types.ts. */
+/** One run: which image it reworks, and which prompt it uses. */
+interface Job {
+  image: string | null;
+  prompt: string;
+}
+
 interface Variation {
   description: string | null;
   height: number | null;
@@ -603,18 +690,20 @@ const unmetRequirement = (
  * a third party to go and fetch, which is the same reason api/ai/generate.ts
  * insists on an explicit scheme rather than helpfully adding one.
  */
-const validatedJobs = (raw: (string | null)[]): (string | null)[] | null => {
-  const jobs: (string | null)[] = [];
-  for (const entry of raw) {
-    if (entry === null) {
-      jobs.push(null);
+const validatedJobs = (raw: Job[]): Job[] | null => {
+  const jobs: Job[] = [];
+  for (const job of raw) {
+    if (job.image === null) {
+      jobs.push(job);
       continue;
     }
-    const url = HTTP_SCHEME.test(entry) ? parsePublicHttpUrl(entry) : null;
+    const url = HTTP_SCHEME.test(job.image)
+      ? parsePublicHttpUrl(job.image)
+      : null;
     if (!url) {
       return null;
     }
-    jobs.push(url);
+    jobs.push({ ...job, image: url });
   }
   return jobs;
 };
@@ -628,8 +717,8 @@ type Prepared =
         capability: NodeCapability;
         fingerprint: string;
         item: RunnableItem;
-        /** One entry per variation: the image it reworks, or null to invent. */
-        jobs: (string | null)[];
+        /** One entry per variation: the image it reworks and the prompt used. */
+        jobs: Job[];
         model: string | null;
         prompt: string;
         /** Every wired image, for the capability that reads them together. */
@@ -727,7 +816,9 @@ const prepare = async (
 
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
-  const jobs = validatedJobs(jobsFor(item, values, shape, type.capability));
+  const jobs = validatedJobs(
+    jobsFor(item, values, shape, type.capability, prompt)
+  );
   if (jobs === null) {
     return refuse(422, {
       error: "A wired image is not a public http(s) URL",
@@ -786,6 +877,37 @@ const prepare = async (
   };
 };
 
+/**
+ * What the request is asking for, or a reason it cannot be read.
+ *
+ * Pulled out of the handler because validating a request and performing one are
+ * different jobs, and doing both in one function had grown past what a reader
+ * can hold — the batching added a third thing to check.
+ */
+const readRequest = (
+  req: VercelRequest
+):
+  | { boardId: string; force: boolean; itemId: string; variation: number }
+  | string => {
+  const raw = req.query.id;
+  const boardId = Array.isArray(raw) ? raw[0] : raw;
+  if (!boardId) {
+    return "A board id is required";
+  }
+  const body = parseJsonBody(req.body);
+  const itemId = typeof body.itemId === "string" ? body.itemId : "";
+  if (!itemId) {
+    return "An item id is required";
+  }
+  // Which variation of a batch to produce. One per request, because four
+  // variations at two minutes each could no more fit in one function call than
+  // a four-node chain could — the same ceiling, the same answer.
+  const variation = Number.isFinite(Number(body.variation))
+    ? Math.max(0, Math.trunc(Number(body.variation)))
+    : 0;
+  return { boardId, force: body.force === true, itemId, variation };
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {
     return;
@@ -796,29 +918,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const user = getBearerUser(req.headers.authorization);
-  if (!user) {
+  if (!getBearerUser(req.headers.authorization)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const raw = req.query.id;
-  const boardId = Array.isArray(raw) ? raw[0] : raw;
-  if (!boardId) {
-    return res.status(400).json({ error: "A board id is required" });
+  const asked = readRequest(req);
+  if (typeof asked === "string") {
+    return res.status(400).json({ error: asked });
   }
-
-  const body = parseJsonBody(req.body);
-  const itemId = typeof body.itemId === "string" ? body.itemId : "";
-  const force = body.force === true;
-  // Which variation of a batch to produce. One per request, because four
-  // variations at two minutes each could no more fit in one function call than
-  // a four-node chain could — the same ceiling, the same answer.
-  const variation = Number.isFinite(Number(body.variation))
-    ? Math.max(0, Math.trunc(Number(body.variation)))
-    : 0;
-  if (!itemId) {
-    return res.status(400).json({ error: "An item id is required" });
-  }
+  const { boardId, force, itemId, variation } = asked;
 
   const sql = getSql();
 
@@ -854,8 +962,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const produced = await produce(capability, {
         item,
         model,
-        prompt,
-        sourceImageUrl: jobs[variation] ?? null,
+        // Per variation, because an Iterate node upstream gives each run its
+        // own prompt — the node's own text is only the fallback.
+        prompt: jobs[variation]?.prompt ?? prompt,
+        sourceImageUrl: jobs[variation]?.image ?? null,
         sourceImageUrls,
       });
 

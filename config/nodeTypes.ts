@@ -86,7 +86,13 @@ export type SettingDef =
  */
 export type NodeCapability = "fal.describe" | "fal.image" | "magnific.icon";
 
-export type NodeTypeId = "describe" | "generate" | "icon" | "join" | "prompt";
+export type NodeTypeId =
+  | "describe"
+  | "generate"
+  | "icon"
+  | "iterate"
+  | "join"
+  | "prompt";
 
 export interface NodeType {
   /** Absent on source nodes, which produce their value without spending. */
@@ -530,10 +536,73 @@ const JOIN: NodeType = {
   ],
 };
 
+/** Where a value is dropped into the template, unless another is chosen. */
+export const DEFAULT_PLACEHOLDER = "{}";
+
+/**
+ * One prompt, written many times over.
+ *
+ * A template with a hole in it, and a list of things to put in the hole. Wire
+ * "a {} chair, studio lit" to a list of "oak, steel, moulded plastic" and three
+ * prompts come out. Whatever consumes them runs three times.
+ *
+ * This is the one node whose output is deliberately plural. A frame already
+ * emits every image on it, so the wire model has always carried lists — this
+ * puts text on the same footing, and the batching that already fans a Generate
+ * node out over several references now fans it out over several prompts too.
+ *
+ * No capability: it composes strings, and composing strings should not cost
+ * anything or need a round trip.
+ */
+const ITERATE: NodeType = {
+  id: "iterate",
+  inputs: [
+    {
+      arity: "one",
+      key: "template",
+      label: "Template",
+      required: true,
+      type: "text",
+    },
+    {
+      // Many, because the list may arrive as several wires or as one node
+      // holding several lines — both should mean the same thing.
+      arity: "many",
+      key: "values",
+      label: "Values",
+      required: true,
+      type: "text",
+    },
+  ],
+  label: "Iterate",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],
+  settings: [
+    {
+      key: "placeholder",
+      kind: "text",
+      label: "Insert at",
+      maxLength: 40,
+      placeholder: DEFAULT_PLACEHOLDER,
+    },
+    {
+      // A list is usually written as lines, which is unambiguous — a value may
+      // legitimately contain a comma, but rarely a newline. Commas are offered
+      // because a list written inline is just as natural, and "whole" is there
+      // for when each wire is already exactly one value.
+      default: "lines",
+      key: "split",
+      kind: "select",
+      label: "Split values by",
+      options: ["lines", "commas", "whole"],
+    },
+  ],
+};
+
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   describe: DESCRIBE,
   generate: GENERATE,
   icon: ICON,
+  iterate: ITERATE,
   join: JOIN,
   prompt: PROMPT,
 };
@@ -542,6 +611,7 @@ export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
   value === "describe" ||
   value === "generate" ||
   value === "icon" ||
+  value === "iterate" ||
   value === "join" ||
   value === "prompt";
 

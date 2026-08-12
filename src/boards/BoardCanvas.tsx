@@ -20,7 +20,12 @@ import {
   pathFor,
   toUnitSpace,
 } from "./drawing";
-import { BOARD_IMAGE_TYPE, outputImageOf, outputTextOf } from "./itemOutput";
+import {
+  BOARD_IMAGE_TYPE,
+  iteratedTextOf,
+  outputImageOf,
+  outputTextOf,
+} from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { useCanvasViewport } from "./useCanvasViewport";
@@ -399,6 +404,27 @@ export function BoardCanvas({
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
   );
+
+  /**
+   * What a node that composes text will send, so it can be read before it runs.
+   *
+   * A Combine node answers with one string; an Iterate node answers with one
+   * per value, numbered, because seeing "3 prompts" and what they say is the
+   * only way to know a batch is set up the way you meant.
+   */
+  const previewTextFor = (item: BoardItem): string | null => {
+    if (item.nodeType === "join") {
+      return outputTextOf(item, { items, wires });
+    }
+    if (item.nodeType !== "iterate") {
+      return null;
+    }
+    const prompts = iteratedTextOf(item, { items, wires });
+    if (prompts.length === 0) {
+      return null;
+    }
+    return prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
+  };
 
   /**
    * The words arriving on an item's prompt input, so the node can show them.
@@ -913,11 +939,7 @@ export function BoardCanvas({
               onSendVersions={
                 onSendVersions ? () => onSendVersions(item.id) : undefined
               }
-              outputText={
-                item.nodeType === "join"
-                  ? outputTextOf(item, { items, wires })
-                  : null
-              }
+              outputText={previewTextFor(item)}
               ports={
                 readOnly
                   ? undefined

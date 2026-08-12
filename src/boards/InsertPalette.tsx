@@ -5,6 +5,7 @@ import {
   LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
+  RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
   TextIcon,
@@ -28,7 +29,13 @@ export type InsertAction =
   | { kind: "images" }
   | {
       kind: "node";
-      nodeType: "describe" | "generate" | "icon" | "join" | "prompt";
+      nodeType:
+        | "describe"
+        | "generate"
+        | "icon"
+        | "iterate"
+        | "join"
+        | "prompt";
     }
   | { kind: "shader"; name: string }
   | { kind: "writable"; writable: "note" | "text" };
@@ -90,6 +97,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "analyse describe style caption reference vision",
     icon: SearchVisualIcon,
     label: "Analyse",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "iterate" },
+    hint: "iterate repeat batch each list variations loop",
+    icon: RepeatIcon,
+    label: "Iterate",
     section: "Nodes",
   },
   {

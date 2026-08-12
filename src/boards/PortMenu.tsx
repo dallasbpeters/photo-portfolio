@@ -3,6 +3,7 @@ import {
   FrameIcon,
   LinkSquare01Icon,
   MagicWand01Icon,
+  RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
   TextIcon,
@@ -28,6 +29,7 @@ const ICONS: Record<string, typeof SparklesIcon> = {
   frame: FrameIcon,
   generate: SparklesIcon,
   icon: MagicWand01Icon,
+  iterate: RepeatIcon,
   join: LinkSquare01Icon,
   prompt: TextIcon,
 };
