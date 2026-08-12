@@ -4,37 +4,6 @@ import { authApi, authStorage } from "../../services/portfolioService";
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 
-interface CredentialResponse {
-  credential?: string;
-}
-
-interface GoogleIdApi {
-  initialize: (config: {
-    client_id: string;
-    callback: (response: CredentialResponse) => void;
-    auto_select?: boolean;
-    cancel_on_tap_outside?: boolean;
-  }) => void;
-  renderButton: (
-    parent: HTMLElement,
-    options: {
-      type?: "standard" | "icon";
-      theme?: "outline" | "filled_blue" | "filled_black";
-      size?: "small" | "medium" | "large";
-      text?: "signin_with" | "continue_with";
-      shape?: "rectangular" | "pill";
-      width?: number;
-      logo_alignment?: "left" | "center";
-    }
-  ) => void;
-}
-
-declare global {
-  interface Window {
-    google?: { accounts?: { id?: GoogleIdApi } };
-  }
-}
-
 /** Loads the GIS script once per page, shared across mounts. */
 let gisLoader: Promise<void> | null = null;
 
@@ -92,7 +61,7 @@ export function GoogleSignInButton({ onSignedIn }: GoogleSignInButtonProps) {
     let cancelled = false;
 
     const handleCredential = async (
-      response: CredentialResponse
+      response: GoogleCredentialResponse
     ): Promise<void> => {
       if (!response.credential) {
         toast.error("Google did not return a credential");
