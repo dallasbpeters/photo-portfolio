@@ -881,24 +881,89 @@ export function BoardEditor({
     if (chosen.length === 0) {
       return;
     }
-    const left = Math.min(...chosen.map((i) => i.x)) - FRAME_PAD;
-    const top = Math.min(...chosen.map((i) => i.y)) - FRAME_PAD;
-    const right = Math.max(...chosen.map((i) => i.x + i.width)) + FRAME_PAD;
-    // Extra at the top: the frame's name sits inside its own bounds, and a
-    // frame tight to its contents puts that label over the first picture.
-    const bottom = Math.max(...chosen.map((i) => i.y + i.height)) + FRAME_PAD;
+
+    // Laid out in a grid rather than framed where they lie. A frame's contents
+    // are decided by geometry — anything whose centre falls inside belongs to
+    // it — so a frame drawn around a scattered selection also swallows every
+    // bystander in that rectangle. Gathering the pictures into the frame is
+    // the only way the group can mean exactly what was selected.
+    const columns = Math.ceil(Math.sqrt(chosen.length));
+    const rows = Math.ceil(chosen.length / columns);
+    // One cell size for all of them, so the grid reads as deliberate. Each
+    // picture keeps its own proportions and sits centred in its cell.
+    const cell = {
+      height: Math.max(...chosen.map((item) => item.height)),
+      width: Math.max(...chosen.map((item) => item.width)),
+    };
+
+    const inner = {
+      height: rows * cell.height + (rows - 1) * FRAME_PAD,
+      width: columns * cell.width + (columns - 1) * FRAME_PAD,
+    };
+    // Room for the frame's name, which sits inside its own bounds.
+    const header = FRAME_PAD * 2;
+    const width = inner.width + FRAME_PAD * 2;
+    const height = inner.height + FRAME_PAD * 2 + header;
+
+    // The spot is chosen against the items that are staying put: the selection
+    // is about to move, so counting it would push the frame away from a space
+    // its own contents are vacating.
+    const staying = items.filter(
+      (item) => !chosen.some((pick) => pick.id === item.id)
+    );
+    const spot = findFreeSpot({
+      height,
+      items: staying,
+      origin: dropOrigin(staying, viewCentreRef.current?.() ?? null),
+      width,
+    });
+    const left = Math.round(spot.x - width / 2);
+    const top = Math.round(spot.y - height / 2);
+
+    const placed = new Map(
+      chosen.map((item, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        return [
+          item.id,
+          {
+            x: Math.round(
+              left +
+                FRAME_PAD +
+                column * (cell.width + FRAME_PAD) +
+                (cell.width - item.width) / 2
+            ),
+            y: Math.round(
+              top +
+                FRAME_PAD +
+                header +
+                row * (cell.height + FRAME_PAD) +
+                (cell.height - item.height) / 2
+            ),
+          },
+        ];
+      })
+    );
+
     const frame: BoardItem = {
       ...BLANK_ITEM,
       body: "",
-      height: bottom - top + FRAME_PAD,
+      height,
       id: newItemId(),
       kind: "frame",
-      width: right - left,
+      width,
       x: left,
-      y: top - FRAME_PAD,
+      y: top,
       z: 0,
     };
-    change([frame, ...items]);
+
+    change([
+      frame,
+      ...items.map((item) => {
+        const at = placed.get(item.id);
+        return at ? { ...item, ...at } : item;
+      }),
+    ]);
     setAutoEditId(frame.id);
   };
 
