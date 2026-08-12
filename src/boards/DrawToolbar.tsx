@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  BucketIcon,
   CircleIcon,
   CursorMagicSelection02Icon,
   PaintBrush02Icon,
@@ -42,6 +43,9 @@ const TOOLS: { icon: typeof SquareIcon; label: string; tool: DrawTool }[] = [
   { icon: SquareIcon, label: "Square", tool: "rect" },
   { icon: SquareIcon, label: "Rounded rectangle", tool: "rounded" },
   { icon: CircleIcon, label: "Circle", tool: "ellipse" },
+  // Last, and separated below, because it is not a drawing tool: it paints
+  // onto a picture instead of leaving a mark of its own.
+  { icon: BucketIcon, label: "Mask an image", tool: "mask" },
 ];
 
 /** Widths worth having, rather than a slider nobody wants to aim at. */

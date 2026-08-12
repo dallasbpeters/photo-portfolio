@@ -12,6 +12,7 @@ import {
   type FalModelInput,
   falModelFor,
   falModelInput,
+  falModelMasks,
   HEX_COLOUR,
   isFalModel,
   isRunnableNodeType,
@@ -556,14 +557,19 @@ const jobsFor = (
   lists: Record<string, string[][] | undefined>,
   shape: FalModelInput,
   capability: NodeCapability,
-  typedPrompt: string
+  typedPrompt: string,
+  /** Rendered mask for each masked picture, keyed by its image URL. */
+  masks: Map<string, string>
 ): Job[] => {
   // Analyse reads every wired image in one call and answers once, so its
   // wiring describes a single run no matter how many references feed it.
   // Fanning out here would bill one description per image and then throw all
   // but the last away.
   if (capability === "fal.describe") {
-    return [{ image: values.image?.[0] ?? null, prompt: typedPrompt }];
+    // Reading a picture back as words is not affected by a mask.
+    return [
+      { image: values.image?.[0] ?? null, mask: null, prompt: typedPrompt },
+    ];
   }
   const raw = Number(item.config.count);
   const count = Number.isFinite(raw)
@@ -593,15 +599,44 @@ const jobsFor = (
         )
       : [typedPrompt];
 
-  const jobs: Job[] = [];
-  for (const prompt of prompts) {
-    for (const image of images) {
-      for (let n = 0; n < count; n += 1) {
-        jobs.push({ image, prompt });
-      }
+  // The mask belongs to the picture, so it is looked up per image rather than
+  // carried on the node: two references wired into one Generate may each be
+  // masked differently, or only one of them at all.
+  // Prompt outermost, then image, then the repeat count — the order the
+  // variations index into, so it must not be rearranged for tidiness.
+  return prompts.flatMap((prompt) =>
+    images.flatMap((image) =>
+      Array.from({ length: count }, () => ({
+        image,
+        mask: image ? (masks.get(image) ?? null) : null,
+        prompt,
+      }))
+    )
+  );
+};
+
+/**
+ * Every masked picture on the board, as image URL to rendered-mask URL.
+ *
+ * Keyed by URL because that is all a resolved image input carries: outputsOf
+ * hands back addresses, not the items they came from. The alternative was to
+ * thread the source item through every port resolution, which would change a
+ * great deal to answer one question.
+ *
+ * A mask without a rendered bitmap is skipped rather than guessed at — the
+ * canvas renders it before the run, and one that has not been rendered is one
+ * that has changed since, so the old bitmap would mask the wrong region.
+ */
+const maskByUrl = (rows: BoardItemRow[]): Map<string, string> => {
+  const masks = new Map<string, string>();
+  for (const row of rows) {
+    const config = asObject(row.config);
+    const url = row.image_url;
+    if (url && typeof config.maskUrl === "string" && config.maskUrl) {
+      masks.set(url, config.maskUrl);
     }
   }
-  return jobs;
+  return masks;
 };
 
 /**
@@ -635,9 +670,11 @@ const priorHistoryOf = (previous: Record<string, unknown>): Variation[] => {
 };
 
 /** One image in a node's result. Mirrors BoardItemVariation in src/types.ts. */
-/** One run: which image it reworks, and which prompt it uses. */
+/** One run: which image it reworks, which mask confines it, which prompt. */
 interface Job {
   image: string | null;
+  /** The rendered mask belonging to `image`, when that picture carries one. */
+  mask: string | null;
   prompt: string;
 }
 
@@ -686,6 +723,8 @@ const produce = async (
     /** "auto" (or absent) keeps fal.ts's own image-present switch. */
     model: string | null;
     prompt: string;
+    /** Confines the repaint to part of the picture. See maskByUrl. */
+    sourceMaskUrl: string | null;
     sourceImageUrl: string | null;
     /** Every wired image, for the one capability that reads them together. */
     sourceImageUrls: string[];
@@ -730,7 +769,8 @@ const produce = async (
   const image = await generateImage(
     args.prompt,
     args.sourceImageUrl,
-    args.model
+    args.model,
+    args.sourceMaskUrl
   );
   return {
     description: image.description,
@@ -827,17 +867,44 @@ const vectorInputRefusal = (
       }
     : null;
 
+/**
+ * A mask wired into a model that cannot honour one.
+ *
+ * Refused rather than dropped. fal would accept the request, ignore the mask,
+ * repaint the entire picture and bill for it — and the result looks like a
+ * generation that simply did not respect the mask, which is indistinguishable
+ * from the mask having been painted wrong.
+ */
+const maskRefusal = (
+  model: string | null,
+  masked: boolean
+): Record<string, unknown> | null => {
+  if (!masked || falModelMasks(model ?? "auto")) {
+    return null;
+  }
+  const label = falModelFor(model)?.label ?? "This model";
+  return {
+    error: `${label} cannot paint into part of an image. Choose Auto or a Flux style, or clear the mask.`,
+    missingPort: "image",
+  };
+};
+
 const unmetRequirement = (
   shape: FalModelInput,
   model: string | null,
   prompt: string,
-  values: Record<string, string[] | undefined>
+  values: Record<string, string[] | undefined>,
+  masked: boolean
 ): Record<string, unknown> | null => {
   // Every shape that consumes an image gets the same check, before any of the
   // per-shape rules below.
   const vector = vectorInputRefusal(values.image ?? []);
   if (vector && shape !== "prompt") {
     return vector;
+  }
+  const mask = maskRefusal(model, masked);
+  if (mask) {
+    return mask;
   }
   if (shape === "prompt-and-image") {
     // Both, so both are checked before anything is spent.
@@ -989,7 +1056,14 @@ const prepare = async (
   const shape = falModelInput(model ?? "auto");
 
   const prompt = promptFor(item, values);
-  const unmet = unmetRequirement(shape, model, prompt, values);
+  const masks = maskByUrl(rows);
+  const unmet = unmetRequirement(
+    shape,
+    model,
+    prompt,
+    values,
+    (values.image ?? []).some((url) => masks.has(url))
+  );
   if (unmet) {
     return refuse(422, unmet);
   }
@@ -1011,7 +1085,7 @@ const prepare = async (
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
   const jobs = validatedJobs(
-    jobsFor(item, values, lists, shape, type.capability, prompt)
+    jobsFor(item, values, lists, shape, type.capability, prompt, masks)
   );
   if (jobs === null) {
     return refuse(422, {
@@ -1161,6 +1235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         prompt: jobs[variation]?.prompt ?? prompt,
         sourceImageUrl: jobs[variation]?.image ?? null,
         sourceImageUrls,
+        sourceMaskUrl: jobs[variation]?.mask ?? null,
       });
 
       const previous = asObject(item.result);

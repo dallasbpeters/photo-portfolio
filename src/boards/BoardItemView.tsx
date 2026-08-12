@@ -18,6 +18,8 @@ import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import type { BoardItem } from "../types";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
+import { MaskOverlay } from "./MaskOverlay";
+import { maskOf } from "./mask";
 import { OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
 import { ShaderControls } from "./ShaderControls";
@@ -290,6 +292,7 @@ function BoardItemBody({
   // comes back as a PNG whenever the vectoriser is unavailable, and it needs
   // fitting just as much as the SVG would have.
   const isIcon = item.imageUrl?.includes("/boards/icons/") ?? false;
+  const mask = maskOf(item.config);
 
   return (
     <figure className="h-full w-full">
@@ -308,6 +311,12 @@ function BoardItemBody({
         src={item.imageUrl ?? ""}
         width={item.width}
       />
+      {/* The mask, if this picture has one painted on it. Above the image and
+          below the credit, because it annotates the picture and the credit
+          annotates the item. */}
+      {mask ? (
+        <MaskOverlay height={item.height} mask={mask} width={item.width} />
+      ) : null}
       {/* Unsplash's licence requires the photographer be credited wherever
           the image appears, so the credit renders with the item rather than
           living only in the database. */}

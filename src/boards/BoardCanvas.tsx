@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CANVAS_HEIGHT,
@@ -9,13 +10,13 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
-import { frameBoardTitle, frameSummary } from "./copyToBoard";
 import {
   boundsOf,
   CORNER_RADIUS,
   type DrawingConfig,
   type DrawTool,
   isFreehand,
+  isMaskTool,
   isTransparent,
   type Point,
   pathFor,
@@ -29,6 +30,7 @@ import {
   outputListOf,
   outputTextOf,
 } from "./itemOutput";
+import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { isImageDrop } from "./svgToRaster";
@@ -108,6 +110,13 @@ interface BoardCanvasProps {
     image: { url: string },
     point: { x: number; y: number }
   ) => void;
+  /**
+   * A stroke painted onto an image with the mask brush.
+   *
+   * The canvas owns the gesture and knows which picture it landed on; the
+   * editor owns the item's config, which is where the mask is kept.
+   */
+  onMaskStroke?: (itemId: string, stroke: MaskStroke) => void;
   /** Deletes one stored version of a node's output. */
   onRemoveVersion?: (itemId: string, index: number) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
@@ -141,6 +150,34 @@ interface BoardCanvasProps {
  * magnified.
  */
 const SNAP_PX = 6;
+
+/** True when a canvas point falls inside an item's box. */
+const covers = (item: BoardItem, point: Point): boolean =>
+  point.x >= item.x &&
+  point.x <= item.x + item.width &&
+  point.y >= item.y &&
+  point.y <= item.y + item.height;
+
+/**
+ * The topmost item under a point that satisfies `wanted`.
+ *
+ * Searched from the end because later items sit above earlier ones, so the one
+ * drawn last is the one a pointer is aiming at. Module-level and pure: it needs
+ * nothing but the list and the point.
+ */
+const topmostAt = (
+  items: BoardItem[],
+  point: Point,
+  wanted: (item: BoardItem) => boolean
+): BoardItem | null => {
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const item = items[i];
+    if (item && wanted(item) && covers(item, point)) {
+      return item;
+    }
+  }
+  return null;
+};
 
 /**
  * The rectangle the items occupy, or null for an empty board.
@@ -195,6 +232,7 @@ export function BoardCanvas({
   onConfigChange,
   onCopyFrame,
   onCreateFromPort,
+  onMaskStroke,
   drawTool = null,
   drawStyle,
   onDraw,
@@ -279,18 +317,74 @@ export function BoardCanvas({
    */
   const [stroke, setStroke] = useState<Point[] | null>(null);
 
-  const isDrawing = drawTool !== null && !readOnly && Boolean(onDraw);
+  // The mask brush is a drawing gesture that ends somewhere else, so it is
+  // enabled by its own handler rather than by onDraw — which it never calls.
+  const isDrawing =
+    drawTool !== null &&
+    !readOnly &&
+    Boolean(isMaskTool(drawTool) ? onMaskStroke : onDraw);
+
+  /**
+   * The image a mask stroke belongs to: the topmost picture under its start.
+   *
+   * Chosen from where the stroke began rather than where it ended, so running
+   * off the edge of a photograph while painting keeps the paint on it instead
+   * of moving the mask to whatever the pointer finished over.
+   */
+  const imageAt = useCallback(
+    (point: Point): BoardItem | null =>
+      topmostAt(
+        items,
+        point,
+        (item) => Boolean(item.imageUrl) && item.kind !== "frame"
+      ),
+    [items]
+  );
+
+  /**
+   * A mask stroke, handed to the picture it was painted on.
+   *
+   * The mask brush never reaches onDraw: it leaves no mark of its own. A
+   * stroke that began off any image is dropped, there being nothing for it to
+   * be a mask of.
+   */
+  const finishMaskStroke = useCallback(
+    (points: Point[], strokeWidth: number) => {
+      const [start] = points;
+      const target = start ? imageAt(start) : null;
+      if (!(target && onMaskStroke)) {
+        return;
+      }
+      onMaskStroke(target.id, {
+        points: toUnitSpace(points, {
+          height: target.height,
+          width: target.width,
+          x: target.x,
+          y: target.y,
+        }),
+        // Stored relative to the item's width so the mask scales with the
+        // node, exactly as the points do.
+        width: strokeWidth / target.width,
+      });
+    },
+    [imageAt, onMaskStroke]
+  );
 
   /** Ends the mark, handing the editor a config and the box it occupies. */
   const finishStroke = useCallback(
     (points: Point[]) => {
       setStroke(null);
-      if (!(drawTool && onDraw && drawStyle) || points.length === 0) {
+      if (!(drawTool && drawStyle) || points.length === 0) {
+        return;
+      }
+
+      if (isMaskTool(drawTool)) {
+        finishMaskStroke(points, drawStyle.strokeWidth);
         return;
       }
       const [first] = points;
       const last = points.at(-1);
-      if (!(first && last)) {
+      if (!(first && last && onDraw)) {
         return;
       }
 
@@ -331,7 +425,7 @@ export function BoardCanvas({
         box
       );
     },
-    [drawStyle, drawTool, onDraw]
+    [drawStyle, drawTool, finishMaskStroke, onDraw]
   );
 
   /**
@@ -572,19 +666,29 @@ export function BoardCanvas({
    */
   const frameAt = useCallback(
     (point: Point): BoardItem | null =>
-      // Copied before reversing, since reverse() mutates in place and this is
-      // the live item list. The allocation is per right-click, not per render.
-      [...items]
-        .reverse()
-        .find(
-          (item) =>
-            item.kind === "frame" &&
-            point.x >= item.x &&
-            point.x <= item.x + item.width &&
-            point.y >= item.y &&
-            point.y <= item.y + item.height
-        ) ?? null,
+      topmostAt(items, point, (item) => item.kind === "frame"),
     [items]
+  );
+
+  /**
+   * Right-clicking a frame offers to copy it to a board of its own.
+   *
+   * Anywhere else keeps the browser's own menu, which is still how an image
+   * gets saved or a link copied — so this only preempts it over a frame.
+   */
+  const openFrameMenu = useCallback(
+    (e: ReactMouseEvent) => {
+      if (readOnly || !onCopyFrame) {
+        return;
+      }
+      const frame = frameAt(view.toCanvas(e.clientX, e.clientY));
+      if (!frame) {
+        return;
+      }
+      e.preventDefault();
+      setFrameMenu({ item: frame, point: { x: e.clientX, y: e.clientY } });
+    },
+    [frameAt, onCopyFrame, readOnly, view]
   );
 
   /** Everything the swept rectangle touches, by index. */
@@ -843,22 +947,7 @@ export function BoardCanvas({
             ? "cursor-crosshair"
             : (view.isPanning && "cursor-grabbing") || "cursor-grab"
         }`}
-        onContextMenu={(e) => {
-          if (readOnly || !onCopyFrame) {
-            return;
-          }
-          const frame = frameAt(view.toCanvas(e.clientX, e.clientY));
-          if (!frame) {
-            // Anywhere else keeps the browser's own menu, which is still how
-            // an image gets saved or a link copied.
-            return;
-          }
-          e.preventDefault();
-          setFrameMenu({
-            item: frame,
-            point: { x: e.clientX, y: e.clientY },
-          });
-        }}
+        onContextMenu={openFrameMenu}
         onDragOver={
           onDropFiles || onDropImage
             ? (e) => {
@@ -1149,19 +1238,16 @@ export function BoardCanvas({
           ))}
         </div>
       </div>
-      {frameMenu ? (
-        <FrameMenu
-          count={frameSummary(frameMenu.item, items, wires).count}
-          defaultTitle={frameBoardTitle(frameMenu.item)}
-          onCopy={(title) => {
-            onCopyFrame?.(frameMenu.item, title);
-            setFrameMenu(null);
-          }}
-          onDismiss={() => setFrameMenu(null)}
-          point={frameMenu.point}
-          severed={frameSummary(frameMenu.item, items, wires).severed}
-        />
-      ) : null}
+      <FrameMenu
+        items={items}
+        menu={frameMenu}
+        onCopy={(frame, title) => {
+          onCopyFrame?.(frame, title);
+          setFrameMenu(null);
+        }}
+        onDismiss={() => setFrameMenu(null)}
+        wires={wires}
+      />
       {portMenu ? (
         <PortMenu
           onChoose={(target) => {

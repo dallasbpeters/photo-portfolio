@@ -1,18 +1,16 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CopyIcon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
+import type { BoardItem, BoardWire } from "../types";
+import { frameBoardTitle, frameSummary } from "./copyToBoard";
 
 interface FrameMenuProps {
-  /** How many items would travel, the frame included. Shown so the size of
-   *  what is about to be copied is visible before committing to it. */
-  count: number;
-  /** The name to start from — the frame's own, when it has one. */
-  defaultTitle: string;
-  onCopy: (title: string) => void;
+  items: BoardItem[];
+  /** The frame and where it was clicked, or null when no menu is open. */
+  menu: { item: BoardItem; point: { x: number; y: number } } | null;
+  onCopy: (frame: BoardItem, title: string) => void;
   onDismiss: () => void;
-  point: { x: number; y: number };
-  /** Wires that would not survive the copy, having one end outside the frame. */
-  severed: number;
+  wires: BoardWire[];
 }
 
 /**
@@ -26,23 +24,46 @@ interface FrameMenuProps {
  * chrome, so the zoom must not change its size or where it sits.
  */
 export function FrameMenu({
-  count,
-  defaultTitle,
+  items,
+  menu,
   onCopy,
   onDismiss,
-  point,
-  severed,
+  wires,
 }: FrameMenuProps) {
-  const [title, setTitle] = useState(defaultTitle);
+  // Hooks first: this component owns its closed state rather than being
+  // wrapped in a conditional at the call site, which keeps one more branch out
+  // of the canvas — already the most tangled component here.
+  const [typed, setTyped] = useState<string | null>(null);
   const field = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!menu) {
+      return;
+    }
+    // Keyed on the menu rather than on mount: this component is now always
+    // mounted and merely renders nothing when closed, so a mount-only effect
+    // would fire once at startup and never again when a menu actually opened.
+    //
+    // The typed name is cleared at the same moment, so opening a second frame's
+    // menu suggests that frame's name instead of keeping the first one's.
+    setTyped(null);
     // Selected rather than merely focused: the default is a suggestion, and
     // typing over it should not mean clearing it first.
     field.current?.select();
-  }, []);
+  }, [menu]);
 
-  const submit = () => onCopy(title.trim() || defaultTitle);
+  if (!menu) {
+    return null;
+  }
+
+  const { item: frame, point } = menu;
+  const defaultTitle = frameBoardTitle(frame);
+  const { count, severed } = frameSummary(frame, items, wires);
+  // Null until something is typed, so the suggested name tracks the frame the
+  // menu was opened on rather than sticking at whichever one came first.
+  const title = typed ?? defaultTitle;
+
+  const submit = () => onCopy(frame, title.trim() || defaultTitle);
 
   return (
     <>
@@ -66,7 +87,7 @@ export function FrameMenu({
           <input
             aria-label="New board name"
             className="w-full rounded border border-white/15 bg-black/40 px-2 py-1.5 text-[12px] text-white outline-none focus:border-white/45"
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setTyped(e.target.value)}
             // Enter creates and Escape closes, both from the field, because
             // the field is where the focus already is — reaching for the mouse
             // to confirm a name you have just typed is a detour.

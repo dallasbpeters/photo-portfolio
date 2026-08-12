@@ -1,9 +1,12 @@
 import {
   type FalModelInput,
+  FLUX_INPAINT_ENDPOINT,
+  FLUX_LORA_INPAINT_ENDPOINT,
   falImageParam,
   falLoraEndpoint,
   falModelInput,
   falModelLora,
+  falModelMasks,
   HEX_COLOUR,
 } from "../../config/nodeTypes.js";
 import { persistGenerated } from "./persistGenerated.js";
@@ -175,6 +178,42 @@ const paletteFrom = (
   };
 };
 
+/**
+ * Which fal endpoint this run actually goes to.
+ *
+ * Four things decide it and they are checked in order of how much they
+ * constrain the answer: a mask needs an inpainting endpoint, a LoRA needs one
+ * that loads weights, an explicitly named model is taken at its word, and
+ * "auto" falls back to inventing or editing depending on whether a picture was
+ * wired in.
+ */
+const endpointFor = ({
+  lora,
+  masking,
+  requestedModel,
+  sourceImageUrl,
+}: {
+  lora: ReturnType<typeof falModelLora>;
+  masking: boolean;
+  requestedModel: string | null;
+  sourceImageUrl: string | null;
+}): string => {
+  if (lora) {
+    return masking
+      ? FLUX_LORA_INPAINT_ENDPOINT
+      : // A wired image reworks rather than invents, so the style is applied
+        // to it through the image-to-image endpoint instead.
+        falLoraEndpoint(lora, Boolean(sourceImageUrl));
+  }
+  if (masking) {
+    return FLUX_INPAINT_ENDPOINT;
+  }
+  if (requestedModel && requestedModel !== "auto") {
+    return requestedModel;
+  }
+  return sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
+};
+
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
@@ -196,7 +235,16 @@ export const generateImage = async (
    * config/nodeTypes.ts — this is handed straight to fal, so an arbitrary
    * string reaching here would be a paid request to a model that may not exist.
    */
-  requestedModel?: string | null
+  requestedModel?: string | null,
+  /**
+   * A black-and-white bitmap confining the repaint to part of the picture:
+   * white is redrawn, black is kept.
+   *
+   * Changes which endpoint is called rather than only what is sent, because
+   * inpainting is a separate endpoint on fal rather than a parameter. Ignored
+   * without a source image, since there would be nothing to repaint *into*.
+   */
+  maskUrl?: string | null
 ): Promise<GeneratedImage> => {
   const key = falKey();
   if (!key) {
@@ -207,17 +255,17 @@ export const generateImage = async (
   // differ only in the weights it loads, so the id chosen on the node is a
   // style name rather than something fal would recognise.
   const lora = falModelLora(requestedModel);
-  const named =
-    requestedModel && requestedModel !== "auto" ? requestedModel : null;
-  const auto = sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
-  let model = auto;
-  if (lora) {
-    // A wired image reworks rather than invents, so the style is applied to it
-    // through the image-to-image endpoint instead.
-    model = falLoraEndpoint(lora, Boolean(sourceImageUrl));
-  } else if (named) {
-    model = named;
-  }
+  // A mask only means anything applied to a picture, and only where the model
+  // has an inpainting endpoint to apply it with.
+  const masking = Boolean(
+    maskUrl && sourceImageUrl && falModelMasks(requestedModel ?? "auto")
+  );
+  const model = endpointFor({
+    lora,
+    masking,
+    requestedModel: requestedModel ?? null,
+    sourceImageUrl: sourceImageUrl ?? null,
+  });
 
   const body = bodyFor(
     lora,
@@ -230,6 +278,14 @@ export const generateImage = async (
     // wrong field on every automatic edit.
     falImageParam(model)
   );
+
+  // Inpainting endpoints take the picture as image_url whatever the chosen
+  // model normally uses, and the mask beside it.
+  if (masking && maskUrl && sourceImageUrl) {
+    body.image_url = sourceImageUrl;
+    body.image_urls = undefined;
+    body.mask_url = maskUrl;
+  }
 
   // A real constraint where the model has one, rather than a request in prose.
   if (PALETTE_MODELS.has(model)) {

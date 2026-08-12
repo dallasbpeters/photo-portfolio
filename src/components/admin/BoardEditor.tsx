@@ -49,6 +49,14 @@ import {
   NO_FILL,
 } from "../../boards/drawing";
 import { InsertPalette } from "../../boards/InsertPalette";
+import { MaskControls } from "../../boards/MaskControls";
+import {
+  type MaskConfig,
+  type MaskStroke,
+  maskOf,
+  naturalSizeOf,
+  rasterizeMask,
+} from "../../boards/mask";
 import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
 import { findFreeSpot } from "../../boards/placement";
@@ -258,40 +266,53 @@ export function BoardEditor({
     };
   }, [boardId]);
 
-  const save = useCallback(async () => {
-    // Refuses to write a board it has not read. Without this the first
-    // debounce after any early edit replaces the stored arrangement with the
-    // empty one this component starts with.
-    if (!isLoaded) {
-      return;
-    }
-    setIsSaving(true);
-    try {
-      await boardsApi.update(boardId, {
-        // The first image on the board becomes its cover, so the list has
-        // something to show without asking anyone to choose.
-        coverUrl:
-          items.find(
-            (i) => (i.kind === "photo" || i.kind === "reference") && i.imageUrl
-          )?.imageUrl ?? undefined,
-        items,
-        sources,
-        wires,
-      });
-      // Deliberately does not adopt saved.items. The canvas is the source of
-      // truth while it is open, and replacing state here discarded anything
-      // typed or dragged while the request was in flight.
-      //
-      // Run results are safe from this in the other direction too: the server
-      // never writes them from a save, so a generation landing mid-request
-      // cannot be overwritten by the copy this call carried.
-      setIsDirty(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save board");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [boardId, isLoaded, items, sources, wires]);
+  const save = useCallback(
+    /**
+     * `override` is for a caller that has just computed the items and cannot
+     * wait for React to re-render with them — rendering masks before a run is
+     * the case. Without it that save would write the state from before the
+     * masks were attached, and the run would read a board that lacks them.
+     */
+    async (override?: BoardItem[]) => {
+      // Refuses to write a board it has not read. Without this the first
+      // debounce after any early edit replaces the stored arrangement with the
+      // empty one this component starts with.
+      if (!isLoaded) {
+        return;
+      }
+      const saving = override ?? items;
+      setIsSaving(true);
+      try {
+        await boardsApi.update(boardId, {
+          // The first image on the board becomes its cover, so the list has
+          // something to show without asking anyone to choose.
+          coverUrl:
+            saving.find(
+              (i) =>
+                (i.kind === "photo" || i.kind === "reference") && i.imageUrl
+            )?.imageUrl ?? undefined,
+          items: saving,
+          sources,
+          wires,
+        });
+        // Deliberately does not adopt saved.items. The canvas is the source of
+        // truth while it is open, and replacing state here discarded anything
+        // typed or dragged while the request was in flight.
+        //
+        // Run results are safe from this in the other direction too: the server
+        // never writes them from a save, so a generation landing mid-request
+        // cannot be overwritten by the copy this call carried.
+        setIsDirty(false);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Could not save board"
+        );
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [boardId, isLoaded, items, sources, wires]
+  );
 
   useEffect(() => {
     if (!isDirty) {
@@ -614,6 +635,48 @@ export function BoardEditor({
    * would otherwise be invisible to it.
    */
   const flushBeforeRun = useCallback(async () => {
+    // Masks are rendered here rather than as they are painted. A stroke is one
+    // of many, and uploading a bitmap per stroke would spend a request on every
+    // brush movement — while a run is the first moment the mask has to exist as
+    // a picture. `maskUrl` is cleared whenever the mask changes, so anything
+    // still holding one is already current.
+    const rendered = await Promise.all(
+      pending.current.items.map(async (item) => {
+        const mask = maskOf(item.config);
+        const config = item.config ?? {};
+        if (!(mask && item.imageUrl) || typeof config.maskUrl === "string") {
+          return item;
+        }
+        try {
+          const size = await naturalSizeOf(item.imageUrl);
+          const blob = await rasterizeMask(mask, size);
+          const { url } = await portfolioService.uploadImageFile(
+            new File([blob], "mask.png", { type: "image/png" }),
+            undefined,
+            "boards/masks"
+          );
+          return { ...item, config: { ...config, maskUrl: url } };
+        } catch (err) {
+          // Reported rather than swallowed: without a mask the run would
+          // repaint the whole picture, which looks like the mask being ignored.
+          toast.error(
+            err instanceof Error ? err.message : "Could not prepare the mask"
+          );
+          return item;
+        }
+      })
+    );
+
+    const changed = rendered.some(
+      (item, i) => item !== pending.current.items[i]
+    );
+    if (changed) {
+      setItems(rendered);
+      // Saved explicitly with these items: the run reads the board from the
+      // database, and React has not re-rendered with them yet.
+      await save(rendered);
+      return;
+    }
     if (pending.current.isDirty) {
       await save();
     }
@@ -853,6 +916,53 @@ export function BoardEditor({
         added.length === 1 ? "Image added" : `${added.length} images added`
       );
     }
+  };
+
+  /**
+   * A stroke painted onto a picture with the mask brush.
+   *
+   * Appended to that item's config rather than kept anywhere of its own, so it
+   * is saved, undone and copied by the machinery that already handles every
+   * other setting. `maskUrl` is dropped on every edit: it is the *rendered*
+   * mask, and a stale bitmap sent with freshly painted strokes would repaint
+   * the wrong part of the picture — the worst kind of failure here, because it
+   * still returns a plausible image.
+   */
+  const addMaskStroke = (itemId: string, stroke: MaskStroke) => {
+    change(
+      items.map((item) => {
+        if (item.id !== itemId) {
+          return item;
+        }
+        const config = item.config ?? {};
+        const existing = maskOf(config);
+        return {
+          ...item,
+          config: {
+            ...config,
+            mask: {
+              invert: existing?.invert ?? false,
+              strokes: [...(existing?.strokes ?? []), stroke],
+            },
+            maskUrl: null,
+          },
+        };
+      })
+    );
+  };
+
+  /** Replaces a picture's mask wholesale — cleared, or inverted. */
+  const changeMask = (itemId: string, next: MaskConfig | null) => {
+    change(
+      items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              config: { ...(item.config ?? {}), mask: next, maskUrl: null },
+            }
+          : item
+      )
+    );
   };
 
   /**
@@ -1121,6 +1231,7 @@ export function BoardEditor({
             what it is drawing on. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
           <div className="pointer-events-auto">
+            <MaskControls onChange={changeMask} selected={selectedItem} />
             <BoardDrawTools
               onConfigChange={changeConfig}
               onStyle={setDrawStyle}
@@ -1225,6 +1336,7 @@ export function BoardEditor({
           onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
           onDropImage={dropImage}
+          onMaskStroke={addMaskStroke}
           onRemoveVersion={(itemId, index) => void removeVersion(itemId, index)}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
           onSelectionChange={setSelectedItem}

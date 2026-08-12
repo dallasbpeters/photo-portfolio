@@ -18,13 +18,24 @@ export const DRAW_TOOLS = [
   "rect",
   "rounded",
   "ellipse",
+  "mask",
 ] as const;
 
 export type DrawTool = (typeof DRAW_TOOLS)[number];
 
 /** Freehand tools collect a path; the rest are defined by their box alone. */
 export const isFreehand = (tool: DrawTool): boolean =>
-  tool === "pen" || tool === "brush";
+  tool === "pen" || tool === "brush" || tool === "mask";
+
+/**
+ * The mask brush, which is a drawing tool that makes no drawing.
+ *
+ * It is here rather than in mask.ts because it is picked from the same toolbar
+ * and uses the same gesture as the pen — but its stroke is painted onto the
+ * image it lands on instead of becoming a mark of its own. Everything that
+ * treats a tool as "the thing the next drag makes" has to know the difference.
+ */
+export const isMaskTool = (tool: DrawTool | null): boolean => tool === "mask";
 
 export interface Point {
   x: number;
