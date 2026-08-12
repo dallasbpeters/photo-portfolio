@@ -20,6 +20,7 @@ import {
   toUnitSpace,
 } from "./drawing";
 import { FrameMenu } from "./FrameMenu";
+import { GroupMenu } from "./GroupMenu";
 import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
@@ -125,6 +126,13 @@ interface BoardCanvasProps {
    * The canvas owns the gesture and knows which picture it landed on; the
    * editor owns the item's config, which is where the mask is kept.
    */
+  /**
+   * Wraps the given items in a frame of their own.
+   *
+   * The canvas knows what is selected; only the editor can mint an item, which
+   * is the same division onCreateFromPort and onCopyFrame already use.
+   */
+  onGroupIntoFrame?: (items: BoardItem[]) => void;
   onMaskStroke?: (itemId: string, stroke: MaskStroke) => void;
   /** Deletes one stored version of a node's output. */
   onRemoveVersion?: (itemId: string, index: number) => void;
@@ -250,6 +258,7 @@ export function BoardCanvas({
   onConfigChange,
   onCopyFrame,
   onCreateFromPort,
+  onGroupIntoFrame,
   onMaskStroke,
   drawTool = null,
   drawStyle,
@@ -298,6 +307,11 @@ export function BoardCanvas({
   /** A frame was right-clicked; it is offering to become a board. */
   const [frameMenu, setFrameMenu] = useState<{
     item: BoardItem;
+    point: { x: number; y: number };
+  } | null>(null);
+  /** Several items were right-clicked; they are offering to be grouped. */
+  const [groupMenu, setGroupMenu] = useState<{
+    items: BoardItem[];
     point: { x: number; y: number };
   } | null>(null);
 
@@ -705,14 +719,26 @@ export function BoardCanvas({
       if (readOnly || !onCopyFrame) {
         return;
       }
+      const point = { x: e.clientX, y: e.clientY };
       const frame = frameAt(view.toCanvas(e.clientX, e.clientY));
-      if (!frame) {
+      if (frame) {
+        e.preventDefault();
+        setFrameMenu({ item: frame, point });
         return;
       }
-      e.preventDefault();
-      setFrameMenu({ item: frame, point: { x: e.clientX, y: e.clientY } });
+      // No frame under the pointer, but something is selected: offer to make
+      // the selection into a group. Grouping is the step before compositing,
+      // and dragging an empty frame around work that already exists is fiddly
+      // enough that people simply do not do it.
+      const chosen = selection
+        .map((index) => items[index])
+        .filter((item): item is BoardItem => Boolean(item));
+      if (chosen.length > 0 && onGroupIntoFrame) {
+        e.preventDefault();
+        setGroupMenu({ items: chosen, point });
+      }
     },
-    [frameAt, onCopyFrame, readOnly, view]
+    [frameAt, items, onCopyFrame, onGroupIntoFrame, readOnly, selection, view]
   );
 
   /** Everything the swept rectangle touches, by index. */
@@ -1244,6 +1270,14 @@ export function BoardCanvas({
           ))}
         </div>
       </div>
+      <GroupMenu
+        menu={groupMenu}
+        onDismiss={() => setGroupMenu(null)}
+        onGroup={(chosen) => {
+          onGroupIntoFrame?.(chosen);
+          setGroupMenu(null);
+        }}
+      />
       <FrameMenu
         items={items}
         menu={frameMenu}

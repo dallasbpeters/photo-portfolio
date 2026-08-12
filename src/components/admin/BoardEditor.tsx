@@ -864,6 +864,45 @@ export function BoardEditor({
   };
 
   /**
+   * Wraps the selected items in a frame of their own.
+   *
+   * The way a group of pictures becomes one thing: select them, group them,
+   * nudge them about inside the frame, and wire the frame into a Composite —
+   * which renders them exactly where they sit. Building that arrangement by
+   * dragging an empty frame around existing work is fiddly and easy to get
+   * wrong by a few pixels, and a picture whose centre falls outside is silently
+   * not in the group.
+   *
+   * The frame is sized to the selection with room to move, and its z puts it
+   * behind everything — a frame drawn over its own contents would swallow the
+   * clicks meant for them.
+   */
+  const groupIntoFrame = (chosen: BoardItem[]) => {
+    if (chosen.length === 0) {
+      return;
+    }
+    const left = Math.min(...chosen.map((i) => i.x)) - FRAME_PAD;
+    const top = Math.min(...chosen.map((i) => i.y)) - FRAME_PAD;
+    const right = Math.max(...chosen.map((i) => i.x + i.width)) + FRAME_PAD;
+    // Extra at the top: the frame's name sits inside its own bounds, and a
+    // frame tight to its contents puts that label over the first picture.
+    const bottom = Math.max(...chosen.map((i) => i.y + i.height)) + FRAME_PAD;
+    const frame: BoardItem = {
+      ...BLANK_ITEM,
+      body: "",
+      height: bottom - top + FRAME_PAD,
+      id: newItemId(),
+      kind: "frame",
+      width: right - left,
+      x: left,
+      y: top - FRAME_PAD,
+      z: 0,
+    };
+    change([frame, ...items]);
+    setAutoEditId(frame.id);
+  };
+
+  /**
    * Places a shader on the canvas.
    *
    * Only the effect's name is stored. Its parameters stay absent until one is
@@ -1419,6 +1458,7 @@ export function BoardEditor({
           onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
           onDropImage={dropImage}
+          onGroupIntoFrame={groupIntoFrame}
           onMaskStroke={addMaskStroke}
           onRemoveVersion={(itemId, index) => void removeVersion(itemId, index)}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
