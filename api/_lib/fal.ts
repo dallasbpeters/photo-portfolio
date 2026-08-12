@@ -1,5 +1,6 @@
 import {
   type FalModelInput,
+  falImageParam,
   falLoraEndpoint,
   falModelInput,
   falModelLora,
@@ -91,8 +92,14 @@ const bodyFor = (
   lora: ReturnType<typeof falModelLora>,
   shape: FalModelInput,
   prompt: string,
-  sourceImageUrl?: string | null
+  sourceImageUrl: string | null | undefined,
+  /** "image_url" for most, "image_urls" for the few that take a list. */
+  imageParam: "image_url" | "image_urls"
 ): Record<string, unknown> => {
+  /** The source image under whichever name this endpoint expects. */
+  const imageField = (url: string): Record<string, unknown> =>
+    imageParam === "image_urls" ? { image_urls: [url] } : { image_url: url };
+
   if (lora) {
     // The trigger token is prepended rather than left to be remembered. A LoRA
     // is trained against one, and a prompt without it quietly returns the base
@@ -114,23 +121,25 @@ const bodyFor = (
     if (!sourceImageUrl) {
       throw new Error("This model needs an image wired into it");
     }
-    return { image_url: sourceImageUrl };
+    return imageField(sourceImageUrl);
   }
   if (shape === "prompt-and-image") {
-    // Both required, and the image singular. Refused here as well as in the
-    // run endpoint, since this function is reachable from api/ai/generate.ts
-    // too and fal bills before it validates.
+    // Both required. Refused here as well as in the run endpoint, since this
+    // function is reachable from api/ai/generate.ts too and fal bills before
+    // it validates.
     if (!sourceImageUrl) {
       throw new Error("This model needs an image wired into it");
     }
-    return { image_url: sourceImageUrl, prompt };
+    return { ...imageField(sourceImageUrl), prompt };
   }
   if (shape === "prompt") {
     // Text-to-image and text-to-vector. Any wired image is deliberately not
     // sent — these endpoints do not take one.
     return { prompt };
   }
-  return sourceImageUrl ? { image_urls: [sourceImageUrl], prompt } : { prompt };
+  return sourceImageUrl
+    ? { ...imageField(sourceImageUrl), prompt }
+    : { prompt };
 };
 
 /** Models that accept a colour palette as a parameter rather than as prose. */
@@ -214,7 +223,12 @@ export const generateImage = async (
     lora,
     falModelInput(requestedModel ?? "auto"),
     prompt,
-    sourceImageUrl
+    sourceImageUrl,
+    // Keyed off the endpoint actually being called, not off what was asked
+    // for. "auto" resolves to nano-banana/edit, which takes a list where most
+    // take one URL — reading the parameter name off "auto" would send the
+    // wrong field on every automatic edit.
+    falImageParam(model)
   );
 
   // A real constraint where the model has one, rather than a request in prose.

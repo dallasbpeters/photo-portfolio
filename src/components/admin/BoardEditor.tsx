@@ -53,6 +53,7 @@ import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
 import { findFreeSpot } from "../../boards/placement";
 import { newShaderConfig } from "../../boards/shaderConfig";
+import { isSvgFile, svgToWebp } from "../../boards/svgToRaster";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
 import {
@@ -805,8 +806,16 @@ export function BoardEditor({
     // to blob storage and never touch a function, so several at once is the
     // normal case and a queue would only make a folder of images slower.
     const results = await Promise.allSettled(
-      files.map((file) =>
-        portfolioService.uploadImageFile(file, undefined, "boards/uploads")
+      files.map(async (file) =>
+        portfolioService.uploadImageFile(
+          // Rasterised on the way in rather than rejected. The upload takes no
+          // vectors, so an SVG dropped on a board used to fail outright — and
+          // nothing downstream wants the vector anyway, since a model is sent a
+          // bitmap and a canvas cannot read pixels back out of an SVG.
+          isSvgFile(file) ? await svgToWebp(file) : file,
+          undefined,
+          "boards/uploads"
+        )
       )
     );
 

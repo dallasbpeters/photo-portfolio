@@ -31,6 +31,7 @@ import {
 } from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
+import { isImageDrop } from "./svgToRaster";
 import { useCanvasViewport } from "./useCanvasViewport";
 import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
@@ -379,7 +380,7 @@ export function BoardCanvas({
         return;
       }
       const files = [...(e.clipboardData?.files ?? [])].filter((file) =>
-        file.type.startsWith("image/")
+        isImageDrop(file)
       );
       if (files.length > 0 && onDropFiles) {
         e.preventDefault();
@@ -887,7 +888,7 @@ export function BoardCanvas({
                 }
 
                 const files = [...e.dataTransfer.files].filter((file) =>
-                  file.type.startsWith("image/")
+                  isImageDrop(file)
                 );
                 if (files.length === 0 || !onDropFiles) {
                   return;

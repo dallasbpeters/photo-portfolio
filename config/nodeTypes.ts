@@ -163,6 +163,15 @@ export interface FalLora {
 export interface FalModelDef {
   /** The exact fal.ai model id, or "auto". */
   id: string;
+  /**
+   * What this endpoint calls its source image.
+   *
+   * Orthogonal to `input`, which says whether an image is required: these
+   * endpoints disagree about the parameter's *name* as well as its necessity,
+   * and nano-banana wants a list where Recraft and Ideogram want one URL.
+   * Defaults to "image_url", which is the majority.
+   */
+  imageParam?: "image_url" | "image_urls";
   input: FalModelInput;
   /** Shown on the node — model ids are too long and too alike to read. */
   label: string;
@@ -220,7 +229,12 @@ export const FAL_MODELS = [
   },
   {
     id: "fal-ai/nano-banana/edit",
-    input: "prompt-or-image",
+    // An edit model, so an image is required rather than optional. Declared
+    // "prompt-or-image" it accepted a run with nothing wired, sent a body with
+    // no image at all, and fal answered "Field required" — after billing. The
+    // node now refuses before spending anything.
+    imageParam: "image_urls",
+    input: "prompt-and-image",
     label: "Nano Banana Edit",
     vector: false,
   },
@@ -369,6 +383,36 @@ export const falLoraEndpoint = (lora: FalLora, hasImage: boolean): string => {
   return lora.endpoint ?? FLUX_LORA_ENDPOINT;
 };
 
+/**
+ * Repainting part of a picture and leaving the rest alone.
+ *
+ * A separate endpoint rather than a parameter, which is why a mask changes
+ * where the request goes rather than only what it carries. The LoRA form takes
+ * the same `loras` array as the others, so a mask and a custom style compose —
+ * masking does not cost you the trained look.
+ */
+export const FLUX_INPAINT_ENDPOINT = "fal-ai/flux-general/inpainting";
+export const FLUX_LORA_INPAINT_ENDPOINT = "fal-ai/flux-lora/inpainting";
+
+/**
+ * Whether this model can repaint part of an image rather than all of it.
+ *
+ * Only the Flux family, for now. A mask sent to a model without an inpainting
+ * endpoint would be ignored silently and billed in full, so the run is refused
+ * instead — see maskRefusal in the run endpoint.
+ */
+export const falModelMasks = (value: unknown): boolean => {
+  const model = falModelFor(value);
+  if (!model) {
+    return false;
+  }
+  // A LoRA on a non-Flux base has its own endpoints and no inpainting one.
+  if (model.lora) {
+    return !model.lora.endpoint;
+  }
+  return model.id === "auto" || model.id.startsWith("fal-ai/flux");
+};
+
 export const FAL_MODEL_IDS: readonly string[] = FAL_MODELS.map(
   (model) => model.id
 );
@@ -386,6 +430,10 @@ export const isVectorModel = (value: unknown): boolean =>
 /** What a chosen model consumes; unknown ids behave like "auto". */
 export const falModelInput = (value: unknown): FalModelInput =>
   falModelFor(value)?.input ?? "prompt-or-image";
+
+/** What to call the source image for this model. See FalModelDef.imageParam. */
+export const falImageParam = (value: unknown): "image_url" | "image_urls" =>
+  falModelFor(value)?.imageParam ?? "image_url";
 
 /** Labels for the node's model picker, keyed by id. */
 export const FAL_MODEL_LABELS: Record<string, string> = Object.fromEntries(
