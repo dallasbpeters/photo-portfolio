@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ColorPickerIcon } from "@hugeicons-pro/core-stroke-standard";
+import { useEffect, useState } from "react";
 import { type ColorResult, SketchPicker } from "react-color";
 import { createPortal } from "react-dom";
 
@@ -48,6 +50,24 @@ const toHex = (color: ColorResult): string => {
 export function ColorWell({ label, onChange, value }: ColorWellProps) {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const clear = isTransparent(value);
+  const canSample = typeof window !== "undefined" && "EyeDropper" in window;
+
+  /**
+   * Hands the pointer back to the operating system while the picker is open.
+   *
+   * The board draws its own cursor and hides the real one, which is fine for
+   * dragging things about and useless for choosing a colour off a gradient —
+   * the drawn arrow and its name label cover the pixel being aimed at. While a
+   * picker is open there is nothing else to interact with, so the swap is safe
+   * for exactly as long as it is needed.
+   */
+  useEffect(() => {
+    if (!at) {
+      return;
+    }
+    document.body.classList.add("cursor-precise");
+    return () => document.body.classList.remove("cursor-precise");
+  }, [at]);
 
   /**
    * Opens the picker at the swatch, in viewport coordinates.
@@ -69,6 +89,26 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
       left: Math.min(box.left, window.innerWidth - PICKER_WIDTH - 8),
       top: wantsAbove ? box.top - PICKER_HEIGHT - 8 : box.bottom + 8,
     });
+  };
+
+  /**
+   * Samples a colour from anywhere on screen.
+   *
+   * The picker stays open behind it: sampling is usually the first move and
+   * nudging the result on the gradient is the second, so closing here would
+   * make the common pair into two trips.
+   */
+  const sample = async () => {
+    const Sampler = window.EyeDropper;
+    if (!Sampler) {
+      return;
+    }
+    try {
+      const picked = await new Sampler().open();
+      onChange(picked.sRGBHex);
+    } catch {
+      // Dismissed with Escape, which is a choice rather than a failure.
+    }
   };
 
   return (
@@ -116,6 +156,21 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                   color={value}
                   onChange={(color: ColorResult) => onChange(toHex(color))}
                 />
+                {/* Sampling beats matching by eye when the colour wanted is
+                    already on the board — a reference photograph, a logo, an
+                    image just generated. Absent rather than disabled where the
+                    browser has no sampler: a control that cannot work is worse
+                    than one that is not offered. */}
+                {canSample ? (
+                  <button
+                    className="flex w-full items-center justify-center gap-1 rounded-b bg-white py-1.5 text-[10px] text-neutral-700 uppercase tracking-[0.14em] hover:text-black"
+                    onClick={() => void sample()}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={ColorPickerIcon} size={12} />
+                    Pick from screen
+                  </button>
+                ) : null}
               </div>
             </>,
             document.body
