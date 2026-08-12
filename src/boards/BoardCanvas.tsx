@@ -5,7 +5,7 @@ import {
   CANVAS_WIDTH,
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
-import { containedBy, findOutputPort, withWire } from "../../config/graph.js";
+import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
@@ -131,6 +131,8 @@ interface BoardCanvasProps {
    * The canvas knows what is selected; only the editor can mint an item, which
    * is the same division onCreateFromPort and onCopyFrame already use.
    */
+  /** Downloads everything a node made, or a frame holds, as one archive. */
+  onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
   onMaskStroke?: (itemId: string, stroke: MaskStroke) => void;
   /** Deletes one stored version of a node's output. */
@@ -257,6 +259,7 @@ export function BoardCanvas({
   onConfigChange,
   onCopyFrame,
   onCreateFromPort,
+  onExportItem,
   onGroupIntoFrame,
   onMaskStroke,
   drawTool = null,
@@ -674,7 +677,7 @@ export function BoardCanvas({
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
     (frame: BoardItem): number[] => {
-      const inside = new Set(containedBy(frame, items).map((item) => item.id));
+      const inside = new Set(withinFrame(frame, items).map((item) => item.id));
       return items.reduce<number[]>((acc, item, index) => {
         if (inside.has(item.id)) {
           acc.push(index);
@@ -1271,6 +1274,10 @@ export function BoardCanvas({
           setMenu(null);
         }}
         onDismiss={() => setMenu(null)}
+        onExport={(itemId) => {
+          onExportItem?.(itemId);
+          setMenu(null);
+        }}
         onGroup={(chosen) => {
           onGroupIntoFrame?.(chosen);
           setMenu(null);

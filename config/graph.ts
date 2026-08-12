@@ -107,23 +107,63 @@ export interface GraphBox {
  * other frames — nesting would make containment ambiguous and the drag
  * recursive.
  */
-export const containedBy = <T extends GraphBox>(
+/** True when an item's centre falls inside a box. */
+const centredIn = (item: GraphBox, box: GraphBox): boolean => {
+  const cx = item.x + item.width / 2;
+  const cy = item.y + item.height / 2;
+  return (
+    cx >= box.x &&
+    cx <= box.x + box.width &&
+    cy >= box.y &&
+    cy <= box.y + box.height
+  );
+};
+
+/**
+ * Everything sitting within a frame, nested frames and their contents included.
+ *
+ * The other question about a frame. `containedBy` answers "what does this frame
+ * mean?" and stops at a nested group; this answers "what moves when I drag it?"
+ * and does not — a frame dragged across the board has to take the group resting
+ * on it, or the arrangement comes apart.
+ */
+export const withinFrame = <T extends GraphBox>(
   frame: GraphBox,
   items: readonly T[]
 ): T[] =>
-  items.filter((item) => {
+  items.filter((item) => item.id !== frame.id && centredIn(item, frame));
+
+/**
+ * The items a frame owns: those inside it and inside no smaller frame within it.
+ *
+ * The innermost frame wins. Without that rule a frame spread across a board
+ * claimed every picture on it, including the ones deliberately gathered into a
+ * group of their own — so grouping five stickers and generating from that group
+ * ran the whole board instead, and there was no way to say "these five, not
+ * those forty".
+ *
+ * Membership is still geometric and still by centre, so an item is in exactly
+ * one frame and dragging it from one to another is how it changes hands. What
+ * nesting adds is that the closest frame is the one that means it.
+ */
+export const containedBy = <T extends GraphBox>(
+  frame: GraphBox,
+  items: readonly T[]
+): T[] => {
+  const nested = items.filter(
+    (item) =>
+      item.kind === "frame" && item.id !== frame.id && centredIn(item, frame)
+  );
+  return items.filter((item) => {
     if (item.id === frame.id || item.kind === "frame") {
       return false;
     }
-    const cx = item.x + item.width / 2;
-    const cy = item.y + item.height / 2;
-    return (
-      cx >= frame.x &&
-      cx <= frame.x + frame.width &&
-      cy >= frame.y &&
-      cy <= frame.y + frame.height
-    );
+    if (!centredIn(item, frame)) {
+      return false;
+    }
+    return !nested.some((inner) => centredIn(item, inner));
   });
+};
 
 export const findOutputPort = (item: GraphItem, key: string): Port | null =>
   outputPortsFor(item).find((port) => port.key === key) ?? null;

@@ -968,6 +968,43 @@ export function BoardEditor({
   };
 
   /**
+   * Downloads everything a node made, or everything a frame holds.
+   *
+   * The other half of being able to make things in batches: vectorise a frame
+   * of twenty stickers and you have twenty files inside a node, reachable only
+   * by clicking through them one at a time.
+   *
+   * The link is clicked rather than followed, so the archive downloads instead
+   * of replacing the board — leaving a canvas full of unsaved work is not a
+   * reasonable price for fetching a file.
+   */
+  const exportItem = async (itemId: string) => {
+    const toastId = toast.loading("Packing the archive…");
+    try {
+      const { count, skipped, url } = await boardsApi.exportItem(
+        boardId,
+        itemId
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      link.rel = "noopener";
+      link.click();
+      toast.dismiss(toastId);
+      toast.success(
+        skipped > 0
+          ? `${count} file${count === 1 ? "" : "s"} downloaded, ${skipped} could not be read`
+          : `${count} file${count === 1 ? "" : "s"} downloaded`
+      );
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(
+        err instanceof Error ? err.message : "Could not build the archive"
+      );
+    }
+  };
+
+  /**
    * Places a shader on the canvas.
    *
    * Only the effect's name is stored. Its parameters stay absent until one is
@@ -1523,6 +1560,7 @@ export function BoardEditor({
           onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
           onDropImage={dropImage}
+          onExportItem={(itemId) => void exportItem(itemId)}
           onGroupIntoFrame={groupIntoFrame}
           onMaskStroke={addMaskStroke}
           onRemoveVersion={(itemId, index) => void removeVersion(itemId, index)}

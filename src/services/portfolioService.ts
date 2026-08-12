@@ -913,6 +913,33 @@ export const boardsApi = {
   },
 
   /**
+   * Packs everything a node made — or everything a frame holds — into one zip
+   * and returns where to fetch it.
+   *
+   * Zipped on the server because the files are already ours and already
+   * remote: the browser would have to pull every one down just to push it back
+   * up again.
+   */
+  exportItem: async (
+    boardId: string,
+    itemId: string
+  ): Promise<{ count: number; skipped: number; url: string }> => {
+    const res = await fetch(`${boardUrl(boardId)}/export`, {
+      body: JSON.stringify({ itemId }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not build the archive"));
+    }
+    return (await res.json()) as {
+      count: number;
+      skipped: number;
+      url: string;
+    };
+  },
+
+  /**
    * Saves on the way out of the page.
    *
    * keepalive lets the request outlive the document; a normal fetch is

@@ -1,5 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CopyIcon, FrameIcon } from "@hugeicons-pro/core-stroke-standard";
+import {
+  CopyIcon,
+  Download01Icon,
+  FrameIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import type { BoardItem, BoardWire } from "../types";
 import { frameBoardTitle, frameSummary } from "./copyToBoard";
@@ -34,6 +38,8 @@ interface CanvasMenuProps {
   menu: CanvasMenuTarget | null;
   onCopyFrame: (frame: BoardItem, title: string) => void;
   onDismiss: () => void;
+  /** Downloads everything the frame holds, as one archive. */
+  onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
   wires: BoardWire[];
 }
@@ -117,6 +123,55 @@ function NamePanel({
   );
 }
 
+/** How many pictures a node is holding, across every run it remembers. */
+const countResults = (item: BoardItem): number => {
+  const result = item.result as
+    | { url?: string; variations?: unknown[] }
+    | null
+    | undefined;
+  if (!result) {
+    return 0;
+  }
+  if (Array.isArray(result.variations)) {
+    return result.variations.filter(Boolean).length;
+  }
+  return result.url ? 1 : 0;
+};
+
+/** The two things a frame under the pointer can do. */
+function FrameRows({
+  canGroup,
+  count,
+  onCopy,
+  onExport,
+}: {
+  canGroup: boolean;
+  count: number;
+  onCopy: () => void;
+  onExport: () => void;
+}) {
+  return (
+    <>
+      <button
+        className={`${rowClass} border-white/10 ${canGroup ? "border-t" : ""}`}
+        onClick={onExport}
+        type="button"
+      >
+        <HugeiconsIcon aria-hidden icon={Download01Icon} size={14} />
+        <span>Download {count === 1 ? "it" : `all ${count}`}</span>
+      </button>
+      <button
+        className={`${rowClass} border-white/10 border-t`}
+        onClick={onCopy}
+        type="button"
+      >
+        <HugeiconsIcon aria-hidden icon={CopyIcon} size={14} />
+        <span>Copy frame to new board</span>
+      </button>
+    </>
+  );
+}
+
 const rowClass =
   "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-white/85 transition-colors hover:bg-white/10 hover:text-white";
 
@@ -125,6 +180,7 @@ export function CanvasMenu({
   menu,
   onCopyFrame,
   onDismiss,
+  onExport,
   onGroup,
   wires,
 }: CanvasMenuProps) {
@@ -154,6 +210,11 @@ export function CanvasMenu({
 
   const summary = frame ? frameSummary(frame, items, wires) : null;
 
+  // A single selected node that has produced something can hand over the whole
+  // batch. More than one selected is a grouping gesture, not an export one.
+  const onlyPicked = selection.length === 1 ? selection[0] : null;
+  const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
+
   return (
     <>
       <button
@@ -167,6 +228,17 @@ export function CanvasMenu({
         className="absolute z-50 w-60 overflow-hidden rounded-lg border border-white/15 bg-neutral-900/95 shadow-xl backdrop-blur"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
+        {onlyPicked && madeCount > 0 && typed === null ? (
+          <button
+            className={rowClass}
+            onClick={() => onExport(onlyPicked.id)}
+            type="button"
+          >
+            <HugeiconsIcon aria-hidden icon={Download01Icon} size={14} />
+            <span>Download {madeCount === 1 ? "it" : `all ${madeCount}`}</span>
+          </button>
+        ) : null}
+
         {canGroup && typed === null ? (
           <>
             <button
@@ -187,16 +259,14 @@ export function CanvasMenu({
         ) : null}
 
         {frame && typed === null ? (
-          <button
-            className={`${rowClass} border-white/10 ${canGroup ? "border-t" : ""}`}
-            onClick={() =>
+          <FrameRows
+            canGroup={canGroup}
+            count={summary?.count ?? 0}
+            onCopy={() =>
               setNaming({ for: menu, title: frameBoardTitle(frame) })
             }
-            type="button"
-          >
-            <HugeiconsIcon aria-hidden icon={CopyIcon} size={14} />
-            <span>Copy frame to new board</span>
-          </button>
+            onExport={() => onExport(frame.id)}
+          />
         ) : null}
 
         {frame && typed !== null ? (
