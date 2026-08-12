@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert02Icon,
+  Cancel01Icon,
   Download01Icon,
   PlayIcon,
   RefreshIcon,
@@ -21,7 +22,11 @@ interface OpNodeViewProps {
   hasWiredPrompt: boolean;
   item: BoardItem;
   onConfigChange: (config: Record<string, unknown>) => void;
+  /** Deletes one stored version for good. */
+  onRemoveVersion?: (index: number) => void;
   onRun: (force: boolean) => void;
+  /** Pins every stored version onto the board as its own image. */
+  onSendVersions?: () => void;
   /** What this node computes from its inputs — a Combine node’s joined text. */
   outputText?: string | null;
   readOnly: boolean;
@@ -160,11 +165,17 @@ const beginImageDrag = (
  */
 function ResultImages({
   images,
+  onRemove,
   onSelect,
+  onSendAll,
   selected,
 }: {
   images: BoardItemVariation[];
+  /** Deletes one version for good. Absent on a published board. */
+  onRemove?: (index: number) => void;
   onSelect: (index: number) => void;
+  /** Pins every version onto the board as its own image. */
+  onSendAll?: () => void;
   selected: number;
 }) {
   if (images.length === 0) {
@@ -210,36 +221,63 @@ function ResultImages({
           happen to be two. */}
       {images.length > 0 ? (
         <div className="space-y-1">
-          <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
-            {images.length === 1 ? "1 version" : `${images.length} versions`}
-          </p>
-          <div className="flex gap-1 overflow-x-auto pb-1">
-            {images.map((variation, index) => (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+              {images.length === 1 ? "1 version" : `${images.length} versions`}
+            </p>
+            {/* Getting the whole set onto the board at once: a node's gallery
+                is for comparing, and the moment you have chosen you usually
+                want them out where they can be arranged. */}
+            {onSendAll ? (
               <button
-                aria-label={`Version ${index + 1}`}
-                aria-pressed={index === selected}
-                className={`shrink-0 overflow-hidden rounded border transition-colors ${
-                  index === selected
-                    ? "border-sky-300"
-                    : "border-white/10 hover:border-white/40"
-                }`}
-                key={variation.url}
-                onClick={() => onSelect(index)}
+                className="text-[9px] text-white/40 uppercase tracking-[0.14em] hover:text-white"
+                onClick={onSendAll}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
               >
-                {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — native image drag, and the surrounding button already carries the keyboard-reachable action */}
-                <img
-                  alt={variation.description ?? `Version ${index + 1}`}
-                  className="size-12 cursor-grab object-cover"
-                  draggable
-                  height={48}
-                  loading="lazy"
-                  onDragStart={(e) => beginImageDrag(e, variation)}
-                  src={variation.url}
-                  width={48}
-                />
+                Send to board
               </button>
+            ) : null}
+          </div>
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {images.map((variation, index) => (
+              <div className="group/v relative shrink-0" key={variation.url}>
+                <button
+                  aria-label={`Version ${index + 1}`}
+                  aria-pressed={index === selected}
+                  className={`block overflow-hidden rounded border transition-colors ${
+                    index === selected
+                      ? "border-sky-300"
+                      : "border-white/10 hover:border-white/40"
+                  }`}
+                  onClick={() => onSelect(index)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  type="button"
+                >
+                  {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — native image drag, and the surrounding button already carries the keyboard-reachable action */}
+                  <img
+                    alt={variation.description ?? `Version ${index + 1}`}
+                    className="size-12 cursor-grab object-cover"
+                    draggable
+                    height={48}
+                    loading="lazy"
+                    onDragStart={(e) => beginImageDrag(e, variation)}
+                    src={variation.url}
+                    width={48}
+                  />
+                </button>
+                {onRemove ? (
+                  <button
+                    aria-label={`Remove version ${index + 1}`}
+                    className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-black/90 text-white/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/v:opacity-100"
+                    onClick={() => onRemove(index)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} size={9} />
+                  </button>
+                ) : null}
+              </div>
             ))}
           </div>
         </div>
@@ -317,7 +355,9 @@ export function OpNodeView({
   wiredPrompt,
   item,
   onConfigChange,
+  onRemoveVersion,
   onRun,
+  onSendVersions,
   outputText,
   readOnly,
 }: OpNodeViewProps) {
@@ -391,6 +431,8 @@ export function OpNodeView({
           images={images}
           item={item}
           onConfigChange={onConfigChange}
+          onRemoveVersion={onRemoveVersion}
+          onSendVersions={onSendVersions}
           readOnly={readOnly}
           state={state}
           type={type}
@@ -463,6 +505,8 @@ interface NodeBodyProps {
   images: BoardItemVariation[];
   item: BoardItem;
   onConfigChange: (config: Record<string, unknown>) => void;
+  onRemoveVersion?: (index: number) => void;
+  onSendVersions?: () => void;
   readOnly: boolean;
   state: string;
   type: NonNullable<ReturnType<typeof nodeTypeFor>>;

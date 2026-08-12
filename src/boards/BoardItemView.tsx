@@ -84,9 +84,11 @@ interface BoardItemViewProps {
   onDelete: () => void;
   onEditBody: (body: string) => void;
   onFontSize: (fontSize: number) => void;
+  onRemoveVersion?: (index: number) => void;
   onResizeStart: (index: number, clientX: number, clientY: number) => void;
   onRun?: (force: boolean) => void;
   onSelect: (index: number, clientX: number, clientY: number) => void;
+  onSendVersions?: () => void;
   /** What a node computes from its inputs, for the kinds that show it. */
   outputText?: string | null;
   ports?: PortHandlers;
@@ -482,7 +484,9 @@ interface ItemContentProps {
   item: BoardItem;
   onConfigChange?: (config: Record<string, unknown>) => void;
   onEditBody: (body: string) => void;
+  onRemoveVersion?: (index: number) => void;
   onRun?: (force: boolean) => void;
+  onSendVersions?: () => void;
   outputText?: string | null;
   readOnly: boolean;
   wiredPrompt?: string | null;
@@ -506,7 +510,9 @@ function ItemContent({
   item,
   onConfigChange,
   onEditBody,
+  onRemoveVersion,
   onRun,
+  onSendVersions,
   outputText,
   readOnly,
 }: ItemContentProps) {
@@ -541,7 +547,9 @@ function ItemContent({
         hasWiredPrompt={hasWiredPrompt}
         item={item}
         onConfigChange={onConfigChange ?? (() => undefined)}
+        onRemoveVersion={onRemoveVersion}
         onRun={onRun ?? (() => undefined)}
+        onSendVersions={onSendVersions}
         outputText={outputText}
         readOnly={readOnly}
         wiredPrompt={wiredPrompt}
@@ -563,6 +571,8 @@ function ItemContent({
 export function BoardItemView({
   hasWiredPrompt = false,
   imageUrl,
+  onRemoveVersion,
+  onSendVersions,
   outputText,
   wiredPrompt,
   index,
@@ -642,7 +652,9 @@ export function BoardItemView({
         item={item}
         onConfigChange={onConfigChange}
         onEditBody={onEditBody}
+        onRemoveVersion={onRemoveVersion}
         onRun={onRun}
+        onSendVersions={onSendVersions}
         outputText={outputText}
         readOnly={readOnly}
         wiredPrompt={wiredPrompt}

@@ -806,6 +806,80 @@ export function BoardEditor({
     ]);
   };
 
+  /**
+   * Deletes one version of a node's output, for good.
+   *
+   * Through its own endpoint because `result` is not written by the board save
+   * — see api/boards/[id]/version.ts. The selection lives in `config`, which
+   * the canvas does own, so it is clamped here rather than there.
+   */
+  const removeVersion = async (itemId: string, index: number) => {
+    try {
+      const result = await boardsApi.deleteVersion(boardId, itemId, index);
+      setItems((current) =>
+        current.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+          const selected = Number(item.config?.selectedVersion ?? 0);
+          return {
+            ...item,
+            config: {
+              ...item.config,
+              // A version below the one removed keeps its place; the one
+              // removed and anything after it shifts down.
+              selectedVersion: Math.max(
+                0,
+                Math.min(
+                  selected > index ? selected - 1 : selected,
+                  (result?.history?.length ?? 1) - 1
+                )
+              ),
+            },
+            result,
+          };
+        })
+      );
+      setIsDirty(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not remove that");
+    }
+  };
+
+  /**
+   * Puts every version a node has made onto the board as its own image.
+   *
+   * A node's gallery is for comparing; once you have compared, the usual next
+   * move is to get them out where they can be arranged and drawn on.
+   */
+  const sendVersions = (itemId: string) => {
+    const node = items.find((item) => item.id === itemId);
+    const history = node?.result?.history ?? [];
+    if (history.length === 0) {
+      return;
+    }
+    const origin = dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT);
+    change([
+      ...items,
+      ...history.map((image, index) => ({
+        ...BLANK_ITEM,
+        height: DEFAULT_IMAGE_HEIGHT,
+        id: newItemId(),
+        imageUrl: image.url,
+        kind: "reference" as const,
+        thumbUrl: image.url,
+        width: DEFAULT_IMAGE_WIDTH,
+        // Laid out in a row so a set arrives comparable rather than stacked.
+        x: Math.round(origin.x + index * (DEFAULT_IMAGE_WIDTH + 24)),
+        y: origin.y,
+        z: items.length + index + 1,
+      })),
+    ]);
+    toast.success(
+      history.length === 1 ? "1 image added" : `${history.length} images added`
+    );
+  };
+
   const close = async () => {
     if (isDirty) {
       await save();
@@ -983,8 +1057,10 @@ export function BoardEditor({
           onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
           onDropImage={dropImage}
+          onRemoveVersion={(itemId, index) => void removeVersion(itemId, index)}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
           onSelectionChange={setSelectedItem}
+          onSendVersions={sendVersions}
           onWiresChange={changeWires}
           wires={wires}
         />

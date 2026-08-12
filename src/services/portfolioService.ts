@@ -860,6 +860,29 @@ export const boardsApi = {
     }
     return (await res.json()) as Board;
   },
+  /**
+   * Deletes one version from a node's history.
+   *
+   * Its own call because `result` is not written by the board save — see
+   * api/boards/[id]/version.ts for why that column is left alone.
+   */
+  deleteVersion: async (
+    boardId: string,
+    itemId: string,
+    index: number
+  ): Promise<BoardItemResult | null> => {
+    const res = await fetch(`${apiBase()}/api/boards/${boardId}/version`, {
+      body: JSON.stringify({ index, itemId }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not remove that version")
+      );
+    }
+    return ((await res.json()) as { result: BoardItemResult | null }).result;
+  },
 
   /**
    * Saves on the way out of the page.

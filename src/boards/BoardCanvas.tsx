@@ -90,6 +90,8 @@ interface BoardCanvasProps {
     image: { url: string },
     point: { x: number; y: number }
   ) => void;
+  /** Deletes one stored version of a node's output. */
+  onRemoveVersion?: (itemId: string, index: number) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
   onRun?: (itemId: string, force: boolean) => void;
   /**
@@ -100,6 +102,8 @@ interface BoardCanvasProps {
    * toolbar knows what is selected.
    */
   onSelectionChange?: (item: BoardItem | null) => void;
+  /** Pins every stored version of a node onto the board. */
+  onSendVersions?: (itemId: string) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
   /**
    * Viewing rather than editing. Pan and zoom remain, since a published board
@@ -177,8 +181,10 @@ export function BoardCanvas({
   onDraw,
   onDropFiles,
   onDropImage,
+  onRemoveVersion,
   onRun,
   onSelectionChange,
+  onSendVersions,
   onWiresChange,
   keyOf,
   autoEditId,
@@ -896,9 +902,17 @@ export function BoardCanvas({
                   items.map((it, i) => (i === index ? { ...it, fontSize } : it))
                 )
               }
+              onRemoveVersion={
+                onRemoveVersion
+                  ? (version) => onRemoveVersion(item.id, version)
+                  : undefined
+              }
               onResizeStart={readOnly ? () => undefined : beginResize}
               onRun={(force) => onRun?.(item.id, force)}
               onSelect={readOnly ? () => undefined : beginMove}
+              onSendVersions={
+                onSendVersions ? () => onSendVersions(item.id) : undefined
+              }
               outputText={
                 item.nodeType === "join"
                   ? outputTextOf(item, { items, wires })
