@@ -632,12 +632,41 @@ const saveFailure = (sql: Sql, itemId: string, message: string) =>
  * after the call has been billed. Each model declares what it consumes, so an
  * unwired vectoriser or a promptless generation is refused for free.
  */
+/**
+ * Whether a wired image is vector art, which no fal image model can read.
+ *
+ * The trap is entirely of the app's own making: Recraft's two vector models and
+ * the icon generator all *emit* SVG, so feeding one of those results into a
+ * Generate node — the obvious next move — is a request that can only fail. It
+ * fails differently for each model, too, from "Failed to load the image" to
+ * "Could not generate images with the given prompts and images", neither of
+ * which points at the actual problem.
+ *
+ * Refused here rather than at fal, because fal bills first.
+ */
+const vectorInputRefusal = (
+  images: string[]
+): Record<string, unknown> | null =>
+  images.some((url) => SVG_URL.test(url))
+    ? {
+        error:
+          "That is an SVG, and image models read pixels. Wire in a photo or a raster generation instead — or use Recraft · Vectorize if you meant to make vector art.",
+        missingPort: "image",
+      }
+    : null;
+
 const unmetRequirement = (
   shape: FalModelInput,
   model: string | null,
   prompt: string,
   values: Record<string, string[] | undefined>
 ): Record<string, unknown> | null => {
+  // Every shape that consumes an image gets the same check, before any of the
+  // per-shape rules below.
+  const vector = vectorInputRefusal(values.image ?? []);
+  if (vector && shape !== "prompt") {
+    return vector;
+  }
   if (shape === "prompt-and-image") {
     // Both, so both are checked before anything is spent.
     if ((values.image?.length ?? 0) === 0) {
@@ -661,18 +690,6 @@ const unmetRequirement = (
       const label = falModelFor(model)?.label ?? "This model";
       return {
         error: `${label} traces an existing image; wire one into it.`,
-        missingPort: "image",
-      };
-    }
-    // A tracer reads pixels, and fal accepts only .png/.jpg/.jpeg/.webp. The
-    // trap is that the other two Recraft models both *emit* SVG, so wiring one
-    // into this one — the obvious thing to try — is a request that can only
-    // fail. Refused here rather than at fal, because fal bills first.
-    const vector = images.find((url) => SVG_URL.test(url));
-    if (vector) {
-      return {
-        error:
-          "This model traces a raster image (PNG, JPEG or WebP). Its input is an SVG, which is already vector art — wire in a photo or a generated image instead.",
         missingPort: "image",
       };
     }
