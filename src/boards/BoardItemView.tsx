@@ -666,7 +666,12 @@ export function BoardItemView({
         width: item.width,
         // A frame is a backdrop: pinned below everything so items sitting on
         // it stay clickable, whatever stacking order they were given.
-        zIndex: item.kind === "frame" ? 0 : item.z + 1,
+        //
+        // Below the wires too, hence negative. At zero it tied with the wire
+        // layer and won on DOM order, so a frame drawn over a wire swallowed
+        // the clicks meant for it — and a node inside a frame could not have
+        // its connections removed at all.
+        zIndex: item.kind === "frame" ? -1 : item.z + 1,
       }}
     >
       <ItemContent

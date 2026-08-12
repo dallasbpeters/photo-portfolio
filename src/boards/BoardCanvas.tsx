@@ -10,6 +10,7 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
+import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import {
   boundsOf,
   type DrawingConfig,
@@ -19,8 +20,6 @@ import {
   type Point,
   toUnitSpace,
 } from "./drawing";
-import { FrameMenu } from "./FrameMenu";
-import { GroupMenu } from "./GroupMenu";
 import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
@@ -304,16 +303,8 @@ export function BoardCanvas({
     portKey: string;
     portType: PortType;
   } | null>(null);
-  /** A frame was right-clicked; it is offering to become a board. */
-  const [frameMenu, setFrameMenu] = useState<{
-    item: BoardItem;
-    point: { x: number; y: number };
-  } | null>(null);
-  /** Several items were right-clicked; they are offering to be grouped. */
-  const [groupMenu, setGroupMenu] = useState<{
-    items: BoardItem[];
-    point: { x: number; y: number };
-  } | null>(null);
+  /** The canvas was right-clicked; what is offered depends on where. */
+  const [menu, setMenu] = useState<CanvasMenuTarget | null>(null);
 
   useEffect(() => {
     if (autoEditId) {
@@ -714,29 +705,31 @@ export function BoardCanvas({
    * Anywhere else keeps the browser's own menu, which is still how an image
    * gets saved or a link copied — so this only preempts it over a frame.
    */
-  const openFrameMenu = useCallback(
+  const openMenu = useCallback(
     (e: ReactMouseEvent) => {
-      if (readOnly || !onCopyFrame) {
+      if (readOnly) {
         return;
       }
-      const point = { x: e.clientX, y: e.clientY };
-      const frame = frameAt(view.toCanvas(e.clientX, e.clientY));
-      if (frame) {
-        e.preventDefault();
-        setFrameMenu({ item: frame, point });
-        return;
-      }
-      // No frame under the pointer, but something is selected: offer to make
-      // the selection into a group. Grouping is the step before compositing,
-      // and dragging an empty frame around work that already exists is fiddly
-      // enough that people simply do not do it.
+      // Both targets are gathered and the menu offers whichever apply. Asking
+      // "is there a frame here?" first made grouping unreachable on any board
+      // with a frame spread under the work — which is most of them.
       const chosen = selection
         .map((index) => items[index])
         .filter((item): item is BoardItem => Boolean(item));
-      if (chosen.length > 0 && onGroupIntoFrame) {
-        e.preventDefault();
-        setGroupMenu({ items: chosen, point });
+      const frame = onCopyFrame
+        ? frameAt(view.toCanvas(e.clientX, e.clientY))
+        : null;
+      if (chosen.length === 0 && !frame) {
+        // Nothing to offer, so the browser's own menu stays — which is still
+        // how an image gets saved or a link copied.
+        return;
       }
+      e.preventDefault();
+      setMenu({
+        frame,
+        point: { x: e.clientX, y: e.clientY },
+        selection: onGroupIntoFrame ? chosen : [],
+      });
     },
     [frameAt, items, onCopyFrame, onGroupIntoFrame, readOnly, selection, view]
   );
@@ -997,7 +990,7 @@ export function BoardCanvas({
             ? "cursor-crosshair"
             : (view.isPanning && "cursor-grabbing") || "cursor-grab"
         }`}
-        onContextMenu={openFrameMenu}
+        onContextMenu={openMenu}
         onDragOver={
           onDropFiles || onDropImage
             ? (e) => {
@@ -1270,22 +1263,18 @@ export function BoardCanvas({
           ))}
         </div>
       </div>
-      <GroupMenu
-        menu={groupMenu}
-        onDismiss={() => setGroupMenu(null)}
+      <CanvasMenu
+        items={items}
+        menu={menu}
+        onCopyFrame={(frame, title) => {
+          onCopyFrame?.(frame, title);
+          setMenu(null);
+        }}
+        onDismiss={() => setMenu(null)}
         onGroup={(chosen) => {
           onGroupIntoFrame?.(chosen);
-          setGroupMenu(null);
+          setMenu(null);
         }}
-      />
-      <FrameMenu
-        items={items}
-        menu={frameMenu}
-        onCopy={(frame, title) => {
-          onCopyFrame?.(frame, title);
-          setFrameMenu(null);
-        }}
-        onDismiss={() => setFrameMenu(null)}
         wires={wires}
       />
       {portMenu ? (
