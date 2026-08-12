@@ -121,12 +121,17 @@ function SettingField({
   return (
     <textarea
       aria-label={setting.label}
-      className="min-h-16 w-full resize-none rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white leading-relaxed outline-none focus:border-white/40 disabled:opacity-60"
+      // resize-y, not resize-none: a prompt is often several sentences, and a
+      // fixed 4rem box meant scrolling a paragraph through a letterbox. The
+      // node itself can be resized too, but that changes the whole node —
+      // this changes only the field, which is what you want mid-sentence.
+      className="max-h-96 min-h-16 w-full resize-y rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white leading-relaxed outline-none focus:border-white/40 disabled:opacity-60"
       disabled={readOnly}
       maxLength={setting.maxLength}
       onChange={(e) => onChange(e.target.value)}
-      // The surface owns dragging, so a press meant for the caret must not
-      // reach it — otherwise typing into a node moves the node.
+      // The surface owns dragging, so a press meant for the caret — or for the
+      // resize corner — must not reach it, or typing into a node moves the
+      // node and dragging the corner drags the board.
       onPointerDown={(e) => e.stopPropagation()}
       placeholder={setting.placeholder}
       value={value}
