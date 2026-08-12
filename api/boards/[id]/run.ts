@@ -966,7 +966,9 @@ const unmetRequirement = (
   prompt: string,
   values: Record<string, string[] | undefined>,
   masked: boolean,
-  capability: NodeCapability
+  capability: NodeCapability,
+  /** Wired images already discarded for being unreadable. */
+  skipped: number
 ): Record<string, unknown> | null => {
   // A composite has no model and no prompt — its inputs are pictures, and the
   // required image port has already been checked by resolveInputs. Running it
@@ -977,7 +979,18 @@ const unmetRequirement = (
   }
   // Every shape that consumes an image gets the same check, before any of the
   // per-shape rules below.
-  const vector = vectorInputRefusal(values.image ?? []);
+  const wired = values.image ?? [];
+  // Everything wired was thrown away for being unreadable, so the honest
+  // reason is what they were — not "nothing is wired", which is what the
+  // emptied list would otherwise be reported as.
+  if (wired.length === 0 && skipped > 0 && shape !== "prompt") {
+    return {
+      error:
+        "Those are SVGs, and image models read pixels. Wire in a photo or a raster generation instead — or use Recraft · Vectorize if you meant to make vector art.",
+      missingPort: "image",
+    };
+  }
+  const vector = vectorInputRefusal(wired);
   if (vector && shape !== "prompt") {
     return vector;
   }
@@ -1030,22 +1043,29 @@ const unmetRequirement = (
  * a third party to go and fetch, which is the same reason api/ai/generate.ts
  * insists on an explicit scheme rather than helpfully adding one.
  */
-const validatedJobs = (raw: Job[]): Job[] | null => {
+const validatedJobs = (raw: Job[]): { dropped: number; jobs: Job[] } => {
   const jobs: Job[] = [];
+  let dropped = 0;
   for (const job of raw) {
     if (job.image === null) {
       jobs.push(job);
       continue;
     }
-    const url = HTTP_SCHEME.test(job.image)
-      ? parsePublicHttpUrl(job.image)
-      : null;
-    if (!url) {
-      return null;
+    // Trimmed before the scheme is tested: the test is anchored, so a stored
+    // URL carrying a stray leading space failed it and took the whole batch
+    // down with it.
+    const trimmed = job.image.trim();
+    const url = HTTP_SCHEME.test(trimmed) ? parsePublicHttpUrl(trimmed) : null;
+    if (url) {
+      jobs.push({ ...job, image: url });
+      continue;
     }
-    jobs.push({ ...job, image: url });
+    // Dropped rather than fatal, for the same reason a vector is: one wire out
+    // of a frame carries everything on it, and a single unusable address among
+    // twenty pictures should not mean none of them run.
+    dropped += 1;
   }
-  return jobs;
+  return { dropped, jobs };
 };
 
 /** Either a response to send as-is, or everything the run needs. */
@@ -1149,7 +1169,8 @@ const prepare = async (
     prompt,
     values,
     (values.image ?? []).some((url) => masks.has(url)),
-    type.capability
+    type.capability,
+    skippedVectors
   );
   if (unmet) {
     return refuse(422, unmet);
@@ -1174,10 +1195,13 @@ const prepare = async (
 
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
-  const jobs = validatedJobs(
+  const { dropped, jobs } = validatedJobs(
     jobsFor(item, values, lists, shape, type.capability, prompt, masks)
   );
-  if (jobs === null) {
+  // Refused only when nothing survived. A batch reduced to nothing has no work
+  // left to do, whereas one that lost a single unusable address still has
+  // nineteen pictures to get on with.
+  if (jobs.length === 0) {
     return refuse(422, {
       error: "A wired image is not a public http(s) URL",
     });
@@ -1216,7 +1240,7 @@ const prepare = async (
       runError: null,
       runState: "succeeded",
       skipped: true,
-      skippedVectors,
+      skippedVectors: skippedVectors + dropped,
       variationCount: jobs.length,
     });
   }
@@ -1230,7 +1254,7 @@ const prepare = async (
       jobs,
       model,
       prompt,
-      skippedVectors,
+      skippedVectors: skippedVectors + dropped,
       sourceImageUrls: values.image ?? [],
     },
     status: null,

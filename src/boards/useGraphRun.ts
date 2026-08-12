@@ -95,17 +95,18 @@ const runStep = async ({
  * Says out loud what a batch quietly declined to run.
  *
  * A frame carrying one vectorised logo among its stickers runs the stickers and
- * drops the vector — but a batch that silently does fewer jobs than you asked
- * for is worse than one that fails outright.
+ * drops the vector; the same goes for a picture whose address cannot be
+ * fetched. Either way a batch that silently does fewer jobs than you asked for
+ * is worse than one that fails outright.
  */
-const reportSkippedVectors = (dropped: number): void => {
+const reportSkipped = (dropped: number): void => {
   if (dropped <= 0) {
     return;
   }
   toast.warning(
     dropped === 1
-      ? "One SVG was skipped — image models read pixels."
-      : `${dropped} SVGs were skipped — image models read pixels.`
+      ? "One image was skipped — a vector, or an address that cannot be read."
+      : `${dropped} images were skipped — vectors, or addresses that cannot be read.`
   );
 };
 
@@ -148,7 +149,7 @@ export function useGraphRun({
       });
       total = outcome.variationCount ?? 1;
 
-      reportSkippedVectors(outcome.skippedVectors ?? 0);
+      reportSkipped(outcome.skippedVectors ?? 0);
 
       // Nothing more to do when the whole node was skipped as unchanged —
       // re-asking for each variation would spend money proving the same thing.
