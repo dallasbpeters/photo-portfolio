@@ -20,3 +20,12 @@ watermarked-photos-backup.json
 /specs/
 .claude/
 .specify/
+
+# Training sets. Tens of megabytes of images assembled for a LoRA run — they
+# are working material for a model, not source, and git is the wrong place for
+# them.
+# Any training set at the repo root, whatever it is called — the first version
+# of this only matched "training*.zip" and let design.zip and photography.zip
+# straight through.
+/*.zip
+/datasets/
