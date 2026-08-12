@@ -401,6 +401,14 @@ const toGraphWires = (rows: BoardWireRow[]): GraphWire[] =>
   }));
 
 interface ResolvedInputs {
+  /**
+   * Each port's values grouped by the wire they arrived on.
+   *
+   * Kept alongside the flattened form because who sent what matters for the
+   * prompt: one wire's five prompts are five runs, while two wires are two
+   * parts of each run. Flattening loses the difference.
+   */
+  lists: Record<string, string[][] | undefined>;
   /** Missing required port, if any — reported without spending anything. */
   missingPort: string | null;
   /**
@@ -432,6 +440,7 @@ const resolveInputs = (
   const incoming = incomingByPort(graphWires, item.id);
 
   const values: Record<string, string[] | undefined> = {};
+  const lists: Record<string, string[][] | undefined> = {};
   let missingPort: string | null = null;
 
   for (const port of type?.inputs ?? []) {
@@ -452,12 +461,13 @@ const resolveInputs = (
     const kept = port.arity === "many" ? perWire : perWire.slice(-1);
     const resolved = kept.flat();
     values[port.key] = resolved;
+    lists[port.key] = kept.filter((list) => list.length > 0);
     if (port.required && resolved.length === 0 && !missingPort) {
       missingPort = port.key;
     }
   }
 
-  return { missingPort, values };
+  return { lists, missingPort, values };
 };
 
 /**
@@ -491,6 +501,7 @@ const promptFor = (
 const jobsFor = (
   item: RunnableItem,
   values: Record<string, string[] | undefined>,
+  lists: Record<string, string[][] | undefined>,
   shape: FalModelInput,
   capability: NodeCapability,
   typedPrompt: string
@@ -511,10 +522,24 @@ const jobsFor = (
   const wiredImages = shape === "prompt" ? [] : (values.image ?? []);
   const images: (string | null)[] =
     wiredImages.length > 0 ? wiredImages : [null];
-  // Several prompts is an Iterate node upstream: each one is its own run, the
-  // same way each wired reference is.
-  const wiredPrompts = (values.prompt ?? []).filter((text) => text.trim());
-  const prompts = wiredPrompts.length > 0 ? wiredPrompts : [typedPrompt];
+  // One wire carrying several prompts is an Iterate node: each is its own run.
+  // Several wires are several *parts* of each run — a subject and a palette,
+  // say — so they are joined. Both at once: five subjects and one palette line
+  // give five runs, each ending with the same colours.
+  const promptWires =
+    (values.prompt ?? []).length > 0 ? (lists.prompt ?? []) : [];
+  const rows = promptWires.length
+    ? Math.max(...promptWires.map((list) => list.length))
+    : 0;
+  const prompts =
+    rows > 0
+      ? Array.from({ length: rows }, (_, row) =>
+          promptWires
+            .map((list) => list[row % list.length] ?? "")
+            .filter((part) => part.trim())
+            .join(", ")
+        )
+      : [typedPrompt];
 
   const jobs: Job[] = [];
   for (const prompt of prompts) {
@@ -895,7 +920,7 @@ const prepare = async (
     runState: row.run_state ?? null,
   };
 
-  const { missingPort, values } = resolveInputs(item, rows, wireRows);
+  const { lists, missingPort, values } = resolveInputs(item, rows, wireRows);
   if (missingPort) {
     return refuse(422, {
       error: `This node needs its ${missingPort} input before it can run.`,
@@ -934,7 +959,7 @@ const prepare = async (
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
   const jobs = validatedJobs(
-    jobsFor(item, values, shape, type.capability, prompt)
+    jobsFor(item, values, lists, shape, type.capability, prompt)
   );
   if (jobs === null) {
     return refuse(422, {

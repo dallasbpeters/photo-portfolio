@@ -185,11 +185,14 @@ export const paletteTextOf = (
 };
 
 export const outputTextOf = (
-  item: BoardItem,
+  item: BoardItem | null,
   /** Needed only to resolve a Combine node, whose value is its inputs. */
   graph?: { items: BoardItem[]; wires: BoardWire[] },
   depth = 0
 ): string | null => {
+  if (!item) {
+    return null;
+  }
   // Mirrors singleOutputOf on the server. Duplicated deliberately: the server
   // is the authority on what actually runs, and this exists so the canvas can
   // *show* the same answer without asking it.

@@ -1060,7 +1060,7 @@ export function BoardEditor({
           </div>
         </div>
 
-        <Card className="fixed top-40 left-10 z-20 grid place-items-start justify-start gap-2 bg-background text-white">
+        <Card className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-black text-white">
           <Button
             onClick={() => addWritable("note")}
             type="button"

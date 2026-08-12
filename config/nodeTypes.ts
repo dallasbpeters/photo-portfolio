@@ -354,7 +354,14 @@ const GENERATE: NodeType = {
       type: "image",
     },
     {
-      arity: "one",
+      // Many, and joined rather than fanned out. Each wire contributes a part
+      // of every prompt — an Iterate node supplying the subject and a Palette
+      // node supplying the colours are both wanted at once, and with a single
+      // wire allowed the second silently replaced the first.
+      //
+      // A wire carrying several values still makes several runs; the parts are
+      // joined per run. See jobsFor.
+      arity: "many",
       // Also optional, because a prompt may instead be typed on the node. The
       // run is refused when neither is present — see promptFor().
       key: "prompt",

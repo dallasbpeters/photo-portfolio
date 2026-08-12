@@ -450,15 +450,30 @@ export function BoardCanvas({
    * knows nothing about what feeds it.
    */
   const wiredTextFor = (itemId: string): string | null => {
-    const wire = wires.find(
-      (candidate) =>
-        candidate.targetItemId === itemId && candidate.targetPort === "prompt"
-    );
-    if (!wire) {
+    // Every wire on the prompt port, kept apart: each contributes a part of
+    // each run, and a wire carrying several values makes several runs. Mirrors
+    // jobsFor, so what the node shows is what the node will send.
+    const perWire = wires
+      .filter((w) => w.targetItemId === itemId && w.targetPort === "prompt")
+      .map((w) => items.find((i) => i.id === w.sourceItemId))
+      .map((source) =>
+        source?.nodeType === "iterate"
+          ? iteratedTextOf(source, { items, wires })
+          : [outputTextOf(source ?? null, { items, wires }) ?? ""]
+      )
+      .map((list) => list.filter((text) => text.trim()))
+      .filter((list) => list.length > 0);
+
+    if (perWire.length === 0) {
       return null;
     }
-    const source = items.find((item) => item.id === wire.sourceItemId);
-    return source ? outputTextOf(source, { items, wires }) : null;
+    const rows = Math.max(...perWire.map((list) => list.length));
+    const prompts = Array.from({ length: rows }, (_, row) =>
+      perWire.map((list) => list[row % list.length] ?? "").join(", ")
+    );
+    return rows === 1
+      ? (prompts[0] ?? null)
+      : prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
   };
 
   /**
