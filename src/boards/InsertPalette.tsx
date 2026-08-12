@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FrameIcon,
+  GroupLayersIcon,
   Image01Icon,
   LinkSquare01Icon,
   MagicWand01Icon,
@@ -107,6 +108,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "combine join merge concatenate text prompt",
     icon: LinkSquare01Icon,
     label: "Combine",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "composite" },
+    hint: "composite layer flatten merge frame stack combine images",
+    icon: GroupLayersIcon,
+    label: "Composite",
     section: "Nodes",
   },
   {

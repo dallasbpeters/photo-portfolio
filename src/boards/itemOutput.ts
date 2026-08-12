@@ -1,3 +1,4 @@
+import { containedBy } from "../../config/graph.js";
 import { DEFAULT_PLACEHOLDER, HEX_COLOUR } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
 
@@ -310,9 +311,30 @@ export const outputTextOf = (
  * should mean the same thing everywhere. Mirrors what the run endpoint does
  * server-side when it resolves an upstream node's output.
  */
-export const outputImageOf = (item: BoardItem): string | null => {
+export const outputImageOf = (
+  item: BoardItem,
+  /**
+   * The board, needed only to resolve a frame.
+   *
+   * A frame's output is computed from geometry rather than stored, so it
+   * cannot be answered from the item alone. Optional because every other kind
+   * can — and because a caller that has no frame to resolve should not have to
+   * hand over the whole board to ask about a photograph.
+   */
+  items: BoardItem[] = []
+): string | null => {
   if (item.kind === "photo" || item.kind === "reference") {
     return item.imageUrl ?? null;
+  }
+  if (item.kind === "frame") {
+    // The topmost picture on the frame, as a stand-in for all of them. The
+    // wire really carries every one — the run fans out over the lot — but a
+    // preview shows one thing, and showing nothing made a correctly wired
+    // frame look like a node that could not see its own input.
+    const inside = containedBy(item, items)
+      .filter((contained) => contained.imageUrl)
+      .sort((a, b) => b.z - a.z);
+    return inside[0]?.imageUrl ?? null;
   }
   if (item.kind !== "op") {
     return null;

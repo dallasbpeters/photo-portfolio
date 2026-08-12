@@ -84,9 +84,14 @@ export type SettingDef =
  * A node type with no capability never runs at all — it is a *source*, and its
  * output is whatever its settings hold. The Prompt node is the only one so far.
  */
-export type NodeCapability = "fal.describe" | "fal.image" | "magnific.icon";
+export type NodeCapability =
+  | "board.composite"
+  | "fal.describe"
+  | "fal.image"
+  | "magnific.icon";
 
 export type NodeTypeId =
+  | "composite"
   | "describe"
   | "generate"
   | "icon"
@@ -688,6 +693,54 @@ const JOIN: NodeType = {
   ],
 };
 
+/**
+ * Several pictures flattened into one.
+ *
+ * A frame groups images but is not itself an image — it has no pixels to hand
+ * on, so there was no way to take an arrangement you had already made and use
+ * it as a single reference. This renders the arrangement.
+ *
+ * Layout comes from the board rather than from settings: the images are drawn
+ * where they sit, at the size they were dragged to, scaled together into the
+ * box they occupy. Overlap them and they layer; the order is the same z-order
+ * you see, so "bring to front" is how you reorder a composite.
+ *
+ * The rendering happens in the browser, which is the only place that knows the
+ * geometry, and the run stores what it produced — see board.composite in the
+ * run endpoint. It costs nothing beyond storing the file.
+ */
+const COMPOSITE: NodeType = {
+  capability: "board.composite",
+  id: "composite",
+  inputs: [
+    {
+      // Many, and every wire contributes its pictures — a frame hands over
+      // everything on it, so one wire is usually enough.
+      arity: "many",
+      key: "image",
+      label: "Images",
+      required: true,
+      type: "image",
+    },
+  ],
+  label: "Composite",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Image", type: "image" }],
+  settings: [
+    {
+      /*
+       * Transparent by default, and deliberately so: the commonest reason to
+       * composite here is to put a cut-out onto something, and flattening onto
+       * white throws away an alpha channel that cannot be recovered.
+       */
+      default: "transparent",
+      key: "background",
+      kind: "select",
+      label: "Background",
+      options: ["transparent", "white", "black"],
+    },
+  ],
+};
+
 /** Where a value is dropped into the template, unless another is chosen. */
 export const DEFAULT_PLACEHOLDER = "{}";
 
@@ -838,6 +891,7 @@ const PALETTE: NodeType = {
 };
 
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
+  composite: COMPOSITE,
   describe: DESCRIBE,
   generate: GENERATE,
   icon: ICON,
@@ -848,6 +902,7 @@ export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
 };
 
 export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
+  value === "composite" ||
   value === "describe" ||
   value === "generate" ||
   value === "icon" ||

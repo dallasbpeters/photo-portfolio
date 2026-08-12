@@ -565,6 +565,12 @@ const jobsFor = (
   // wiring describes a single run no matter how many references feed it.
   // Fanning out here would bill one description per image and then throw all
   // but the last away.
+  if (capability === "board.composite") {
+    // One run however many pictures feed it: the images are its material, not
+    // a batch to iterate over. Fanning out here would store the same rendered
+    // composite once per source.
+    return [{ image: null, mask: null, prompt: "" }];
+  }
   if (capability === "fal.describe") {
     // Reading a picture back as words is not affected by a mask.
     return [
@@ -744,6 +750,32 @@ const produce = async (
     };
   }
 
+  if (capability === "board.composite") {
+    // Rendered in the browser, which is the only place that knows where the
+    // pictures sit — this stores what it produced so the node gets a result,
+    // a history and a thumbnail like every other node. The canvas clears the
+    // URL on any edit, so one that survived to here is current.
+    const raw = args.item.config.compositeUrl;
+    // Checked like any other URL that leaves here, even though the canvas only
+    // ever writes our own blob storage into it: this value arrives through a
+    // board save, and a saved board is caller-supplied data.
+    const url =
+      typeof raw === "string" && HTTP_SCHEME.test(raw)
+        ? parsePublicHttpUrl(raw)
+        : null;
+    if (!url) {
+      throw new Error("The composite has not been rendered yet");
+    }
+    return {
+      description: null,
+      height: null,
+      isVector: null,
+      kind: "image",
+      url,
+      width: null,
+    };
+  }
+
   if (capability === "magnific.icon") {
     const style = isIconStyle(args.item.config.style)
       ? args.item.config.style
@@ -894,8 +926,16 @@ const unmetRequirement = (
   model: string | null,
   prompt: string,
   values: Record<string, string[] | undefined>,
-  masked: boolean
+  masked: boolean,
+  capability: NodeCapability
 ): Record<string, unknown> | null => {
+  // A composite has no model and no prompt — its inputs are pictures, and the
+  // required image port has already been checked by resolveInputs. Running it
+  // through the model rules below would refuse it for lacking a prompt that it
+  // has no field to type one into.
+  if (capability === "board.composite") {
+    return null;
+  }
   // Every shape that consumes an image gets the same check, before any of the
   // per-shape rules below.
   const vector = vectorInputRefusal(values.image ?? []);
@@ -1062,20 +1102,24 @@ const prepare = async (
     model,
     prompt,
     values,
-    (values.image ?? []).some((url) => masks.has(url))
+    (values.image ?? []).some((url) => masks.has(url)),
+    type.capability
   );
   if (unmet) {
     return refuse(422, unmet);
   }
 
+  // A composite is assembled in the browser and merely stored here, so neither
+  // provider needs to be configured for one to run.
   const needsFal = type.capability === "fal.image";
+  const needsMagnific = type.capability === "magnific.icon";
   if (needsFal && !isFalConfigured()) {
     return refuse(503, {
       error:
         "Image generation is not configured. Set FAL_API_KEY on the project.",
     });
   }
-  if (!(needsFal || isMagnificConfigured())) {
+  if (needsMagnific && !isMagnificConfigured()) {
     return refuse(503, {
       error:
         "Icon generation is not configured. Set MAGNIFIC_API_KEY on the project.",

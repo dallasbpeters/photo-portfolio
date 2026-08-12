@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FrameIcon,
+  GroupLayersIcon,
   LinkSquare01Icon,
   MagicWand01Icon,
   PaintBoardIcon,
@@ -26,6 +27,7 @@ export interface PortTarget {
 }
 
 const ICONS: Record<string, typeof SparklesIcon> = {
+  composite: GroupLayersIcon,
   describe: SearchVisualIcon,
   frame: FrameIcon,
   generate: SparklesIcon,

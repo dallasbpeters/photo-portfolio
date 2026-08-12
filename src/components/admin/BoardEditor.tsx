@@ -38,6 +38,7 @@ import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
 import { BoardDrawTools } from "../../boards/BoardDrawTools";
+import { compositeSources, renderComposite } from "../../boards/composite";
 import { copyOfFrame } from "../../boards/copyToBoard";
 import type { DrawStyle } from "../../boards/DrawToolbar";
 import {
@@ -143,6 +144,24 @@ const dropOrigin = (
  * mean remembering to add `null` in four different places — the compiler used
  * to catch that, but only after four identical edits.
  */
+/**
+ * Throws away any rendered composite.
+ *
+ * A composite is a picture of the arrangement, so *any* edit can invalidate it
+ * — something moved, was resized, changed z-order, was deleted, or had its own
+ * result replaced. Working out which edits actually mattered would be a
+ * dependency graph over geometry, and getting it subtly wrong means a node that
+ * quietly shows yesterday's layout. Clearing it always costs one render on the
+ * next run and cannot be wrong.
+ */
+const dropComposites = (list: BoardItem[]): BoardItem[] =>
+  list.map((item) =>
+    item.nodeType === "composite" &&
+    typeof item.config?.compositeUrl === "string"
+      ? { ...item, config: { ...item.config, compositeUrl: null } }
+      : item
+  );
+
 const BLANK_ITEM = {
   body: null,
   config: null,
@@ -482,7 +501,7 @@ export function BoardEditor({
   const change = useCallback(
     (next: BoardItem[]) => {
       remember();
-      setItems(next);
+      setItems(dropComposites(next));
       setIsDirty(true);
     },
     [remember]
@@ -492,6 +511,9 @@ export function BoardEditor({
     (next: BoardWire[]) => {
       remember();
       setWires(next);
+      // Rewiring changes what a composite is made of, so it invalidates one
+      // just as surely as moving a picture does.
+      setItems(dropComposites);
       setIsDirty(true);
     },
     [remember]
@@ -689,14 +711,53 @@ export function BoardEditor({
       })
     );
 
-    const changed = rendered.some(
+    // Composites are rendered here for the same reason masks are: only the
+    // browser knows the arrangement, and a run is the first moment it has to
+    // exist as a file. `compositeUrl` is cleared whenever anything feeding the
+    // node moves — see change() — so one still holding a URL is current.
+    const composed = await Promise.all(
+      rendered.map(async (item) => {
+        if (item.nodeType !== "composite") {
+          return item;
+        }
+        const config = item.config ?? {};
+        if (typeof config.compositeUrl === "string") {
+          return item;
+        }
+        try {
+          const layers = compositeSources(
+            item,
+            pending.current.items,
+            pending.current.wires
+          );
+          const background =
+            typeof config.background === "string"
+              ? config.background
+              : "transparent";
+          const blob = await renderComposite(layers, background);
+          const { url } = await portfolioService.uploadImageFile(
+            new File([blob], "composite.png", { type: "image/png" }),
+            undefined,
+            "boards/composites"
+          );
+          return { ...item, config: { ...config, compositeUrl: url } };
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Could not build the composite"
+          );
+          return item;
+        }
+      })
+    );
+
+    const changed = composed.some(
       (item, i) => item !== pending.current.items[i]
     );
     if (changed) {
-      setItems(rendered);
+      setItems(composed);
       // Saved explicitly with these items: the run reads the board from the
       // database, and React has not re-rendered with them yet.
-      await save(rendered);
+      await save(composed);
       return;
     }
     if (pending.current.isDirty) {

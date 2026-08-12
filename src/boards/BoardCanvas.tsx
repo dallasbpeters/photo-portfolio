@@ -624,7 +624,7 @@ export function BoardCanvas({
       return null;
     }
     const source = items.find((item) => item.id === wire.sourceItemId);
-    return source ? outputImageOf(source) : null;
+    return source ? outputImageOf(source, items) : null;
   };
 
   /**
