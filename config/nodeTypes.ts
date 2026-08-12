@@ -598,6 +598,16 @@ const ITERATE: NodeType = {
       required: true,
       type: "text",
     },
+    {
+      // Added to the end of every prompt this node writes. A palette belongs
+      // to the prompts rather than to whatever consumes them, so it attaches
+      // here and travels down one wire with them.
+      arity: "one",
+      key: "suffix",
+      label: "Append to each",
+      required: false,
+      type: "text",
+    },
   ],
   label: "Iterate",
   outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],

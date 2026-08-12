@@ -151,7 +151,9 @@ const iteratedOutputsOf = (
           .filter((list) => list.length > 0)
       : columnsOf(typedList[0] ?? "", slots, config.split);
 
-  return expandTemplate(template, placeholder, lists);
+  const suffix = readPerWire("suffix").at(-1)?.trim() ?? "";
+  const prompts = expandTemplate(template, placeholder, lists);
+  return suffix ? prompts.map((prompt) => `${prompt}, ${suffix}`) : prompts;
 };
 
 /**
