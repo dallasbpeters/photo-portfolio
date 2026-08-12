@@ -282,6 +282,29 @@ export const FAL_MODELS = [
     vector: true,
   },
   {
+    // Cuts the subject out and returns it on transparency. Like the vectoriser
+    // it takes an image and has no use for a prompt — the "image" shape is what
+    // stops the node asking for one and what refuses the run before it is
+    // billed when nothing is wired in.
+    //
+    // The result is a PNG with a real alpha channel, which survives storage
+    // because persistGenerated sniffs the bytes rather than trusting the
+    // header — an RGBA PNG filed as .jpg would be flattened onto black.
+    id: "fal-ai/birefnet/v2",
+    input: "image",
+    label: "Remove background",
+    vector: false,
+  },
+  {
+    // The cheap, fast one. Noticeably rougher on hair and thin edges, which is
+    // exactly the case the model above is worth paying for — but for a sticker
+    // with a hard outline the difference does not show.
+    id: "fal-ai/imageutils/rembg",
+    input: "image",
+    label: "Remove background · fast",
+    vector: false,
+  },
+  {
     id: "lora/rolemodel-style",
     input: "prompt-or-image",
     label: "RoleModel style",
