@@ -603,18 +603,18 @@ const ITERATE: NodeType = {
       // the Generate node downstream as "this node needs a prompt".
       key: "template",
       kind: "text",
-      label: "Template",
+      label: "Template — put {} where a value goes",
       maxLength: GENERATE_PROMPT_MAX,
       placeholder: "a {} chair, studio lit…",
     },
     {
       key: "values",
       kind: "text",
-      label: "Values",
+      label: "Values — one per line, or one row per line for several slots",
       // Roomier than a prompt: this is a list, and a list of forty words is
       // ordinary where a forty-sentence prompt is not.
       maxLength: GENERATE_PROMPT_MAX * 2,
-      placeholder: "oak\nsteel\nmoulded plastic",
+      placeholder: "Orange, Brainstorm\nYellow, Reflect\nPurple, Approach",
     },
     {
       key: "placeholder",

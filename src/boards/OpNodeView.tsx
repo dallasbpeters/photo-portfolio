@@ -122,23 +122,27 @@ function SettingField({
   }
 
   return (
-    <textarea
-      aria-label={setting.label}
-      // resize-y, not resize-none: a prompt is often several sentences, and a
-      // fixed 4rem box meant scrolling a paragraph through a letterbox. The
-      // node itself can be resized too, but that changes the whole node —
-      // this changes only the field, which is what you want mid-sentence.
-      className="max-h-96 min-h-16 w-full resize-y rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white leading-relaxed outline-none focus:border-white/40 disabled:opacity-60"
-      disabled={readOnly}
-      maxLength={setting.maxLength}
-      onChange={(e) => onChange(e.target.value)}
-      // The surface owns dragging, so a press meant for the caret — or for the
-      // resize corner — must not reach it, or typing into a node moves the
-      // node and dragging the corner drags the board.
-      onPointerDown={(e) => e.stopPropagation()}
-      placeholder={setting.placeholder}
-      value={value}
-    />
+    // Labelled visibly, not only for screen readers. A node with one text field
+    // could get away with an aria-label; the Iterate node has three, and three
+    // unlabelled boxes are a guessing game — which is exactly how a list ended
+    // up in the template field.
+    <label className="block space-y-1">
+      <span className="text-[10px] text-white/40 uppercase tracking-[0.14em]">
+        {setting.label}
+      </span>
+      <textarea
+        className="max-h-96 min-h-16 w-full resize-y rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white leading-relaxed outline-none focus:border-white/40 disabled:opacity-60"
+        disabled={readOnly}
+        maxLength={setting.maxLength}
+        onChange={(e) => onChange(e.target.value)}
+        // The surface owns dragging, so a press meant for the caret — or for
+        // the resize corner — must not reach it, or typing into a node moves
+        // the node and dragging the corner drags the board.
+        onPointerDown={(e) => e.stopPropagation()}
+        placeholder={setting.placeholder}
+        value={value}
+      />
+    </label>
   );
 }
 

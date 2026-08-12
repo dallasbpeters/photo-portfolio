@@ -142,9 +142,14 @@ const iteratedOutputsOf = (
     typeof config.values === "string" && config.values.trim()
       ? [config.values]
       : [];
-  const lists = (wiredLists.length > 0 ? wiredLists : typedList)
-    .map((raw) => splitValues(raw, config.split))
-    .filter((list) => list.length > 0);
+  const slots = template.split(placeholder).length - 1;
+  const lists =
+    wiredLists.length > 0
+      ? // One wire per slot: the list on the first wire fills the first {}.
+        wiredLists
+          .map((raw) => splitValues(raw, config.split))
+          .filter((list) => list.length > 0)
+      : columnsOf(typedList[0] ?? "", slots, config.split);
 
   return expandTemplate(template, placeholder, lists);
 };
@@ -188,6 +193,33 @@ const expandTemplate = (
       return text + value + part;
     }, "")
   );
+};
+
+/**
+ * The typed Values field, read as one list per slot.
+ *
+ * With a single placeholder it is simply a list. With several, each line is one
+ * row and the commas within it are its columns — "Orange, Brainstorm" on one
+ * line fills both slots of that prompt. Typing pairs as pairs is how anyone would
+ * write them down, and it is the only way the typed field can feed more than
+ * one slot without growing a field per slot.
+ */
+const columnsOf = (raw: string, slots: number, mode: unknown): string[][] => {
+  if (!raw.trim()) {
+    return [];
+  }
+  if (slots <= 1) {
+    const list = splitValues(raw, mode);
+    return list.length > 0 ? [list] : [];
+  }
+  const rows = raw
+    .split(LINES)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(",").map((cell) => cell.trim()));
+  return Array.from({ length: slots }, (_, column) =>
+    rows.map((cells) => cells[column] ?? cells.at(-1) ?? "").filter(Boolean)
+  ).filter((list) => list.length > 0);
 };
 
 /** How one incoming text becomes one or several values. */
