@@ -50,6 +50,7 @@ import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
 import { findFreeSpot } from "../../boards/placement";
 import { newShaderConfig } from "../../boards/shaderConfig";
+import { restore, useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
 import {
   authStorage,
@@ -158,6 +159,7 @@ export function BoardEditor({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
+  const history = useBoardHistory();
   const [drawTool, setDrawTool] = useState<DrawTool | null>(null);
   const [selectedItem, setSelectedItem] = useState<BoardItem | null>(null);
   const [drawStyle, setDrawStyle] = useState<DrawStyle>({
@@ -345,6 +347,36 @@ export function BoardEditor({
       // can only leave by finding the toolbar again, and since a tool draws on
       // every press it also means nothing on the board can be moved — which
       // reads as the cursor being stuck rather than as a mode being on.
+      // Undo and redo. Ignored while typing: a field has its own undo, and
+      // stealing it would make editing a prompt lose the prompt rather than
+      // the last character.
+      const active = document.activeElement;
+      const isTyping =
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable);
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "z" &&
+        !isTyping
+      ) {
+        e.preventDefault();
+        setItems((currentItems) => {
+          setWires((currentWires) => {
+            const now = { items: currentItems, wires: currentWires };
+            const step = e.shiftKey ? history.redo(now) : history.undo(now);
+            if (step) {
+              const restored = restore(step, currentItems);
+              setItems(restored.items);
+              setWires(restored.wires);
+              setIsDirty(true);
+            }
+            return currentWires;
+          });
+          return currentItems;
+        });
+        return;
+      }
       if (e.key === "Escape") {
         setDrawTool((current) => {
           if (current === null) {
@@ -357,17 +389,42 @@ export function BoardEditor({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [history]);
 
-  const change = useCallback((next: BoardItem[]) => {
-    setItems(next);
-    setIsDirty(true);
-  }, []);
+  /**
+   * Records the state about to be replaced.
+   *
+   * Taken from the setters rather than passed in, so a caller cannot forget —
+   * and read inside the updater so it is the state React actually holds rather
+   * than whatever this closure captured.
+   */
+  const remember = useCallback(() => {
+    setItems((currentItems) => {
+      setWires((currentWires) => {
+        history.record({ items: currentItems, wires: currentWires });
+        return currentWires;
+      });
+      return currentItems;
+    });
+  }, [history]);
 
-  const changeWires = useCallback((next: BoardWire[]) => {
-    setWires(next);
-    setIsDirty(true);
-  }, []);
+  const change = useCallback(
+    (next: BoardItem[]) => {
+      remember();
+      setItems(next);
+      setIsDirty(true);
+    },
+    [remember]
+  );
+
+  const changeWires = useCallback(
+    (next: BoardWire[]) => {
+      remember();
+      setWires(next);
+      setIsDirty(true);
+    },
+    [remember]
+  );
 
   /**
    * Remembers a place this board pulls references from.
@@ -427,11 +484,11 @@ export function BoardEditor({
           // Show what was just made. The selection is what a node displays and
           // what it hands downstream, so leaving it on an older version after a
           // run means watching a generation finish and seeing nothing change.
-          const history = merged.result?.history;
-          if (patch.result && Array.isArray(history) && history.length > 0) {
+          const versions = merged.result?.history;
+          if (patch.result && Array.isArray(versions) && versions.length > 0) {
             merged.config = {
               ...merged.config,
-              selectedVersion: history.length - 1,
+              selectedVersion: versions.length - 1,
             };
           }
           return merged;
@@ -869,14 +926,14 @@ export function BoardEditor({
    */
   const sendVersions = (itemId: string) => {
     const node = items.find((item) => item.id === itemId);
-    const history = node?.result?.history ?? [];
-    if (history.length === 0) {
+    const versions = node?.result?.history ?? [];
+    if (versions.length === 0) {
       return;
     }
     const origin = dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT);
     change([
       ...items,
-      ...history.map((image, index) => ({
+      ...versions.map((image, index) => ({
         ...BLANK_ITEM,
         height: DEFAULT_IMAGE_HEIGHT,
         id: newItemId(),
@@ -891,7 +948,9 @@ export function BoardEditor({
       })),
     ]);
     toast.success(
-      history.length === 1 ? "1 image added" : `${history.length} images added`
+      versions.length === 1
+        ? "1 image added"
+        : `${versions.length} images added`
     );
   };
 

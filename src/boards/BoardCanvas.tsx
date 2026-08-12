@@ -203,7 +203,18 @@ export function BoardCanvas({
   // The viewport frames itself on the items, and keeps doing so as the
   // container settles, until the board is panned, zoomed or rearranged.
   const view = useCanvasViewport(containerRef, () => contentBounds(items));
-  const [selected, setSelected] = useState<number | null>(null);
+  /**
+   * Which items are selected, by index.
+   *
+   * A list rather than one index: several can be picked with a marquee or with
+   * shift, and dragging any of them moves the whole set. One selection is just
+   * a list of length one, which keeps every read the same shape.
+   */
+  const [selection, setSelection] = useState<number[]>([]);
+  /** The marquee being dragged out on the background, in canvas units. */
+  const [marquee, setMarquee] = useState<{ from: Point; to: Point } | null>(
+    null
+  );
   // Selecting and editing are separate: one click picks an item up, typing
   // needs a second. Without that split a note could never be dragged.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -226,7 +237,10 @@ export function BoardCanvas({
   // Reported from an effect rather than at each call site: selection is cleared
   // in half a dozen places — a background press, a delete, a drawing gesture —
   // and every one of them would otherwise have to remember to announce it.
-  const selectedItem = selected === null ? null : (items[selected] ?? null);
+  // The toolbar edits one thing, so it is told about a lone selection only —
+  // with several picked there is no single item its controls could mean.
+  const selectedItem =
+    selection.length === 1 ? (items[selection[0] ?? -1] ?? null) : null;
   // Held in a ref so the effect below can read the current item without
   // depending on it: the item is a new object on every edit, and depending on
   // it would re-announce the selection on each keystroke.
@@ -520,8 +534,67 @@ export function BoardCanvas({
     [items]
   );
 
+  /**
+   * Whether the space bar is down, which turns a background drag into a pan.
+   *
+   * A ref rather than state: it changes on every keypress and nothing renders
+   * differently for it, so re-rendering the whole canvas would be waste.
+   */
+  const isPanKey = useRef<boolean>(false);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        isPanKey.current = true;
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        isPanKey.current = false;
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
+  /** Everything the swept rectangle touches, by index. */
+  const finishMarquee = useCallback(
+    (box: { from: Point; to: Point }, add: boolean) => {
+      setMarquee(null);
+      const left = Math.min(box.from.x, box.to.x);
+      const right = Math.max(box.from.x, box.to.x);
+      const top = Math.min(box.from.y, box.to.y);
+      const bottom = Math.max(box.from.y, box.to.y);
+      // A click rather than a sweep: too small to have meant a selection, so it
+      // clears rather than picking whatever happened to be under the pointer.
+      if (right - left < 4 && bottom - top < 4) {
+        return;
+      }
+      // Touched, not enclosed. Requiring an item to be wholly inside means
+      // sweeping around a large photograph rather than across it, which on a
+      // zoomed-in board can be impossible without scrolling.
+      const hit = items
+        .map((item, index) => ({ index, item }))
+        .filter(
+          ({ item }) =>
+            item.x < right &&
+            item.x + item.width > left &&
+            item.y < bottom &&
+            item.y + item.height > top
+        )
+        .map(({ index }) => index);
+      setSelection((current) =>
+        add ? [...new Set([...current, ...hit])] : hit
+      );
+    },
+    [items]
+  );
+
   const beginMove = useCallback(
-    (index: number, clientX: number, clientY: number) => {
+    (index: number, clientX: number, clientY: number, additive = false) => {
       const item = items[index];
       if (!item) {
         return;
@@ -531,15 +604,35 @@ export function BoardCanvas({
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
       const isFrame = item.kind === "frame";
+      // Shift or cmd adds to the selection instead of replacing it, and does
+      // not begin a drag — picking several one by one should not nudge them.
+      if (additive) {
+        setSelection((current) =>
+          current.includes(index)
+            ? current.filter((i) => i !== index)
+            : [...current, index]
+        );
+        gesture.current = { kind: "none" };
+        return;
+      }
+      // Pressing something already selected drags the whole selection; pressing
+      // something outside it selects that one instead, which is what every
+      // canvas does and what stops a stray click scattering a careful set.
+      const inSelection = selection.includes(index);
+      const moving = inSelection ? selection : [index];
+      const alsoCarried = isFrame ? containedIndices(item) : [];
+      const carriedIndices = [...new Set([...moving, ...alsoCarried])].filter(
+        (i) => i !== index
+      );
+
       gesture.current = {
-        // A frame takes whatever is sitting on it; everything else moves alone.
-        carried: isFrame
-          ? containedIndices(item).map((i) => ({
-              index: i,
-              originX: items[i]?.x ?? 0,
-              originY: items[i]?.y ?? 0,
-            }))
-          : [],
+        // A frame takes whatever is sitting on it, and a multiple selection
+        // takes the rest of itself.
+        carried: carriedIndices.map((i) => ({
+          index: i,
+          originX: items[i]?.x ?? 0,
+          originY: items[i]?.y ?? 0,
+        })),
         index,
         kind: "move",
         originX: item.x,
@@ -547,7 +640,9 @@ export function BoardCanvas({
         startX: p.x,
         startY: p.y,
       };
-      setSelected(index);
+      if (!inSelection) {
+        setSelection([index]);
+      }
       // Raise on grab: the thing you are touching should be the thing on top.
       // Except a frame, which is a backdrop — raising it would bury everything
       // it contains the moment it was nudged.
@@ -557,7 +652,7 @@ export function BoardCanvas({
         );
       }
     },
-    [containedIndices, items, onChange, topZ, view]
+    [containedIndices, items, onChange, selection, topZ, view]
   );
 
   const beginResize = useCallback(
@@ -576,7 +671,7 @@ export function BoardCanvas({
         startX: p.x,
         startY: p.y,
       };
-      setSelected(index);
+      setSelection([index]);
     },
     [items, view]
   );
@@ -762,6 +857,10 @@ export function BoardCanvas({
             : undefined
         }
         onPointerCancel={(e) => {
+          if (marquee) {
+            setMarquee(null);
+            return;
+          }
           if (stroke) {
             finishStroke(stroke);
             return;
@@ -779,19 +878,40 @@ export function BoardCanvas({
           // finishes here instead of being abandoned mid-line.
           if (isDrawing) {
             e.currentTarget.setPointerCapture(e.pointerId);
-            setSelected(null);
+            setSelection([]);
             setEditingId(null);
             setStroke([view.toCanvas(e.clientX, e.clientY)]);
             return;
           }
-          // Landing on the background clears the selection and starts a pan.
+          // Landing on the background: pan when the space bar or the middle
+          // button says so, otherwise sweep out a selection. Dragging empty
+          // canvas to select is what every canvas does, and it was the one
+          // gesture the board had spent on panning.
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
-            setSelected(null);
             setEditingId(null);
-            view.onPointerDown(e);
+            // biome-ignore lint/suspicious/noUnnecessaryConditions: the ref is set from a keydown listener the analyser cannot see from inside this callback, so it reads the initial false as the only possible value
+            if (isPanKey.current || e.button === 1) {
+              setSelection([]);
+              view.onPointerDown(e);
+              return;
+            }
+            e.currentTarget.setPointerCapture(e.pointerId);
+            // Shift keeps what is already picked, so a second sweep adds to it.
+            if (!e.shiftKey) {
+              setSelection([]);
+            }
+            const start = view.toCanvas(e.clientX, e.clientY);
+            setMarquee({ from: start, to: start });
           }
         }}
         onPointerMove={(e) => {
+          if (marquee) {
+            setMarquee({
+              from: marquee.from,
+              to: view.toCanvas(e.clientX, e.clientY),
+            });
+            return;
+          }
           if (stroke) {
             const point = view.toCanvas(e.clientX, e.clientY);
             // A shape only ever needs where it started and where it is now;
@@ -813,6 +933,10 @@ export function BoardCanvas({
           onPointerMove(e);
         }}
         onPointerUp={(e) => {
+          if (marquee) {
+            finishMarquee(marquee, e.shiftKey);
+            return;
+          }
           if (stroke) {
             finishStroke(stroke);
             return;
@@ -905,13 +1029,27 @@ export function BoardCanvas({
             </svg>
           ) : null}
 
+          {/* Drawn in canvas units inside the transform, so it stays exactly
+              under the pointer at any zoom. */}
+          {marquee ? (
+            <div
+              className="pointer-events-none absolute border border-sky-300 bg-sky-300/10"
+              style={{
+                height: Math.abs(marquee.to.y - marquee.from.y),
+                left: Math.min(marquee.from.x, marquee.to.x),
+                top: Math.min(marquee.from.y, marquee.to.y),
+                width: Math.abs(marquee.to.x - marquee.from.x),
+              }}
+            />
+          ) : null}
+
           {items.map((item, index) => (
             <BoardItemView
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
               imageUrl={wiredImageFor(item.id)}
               index={index}
               isEditing={!readOnly && editingId === item.id}
-              isSelected={!readOnly && selected === index}
+              isSelected={!readOnly && selection.includes(index)}
               item={item}
               key={keyOf(item)}
               onBeginEdit={() => {

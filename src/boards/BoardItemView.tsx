@@ -89,7 +89,12 @@ interface BoardItemViewProps {
   onRemoveVersion?: (index: number) => void;
   onResizeStart: (index: number, clientX: number, clientY: number) => void;
   onRun?: (force: boolean) => void;
-  onSelect: (index: number, clientX: number, clientY: number) => void;
+  onSelect: (
+    index: number,
+    clientX: number,
+    clientY: number,
+    additive: boolean
+  ) => void;
   onSendVersions?: () => void;
   /** What a node computes from its inputs, for the kinds that show it. */
   outputText?: string | null;
@@ -632,7 +637,7 @@ export function BoardItemView({
           e.stopPropagation();
           return;
         }
-        onSelect(index, e.clientX, e.clientY);
+        onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
         // Already selected, so this is the second press: start typing.
         if (isWritable && isSelected) {
           onBeginEdit();
