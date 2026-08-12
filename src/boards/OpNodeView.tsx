@@ -17,6 +17,7 @@ import {
 import type { BoardItem, BoardItemVariation } from "../types";
 import { downloadImage } from "./downloadImage";
 import { BOARD_IMAGE_TYPE, pickImages, selectedIndex } from "./itemOutput";
+import { PaletteSwatches } from "./PaletteSwatches";
 
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
@@ -587,18 +588,28 @@ function NodeBody({
         </p>
       ) : null}
 
-      {type.settings.map((setting) => (
-        <SettingField
-          key={setting.key}
-          onChange={(value) => set(setting.key, value)}
-          // Only the prompt is superseded by a wire. Disabling every
-          // setting locked the model and variation count too, which have
-          // nothing to do with where the prompt came from.
-          readOnly={readOnly || (hasWiredPrompt && setting.key === "prompt")}
-          setting={setting}
-          value={fieldValue(setting.key, config, wiredPrompt)}
-        />
-      ))}
+      {type.settings.map((setting) =>
+        // The palette's colours are swatches rather than a text field — see
+        // PaletteSwatches, which edits the very same stored string.
+        item.nodeType === "palette" && setting.key === "colors" ? (
+          <PaletteSwatches
+            key={setting.key}
+            onChange={(colors) => set("colors", colors)}
+            value={typeof config.colors === "string" ? config.colors : ""}
+          />
+        ) : (
+          <SettingField
+            key={setting.key}
+            onChange={(value) => set(setting.key, value)}
+            // Only the prompt is superseded by a wire. Disabling every
+            // setting locked the model and variation count too, which have
+            // nothing to do with where the prompt came from.
+            readOnly={readOnly || (hasWiredPrompt && setting.key === "prompt")}
+            setting={setting}
+            value={fieldValue(setting.key, config, wiredPrompt)}
+          />
+        )
+      )}
 
       {/* A run that reported success but drew nothing would otherwise look
               identical to one that never ran. Saying so is what keeps a broken

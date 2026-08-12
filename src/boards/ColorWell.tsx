@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { type ColorResult, SketchPicker } from "react-color";
+import { createPortal } from "react-dom";
+
+/** SketchPicker's own size, used only to keep it on screen. */
+const PICKER_WIDTH = 220;
+const PICKER_HEIGHT = 300;
+
 import { isTransparent } from "./drawing";
 
 /**
@@ -40,15 +46,38 @@ const toHex = (color: ColorResult): string => {
 };
 
 export function ColorWell({ label, onChange, value }: ColorWellProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const clear = isTransparent(value);
+
+  /**
+   * Opens the picker at the swatch, in viewport coordinates.
+   *
+   * The position is read from the swatch and the picker is rendered into the
+   * document body, because an absolutely-positioned popover is clipped by any
+   * scrolling ancestor — and a node's body scrolls, so on a Palette node the
+   * picker would have opened inside a box too short to show it.
+   */
+  const open = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (at) {
+      setAt(null);
+      return;
+    }
+    const box = e.currentTarget.getBoundingClientRect();
+    // Below the swatch, unless that would run off the bottom of the window.
+    const wantsAbove = box.bottom + PICKER_HEIGHT > window.innerHeight;
+    setAt({
+      left: Math.min(box.left, window.innerWidth - PICKER_WIDTH - 8),
+      top: wantsAbove ? box.top - PICKER_HEIGHT - 8 : box.bottom + 8,
+    });
+  };
 
   return (
     <div className="relative">
       <button
         aria-label={label}
         className="size-6 overflow-hidden rounded border border-white/20"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={open}
+        onPointerDown={(e) => e.stopPropagation()}
         title={label}
         type="button"
       >
@@ -67,26 +96,31 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
         />
       </button>
 
-      {isOpen ? (
-        <>
-          {/* Catches the click that dismisses the picker. Sits under it, over
-              everything else. */}
-          <button
-            aria-label={`Close ${label}`}
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setIsOpen(false)}
-            type="button"
-          />
-          {/* Above the well rather than below: the toolbar sits at the bottom
-              of the canvas, so a picker underneath it would be off screen. */}
-          <div className="absolute bottom-9 left-0 z-50">
-            <SketchPicker
-              color={value}
-              onChange={(color: ColorResult) => onChange(toHex(color))}
-            />
-          </div>
-        </>
-      ) : null}
+      {at
+        ? createPortal(
+            <>
+              {/* Catches the click that dismisses the picker. Sits under it,
+                  over everything else. */}
+              <button
+                aria-label={`Close ${label}`}
+                className="fixed inset-0 z-[60] cursor-default"
+                onClick={() => setAt(null)}
+                type="button"
+              />
+              <div
+                className="fixed z-[61]"
+                onPointerDown={(e) => e.stopPropagation()}
+                style={{ left: at.left, top: at.top }}
+              >
+                <SketchPicker
+                  color={value}
+                  onChange={(color: ColorResult) => onChange(toHex(color))}
+                />
+              </div>
+            </>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
