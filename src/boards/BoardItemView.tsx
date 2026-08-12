@@ -293,11 +293,18 @@ function BoardItemBody({
 
   return (
     <figure className="h-full w-full">
+      {/* Lazy and async because a board is mostly off screen. A decoded
+          1024-square bitmap is four megabytes whether or not it is in view, and
+          a board of a hundred results was decoding all of them at once — which
+          is felt as the canvas bogging down rather than as anything to do with
+          pictures. */}
       <img
         alt=""
         className={`h-full w-full ${isIcon ? "object-contain" : "object-cover"}`}
+        decoding="async"
         draggable={false}
         height={item.height}
+        loading="lazy"
         src={item.imageUrl ?? ""}
         width={item.width}
       />

@@ -204,8 +204,10 @@ function ResultImages({
           <img
             alt={hero.description ?? "Result"}
             className="h-auto w-full cursor-grab rounded border border-white/10 object-contain"
+            decoding="async"
             draggable
             height={hero.height ?? undefined}
+            loading="lazy"
             onDragStart={(e) => beginImageDrag(e, hero)}
             src={hero.url}
             width={hero.width ?? undefined}
@@ -356,7 +358,9 @@ function PublishedResult({
     <img
       alt={shown.description ?? ""}
       className="h-full w-full object-contain"
+      decoding="async"
       height={shown.height ?? undefined}
+      loading="lazy"
       src={shown.url}
       width={shown.width ?? undefined}
     />
