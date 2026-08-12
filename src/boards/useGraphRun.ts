@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   descendantsOf,
   type GraphItem,
@@ -90,6 +91,24 @@ const runStep = async ({
  * Nothing already paid for is lost, because each node's result is committed by
  * its own request before the next one begins.
  */
+/**
+ * Says out loud what a batch quietly declined to run.
+ *
+ * A frame carrying one vectorised logo among its stickers runs the stickers and
+ * drops the vector — but a batch that silently does fewer jobs than you asked
+ * for is worse than one that fails outright.
+ */
+const reportSkippedVectors = (dropped: number): void => {
+  if (dropped <= 0) {
+    return;
+  }
+  toast.warning(
+    dropped === 1
+      ? "One SVG was skipped — image models read pixels."
+      : `${dropped} SVGs were skipped — image models read pixels.`
+  );
+};
+
 export function useGraphRun({
   beforeRun,
   boardId,
@@ -128,6 +147,8 @@ export function useGraphRun({
         ...(signal ? { signal } : {}),
       });
       total = outcome.variationCount ?? 1;
+
+      reportSkippedVectors(outcome.skippedVectors ?? 0);
 
       // Nothing more to do when the whole node was skipped as unchanged —
       // re-asking for each variation would spend money proving the same thing.

@@ -24,6 +24,15 @@ export interface RunNodeResponse {
   /** True when nothing had changed, so the stored result was returned as-is. */
   skipped: boolean;
   /**
+   * Wired images an image model could not read, and so did not run.
+   *
+   * Vectors are dropped from a batch rather than failing it — a frame with one
+   * vectorised logo in it is an ordinary board — but a batch that quietly does
+   * nineteen of twenty jobs is worse than one that fails, so the count travels
+   * back and is reported.
+   */
+  skippedVectors?: number;
+  /**
    * How many variations this node's wiring and settings describe.
    *
    * The client discovers the batch size from the first response rather than
@@ -849,6 +858,25 @@ const boardUrl = (id: string): string =>
   `${boardsPath()}/${encodeURIComponent(id)}`;
 
 export const boardsApi = {
+  /**
+   * Copies a picture we merely link to into storage we own, and returns the
+   * new address. An image already in our storage comes back unchanged.
+   *
+   * Needed before a canvas can read a picture back: a host that sends no CORS
+   * headers taints the canvas, and reading it throws — see api/boards/adopt.ts.
+   */
+  adopt: async (url: string): Promise<string> => {
+    const res = await fetch(`${apiBase()}/api/boards/adopt`, {
+      body: JSON.stringify({ url }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "That image could not be used"));
+    }
+    return ((await res.json()) as { url: string }).url;
+  },
+
   create: async (title: string): Promise<Board> => {
     const res = await fetch(boardsPath(), {
       body: JSON.stringify({ title }),

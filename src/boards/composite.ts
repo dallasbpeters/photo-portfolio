@@ -1,4 +1,5 @@
 import { containedBy } from "../../config/graph.js";
+import { boardsApi } from "../services/portfolioService";
 import type { BoardItem, BoardWire } from "../types";
 
 /**
@@ -116,6 +117,25 @@ const loadImage = (url: string): Promise<HTMLImageElement> =>
     image.src = url;
   });
 
+/**
+ * A picture the canvas is allowed to read back.
+ *
+ * A board legitimately holds images from anywhere — a Pinterest pin is the
+ * common case — and those hosts send no CORS headers, so requesting one with
+ * crossOrigin set fails outright. The picture is plainly visible on the board,
+ * which makes this the least obvious failure in the whole feature.
+ *
+ * So a foreign picture is copied into our own storage first, once, and the
+ * copy is what gets drawn.
+ */
+const readableUrl = async (url: string): Promise<string> => {
+  try {
+    return await loadImage(url).then(() => url);
+  } catch {
+    return await boardsApi.adopt(url);
+  }
+};
+
 /** Fills for the non-transparent background choices. */
 const GROUNDS: Record<string, string> = { black: "#000000", white: "#ffffff" };
 
@@ -153,7 +173,10 @@ export const renderComposite = async (
 
   // Loaded together, drawn in order. Fetching one at a time would make a
   // twelve-image frame twelve round trips deep.
-  const images = await Promise.all(sources.map((s) => loadImage(s.url)));
+  const readable = await Promise.all(
+    sources.map((source) => readableUrl(source.url))
+  );
+  const images = await Promise.all(readable.map((url) => loadImage(url)));
 
   images.forEach((image, index) => {
     const source = sources[index];

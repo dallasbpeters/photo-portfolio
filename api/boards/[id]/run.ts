@@ -891,13 +891,52 @@ const saveFailure = (sql: Sql, itemId: string, message: string) =>
 const vectorInputRefusal = (
   images: string[]
 ): Record<string, unknown> | null =>
-  images.some((url) => SVG_URL.test(url))
+  images.length > 0 && images.every((url) => SVG_URL.test(url))
     ? {
         error:
           "That is an SVG, and image models read pixels. Wire in a photo or a raster generation instead — or use Recraft · Vectorize if you meant to make vector art.",
         missingPort: "image",
       }
     : null;
+
+/**
+ * The wired images a raster model can actually read.
+ *
+ * Vectors are dropped from a batch rather than failing it. One wire out of a
+ * frame carries everything on that frame, and a frame with twenty stickers and
+ * one vectorised logo is a completely ordinary board — refusing the whole run
+ * because one member cannot be read meant a frame could not be generated from
+ * at all once anything had been vectorised into it.
+ *
+ * Never silent: the count comes back on the response as `skippedVectors` so the
+ * canvas can say what did not run. A batch that quietly does nineteen of twenty
+ * jobs is worse than one that fails.
+ */
+const rasterOnly = (images: string[]): string[] =>
+  images.filter((url) => !SVG_URL.test(url));
+
+/**
+ * Removes the unreadable images from the resolved inputs, and says how many.
+ *
+ * Mutates `values` on purpose: every later step — the refusals, the job list,
+ * the batch size — has to agree on what is actually runnable, and threading a
+ * second copy through all of them would be a second thing to keep in step.
+ *
+ * Analyse is exempt. It reads pictures with a vision model rather than handing
+ * them to an image model, and that reads an SVG perfectly well.
+ */
+const dropVectors = (
+  values: Record<string, string[] | undefined>,
+  capability: NodeCapability
+): number => {
+  const wired = values.image ?? [];
+  if (capability === "fal.describe") {
+    return 0;
+  }
+  const usable = rasterOnly(wired);
+  values.image = usable;
+  return wired.length - usable.length;
+};
 
 /**
  * A mask wired into a model that cannot honour one.
@@ -1022,6 +1061,8 @@ type Prepared =
         jobs: Job[];
         model: string | null;
         prompt: string;
+        /** Wired images a raster model could not read, and so did not run. */
+        skippedVectors: number;
         /** Every wired image, for the capability that reads them together. */
         sourceImageUrls: string[];
       };
@@ -1096,6 +1137,11 @@ const prepare = async (
   const shape = falModelInput(model ?? "auto");
 
   const prompt = promptFor(item, values);
+
+  // Vectors are dropped here, once, so everything downstream — the refusals,
+  // the job list, the batch size — agrees on what is actually runnable.
+  const skippedVectors = dropVectors(values, type.capability);
+
   const masks = maskByUrl(rows);
   const unmet = unmetRequirement(
     shape,
@@ -1170,6 +1216,7 @@ const prepare = async (
       runError: null,
       runState: "succeeded",
       skipped: true,
+      skippedVectors,
       variationCount: jobs.length,
     });
   }
@@ -1183,6 +1230,7 @@ const prepare = async (
       jobs,
       model,
       prompt,
+      skippedVectors,
       sourceImageUrls: values.image ?? [],
     },
     status: null,
@@ -1259,6 +1307,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       jobs,
       model,
       prompt,
+      skippedVectors,
       sourceImageUrls,
     } = prepared.ready;
 
@@ -1337,6 +1386,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         runError: null,
         runState: "succeeded",
         skipped: false,
+        skippedVectors,
         variationCount: jobs.length,
       });
     } catch (e) {
