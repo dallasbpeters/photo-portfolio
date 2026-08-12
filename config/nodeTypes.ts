@@ -92,6 +92,7 @@ export type NodeTypeId =
   | "icon"
   | "iterate"
   | "join"
+  | "palette"
   | "prompt";
 
 export interface NodeType {
@@ -210,6 +211,14 @@ export const FAL_MODELS = [
     input: "prompt",
     label: "Recraft v4.1 · Vector",
     vector: true,
+  },
+  {
+    // The one model that takes a colour palette as a parameter rather than as
+    // a request buried in the prompt — see PALETTE.
+    id: "fal-ai/ideogram/v3",
+    input: "prompt-or-image",
+    label: "Ideogram v3 · Palette",
+    vector: false,
   },
   {
     id: "ideogram/v4/instant",
@@ -628,12 +637,54 @@ const ITERATE: NodeType = {
   ],
 };
 
+/** Hex colours, however they were separated when written down. */
+export const HEX_COLOUR = /#[0-9a-f]{6}\b/gi;
+
+/**
+ * The colours a generation is allowed to use.
+ *
+ * Emits a line of text naming them, which is what makes one node serve two very
+ * different mechanisms. Most models can only be *asked* for a palette, and a
+ * sentence naming the hex codes is the best that can be done. Ideogram v3 takes
+ * a real colour palette as a parameter, so for that model the same line is read
+ * back into an actual constraint — see paletteFrom in api/_lib/fal.ts.
+ *
+ * Writing the colours into the prompt rather than inventing a second kind of
+ * wire is what keeps that possible: one text output, understood loosely by
+ * everything and precisely by what can.
+ */
+const PALETTE: NodeType = {
+  id: "palette",
+  inputs: [],
+  label: "Palette",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],
+  settings: [
+    {
+      key: "colors",
+      kind: "text",
+      label: "Colours",
+      maxLength: 400,
+      placeholder: "#0a2540, #f5f0e8, #c8102e",
+    },
+    {
+      // How hard to push. "only" is a flat restriction, which is what a brand
+      // palette usually means; "mostly" leaves room for shadow and skin.
+      default: "only",
+      key: "strictness",
+      kind: "select",
+      label: "Use",
+      options: ["only", "mostly"],
+    },
+  ],
+};
+
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   describe: DESCRIBE,
   generate: GENERATE,
   icon: ICON,
   iterate: ITERATE,
   join: JOIN,
+  palette: PALETTE,
   prompt: PROMPT,
 };
 
@@ -643,6 +694,7 @@ export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
   value === "icon" ||
   value === "iterate" ||
   value === "join" ||
+  value === "palette" ||
   value === "prompt";
 
 export const nodeTypeFor = (value: unknown): NodeType | null =>

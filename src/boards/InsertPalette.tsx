@@ -5,12 +5,14 @@ import {
   LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
+  PaintBoardIcon,
   RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { NodeTypeId } from "../../config/nodeTypes.js";
 import { ALL_SHADERS } from "./shaderConfig";
 
 /**
@@ -27,16 +29,10 @@ import { ALL_SHADERS } from "./shaderConfig";
 export type InsertAction =
   | { kind: "frame" }
   | { kind: "images" }
-  | {
-      kind: "node";
-      nodeType:
-        | "describe"
-        | "generate"
-        | "icon"
-        | "iterate"
-        | "join"
-        | "prompt";
-    }
+  // NodeTypeId rather than a written-out union: the registry is the list, and
+  // spelling it again here meant a new node type compiled fine while being
+  // impossible to insert.
+  | { kind: "node"; nodeType: NodeTypeId }
   | { kind: "shader"; name: string }
   | { kind: "writable"; writable: "note" | "text" };
 
@@ -111,6 +107,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "combine join merge concatenate text prompt",
     icon: LinkSquare01Icon,
     label: "Combine",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "palette" },
+    hint: "palette colour color swatch brand hex restrict",
+    icon: PaintBoardIcon,
+    label: "Palette",
     section: "Nodes",
   },
   {

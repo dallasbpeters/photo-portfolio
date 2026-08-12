@@ -12,6 +12,7 @@ import {
   type FalModelInput,
   falModelFor,
   falModelInput,
+  HEX_COLOUR,
   isFalModel,
   isRunnableNodeType,
   isVectorModel,
@@ -108,7 +109,8 @@ const iteratedOutputsOf = (
   if (depth > MAX_JOIN_DEPTH) {
     return [];
   }
-  const read = (port: string): string[] =>
+  /** Each wire's text kept apart, because each wire fills its own slot. */
+  const readPerWire = (port: string): string[] =>
     wires
       .filter(
         (wire) => wire.targetItemId === row.id && wire.targetPort === port
@@ -116,35 +118,76 @@ const iteratedOutputsOf = (
       .map((wire) =>
         rows.find((candidate) => candidate.id === wire.sourceItemId)
       )
-      .flatMap((source) =>
-        source ? outputsOf(source, rows, wires, depth + 1) : []
+      .map((source) =>
+        source ? outputsOf(source, rows, wires, depth + 1).join("\n") : ""
       )
-      .filter((text): text is string => Boolean(text?.trim()));
+      .filter((text) => text.trim());
 
-  const template = read("template").at(-1);
+  const config = asObject(row.config);
+  // A wire beats the typed field, the same rule a Generate node's prompt
+  // follows: wiring is the more deliberate act.
+  const typedTemplate =
+    typeof config.template === "string" ? config.template.trim() : "";
+  const template = readPerWire("template").at(-1) ?? typedTemplate;
   if (!template) {
     return [];
   }
-  const config = asObject(row.config);
   const placeholder =
     typeof config.placeholder === "string" && config.placeholder.trim()
       ? config.placeholder.trim()
       : DEFAULT_PLACEHOLDER;
-  const wiredValues = read("values");
-  const typedValues =
+
+  const wiredLists = readPerWire("values");
+  const typedList =
     typeof config.values === "string" && config.values.trim()
       ? [config.values]
       : [];
-  const values = (wiredValues.length > 0 ? wiredValues : typedValues).flatMap(
-    (raw) => splitValues(raw, config.split)
-  );
+  const lists = (wiredLists.length > 0 ? wiredLists : typedList)
+    .map((raw) => splitValues(raw, config.split))
+    .filter((list) => list.length > 0);
 
-  // Without the placeholder the template is a constant, and repeating a
-  // constant is not iteration — one prompt is the honest answer.
-  if (values.length === 0 || !template.includes(placeholder)) {
+  return expandTemplate(template, placeholder, lists);
+};
+
+/**
+ * The template filled in, once per row of the value lists.
+ *
+ * Each wire fills its own placeholder: the first list goes into the first slot,
+ * the second into the second, and so on. That is what makes "a {} card with the
+ * word {}" work with a list of colours and a list of words — replacing every
+ * slot with the same value, which is what a naive replace does, produced "a
+ * Brainstorm card with the word Brainstorm".
+ *
+ * Lists are read across rather than combined: four colours and five words give
+ * five prompts, not twenty. A cross product is occasionally what someone wants
+ * and is never what they expect, and it multiplies what a run costs.
+ *
+ * A list shorter than the longest repeats. Truncating to the shortest would
+ * silently drop values that were deliberately typed in.
+ */
+const expandTemplate = (
+  template: string,
+  placeholder: string,
+  lists: string[][]
+): string[] => {
+  const parts = template.split(placeholder);
+  const slots = parts.length - 1;
+  if (slots === 0 || lists.length === 0) {
     return [template];
   }
-  return values.map((value) => template.split(placeholder).join(value));
+  const rows = Math.max(...lists.map((list) => list.length));
+  return Array.from({ length: rows }, (_, row) =>
+    parts.reduce((text, part, index) => {
+      if (index === 0) {
+        return part;
+      }
+      // One list per slot; with a single list every slot draws from it, which
+      // keeps the simple one-placeholder case working unchanged.
+      const list = lists[Math.min(index - 1, lists.length - 1)] ?? [];
+      const value = list[row % list.length] ?? "";
+      return text + value + part;
+    }, "")
+  );
 };
 
 /** How one incoming text becomes one or several values. */
@@ -154,6 +197,23 @@ const splitValues = (raw: string, mode: unknown): string[] => {
   }
   const parts = mode === "commas" ? raw.split(",") : raw.split(LINES);
   return parts.map((part) => part.trim()).filter(Boolean);
+};
+
+/**
+ * A palette node's line of text.
+ *
+ * Written as a sentence containing the hex codes, which is the one shape that
+ * serves both mechanisms: a model that can only be asked reads it as English,
+ * and Ideogram v3 has the codes lifted back out into a real colour palette.
+ */
+const paletteTextOf = (config: Record<string, unknown>): string | null => {
+  const raw = typeof config.colors === "string" ? config.colors : "";
+  const colours = raw.match(HEX_COLOUR);
+  if (!colours || colours.length === 0) {
+    return null;
+  }
+  const strict = config.strictness === "mostly" ? "predominantly" : "only";
+  return `using ${strict} these colours: ${colours.join(", ")}`;
 };
 
 /**
@@ -206,6 +266,9 @@ const singleOutputOf = (
 ): string | null => {
   if (row.node_type === "join") {
     return joinedOutputOf(row, rows, wires, depth);
+  }
+  if (row.node_type === "palette") {
+    return paletteTextOf(asObject(row.config));
   }
   if (row.kind === "photo") {
     return row.photo_url ?? null;

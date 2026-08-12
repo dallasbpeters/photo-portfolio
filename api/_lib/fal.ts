@@ -4,6 +4,7 @@ import {
   FLUX_LORA_IMAGE_ENDPOINT,
   falModelInput,
   falModelLora,
+  HEX_COLOUR,
 } from "../../config/nodeTypes.js";
 import { persistGenerated } from "./persistGenerated.js";
 
@@ -133,6 +134,39 @@ const bodyFor = (
   return sourceImageUrl ? { image_urls: [sourceImageUrl], prompt } : { prompt };
 };
 
+/** Models that accept a colour palette as a parameter rather than as prose. */
+const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
+
+/**
+ * The hex codes in a prompt, as the palette parameter Ideogram expects.
+ *
+ * Lifted back out of the prompt rather than carried on a wire of their own.
+ * A palette node writes its colours into the text so that every model gets
+ * something to go on — most can only be asked — and this turns the same line
+ * into an actual constraint for the one model that can honour it.
+ *
+ * Weights are left at the default: an even palette is what a brand palette
+ * usually means, and guessing a weighting from the order they were typed in
+ * would be inventing intent.
+ */
+const paletteFrom = (
+  prompt: string
+): { members: { rgb: { b: number; g: number; r: number } }[] } | null => {
+  const found = prompt.match(HEX_COLOUR);
+  if (!found || found.length === 0) {
+    return null;
+  }
+  return {
+    members: found.slice(0, 8).map((hex) => ({
+      rgb: {
+        b: Number.parseInt(hex.slice(5, 7), 16),
+        g: Number.parseInt(hex.slice(3, 5), 16),
+        r: Number.parseInt(hex.slice(1, 3), 16),
+      },
+    })),
+  };
+};
+
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
@@ -183,6 +217,14 @@ export const generateImage = async (
     prompt,
     sourceImageUrl
   );
+
+  // A real constraint where the model has one, rather than a request in prose.
+  if (PALETTE_MODELS.has(model)) {
+    const palette = paletteFrom(prompt);
+    if (palette) {
+      body.color_palette = palette;
+    }
+  }
 
   const res = await fetch(`https://fal.run/${model}`, {
     body: JSON.stringify(body),

@@ -430,7 +430,7 @@ export function BoardCanvas({
    * only way to know a batch is set up the way you meant.
    */
   const previewTextFor = (item: BoardItem): string | null => {
-    if (item.nodeType === "join") {
+    if (item.nodeType === "join" || item.nodeType === "palette") {
       return outputTextOf(item, { items, wires });
     }
     if (item.nodeType !== "iterate") {

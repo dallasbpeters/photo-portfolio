@@ -1,4 +1,4 @@
-import { DEFAULT_PLACEHOLDER } from "../../config/nodeTypes.js";
+import { DEFAULT_PLACEHOLDER, HEX_COLOUR } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
 
 /**
@@ -68,36 +68,59 @@ export const iteratedTextOf = (
   if (depth > MAX_JOIN_DEPTH) {
     return [];
   }
-  const read = (port: string): string[] =>
+  /** Each wire kept apart, because each wire fills its own slot. */
+  const readPerWire = (port: string): string[] =>
     graph.wires
       .filter((w) => w.targetItemId === item.id && w.targetPort === port)
       .map((w) => graph.items.find((i) => i.id === w.sourceItemId))
-      .map((source) => (source ? outputTextOf(source, graph, depth + 1) : null))
-      .filter((text): text is string => Boolean(text?.trim()));
+      .map((source) =>
+        source ? (outputTextOf(source, graph, depth + 1) ?? "") : ""
+      )
+      .filter((text) => text.trim());
 
   const config = item.config ?? {};
-  // A wire beats the typed field, matching the server.
   const typedTemplate =
     typeof config.template === "string" ? config.template.trim() : "";
-  const template = read("template").at(-1) ?? typedTemplate;
+  const template = readPerWire("template").at(-1) ?? typedTemplate;
   if (!template) {
     return [];
   }
   const raw = config.placeholder;
   const placeholder =
     typeof raw === "string" && raw.trim() ? raw.trim() : DEFAULT_PLACEHOLDER;
-  const wiredValues = read("values");
-  const typedValues =
+
+  const wiredLists = readPerWire("values");
+  const typedList =
     typeof config.values === "string" && config.values.trim()
       ? [config.values]
       : [];
-  const values = (wiredValues.length > 0 ? wiredValues : typedValues).flatMap(
-    (text) => splitValues(text, config.split)
-  );
-  if (values.length === 0 || !template.includes(placeholder)) {
+  const lists = (wiredLists.length > 0 ? wiredLists : typedList)
+    .map((text) => splitValues(text, config.split))
+    .filter((list) => list.length > 0);
+
+  return expandTemplate(template, placeholder, lists);
+};
+
+/** Mirrors expandTemplate on the server, which is the authority. */
+const expandTemplate = (
+  template: string,
+  placeholder: string,
+  lists: string[][]
+): string[] => {
+  const parts = template.split(placeholder);
+  if (parts.length - 1 === 0 || lists.length === 0) {
     return [template];
   }
-  return values.map((value) => template.split(placeholder).join(value));
+  const rows = Math.max(...lists.map((list) => list.length));
+  return Array.from({ length: rows }, (_, row) =>
+    parts.reduce((text, part, index) => {
+      if (index === 0) {
+        return part;
+      }
+      const list = lists[Math.min(index - 1, lists.length - 1)] ?? [];
+      return text + (list[row % list.length] ?? "") + part;
+    }, "")
+  );
 };
 
 const LINES = /\r?\n/;
@@ -108,6 +131,25 @@ const splitValues = (raw: string, mode: unknown): string[] => {
   }
   const parts = mode === "commas" ? raw.split(",") : raw.split(LINES);
   return parts.map((part) => part.trim()).filter(Boolean);
+};
+
+/**
+ * A palette node's line, mirroring paletteTextOf on the server.
+ *
+ * The hex codes are written into the sentence deliberately: it reads as English
+ * for the models that can only be asked, and Ideogram v3 has the codes lifted
+ * back out into a real palette parameter.
+ */
+export const paletteTextOf = (
+  config: Record<string, unknown>
+): string | null => {
+  const raw = typeof config.colors === "string" ? config.colors : "";
+  const colours = raw.match(HEX_COLOUR);
+  if (!colours || colours.length === 0) {
+    return null;
+  }
+  const strict = config.strictness === "mostly" ? "predominantly" : "only";
+  return `using ${strict} these colours: ${colours.join(", ")}`;
 };
 
 export const outputTextOf = (
@@ -130,6 +172,9 @@ export const outputTextOf = (
     }
     const separator = item.config?.separator;
     return parts.join(typeof separator === "string" ? separator : ", ");
+  }
+  if (item.nodeType === "palette") {
+    return paletteTextOf(item.config ?? {});
   }
   if (item.kind === "note" || item.kind === "text") {
     return item.body?.trim() || null;

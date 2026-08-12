@@ -6,6 +6,7 @@ import {
   LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
+  PaintBoardIcon,
   PlayIcon,
   RepeatIcon,
   SearchVisualIcon,
@@ -65,6 +66,7 @@ import type {
   Photo,
 } from "../../types";
 import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCurstor";
 
@@ -984,76 +986,7 @@ export function BoardEditor({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            onClick={() => addWritable("note")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
-            Note
-          </Button>
-          <Button
-            onClick={() => addWritable("text")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
-            Text
-          </Button>
-          <Button
-            onClick={() => setIsPicking((v) => !v)}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
-            Image
-          </Button>
-          <Button
-            onClick={() => addNode("generate")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
-            Generate
-          </Button>
-          <Button
-            onClick={() => addNode("describe")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
-            Analyse
-          </Button>
-          <Button onClick={() => addNode("join")} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
-            Combine
-          </Button>
-          <Button
-            onClick={() => addNode("iterate")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
-            Iterate
-          </Button>
-          <Button onClick={() => addNode("icon")} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
-            Icon
-          </Button>
-          <Button
-            onClick={() => addNode("prompt")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
-            Prompt
-          </Button>
-          <Button onClick={addFrame} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
-            Frame
-          </Button>
-
+        <div className="flex flex-1 justify-end gap-2">
           {/* Only offered once there is a graph to run. A board of pinned
               photographs has nothing to execute, and a control that would
               always be a no-op is noise. */}
@@ -1126,6 +1059,85 @@ export function BoardEditor({
             />
           </div>
         </div>
+
+        <Card className="fixed top-40 left-10 z-20 grid place-items-start justify-start gap-2 bg-background text-white">
+          <Button
+            onClick={() => addWritable("note")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
+            Note
+          </Button>
+          <Button
+            onClick={() => addWritable("text")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
+            Text
+          </Button>
+          <Button
+            onClick={() => setIsPicking((v) => !v)}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
+            Image
+          </Button>
+          <Button
+            onClick={() => addNode("generate")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+            Generate
+          </Button>
+          <Button
+            onClick={() => addNode("describe")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
+            Analyse
+          </Button>
+          <Button onClick={() => addNode("join")} type="button" variant="ghost">
+            <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
+            Combine
+          </Button>
+          <Button
+            onClick={() => addNode("iterate")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
+            Iterate
+          </Button>
+          <Button onClick={() => addNode("icon")} type="button" variant="ghost">
+            <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
+            Icon
+          </Button>
+          <Button
+            onClick={() => addNode("palette")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={PaintBoardIcon} size={14} />
+            Palette
+          </Button>
+          <Button
+            onClick={() => addNode("prompt")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
+            Prompt
+          </Button>
+          <Button onClick={addFrame} type="button" variant="ghost">
+            <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
+            Frame
+          </Button>
+        </Card>
 
         <BoardCanvas
           autoEditId={autoEditId}
