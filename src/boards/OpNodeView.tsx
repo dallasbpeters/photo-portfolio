@@ -525,13 +525,15 @@ function NodeBody({
   analysed,
   config,
   hasWiredPrompt,
-  wiredPrompt,
   images,
   item,
   onConfigChange,
+  onRemoveVersion,
+  onSendVersions,
   readOnly,
   state,
   type,
+  wiredPrompt,
 }: NodeBodyProps) {
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
@@ -550,9 +552,11 @@ function NodeBody({
               at a glance, which is the entire reason for asking for several. */}
       <ResultImages
         images={images}
+        onRemove={onRemoveVersion}
         onSelect={(index) =>
           onConfigChange({ ...config, selectedVersion: index })
         }
+        onSendAll={onSendVersions}
         selected={selectedIndex(config)}
       />
 

@@ -100,7 +100,9 @@ export function WireLayer({
               className="transition-all duration-300"
               d={d}
               stroke={
-                isHovered ? "rgb(248 113 113 / 0.95)" : "rgb(56 189 248 / 0.55)"
+                isHovered
+                  ? "oklch(57.6% 0.21 27.25)"
+                  : "oklch(67.2% 0.22 241.99)"
               }
               strokeWidth={isHovered ? stroke * 1.5 : stroke}
             />
@@ -143,12 +145,12 @@ export function WireLayer({
                   cy={mid.y}
                   fill="rgb(24 24 27)"
                   r={badge}
-                  stroke="rgb(248 113 113 / 0.95)"
+                  stroke="oklch(57.6% 0.21 27.25)"
                   strokeWidth={stroke}
                 />
                 <path
                   d={`M ${mid.x - badge / 3} ${mid.y - badge / 3} L ${mid.x + badge / 3} ${mid.y + badge / 3} M ${mid.x + badge / 3} ${mid.y - badge / 3} L ${mid.x - badge / 3} ${mid.y + badge / 3}`}
-                  stroke="rgb(248 113 113 / 0.95)"
+                  stroke="oklch(57.6% 0.21 27.25)"
                   strokeLinecap="round"
                   strokeWidth={stroke}
                 />
