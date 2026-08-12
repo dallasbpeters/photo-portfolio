@@ -36,6 +36,19 @@ export interface MaskConfig {
 /** Brush width as a fraction of the node's width, so it scales with the node. */
 export const DEFAULT_MASK_WIDTH = 0.08;
 
+/**
+ * How a mask looks: red for "change this", blue for "keep this".
+ *
+ * Here rather than in either component because three places draw a mask — the
+ * stroke being painted, the finished overlay, and nothing else may disagree
+ * with them. A preview in one colour that settles into another reads as the
+ * stroke having been misunderstood.
+ */
+export const MASK_PAINT = "#f43f5e";
+export const MASK_KEEP = "#38bdf8";
+/** Enough to see the mask, little enough to see through it. */
+export const MASK_OPACITY = 0.55;
+
 export const isMaskConfig = (value: unknown): value is MaskConfig =>
   typeof value === "object" &&
   value !== null &&

@@ -8,7 +8,12 @@ import {
   SquareIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { ColorWell } from "./ColorWell";
-import { type DrawTool, isTransparent, NO_FILL } from "./drawing";
+import {
+  DEFAULT_STROKE_WIDTH,
+  type DrawTool,
+  isTransparent,
+  NO_FILL,
+} from "./drawing";
 
 /**
  * The drawing tools, and the colours the next mark is made in.
@@ -50,6 +55,20 @@ const TOOLS: { icon: typeof SquareIcon; label: string; tool: DrawTool }[] = [
 
 /** Widths worth having, rather than a slider nobody wants to aim at. */
 const WIDTHS = [2, 4, 8, 16];
+
+/**
+ * The same idea for the mask brush, an order of magnitude larger.
+ *
+ * A mask covers regions — a face, a sky, a card someone is holding — where a
+ * pen marks lines. Painting a sky out at four canvas units is a hundred strokes
+ * of work, so the mask brush gets its own scale rather than sharing one that
+ * was chosen for drawing.
+ */
+const MASK_WIDTHS = [24, 48, 96, 160];
+
+/** The width a brush adopts when it is picked and the current one is unusable. */
+const MASK_DEFAULT_WIDTH = 48;
+const WIDEST_PEN = 16;
 
 const buttonClass = (isActive: boolean): string =>
   `grid size-8 place-items-center rounded transition-colors ${
@@ -93,7 +112,19 @@ export function DrawToolbar({
           aria-pressed={tool === entry.tool}
           className={buttonClass(tool === entry.tool)}
           key={entry.tool}
-          onClick={() => onTool(entry.tool)}
+          onClick={() => {
+            onTool(entry.tool);
+            // The two brushes work at different scales, so switching between
+            // them carries a width the other cannot use — a mask painted at a
+            // pen's weight covers almost nothing, and looks like the brush not
+            // working rather than like a setting to change.
+            if (entry.tool === "mask" && style.strokeWidth <= WIDEST_PEN) {
+              onStyle({ ...style, strokeWidth: MASK_DEFAULT_WIDTH });
+            }
+            if (entry.tool !== "mask" && style.strokeWidth > WIDEST_PEN) {
+              onStyle({ ...style, strokeWidth: DEFAULT_STROKE_WIDTH });
+            }
+          }}
           title={entry.label}
           type="button"
         >
@@ -150,7 +181,7 @@ export function DrawToolbar({
       <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
 
       <div className="flex items-center gap-0.5">
-        {WIDTHS.map((width) => (
+        {(tool === "mask" ? MASK_WIDTHS : WIDTHS).map((width) => (
           <button
             aria-label={`Line weight ${width}`}
             aria-pressed={style.strokeWidth === width}

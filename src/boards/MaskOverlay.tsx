@@ -1,4 +1,4 @@
-import type { MaskConfig } from "./mask";
+import { MASK_KEEP, MASK_OPACITY, MASK_PAINT, type MaskConfig } from "./mask";
 
 /**
  * The painted mask, shown over the picture it belongs to.
@@ -56,10 +56,10 @@ export function MaskOverlay({ height, mask, width }: MaskOverlayProps) {
             // a different colour. Painting "protect this" and seeing the same
             // red that elsewhere means "replace this" is how a mask ends up
             // used backwards without anyone noticing.
-            stroke={mask.invert ? "#38bdf8" : "#f43f5e"}
+            stroke={mask.invert ? MASK_KEEP : MASK_PAINT}
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeOpacity={0.55}
+            strokeOpacity={MASK_OPACITY}
             strokeWidth={Math.max(1, stroke.width * width)}
           />
         );
