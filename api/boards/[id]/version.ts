@@ -39,7 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const raw = req.query.id;
   const boardId = Array.isArray(raw) ? raw[0] : raw;
-  const body = parseJsonBody(req) as { index?: unknown; itemId?: unknown };
+  const body = parseJsonBody(req.body) as {
+    index?: unknown;
+    itemId?: unknown;
+  };
   const itemId = typeof body.itemId === "string" ? body.itemId : "";
   const index = Number(body.index);
   const hasTarget = Boolean(boardId && itemId);

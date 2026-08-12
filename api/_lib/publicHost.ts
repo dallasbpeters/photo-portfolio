@@ -149,22 +149,18 @@ export const resolvePublicUrl = async (
     return addresses.some((entry) => isPrivateAddress(entry.address))
       ? { ok: false, reason: "private" }
       : { ok: true, url };
-  } catch {
-    // A failed lookup is never fatal here, whatever its code.
-    //
-    // This check only ever had one job: refuse a name that points somewhere
-    // private. It was never the authority on whether a site exists — fetch
-    // resolves the name again on its own, and a domain that really is missing
-    // fails there and reports itself accurately. Using a lookup failure to mean
-    // "no such site" therefore bought nothing, and cost a great deal: in an
-    // environment where node:dns is restricted while fetch still works — a
-    // serverless sandbox, as here — every lookup fails and every perfectly good
-    // domain was declared not to exist.
-    //
-    // What remains without DNS still closes the routes that matter. An IP
-    // literal was checked above without any lookup, and so was a local-looking
-    // name. What is lost is only the case of a public *name* pointing at a
-    // private address, which no pre-check could have guaranteed anyway.
+  } catch (e) {
+    // A name DNS positively denies is genuinely missing, and saying so beats
+    // letting fetch fail with something vaguer.
+    const { code } = e as NodeJS.ErrnoException;
+    if (code === "ENOTFOUND" || code === "EAI_NODATA") {
+      return { ok: false, reason: "unresolved" };
+    }
+    // Any other failure is *ours*, not the domain's — a resolver that is busy,
+    // or an environment where node:dns is unavailable while fetch still works.
+    // Refusing there would blame a good site for something we could not check,
+    // so the guard degrades: IP literals and local-looking names were both
+    // rejected above without any lookup, which closes the routes that matter.
     return { ok: true, url };
   }
 };

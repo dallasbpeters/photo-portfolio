@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const body = parseJsonBody(req) as { url?: unknown };
+  const body = parseJsonBody(req.body) as { url?: unknown };
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url) {
     return res.status(400).json({ error: "A page address is required" });

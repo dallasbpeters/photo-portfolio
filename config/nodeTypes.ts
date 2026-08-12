@@ -197,6 +197,18 @@ export const FAL_MODELS = [
     vector: true,
   },
   {
+    id: "ideogram/v4/instant",
+    input: "prompt",
+    label: "Ideogram v4 Instant",
+    vector: false,
+  },
+  {
+    id: "ideogram/v4/image-to-image",
+    input: "prompt",
+    label: "Ideogram v4 Image-to-Image",
+    vector: false,
+  },
+  {
     id: "fal-ai/recraft/v4/pro/text-to-vector",
     input: "prompt",
     label: "Recraft v4 Pro · Vector",

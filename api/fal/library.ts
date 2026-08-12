@@ -54,7 +54,10 @@ async function handleList(
  * persistGenerated.
  */
 async function handleImport(req: VercelRequest, res: VercelResponse) {
-  const body = parseJsonBody(req) as { contentType?: unknown; url?: unknown };
+  const body = parseJsonBody(req.body) as {
+    contentType?: unknown;
+    url?: unknown;
+  };
   const url = typeof body.url === "string" ? body.url : "";
   // Checked against the media allowlist, not merely parsed: this is a URL the
   // browser supplied and the server is about to go and fetch.
