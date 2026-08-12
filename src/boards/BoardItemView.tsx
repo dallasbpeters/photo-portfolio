@@ -646,6 +646,14 @@ export function BoardItemView({
         isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-white/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
       onPointerDown={(e) => {
+        // Only the primary button picks an item up. A right-click emits
+        // pointerdown too, and letting it begin a drag meant the context menu
+        // opened over a gesture holding everyone's old positions — which were
+        // written back the moment it ended, undoing whatever the menu had just
+        // done. The press still passes through, so the menu sees the selection.
+        if (e.button !== 0) {
+          return;
+        }
         // While editing, the press belongs to the field — placing a caret or
         // selecting text must not start a drag, and must not reach the
         // background handler, which would clear the selection and pan.
@@ -730,6 +738,10 @@ export function BoardItemView({
           className="absolute right-0 bottom-0 grid size-12 origin-bottom-right cursor-nwse-resize place-items-center text-white/90"
           onPointerDown={(e) => {
             e.stopPropagation();
+            // Primary button only, like the item body above.
+            if (e.button !== 0) {
+              return;
+            }
             onResizeStart(index, e.clientX, e.clientY);
           }}
           style={chromeScale}

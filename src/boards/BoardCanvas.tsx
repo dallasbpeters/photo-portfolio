@@ -1049,6 +1049,14 @@ export function BoardCanvas({
           endGesture(e);
         }}
         onPointerDown={(e) => {
+          // Only the primary button begins anything. A right-click also emits
+          // pointerdown, so without this it started a drag that captured every
+          // item's position, sat there while the context menu was open, and
+          // wrote those stale positions back when it ended — which looked
+          // exactly like the menu's action being undone a moment after it ran.
+          if (e.button !== 0) {
+            return;
+          }
           // A press that began on a port is already a wire drag; the surface
           // must not also start panning underneath it.
           if (wiring.isDragging) {
