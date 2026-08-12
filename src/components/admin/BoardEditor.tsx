@@ -36,6 +36,7 @@ import {
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
+import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
 import { BoardDrawTools } from "../../boards/BoardDrawTools";
 import { compositeSources, renderComposite } from "../../boards/composite";
@@ -91,9 +92,6 @@ const AUTOSAVE_DELAY_MS = 1200;
 /** New items land near the middle of the canvas, offset so they do not stack. */
 /** How far a port-created node sits from the thing feeding it, in canvas units. */
 const PORT_SPAWN_GAP = 120;
-
-/** Breathing room inside a frame when it tidies collected results. */
-const FRAME_PAD = 40;
 
 /**
  * Where the next item goes.
@@ -882,28 +880,14 @@ export function BoardEditor({
       return;
     }
 
-    // Laid out in a grid rather than framed where they lie. A frame's contents
-    // are decided by geometry — anything whose centre falls inside belongs to
-    // it — so a frame drawn around a scattered selection also swallows every
-    // bystander in that rectangle. Gathering the pictures into the frame is
-    // the only way the group can mean exactly what was selected.
-    const columns = Math.ceil(Math.sqrt(chosen.length));
-    const rows = Math.ceil(chosen.length / columns);
-    // One cell size for all of them, so the grid reads as deliberate. Each
-    // picture keeps its own proportions and sits centred in its cell.
-    const cell = {
-      height: Math.max(...chosen.map((item) => item.height)),
-      width: Math.max(...chosen.map((item) => item.width)),
-    };
-
-    const inner = {
-      height: rows * cell.height + (rows - 1) * FRAME_PAD,
-      width: columns * cell.width + (columns - 1) * FRAME_PAD,
-    };
-    // Room for the frame's name, which sits inside its own bounds.
-    const header = FRAME_PAD * 2;
-    const width = inner.width + FRAME_PAD * 2;
-    const height = inner.height + FRAME_PAD * 2 + header;
+    // Gathered into a grid rather than framed where they lie. A frame's
+    // contents are decided by geometry — anything whose centre falls inside
+    // belongs to it — so a frame drawn around a scattered selection also
+    // swallows every bystander in that rectangle.
+    const ordered = readingOrder(chosen);
+    // Measured at the origin, then placed: the size has to be known before a
+    // free spot can be found, and the spot before the pictures can be put down.
+    const size = gridLayout(ordered, { x: 0, y: 0 });
 
     // The spot is chosen against the items that are staying put: the selection
     // is about to move, so counting it would push the frame away from a space
@@ -912,46 +896,22 @@ export function BoardEditor({
       (item) => !chosen.some((pick) => pick.id === item.id)
     );
     const spot = findFreeSpot({
-      height,
+      height: size.height,
       items: staying,
       origin: dropOrigin(staying, viewCentreRef.current?.() ?? null),
-      width,
+      width: size.width,
     });
-    const left = Math.round(spot.x - width / 2);
-    const top = Math.round(spot.y - height / 2);
-
-    const placed = new Map(
-      chosen.map((item, index) => {
-        const column = index % columns;
-        const row = Math.floor(index / columns);
-        return [
-          item.id,
-          {
-            x: Math.round(
-              left +
-                FRAME_PAD +
-                column * (cell.width + FRAME_PAD) +
-                (cell.width - item.width) / 2
-            ),
-            y: Math.round(
-              top +
-                FRAME_PAD +
-                header +
-                row * (cell.height + FRAME_PAD) +
-                (cell.height - item.height) / 2
-            ),
-          },
-        ];
-      })
-    );
+    const left = Math.round(spot.x - size.width / 2);
+    const top = Math.round(spot.y - size.height / 2);
+    const { at } = gridLayout(ordered, { x: left, y: top });
 
     const frame: BoardItem = {
       ...BLANK_ITEM,
       body: "",
-      height,
+      height: size.height,
       id: newItemId(),
       kind: "frame",
-      width,
+      width: size.width,
       x: left,
       y: top,
       z: 0,
@@ -960,11 +920,51 @@ export function BoardEditor({
     change([
       frame,
       ...items.map((item) => {
-        const at = placed.get(item.id);
-        return at ? { ...item, ...at } : item;
+        const place = at.get(item.id);
+        return place ? { ...item, ...place } : item;
       }),
     ]);
     setAutoEditId(frame.id);
+  };
+
+  /**
+   * Tidies a frame that already exists.
+   *
+   * The same grid grouping uses, so a frame you tidy and a group you make of
+   * the same pictures come out identical. The frame keeps its top-left and is
+   * resized to fit — growing from the corner you can see rather than from the
+   * middle, which would slide the whole group sideways under the pointer.
+   *
+   * Order is preserved: the pictures are read top-to-bottom, left-to-right as
+   * they sit now, so tidying never scrambles a set that was already sequenced.
+   */
+  const autoArrange = (frameId: string) => {
+    const frame = items.find((item) => item.id === frameId);
+    if (frame?.kind !== "frame") {
+      return;
+    }
+    const inside = containedBy(frame, items);
+    if (inside.length === 0) {
+      toast.error("This frame has nothing in it to arrange");
+      return;
+    }
+    const ordered = readingOrder(inside);
+    const { at, height, width } = gridLayout(ordered, {
+      x: frame.x,
+      y: frame.y,
+    });
+    change(
+      items.map((item) => {
+        if (item.id === frame.id) {
+          return { ...item, height, width };
+        }
+        const place = at.get(item.id);
+        return place ? { ...item, ...place } : item;
+      })
+    );
+    toast.success(
+      inside.length === 1 ? "Arranged" : `Arranged ${inside.length} items`
+    );
   };
 
   /**
@@ -1552,6 +1552,7 @@ export function BoardEditor({
           drawTool={drawTool}
           items={items}
           keyOf={keyOf}
+          onArrangeFrame={autoArrange}
           onCancel={graphRun.cancel}
           onChange={change}
           onConfigChange={changeConfig}

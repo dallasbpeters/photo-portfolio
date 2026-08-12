@@ -70,6 +70,20 @@ interface BoardCanvasProps {
   items: BoardItem[];
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
+  /**
+   * A stroke painted onto an image with the mask brush.
+   *
+   * The canvas owns the gesture and knows which picture it landed on; the
+   * editor owns the item's config, which is where the mask is kept.
+   */
+  /**
+   * Wraps the given items in a frame of their own.
+   *
+   * The canvas knows what is selected; only the editor can mint an item, which
+   * is the same division onCreateFromPort and onCopyFrame already use.
+   */
+  /** Lays a frame's contents out in a grid, keeping their order. */
+  onArrangeFrame?: (itemId: string) => void;
   /** Stops whatever run is in flight. */
   onCancel?: () => void;
   onChange: (items: BoardItem[]) => void;
@@ -119,18 +133,6 @@ interface BoardCanvasProps {
     image: { url: string },
     point: { x: number; y: number }
   ) => void;
-  /**
-   * A stroke painted onto an image with the mask brush.
-   *
-   * The canvas owns the gesture and knows which picture it landed on; the
-   * editor owns the item's config, which is where the mask is kept.
-   */
-  /**
-   * Wraps the given items in a frame of their own.
-   *
-   * The canvas knows what is selected; only the editor can mint an item, which
-   * is the same division onCreateFromPort and onCopyFrame already use.
-   */
   /** Downloads everything a node made, or a frame holds, as one archive. */
   onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
@@ -258,6 +260,7 @@ export function BoardCanvas({
   onChange,
   onConfigChange,
   onCopyFrame,
+  onArrangeFrame,
   onCreateFromPort,
   onExportItem,
   onGroupIntoFrame,
@@ -1269,6 +1272,10 @@ export function BoardCanvas({
       <CanvasMenu
         items={items}
         menu={menu}
+        onArrange={(itemId) => {
+          onArrangeFrame?.(itemId);
+          setMenu(null);
+        }}
         onCopyFrame={(frame, title) => {
           onCopyFrame?.(frame, title);
           setMenu(null);

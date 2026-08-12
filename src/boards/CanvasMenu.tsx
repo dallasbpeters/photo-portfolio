@@ -3,6 +3,7 @@ import {
   CopyIcon,
   Download01Icon,
   FrameIcon,
+  GridIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import type { BoardItem, BoardWire } from "../types";
@@ -36,6 +37,8 @@ export interface CanvasMenuTarget {
 interface CanvasMenuProps {
   items: BoardItem[];
   menu: CanvasMenuTarget | null;
+  /** Lays the frame's contents out in a grid, keeping their order. */
+  onArrange: (itemId: string) => void;
   onCopyFrame: (frame: BoardItem, title: string) => void;
   onDismiss: () => void;
   /** Downloads everything the frame holds, as one archive. */
@@ -138,22 +141,46 @@ const countResults = (item: BoardItem): number => {
   return result.url ? 1 : 0;
 };
 
-/** The two things a frame under the pointer can do. */
+/** What a single selected node that has produced something can do. */
+function NodeRow({ count, onExport }: { count: number; onExport: () => void }) {
+  return (
+    <button className={rowClass} onClick={onExport} type="button">
+      <HugeiconsIcon aria-hidden icon={Download01Icon} size={14} />
+      <span>Download {count === 1 ? "it" : `all ${count}`}</span>
+    </button>
+  );
+}
+
+/** The things a frame under the pointer can do. */
 function FrameRows({
+  canArrange,
   canGroup,
   count,
+  onArrange,
   onCopy,
   onExport,
 }: {
+  canArrange: boolean;
   canGroup: boolean;
   count: number;
+  onArrange: () => void;
   onCopy: () => void;
   onExport: () => void;
 }) {
   return (
     <>
+      {canArrange ? (
+        <button
+          className={`${rowClass} border-white/10 ${canGroup ? "border-t" : ""}`}
+          onClick={onArrange}
+          type="button"
+        >
+          <HugeiconsIcon aria-hidden icon={GridIcon} size={14} />
+          <span>Arrange {count} into a grid</span>
+        </button>
+      ) : null}
       <button
-        className={`${rowClass} border-white/10 ${canGroup ? "border-t" : ""}`}
+        className={`${rowClass} border-white/10 ${canGroup || canArrange ? "border-t" : ""}`}
         onClick={onExport}
         type="button"
       >
@@ -178,6 +205,7 @@ const rowClass =
 export function CanvasMenu({
   items,
   menu,
+  onArrange,
   onCopyFrame,
   onDismiss,
   onExport,
@@ -229,14 +257,7 @@ export function CanvasMenu({
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
         {onlyPicked && madeCount > 0 && typed === null ? (
-          <button
-            className={rowClass}
-            onClick={() => onExport(onlyPicked.id)}
-            type="button"
-          >
-            <HugeiconsIcon aria-hidden icon={Download01Icon} size={14} />
-            <span>Download {madeCount === 1 ? "it" : `all ${madeCount}`}</span>
-          </button>
+          <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
         ) : null}
 
         {canGroup && typed === null ? (
@@ -260,8 +281,10 @@ export function CanvasMenu({
 
         {frame && typed === null ? (
           <FrameRows
+            canArrange={(summary?.count ?? 0) > 1}
             canGroup={canGroup}
             count={summary?.count ?? 0}
+            onArrange={() => onArrange(frame.id)}
             onCopy={() =>
               setNaming({ for: menu, title: frameBoardTitle(frame) })
             }
