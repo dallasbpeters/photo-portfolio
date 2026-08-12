@@ -130,8 +130,13 @@ const iteratedOutputsOf = (
     typeof config.placeholder === "string" && config.placeholder.trim()
       ? config.placeholder.trim()
       : DEFAULT_PLACEHOLDER;
-  const values = read("values").flatMap((raw) =>
-    splitValues(raw, config.split)
+  const wiredValues = read("values");
+  const typedValues =
+    typeof config.values === "string" && config.values.trim()
+      ? [config.values]
+      : [];
+  const values = (wiredValues.length > 0 ? wiredValues : typedValues).flatMap(
+    (raw) => splitValues(raw, config.split)
   );
 
   // Without the placeholder the template is a constant, and repeating a

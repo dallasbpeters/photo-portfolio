@@ -578,6 +578,27 @@ const ITERATE: NodeType = {
   outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],
   settings: [
     {
+      // Typed here or wired in, exactly like a Generate node's prompt. Without
+      // this the only text field on the node was the 40-character placeholder,
+      // so a template pasted onto the node came back cut to 40 characters —
+      // and with nothing wired the node emitted nothing at all, which reached
+      // the Generate node downstream as "this node needs a prompt".
+      key: "template",
+      kind: "text",
+      label: "Template",
+      maxLength: GENERATE_PROMPT_MAX,
+      placeholder: "a {} chair, studio lit…",
+    },
+    {
+      key: "values",
+      kind: "text",
+      label: "Values",
+      // Roomier than a prompt: this is a list, and a list of forty words is
+      // ordinary where a forty-sentence prompt is not.
+      maxLength: GENERATE_PROMPT_MAX * 2,
+      placeholder: "oak\nsteel\nmoulded plastic",
+    },
+    {
       key: "placeholder",
       kind: "text",
       label: "Insert at",

@@ -75,16 +75,24 @@ export const iteratedTextOf = (
       .map((source) => (source ? outputTextOf(source, graph, depth + 1) : null))
       .filter((text): text is string => Boolean(text?.trim()));
 
-  const template = read("template").at(-1);
+  const config = item.config ?? {};
+  // A wire beats the typed field, matching the server.
+  const typedTemplate =
+    typeof config.template === "string" ? config.template.trim() : "";
+  const template = read("template").at(-1) ?? typedTemplate;
   if (!template) {
     return [];
   }
-  const config = item.config ?? {};
   const raw = config.placeholder;
   const placeholder =
     typeof raw === "string" && raw.trim() ? raw.trim() : DEFAULT_PLACEHOLDER;
-  const values = read("values").flatMap((text) =>
-    splitValues(text, config.split)
+  const wiredValues = read("values");
+  const typedValues =
+    typeof config.values === "string" && config.values.trim()
+      ? [config.values]
+      : [];
+  const values = (wiredValues.length > 0 ? wiredValues : typedValues).flatMap(
+    (text) => splitValues(text, config.split)
   );
   if (values.length === 0 || !template.includes(placeholder)) {
     return [template];
