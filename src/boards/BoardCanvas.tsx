@@ -1,4 +1,4 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { MutableRefObject, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CANVAS_HEIGHT,
@@ -39,6 +39,17 @@ import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
 const NO_WIRES: BoardWire[] = [];
+
+/**
+ * Stand-in for a caller that does not want the view centre.
+ *
+ * Shared and written to harmlessly, the same shape as NO_WIRES above — it lets
+ * the canvas publish the getter unconditionally instead of guarding every
+ * render on whether anyone asked for it.
+ */
+const NO_VIEW_CENTRE: MutableRefObject<
+  (() => { x: number; y: number }) | null
+> = { current: null };
 
 /** Where a mark ended up, in canvas units. */
 export interface Box {
@@ -139,6 +150,15 @@ interface BoardCanvasProps {
    * were made, which is most of the reason to publish one.
    */
   readOnly?: boolean;
+  /**
+   * Filled with a getter for the middle of what is currently on screen.
+   *
+   * Only the canvas can turn the viewport into a board coordinate, but it is
+   * the editor that decides where a new item goes — so instead of lifting the
+   * viewport into the editor, the canvas hands down the one question the
+   * editor needs answered.
+   */
+  viewCentreRef?: MutableRefObject<(() => { x: number; y: number }) | null>;
   wires?: BoardWire[];
 }
 
@@ -244,6 +264,7 @@ export function BoardCanvas({
   onSelectionChange,
   onSendVersions,
   onWiresChange,
+  viewCentreRef = NO_VIEW_CENTRE,
   keyOf,
   autoEditId,
   readOnly = false,
@@ -446,6 +467,11 @@ export function BoardCanvas({
       ? view.toCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2)
       : { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
   }, [view]);
+
+  // Published so the editor can drop new items where you are looking. Assigned
+  // during render rather than in an effect: an insert can happen on the very
+  // first interaction, before effects from a later render have run.
+  viewCentreRef.current = viewCentre;
 
   /**
    * Pasting an image onto the board.

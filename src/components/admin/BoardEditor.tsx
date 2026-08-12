@@ -114,7 +114,17 @@ const DROP_FAN = 28;
  * nothing having happened. Only an empty board falls back to the canvas centre,
  * which is where an empty board is already looking.
  */
-const dropOrigin = (items: BoardItem[]): { x: number; y: number } => {
+const dropOrigin = (
+  items: BoardItem[],
+  /** The middle of what is on screen, when the canvas has reported it. */
+  inView: { x: number; y: number } | null
+): { x: number; y: number } => {
+  // Where you are looking, first. The canvas is far larger than the screen, so
+  // an item placed at the middle of the *board* lands off screen on any board
+  // that has been panned — which reads as the insert having done nothing.
+  if (inView) {
+    return inView;
+  }
   if (items.length === 0) {
     return { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
   }
@@ -125,18 +135,6 @@ const dropOrigin = (items: BoardItem[]): { x: number; y: number } => {
     y: (Math.min(...ys) + Math.max(...ys)) / 2,
   };
 };
-
-const dropPoint = (
-  items: BoardItem[],
-  width: number,
-  height: number
-): { x: number; y: number } =>
-  findFreeSpot({
-    height,
-    items,
-    origin: dropOrigin(items),
-    width,
-  });
 
 /**
  * The fields every item carries whatever its kind, all empty.
@@ -175,6 +173,30 @@ export function BoardEditor({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  /**
+   * Filled in by the canvas: the middle of what is currently on screen.
+   *
+   * A ref rather than state because it changes on every pan frame and nothing
+   * renders from it — it is only read at the moment something is inserted.
+   */
+  const viewCentreRef = useRef<(() => { x: number; y: number }) | null>(null);
+
+  /** Somewhere free for a new item, near where you are looking. */
+  const dropPoint = useCallback(
+    (
+      list: BoardItem[],
+      width: number,
+      height: number
+    ): { x: number; y: number } =>
+      findFreeSpot({
+        height,
+        items: list,
+        origin: dropOrigin(list, viewCentreRef.current?.() ?? null),
+        width,
+      }),
+    []
+  );
+
   const [board, setBoard] = useState<Board | null>(null);
   const [items, setItems] = useState<BoardItem[]>([]);
   const [wires, setWires] = useState<BoardWire[]>([]);
@@ -1342,6 +1364,7 @@ export function BoardEditor({
           onSelectionChange={setSelectedItem}
           onSendVersions={sendVersions}
           onWiresChange={changeWires}
+          viewCentreRef={viewCentreRef}
           wires={wires}
         />
 
