@@ -546,6 +546,23 @@ const unmetRequirement = (
   prompt: string,
   values: Record<string, string[] | undefined>
 ): Record<string, unknown> | null => {
+  if (shape === "prompt-and-image") {
+    // Both, so both are checked before anything is spent.
+    if ((values.image?.length ?? 0) === 0) {
+      const label = falModelFor(model)?.label ?? "This model";
+      return {
+        error: `${label} reworks an existing image; wire one into it.`,
+        missingPort: "image",
+      };
+    }
+    if (!prompt) {
+      return {
+        error: "This node needs a prompt, wired in or typed on the node.",
+        missingPort: "prompt",
+      };
+    }
+    return null;
+  }
   if (shape === "image") {
     const images = values.image ?? [];
     if (images.length === 0) {

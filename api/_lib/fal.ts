@@ -110,6 +110,15 @@ const bodyFor = (
     }
     return { image_url: sourceImageUrl };
   }
+  if (shape === "prompt-and-image") {
+    // Both required, and the image singular. Refused here as well as in the
+    // run endpoint, since this function is reachable from api/ai/generate.ts
+    // too and fal bills before it validates.
+    if (!sourceImageUrl) {
+      throw new Error("This model needs an image wired into it");
+    }
+    return { image_url: sourceImageUrl, prompt };
+  }
   if (shape === "prompt") {
     // Text-to-image and text-to-vector. Any wired image is deliberately not
     // sent — these endpoints do not take one.

@@ -120,6 +120,15 @@ const GENERATE_PROMPT_MAX = 1200;
 export type FalModelInput =
   /** A prompt, and an image only if one happens to be wired. */
   | "prompt-or-image"
+  /**
+   * Both, and both required — the image as `image_url`, singular.
+   *
+   * Distinct from "prompt-or-image", which sends `image_urls` as an array and
+   * is happy without one. Ideogram's image-to-image endpoint lists prompt and
+   * image_url as required and takes neither in the other shape, so sending it
+   * the wrong one is a request that fails after it has been billed.
+   */
+  | "prompt-and-image"
   /** A prompt. Any wired image is ignored. */
   | "prompt"
   /** An image, and nothing else. Refused when none is wired. */
@@ -203,8 +212,11 @@ export const FAL_MODELS = [
     vector: false,
   },
   {
+    // Verified against fal's schema: prompt and image_url are both required,
+    // and it takes image_url rather than the image_urls array the nano-banana
+    // edit endpoint wants.
     id: "ideogram/v4/image-to-image",
-    input: "prompt",
+    input: "prompt-and-image",
     label: "Ideogram v4 Image-to-Image",
     vector: false,
   },
