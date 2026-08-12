@@ -534,32 +534,6 @@ export function BoardCanvas({
     [items]
   );
 
-  /**
-   * Whether the space bar is down, which turns a background drag into a pan.
-   *
-   * A ref rather than state: it changes on every keypress and nothing renders
-   * differently for it, so re-rendering the whole canvas would be waste.
-   */
-  const isPanKey = useRef<boolean>(false);
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        isPanKey.current = true;
-      }
-    };
-    const up = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        isPanKey.current = false;
-      }
-    };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, []);
-
   /** Everything the swept rectangle touches, by index. */
   const finishMarquee = useCallback(
     (box: { from: Point; to: Point }, add: boolean) => {
@@ -883,20 +857,20 @@ export function BoardCanvas({
             setStroke([view.toCanvas(e.clientX, e.clientY)]);
             return;
           }
-          // Landing on the background: pan when the space bar or the middle
-          // button says so, otherwise sweep out a selection. Dragging empty
-          // canvas to select is what every canvas does, and it was the one
-          // gesture the board had spent on panning.
+          // Landing on the background pans, as it always has. Sweeping out a
+          // selection is behind shift: dragging the board is the gesture
+          // reached for constantly, and selecting several is occasional, so
+          // the plain drag belongs to the common one.
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
             setEditingId(null);
-            // biome-ignore lint/suspicious/noUnnecessaryConditions: the ref is set from a keydown listener the analyser cannot see from inside this callback, so it reads the initial false as the only possible value
-            if (isPanKey.current || e.button === 1) {
+            if (!(e.shiftKey || e.altKey)) {
               setSelection([]);
               view.onPointerDown(e);
               return;
             }
             e.currentTarget.setPointerCapture(e.pointerId);
-            // Shift keeps what is already picked, so a second sweep adds to it.
+            // Alt sweeps a fresh selection; shift keeps what is already picked,
+            // matching what shift does on a single item.
             if (!e.shiftKey) {
               setSelection([]);
             }
