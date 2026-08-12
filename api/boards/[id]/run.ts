@@ -110,7 +110,16 @@ const iteratedOutputsOf = (
     return [];
   }
   /** Each wire's text kept apart, because each wire fills its own slot. */
-  const readPerWire = (port: string): string[] =>
+  /**
+   * Each wire's text kept apart, because each wire fills its own slot.
+   *
+   * `single` is for the ports that hold one value — the template, and the line
+   * appended to each prompt. A wire can carry several (a Palette node set to
+   * send one colour at a time carries one per swatch), and running them all
+   * together into a single field produced a suffix five colours long stuck on
+   * the end of every prompt.
+   */
+  const readPerWire = (port: string, single = false): string[] =>
     wires
       .filter(
         (wire) => wire.targetItemId === row.id && wire.targetPort === port
@@ -118,9 +127,10 @@ const iteratedOutputsOf = (
       .map((wire) =>
         rows.find((candidate) => candidate.id === wire.sourceItemId)
       )
-      .map((source) =>
-        source ? outputsOf(source, rows, wires, depth + 1).join("\n") : ""
-      )
+      .map((source) => {
+        const sent = source ? outputsOf(source, rows, wires, depth + 1) : [];
+        return single ? (sent[0] ?? "") : sent.join("\n");
+      })
       .filter((text) => text.trim());
 
   const config = asObject(row.config);
@@ -128,7 +138,7 @@ const iteratedOutputsOf = (
   // follows: wiring is the more deliberate act.
   const typedTemplate =
     typeof config.template === "string" ? config.template.trim() : "";
-  const template = readPerWire("template").at(-1) ?? typedTemplate;
+  const template = readPerWire("template", true).at(-1) ?? typedTemplate;
   if (!template) {
     return [];
   }
@@ -151,7 +161,7 @@ const iteratedOutputsOf = (
           .filter((list) => list.length > 0)
       : columnsOf(typedList[0] ?? "", slots, config.split);
 
-  const suffix = readPerWire("suffix").at(-1)?.trim() ?? "";
+  const suffix = readPerWire("suffix", true).at(-1)?.trim() ?? "";
   const prompts = expandTemplate(template, placeholder, lists);
   return suffix ? prompts.map((prompt) => `${prompt}, ${suffix}`) : prompts;
 };
