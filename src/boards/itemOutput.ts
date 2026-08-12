@@ -74,7 +74,7 @@ export const iteratedTextOf = (
       .filter((w) => w.targetItemId === item.id && w.targetPort === port)
       .map((w) => graph.items.find((i) => i.id === w.sourceItemId))
       .map((source) =>
-        source ? (outputTextOf(source, graph, depth + 1) ?? "") : ""
+        outputListOf(source ?? null, graph, depth + 1).join("\n")
       )
       .filter((text) => text.trim());
 
@@ -106,6 +106,32 @@ export const iteratedTextOf = (
   const suffix = readPerWire("suffix").at(-1)?.trim() ?? "";
   const prompts = expandTemplate(template, placeholder, lists);
   return suffix ? prompts.map((prompt) => `${prompt}, ${suffix}`) : prompts;
+};
+
+/**
+ * Everything an item sends, which is not always one thing.
+ *
+ * Mirrors outputsOf on the server. Two nodes are plural by design — an Iterate
+ * node writes a prompt per value, and a Palette node set to send one colour at
+ * a time sends one per swatch — and every reader has to account for that or it
+ * silently keeps only the first.
+ */
+export const outputListOf = (
+  item: BoardItem | null,
+  graph: { items: BoardItem[]; wires: BoardWire[] },
+  depth = 0
+): string[] => {
+  if (!item) {
+    return [];
+  }
+  if (item.nodeType === "iterate") {
+    return iteratedTextOf(item, graph, depth);
+  }
+  if (item.nodeType === "palette") {
+    return paletteOutputsOf(item.config ?? {});
+  }
+  const single = outputTextOf(item, graph, depth);
+  return single ? [single] : [];
 };
 
 /** Mirrors expandTemplate on the server, which is the authority. */
@@ -174,6 +200,20 @@ const splitValues = (raw: string, mode: unknown): string[] => {
  * for the models that can only be asked, and Ideogram v3 has the codes lifted
  * back out into a real palette parameter.
  */
+/**
+ * What a palette sends: one constraint, or one colour at a time.
+ *
+ * Mirrors paletteOutputsOf on the server.
+ */
+export const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
+  if (config.output !== "one at a time") {
+    const line = paletteTextOf(config);
+    return line ? [line] : [];
+  }
+  const raw = typeof config.colors === "string" ? config.colors : "";
+  return raw.match(HEX_COLOUR) ?? [];
+};
+
 export const paletteTextOf = (
   config: Record<string, unknown>
 ): string | null => {

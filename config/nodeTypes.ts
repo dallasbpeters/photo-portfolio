@@ -692,6 +692,21 @@ const PALETTE: NodeType = {
       label: "Use",
       options: ["only", "mostly"],
     },
+    {
+      /*
+       * Whether the palette is one constraint or a list to work through.
+       *
+       * "together" names every colour in a single line, which is a restriction
+       * on one image. "one at a time" emits each colour separately, so an
+       * Iterate node can fill a slot with them and make one image per colour.
+       * The same swatches, meaning two quite different things.
+       */
+      default: "together",
+      key: "output",
+      kind: "select",
+      label: "Send",
+      options: ["together", "one at a time"],
+    },
   ],
 };
 

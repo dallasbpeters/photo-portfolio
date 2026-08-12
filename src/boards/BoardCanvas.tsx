@@ -24,6 +24,7 @@ import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
   outputImageOf,
+  outputListOf,
   outputTextOf,
 } from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
@@ -456,11 +457,7 @@ export function BoardCanvas({
     const perWire = wires
       .filter((w) => w.targetItemId === itemId && w.targetPort === "prompt")
       .map((w) => items.find((i) => i.id === w.sourceItemId))
-      .map((source) =>
-        source?.nodeType === "iterate"
-          ? iteratedTextOf(source, { items, wires })
-          : [outputTextOf(source ?? null, { items, wires }) ?? ""]
-      )
+      .map((source) => outputListOf(source ?? null, { items, wires }))
       .map((list) => list.filter((text) => text.trim()))
       .filter((list) => list.length > 0);
 

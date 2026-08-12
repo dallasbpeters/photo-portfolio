@@ -240,6 +240,22 @@ const splitValues = (raw: string, mode: unknown): string[] => {
  * serves both mechanisms: a model that can only be asked reads it as English,
  * and Ideogram v3 has the codes lifted back out into a real colour palette.
  */
+/**
+ * What a palette sends: one constraint, or one colour at a time.
+ *
+ * Sending them separately is what lets an Iterate node work through a palette —
+ * a slot filled with each colour in turn, one image per colour — rather than
+ * every colour being pressed into a single image.
+ */
+const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
+  if (config.output !== "one at a time") {
+    const line = paletteTextOf(config);
+    return line ? [line] : [];
+  }
+  const raw = typeof config.colors === "string" ? config.colors : "";
+  return raw.match(HEX_COLOUR) ?? [];
+};
+
 const paletteTextOf = (config: Record<string, unknown>): string | null => {
   const raw = typeof config.colors === "string" ? config.colors : "";
   const colours = raw.match(HEX_COLOUR);
@@ -353,9 +369,12 @@ const outputsOf = (
   wires: GraphWire[],
   depth = 0
 ): string[] => {
-  // The one node whose output is plural by design.
+  // The two nodes whose output is plural by design.
   if (row.node_type === "iterate") {
     return iteratedOutputsOf(row, rows, wires, depth);
+  }
+  if (row.node_type === "palette") {
+    return paletteOutputsOf(asObject(row.config));
   }
   if (row.kind !== "frame") {
     const single = singleOutputOf(row, rows, wires);
