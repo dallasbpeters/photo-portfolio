@@ -141,6 +141,25 @@ export type FalModelInput =
   /** An image, and nothing else. Refused when none is wired. */
   | "image";
 
+export interface FalLora {
+  /**
+   * The endpoint these weights were trained against, when it is not Flux.
+   *
+   * A LoRA only loads on the base model it was trained on — a Krea-2 LoRA sent
+   * to fal-ai/flux-lora returns a picture, but a picture in the base style,
+   * which reads as the LoRA simply not being very strong. That silence is why
+   * the base is declared here rather than assumed.
+   *
+   * Omitted means the Flux pair below.
+   */
+  endpoint?: string;
+  /** The same base, applied to a picture rather than a blank canvas. */
+  imageEndpoint?: string;
+  path: string;
+  scale: number;
+  trigger: string;
+}
+
 export interface FalModelDef {
   /** The exact fal.ai model id, or "auto". */
   id: string;
@@ -150,15 +169,14 @@ export interface FalModelDef {
   /**
    * A LoRA to load, for the models that are a style rather than an endpoint.
    *
-   * These all run on the same fal endpoint — fal-ai/flux-lora — and differ only
-   * in the weights it loads, so they are listed as models here because that is
-   * what they are to whoever is picking one. `path` is a URL to a safetensors
-   * file, ours or Hugging Face's.
+   * Most run on fal-ai/flux-lora and differ only in the weights it loads, so
+   * they are listed as models here because that is what they are to whoever is
+   * picking one. `path` is a URL to a safetensors file, ours or Hugging Face's.
    *
    * `trigger` is not optional in practice: a LoRA is trained against a token,
    * and a prompt without it gets the base model. It is prepended for you.
    */
-  lora?: { path: string; scale: number; trigger: string };
+  lora?: FalLora;
   /**
    * True when this model returns vector art rather than a raster.
    *
@@ -294,9 +312,24 @@ export const FAL_MODELS = [
     },
     vector: false,
   },
+  {
+    id: "lora/bubblegum-sticker",
+    input: "prompt-or-image",
+    label: "Bubblegum sticker",
+    lora: {
+      // Trained on Krea 2, so it runs there. Also about twenty times faster
+      // than the Flux pair, which is the whole point of the turbo endpoint.
+      endpoint: "fal-ai/krea-2/turbo",
+      imageEndpoint: "fal-ai/krea-2/turbo/image-to-image",
+      path: "https://huggingface.co/ilkerzgi/krea-2-bubblegum-pop-sticker-lora/resolve/main/bubblegum-pop-sticker.safetensors",
+      scale: 0.9,
+      trigger: "bubblegum pop sticker style",
+    },
+    vector: false,
+  },
 ] as const satisfies readonly FalModelDef[];
 
-/** The fal endpoint every LoRA style runs on. */
+/** The fal endpoint a LoRA style runs on unless it names its own. */
 export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
 
 /**
@@ -308,10 +341,16 @@ export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
  */
 export const FLUX_LORA_IMAGE_ENDPOINT = "fal-ai/flux-lora/image-to-image";
 
-export const falModelLora = (
-  value: unknown
-): { path: string; scale: number; trigger: string } | null =>
+export const falModelLora = (value: unknown): FalLora | null =>
   falModelFor(value)?.lora ?? null;
+
+/** Where a style's weights actually load, with or without a source image. */
+export const falLoraEndpoint = (lora: FalLora, hasImage: boolean): string => {
+  if (hasImage) {
+    return lora.imageEndpoint ?? FLUX_LORA_IMAGE_ENDPOINT;
+  }
+  return lora.endpoint ?? FLUX_LORA_ENDPOINT;
+};
 
 export const FAL_MODEL_IDS: readonly string[] = FAL_MODELS.map(
   (model) => model.id

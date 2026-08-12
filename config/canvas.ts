@@ -14,8 +14,27 @@
  * and Node globals so every layer can import it.
  */
 
-export const CANVAS_WIDTH = 4000;
-export const CANVAS_HEIGHT = 3000;
+/**
+ * Roomy, because a graph grows sideways in a way a moodboard never did.
+ *
+ * A node is 380 units wide, so the original 4000 held about ten across before
+ * the API's clamp started pulling them back inside — which showed up as nodes
+ * quietly moving on the next load rather than as any error. This holds about
+ * thirty across and as many rows.
+ */
+export const CANVAS_WIDTH = 12_000;
+export const CANVAS_HEIGHT = 9000;
+
+/**
+ * How much of that canvas an empty board opens on.
+ *
+ * Fitting the whole space would open a new board at nine percent zoom, where a
+ * dropped note is a speck. The canvas is a place to spread out into, not the
+ * thing you have to look at all of, so a new board starts on a screenful in the
+ * middle and pans out from there.
+ */
+export const START_VIEW_WIDTH = 4000;
+export const START_VIEW_HEIGHT = 3000;
 
 /** Small enough to sit alongside others, large enough to still grab. */
 export const MIN_ITEM_SIZE = 40;

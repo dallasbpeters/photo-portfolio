@@ -112,9 +112,22 @@ export const iteratedTextOf = (
           .filter((list) => list.length > 0)
       : columnsOf(typedList[0] ?? "", slots, config.split);
 
-  const suffix = readPerWire("suffix", true).at(-1)?.trim() ?? "";
+  // Appended per prompt rather than once for all of them. A Palette node
+  // sending one colour at a time carries a list, and the point of that list is
+  // that each prompt gets a different one — a single suffix repeated would be
+  // the "together" mode with extra steps. A shorter list cycles, as everywhere
+  // else here.
+  const suffixes = readPerWire("suffix");
   const prompts = expandTemplate(template, placeholder, lists);
-  return suffix ? prompts.map((prompt) => `${prompt}, ${suffix}`) : prompts;
+  if (suffixes.length === 0) {
+    return prompts;
+  }
+  const parts = suffixes
+    .flatMap((text) => text.split(LINES))
+    .filter((t) => t.trim());
+  return prompts.map(
+    (prompt, row) => `${prompt}, ${parts[row % parts.length]?.trim() ?? ""}`
+  );
 };
 
 /**
@@ -220,7 +233,15 @@ export const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
     return line ? [line] : [];
   }
   const raw = typeof config.colors === "string" ? config.colors : "";
-  return raw.match(HEX_COLOUR) ?? [];
+  const strict = config.strictness === "mostly" ? "predominantly" : "only";
+  // Each colour as an instruction rather than as a bare code. "#5ccde9" on the
+  // end of a prompt is a string a model has to guess the meaning of; "using
+  // only this colour: #5ccde9" says what to do with it, and reads the same way
+  // as the together form so switching between them changes the number of
+  // prompts rather than their grammar.
+  return (raw.match(HEX_COLOUR) ?? []).map(
+    (hex) => `using ${strict} this colour: ${hex}`
+  );
 };
 
 export const paletteTextOf = (

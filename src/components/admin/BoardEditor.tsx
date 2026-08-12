@@ -93,6 +93,28 @@ const FRAME_PAD = 40;
 /** Offset between images dropped together, so they do not land in one pile. */
 const DROP_FAN = 28;
 
+/**
+ * Where something arriving without a position should look for room.
+ *
+ * The middle of what is already on the board, not the middle of the canvas.
+ * The canvas is far larger than any one board fills, so its centre is usually
+ * empty space a long way from the work — and since the view frames the items
+ * rather than the canvas, an item dropped there lands off screen and reads as
+ * nothing having happened. Only an empty board falls back to the canvas centre,
+ * which is where an empty board is already looking.
+ */
+const dropOrigin = (items: BoardItem[]): { x: number; y: number } => {
+  if (items.length === 0) {
+    return { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
+  }
+  const xs = items.map((item) => item.x + item.width / 2);
+  const ys = items.map((item) => item.y + item.height / 2);
+  return {
+    x: (Math.min(...xs) + Math.max(...xs)) / 2,
+    y: (Math.min(...ys) + Math.max(...ys)) / 2,
+  };
+};
+
 const dropPoint = (
   items: BoardItem[],
   width: number,
@@ -101,7 +123,7 @@ const dropPoint = (
   findFreeSpot({
     height,
     items,
-    origin: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 },
+    origin: dropOrigin(items),
     width,
   });
 

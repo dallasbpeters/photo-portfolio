@@ -4,6 +4,8 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   clampScale,
+  START_VIEW_HEIGHT,
+  START_VIEW_WIDTH,
 } from "../../config/canvas.js";
 
 export interface Viewport {
@@ -161,12 +163,16 @@ export const useCanvasViewport = (
     const { width, height } = el.getBoundingClientRect();
     // A little breathing room so the edges are not flush with the frame.
     const scale = clampScale(
-      Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT) * 0.92
+      Math.min(width / START_VIEW_WIDTH, height / START_VIEW_HEIGHT) * 0.92
     );
+    // The opening screenful sits in the middle of the canvas, which is also
+    // where an item with nowhere else to go is dropped — see dropPoint.
+    const left = (CANVAS_WIDTH - START_VIEW_WIDTH) / 2;
+    const top = (CANVAS_HEIGHT - START_VIEW_HEIGHT) / 2;
     setViewport({
       scale,
-      tx: (width - CANVAS_WIDTH * scale) / 2,
-      ty: (height - CANVAS_HEIGHT * scale) / 2,
+      tx: (width - START_VIEW_WIDTH * scale) / 2 - left * scale,
+      ty: (height - START_VIEW_HEIGHT * scale) / 2 - top * scale,
     });
   }, [containerRef]);
 

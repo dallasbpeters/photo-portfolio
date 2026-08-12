@@ -1,7 +1,6 @@
 import {
   type FalModelInput,
-  FLUX_LORA_ENDPOINT,
-  FLUX_LORA_IMAGE_ENDPOINT,
+  falLoraEndpoint,
   falModelInput,
   falModelLora,
   HEX_COLOUR,
@@ -206,7 +205,7 @@ export const generateImage = async (
   if (lora) {
     // A wired image reworks rather than invents, so the style is applied to it
     // through the image-to-image endpoint instead.
-    model = sourceImageUrl ? FLUX_LORA_IMAGE_ENDPOINT : FLUX_LORA_ENDPOINT;
+    model = falLoraEndpoint(lora, Boolean(sourceImageUrl));
   } else if (named) {
     model = named;
   }
