@@ -84,9 +84,9 @@ export type SettingDef =
  * A node type with no capability never runs at all — it is a *source*, and its
  * output is whatever its settings hold. The Prompt node is the only one so far.
  */
-export type NodeCapability = "fal.image" | "magnific.icon";
+export type NodeCapability = "fal.describe" | "fal.image" | "magnific.icon";
 
-export type NodeTypeId = "generate" | "icon" | "prompt";
+export type NodeTypeId = "describe" | "generate" | "icon" | "join" | "prompt";
 
 export interface NodeType {
   /** Absent on source nodes, which produce their value without spending. */
@@ -131,6 +131,18 @@ export interface FalModelDef {
   input: FalModelInput;
   /** Shown on the node — model ids are too long and too alike to read. */
   label: string;
+  /**
+   * A LoRA to load, for the models that are a style rather than an endpoint.
+   *
+   * These all run on the same fal endpoint — fal-ai/flux-lora — and differ only
+   * in the weights it loads, so they are listed as models here because that is
+   * what they are to whoever is picking one. `path` is a URL to a safetensors
+   * file, ours or Hugging Face's.
+   *
+   * `trigger` is not optional in practice: a LoRA is trained against a token,
+   * and a prompt without it gets the base model. It is prepended for you.
+   */
+  lora?: { path: string; scale: number; trigger: string };
   /**
    * True when this model returns vector art rather than a raster.
    *
@@ -198,7 +210,60 @@ export const FAL_MODELS = [
     label: "Recraft · Vectorize",
     vector: true,
   },
+  {
+    id: "lora/rolemodel-style",
+    input: "prompt",
+    label: "RoleModel style",
+    lora: {
+      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmstyle-v1.safetensors",
+      scale: 1,
+      trigger: "rmstyle",
+    },
+    vector: false,
+  },
+  {
+    id: "lora/rolemodel-design",
+    input: "prompt",
+    label: "RoleModel design",
+    lora: {
+      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmdesign-v1.safetensors",
+      scale: 1,
+      trigger: "rmdesign",
+    },
+    vector: false,
+  },
+  {
+    id: "lora/text-poster",
+    input: "prompt",
+    label: "Typography poster",
+    lora: {
+      path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Text-Poster/resolve/main/FLUX-dev-lora-Text-Poster.safetensors",
+      // The card recommends 0.8-1.0; the lower end leaves room for the prompt.
+      scale: 0.9,
+      trigger: "text poster",
+    },
+    vector: false,
+  },
+  {
+    id: "lora/logo-design",
+    input: "prompt",
+    label: "Logo / mark",
+    lora: {
+      path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design/resolve/main/FLUX-dev-lora-Logo-Design.safetensors",
+      scale: 0.8,
+      trigger: "wablogo, logo, Minimalist",
+    },
+    vector: false,
+  },
 ] as const satisfies readonly FalModelDef[];
+
+/** The fal endpoint every LoRA style runs on. */
+export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
+
+export const falModelLora = (
+  value: unknown
+): { path: string; scale: number; trigger: string } | null =>
+  falModelFor(value)?.lora ?? null;
 
 export const FAL_MODEL_IDS: readonly string[] = FAL_MODELS.map(
   (model) => model.id
@@ -344,14 +409,117 @@ const PROMPT: NodeType = {
   ],
 };
 
+/**
+ * Looks at a picture and writes down how it looks.
+ *
+ * The output is a *prompt*, not a caption: comma-separated phrases about
+ * medium, palette, light, composition and rendering, with the subject
+ * deliberately left out. That distinction is the whole point — "a woman in a
+ * field" tells a generator what to draw, whereas "muted greens, soft overcast
+ * light, shallow depth of field, 35mm" tells it how to draw anything.
+ *
+ * It emits text, so it wires into the prompt of a Generate node exactly as a
+ * Prompt node does. Point it at a reference you like and the style travels
+ * down the wire.
+ */
+const DESCRIBE: NodeType = {
+  capability: "fal.describe",
+  id: "describe",
+  inputs: [
+    {
+      // Many, and read together rather than one at a time. Describing a style
+      // from a single picture describes that picture; several references are
+      // how the description lands on what they have in common. Unlike a batch
+      // on a Generate node, these do not fan out into separate runs — they go
+      // into one call and come back as one description.
+      arity: "many",
+      key: "image",
+      label: "Images",
+      required: true,
+      type: "image",
+    },
+    {
+      // Optional, and the reason this is a node rather than a button: wire a
+      // Prompt node in to say what you want noticed — "the colour palette",
+      // "how the type is set" — instead of accepting one fixed reading.
+      arity: "one",
+      key: "prompt",
+      label: "What to look for",
+      required: false,
+      type: "text",
+    },
+  ],
+  label: "Analyse",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],
+  settings: [
+    {
+      default: "style",
+      key: "focus",
+      kind: "select",
+      label: "Describe",
+      options: ["style", "subject", "both"],
+    },
+    {
+      key: "prompt",
+      kind: "text",
+      label: "What to look for",
+      maxLength: GENERATE_PROMPT_MAX,
+      placeholder: "the colour palette and how the type is set…",
+    },
+  ],
+};
+
+/**
+ * Joins several pieces of text into one.
+ *
+ * The node that makes the others compose. A description off an Analyse node
+ * plus a subject line off a Prompt node is the common case: one says how it
+ * should look, the other says what it is, and a generation wants both in a
+ * single prompt.
+ *
+ * No capability, so it never runs and never costs anything. Unlike a Prompt
+ * node, though, its value is not what is typed on it — it is a function of
+ * whatever is wired in, resolved wherever the output is read.
+ */
+const JOIN: NodeType = {
+  id: "join",
+  inputs: [
+    {
+      // Order follows the wires, so rewiring is how you reorder.
+      arity: "many",
+      key: "text",
+      label: "Text",
+      required: true,
+      type: "text",
+    },
+  ],
+  label: "Combine",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Text", type: "text" }],
+  settings: [
+    {
+      default: ", ",
+      key: "separator",
+      kind: "select",
+      label: "Joined with",
+      options: [", ", ". ", " ", "\n"],
+    },
+  ],
+};
+
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
+  describe: DESCRIBE,
   generate: GENERATE,
   icon: ICON,
+  join: JOIN,
   prompt: PROMPT,
 };
 
 export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
-  value === "generate" || value === "icon" || value === "prompt";
+  value === "describe" ||
+  value === "generate" ||
+  value === "icon" ||
+  value === "join" ||
+  value === "prompt";
 
 export const nodeTypeFor = (value: unknown): NodeType | null =>
   isNodeTypeId(value) ? NODE_TYPES[value] : null;

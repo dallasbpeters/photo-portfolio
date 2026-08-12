@@ -79,7 +79,8 @@ export type BoardItemKind =
   | "text"
   | "op"
   | "frame"
-  | "shader";
+  | "shader"
+  | "drawing";
 
 /** One image a run produced. A batch produces several. */
 export interface BoardItemVariation {
@@ -114,8 +115,17 @@ export interface BoardItemResult {
   history?: BoardItemVariation[];
   /** False when an icon fell back to a raster because the vectoriser was down. */
   isVector: boolean | null;
-  kind: "image";
+  /**
+   * What kind of result this is.
+   *
+   * Not every node makes a picture: the Analyse node reads one and writes
+   * words. Absent on results stored before the distinction existed, which are
+   * images by definition.
+   */
+  kind?: "image" | "text";
   ranAt: string;
+  /** The words an Analyse node produced. Absent on every image result. */
+  text?: string;
   /** Already on our own blob host, never the generator's expiring link. */
   url: string;
   /**

@@ -1053,6 +1053,8 @@ export interface FalLibraryItem {
   createdAt: string;
   endpoint: string;
   id: string;
+  /** What to render: the fal URL, or an inlined data URI for vector output. */
+  previewUrl: string;
   prompt: string | null;
   url: string;
 }
@@ -1096,6 +1098,67 @@ export const falLibraryApi = {
       throw new Error(await readPageError(res, "Could not read your library"));
     }
     return (await res.json()) as FalLibraryPage;
+  },
+};
+
+/** One image found on a published Framer page. */
+export interface FramerImage {
+  altText: string | null;
+  imageUrl: string;
+  thumbUrl: string;
+}
+
+export interface FramerPageResult {
+  images: FramerImage[];
+  notice?: string;
+  title: string | null;
+}
+
+/**
+ * The images on a published Framer page.
+ *
+ * Reads the published site rather than the Framer project: Framer's Server API
+ * documents nothing for listing a project's assets, and a published page is a
+ * normal website that works on any custom domain with no key at all.
+ */
+export const framerApi = {
+  page: async (url: string): Promise<FramerPageResult> => {
+    const res = await fetch(`${apiBase()}/api/framer/page`, {
+      body: JSON.stringify({ url }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not read that page"));
+    }
+    return (await res.json()) as FramerPageResult;
+  },
+};
+
+/** What the Drive picker needs to start. Admin-only, never in the bundle. */
+export interface PickerConfig {
+  apiKey: string;
+  clientId: string;
+}
+
+export const googleApi = {
+  /**
+   * Fetches the picker's credentials at the moment they are needed.
+   *
+   * Not build-time constants: a VITE_ variable is compiled into the public
+   * bundle and ships to every visitor. This keeps them behind the admin
+   * session instead.
+   */
+  pickerConfig: async (): Promise<PickerConfig> => {
+    const res = await fetch(`${apiBase()}/api/google/picker-config`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Google Drive is not configured")
+      );
+    }
+    return (await res.json()) as PickerConfig;
   },
 };
 

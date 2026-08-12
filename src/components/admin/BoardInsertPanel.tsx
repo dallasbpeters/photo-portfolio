@@ -10,12 +10,15 @@ import { toast } from "sonner";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
+import { pickDriveImages } from "../../boards/googleDrive";
 import { newItemId } from "../../boards/newItemId";
 import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
   aiApi,
   type FalLibraryItem,
+  type FramerImage,
   falLibraryApi,
+  framerApi,
   type GeneratedIcon,
   type GeneratedImage,
   type PinResult,
@@ -38,6 +41,8 @@ export interface ExternalImage {
 
 interface BoardInsertPanelProps {
   onAddExternal: (image: ExternalImage) => void;
+  /** Uploads and pins picked files — the same path a dragged file takes. */
+  onAddFiles: (files: File[]) => void;
   /** Places an operation node on the canvas, carrying the prompt with it. */
   onAddNode: (nodeType: NodeTypeId, config: Record<string, unknown>) => void;
   onAddPhoto: (photo: Photo) => void;
@@ -53,6 +58,8 @@ interface BoardInsertPanelProps {
 
 type Tab =
   | "yours"
+  | "drive"
+  | "framer"
   | "library"
   | "unsplash"
   | "pinterest"
@@ -61,12 +68,14 @@ type Tab =
   | "shader";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "yours", label: "Yours" },
-  { id: "library", label: "fal library" },
+  { id: "yours", label: "Your photos" },
+  { id: "drive", label: "Google Drive" },
+  { id: "framer", label: "Framer site" },
+  { id: "library", label: "fal.ai library" },
   { id: "unsplash", label: "Unsplash" },
   { id: "pinterest", label: "Pinterest" },
-  { id: "ai", label: "Generate" },
-  { id: "icon", label: "Icon" },
+  { id: "ai", label: "Generate an image" },
+  { id: "icon", label: "Draw an icon" },
   { id: "shader", label: "Shaders" },
 ];
 
@@ -75,11 +84,6 @@ const PIN_PATH = /\/pin\//;
 
 /** Leaves just the board path, which is the readable part of a pin URL. */
 const SCHEME_AND_HOST = /^https?:\/\/[^/]+\//;
-
-const tabClass = (isActive: boolean) =>
-  `min-h-9 flex-1 text-[10px] uppercase tracking-[0.18em] transition-colors ${
-    isActive ? "text-white" : "text-white/40 hover:text-white/70"
-  }`;
 
 /**
  * Everything that can be added to a board: your own photographs, an Unsplash
@@ -91,6 +95,7 @@ const tabClass = (isActive: boolean) =>
  */
 export function BoardInsertPanel({
   onAddExternal,
+  onAddFiles,
   onAddNode,
   onAddPhoto,
   onAddShader,
@@ -102,40 +107,11 @@ export function BoardInsertPanel({
 }: BoardInsertPanelProps) {
   const [tab, setTab] = useState<Tab>("yours");
 
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<UnsplashResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
   // Seeded from what they already shoot, then edited freely.
   const [prompt, setPrompt] = useState(() => defaultPrompt(photos));
   const [source, setSource] = useState<UnsplashResult | null>(null);
   const [generated, setGenerated] = useState<GeneratedImage | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const [pinUrl, setPinUrl] = useState("");
-  const [pins, setPins] = useState<PinResult[]>([]);
-  const [boardTitle, setBoardTitle] = useState<string | null>(null);
-  const [isResolvingPin, setIsResolvingPin] = useState(false);
-
-  const [iconPrompt, setIconPrompt] = useState("");
-  const [iconStyle, setIconStyle] = useState<IconStyle>(ICON_STYLES[0]);
-  const [icon, setIcon] = useState<GeneratedIcon | null>(null);
-  const [isDrawingIcon, setIsDrawingIcon] = useState(false);
-
-  const search = async () => {
-    const term = query.trim();
-    if (!term) {
-      return;
-    }
-    setIsSearching(true);
-    try {
-      setResults(await unsplashApi.search(term));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Search failed");
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   const addUnsplash = (result: UnsplashResult) => {
     // Their terms require registering a download when a photo is used.
@@ -172,78 +148,26 @@ export function BoardInsertPanel({
     }
   };
 
-  /**
-   * One field for both shapes.
-   *
-   * A pin link has /pin/<id>/ in it and anything else on pinterest.com is a
-   * board, so the distinction is free — asking someone to say which they
-   * pasted would be asking them to tell us what we can already see.
-   */
-  const loadPinterest = async (override?: string) => {
-    const url = (override ?? pinUrl).trim();
-    if (!url) {
-      return;
-    }
-    setIsResolvingPin(true);
-    setPins([]);
-    setBoardTitle(null);
-    try {
-      if (PIN_PATH.test(url)) {
-        setPins([await pinterestApi.resolve(url)]);
-      } else {
-        const board = await pinterestApi.board(url);
-        setPins(board.pins);
-        setBoardTitle(board.title);
-        // Remembered as soon as it resolves, not when a pin is added: the
-        // point is to be able to come back to it, which is true whether or not
-        // anything was taken from it this time.
-        onAttachSource({
-          id: newItemId(),
-          provider: "pinterest",
-          title: board.title,
-          url,
-        });
-      }
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not read that link"
-      );
-    } finally {
-      setIsResolvingPin(false);
-    }
-  };
-
-  const drawIcon = async () => {
-    const text = iconPrompt.trim();
-    if (!text) {
-      return;
-    }
-    setIsDrawingIcon(true);
-    setIcon(null);
-    try {
-      setIcon(await aiApi.generateIcon(text, iconStyle));
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not draw an icon"
-      );
-    } finally {
-      setIsDrawingIcon(false);
-    }
-  };
-
   return (
     <div className="absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-white/10 border-l bg-black/95 backdrop-blur">
-      <div className="flex items-center gap-1 border-white/10 border-b px-2">
-        {TABS.map((t) => (
-          <button
-            className={tabClass(tab === t.id)}
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            type="button"
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* A select rather than a row of tabs. Nine sources do not fit across the
+          panel at any sensible size — the row wrapped mid-label, putting "fal"
+          above "library" — and a tab strip that wraps is worse than a list,
+          because it reflows as the panel resizes and nothing stays where you
+          last saw it. */}
+      <div className="flex items-center gap-2 border-white/10 border-b px-2 py-2">
+        <select
+          aria-label="Where to insert from"
+          className="min-h-9 flex-1 rounded border border-white/10 bg-black/60 px-2 text-[11px] text-white uppercase tracking-[0.18em] outline-none focus:border-white/40"
+          onChange={(e) => setTab(e.target.value as Tab)}
+          value={tab}
+        >
+          {TABS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
         <button
           aria-label="Close insert panel"
           className="min-h-9 px-2 text-white/50 hover:text-white"
@@ -283,76 +207,11 @@ export function BoardInsertPanel({
         ) : null}
 
         {tab === "unsplash" ? (
-          <>
-            <form
-              className="mb-3 flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void search();
-              }}
-            >
-              <Input
-                className="min-h-10 border-white/10 bg-black/40 text-base"
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search references…"
-                value={query}
-              />
-              <Button
-                aria-label="Search"
-                className="min-h-10 border-white/20"
-                type="submit"
-                variant="outline"
-              >
-                <HugeiconsIcon icon={Search01Icon} size={14} />
-              </Button>
-            </form>
-
-            {isSearching ? (
-              <p className="text-[11px] text-white/50 uppercase tracking-widest">
-                Searching…
-              </p>
-            ) : null}
-
-            <div className="grid grid-cols-2 gap-2">
-              {results.map((result) => (
-                <div className="group relative" key={result.id}>
-                  <button
-                    className="block w-full overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
-                    onClick={() => addUnsplash(result)}
-                    type="button"
-                  >
-                    <img
-                      alt={result.altText ?? ""}
-                      className="aspect-square w-full object-cover"
-                      height={160}
-                      loading="lazy"
-                      src={result.thumbUrl}
-                      width={160}
-                    />
-                  </button>
-                  {/* Credit is shown here as well as on the board, so it is
-                      visible before the photograph is chosen. */}
-                  <p className="truncate pt-1 text-[9px] text-white/40">
-                    {result.creditName}
-                  </p>
-                  <button
-                    className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-1 bg-black/80 py-1 text-[9px] text-white uppercase tracking-widest opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-                    onClick={() => makeVersions(result)}
-                    type="button"
-                  >
-                    <HugeiconsIcon icon={MagicWand01Icon} size={11} />
-                    Make versions
-                  </button>
-                </div>
-              ))}
-            </div>
-          </>
+          <UnsplashTab onAdd={addUnsplash} onMakeVersions={makeVersions} />
         ) : null}
 
         {tab === "pinterest" ? (
           <PinterestTab
-            boardTitle={boardTitle}
-            isResolving={isResolvingPin}
             onAdd={(chosen) => {
               for (const pin of chosen) {
                 onAddExternal({
@@ -370,16 +229,9 @@ export function BoardInsertPanel({
                 });
               }
             }}
+            onAttach={onAttachSource}
             onDetach={onDetachSource}
-            onOpenSource={(sourceUrl: string) => {
-              setPinUrl(sourceUrl);
-              void loadPinterest(sourceUrl);
-            }}
-            onResolve={() => void loadPinterest()}
-            onUrlChange={setPinUrl}
-            pins={pins}
             sources={sources.filter((s) => s.provider === "pinterest")}
-            url={pinUrl}
           />
         ) : null}
 
@@ -482,52 +334,286 @@ export function BoardInsertPanel({
           </div>
         ) : null}
 
+        {tab === "drive" ? <DriveTab onAdd={onAddFiles} /> : null}
+
+        {tab === "framer" ? <FramerTab onAdd={onAddExternal} /> : null}
+
         {tab === "library" ? <FalLibraryTab onAdd={onAddExternal} /> : null}
 
         {tab === "shader" ? <ShaderTab onAdd={onAddShader} /> : null}
 
-        {tab === "icon" ? (
-          <IconTab
-            icon={icon}
-            isDrawing={isDrawingIcon}
-            onAdd={() => {
-              if (icon) {
-                onAddExternal({
-                  altText: iconPrompt.slice(0, 200),
-                  // Generated, so there is no one to credit.
-                  creditName: null,
-                  creditUrl: null,
-                  imageUrl: icon.url,
-                  thumbUrl: icon.url,
-                });
-              }
-            }}
-            onDraw={() => void drawIcon()}
-            onPrompt={setIconPrompt}
-            onStyle={setIconStyle}
-            prompt={iconPrompt}
-            style={iconStyle}
-          />
-        ) : null}
+        {tab === "icon" ? <IconTab onAdd={onAddExternal} /> : null}
       </div>
     </div>
   );
 }
 
-/**
- * The shader picker.
- *
- * Built entirely from the installed package's registry — 189 effects across ten
- * categories, none of them listed here. A package update changes what this
- * offers without a line of code changing, which is the whole reason the
- * registry is worth leaning on.
- */
 /** The vendor prefix every fal model id carries, which only costs width. */
 const FAL_PREFIX = /^fal-ai\//;
 
 /** "fal-ai/recraft/v4.1/text-to-vector" → "recraft/v4.1/text-to-vector". */
 const shortEndpoint = (endpoint: string): string =>
   endpoint.replace(FAL_PREFIX, "");
+
+/**
+ * Searching Unsplash for references.
+ *
+ * Holds its own query and results, like every other tab — the panel used to
+ * carry all of them at once.
+ */
+function UnsplashTab({
+  onAdd,
+  onMakeVersions,
+}: {
+  onAdd: (result: UnsplashResult) => void;
+  onMakeVersions: (result: UnsplashResult) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UnsplashResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const search = async () => {
+    const term = query.trim();
+    if (!term) {
+      return;
+    }
+    setIsSearching(true);
+    try {
+      setResults(await unsplashApi.search(term));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  return (
+    <>
+      <form
+        className="mb-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search();
+        }}
+      >
+        <Input
+          className="min-h-10 border-white/10 bg-black/40 text-base"
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search references…"
+          value={query}
+        />
+        <Button
+          aria-label="Search"
+          className="min-h-10 border-white/20"
+          type="submit"
+          variant="outline"
+        >
+          <HugeiconsIcon icon={Search01Icon} size={14} />
+        </Button>
+      </form>
+
+      {isSearching ? (
+        <p className="text-[11px] text-white/50 uppercase tracking-widest">
+          Searching…
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2">
+        {results.map((result) => (
+          <div className="group relative" key={result.id}>
+            <button
+              className="block w-full overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
+              onClick={() => onAdd(result)}
+              type="button"
+            >
+              <img
+                alt={result.altText ?? ""}
+                className="aspect-square w-full object-cover"
+                height={160}
+                loading="lazy"
+                src={result.thumbUrl}
+                width={160}
+              />
+            </button>
+            {/* Credit is shown here as well as on the board, so it is
+                      visible before the photograph is chosen. */}
+            <p className="truncate pt-1 text-[9px] text-white/40">
+              {result.creditName}
+            </p>
+            <button
+              className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-1 bg-black/80 py-1 text-[9px] text-white uppercase tracking-widest opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              onClick={() => onMakeVersions(result)}
+              type="button"
+            >
+              <HugeiconsIcon icon={MagicWand01Icon} size={11} />
+              Make versions
+            </button>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Picking images out of Google Drive.
+ *
+ * The button is the whole interface: Google's own picker is the browser, which
+ * is what lets this ask only for the files you choose rather than for your
+ * whole Drive.
+ */
+function DriveTab({ onAdd }: { onAdd: (files: File[]) => void }) {
+  const [isPicking, setIsPicking] = useState(false);
+
+  const pick = async () => {
+    setIsPicking(true);
+    try {
+      const files = await pickDriveImages();
+      if (files.length > 0) {
+        onAdd(files);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open Drive");
+    } finally {
+      setIsPicking(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Button
+        className="w-full"
+        disabled={isPicking}
+        onClick={() => void pick()}
+        type="button"
+        variant="ghost"
+      >
+        {isPicking ? "Waiting for Google…" : "Choose from Drive"}
+      </Button>
+      <p className="text-[10px] text-white/35 leading-relaxed">
+        Only the files you pick are shared with this site. They are copied here,
+        so a board keeps working if the original moves.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The images on a published Framer page.
+ *
+ * A page address rather than a project: Framer's Server API documents nothing
+ * for listing a project's assets, and a published page works on any custom
+ * domain with no key at all. The cost is that unpublished work is out of reach.
+ */
+function FramerTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
+  const [url, setUrl] = useState("");
+  const [images, setImages] = useState<FramerImage[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isReading, setIsReading] = useState(false);
+
+  const read = async () => {
+    if (!url.trim()) {
+      return;
+    }
+    setIsReading(true);
+    setImages([]);
+    setNotice(null);
+    try {
+      const page = await framerApi.page(url.trim());
+      setImages(page.images);
+      setNotice(page.notice ?? null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not read that");
+    } finally {
+      setIsReading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Input
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              void read();
+            }
+          }}
+          placeholder="https://your-site.framer.website/work"
+          value={url}
+        />
+        <Button
+          disabled={isReading}
+          onClick={() => void read()}
+          type="button"
+          variant="ghost"
+        >
+          {isReading ? "Reading…" : "Read"}
+        </Button>
+      </div>
+
+      {notice ? (
+        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+          {notice}
+        </p>
+      ) : null}
+
+      {images.length > 0 ? (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+              {images.length} found
+            </p>
+            <button
+              className="text-[9px] text-white/50 uppercase tracking-[0.14em] hover:text-white"
+              onClick={() => {
+                for (const image of images) {
+                  onAdd({
+                    altText: image.altText,
+                    creditName: null,
+                    creditUrl: url.trim(),
+                    imageUrl: image.imageUrl,
+                    thumbUrl: image.thumbUrl,
+                  });
+                }
+              }}
+              type="button"
+            >
+              Add all
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {images.map((image) => (
+              <button
+                className="overflow-hidden rounded border border-white/10 hover:border-white/40"
+                key={image.imageUrl}
+                onClick={() =>
+                  onAdd({
+                    altText: image.altText,
+                    creditName: null,
+                    creditUrl: url.trim(),
+                    imageUrl: image.imageUrl,
+                    thumbUrl: image.thumbUrl,
+                  })
+                }
+                type="button"
+              >
+                <img
+                  alt={image.altText ?? "Framer asset"}
+                  className="aspect-square w-full bg-neutral-900 object-cover"
+                  height={160}
+                  loading="lazy"
+                  src={image.thumbUrl}
+                  width={160}
+                />
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Everything the fal account has already generated.
@@ -633,7 +719,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
               // a grid; the intrinsic size is only a hint against layout shift.
               height={160}
               loading="lazy"
-              src={item.url}
+              src={item.previewUrl}
               width={160}
             />
             <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] text-white/60">
@@ -663,6 +749,14 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
   );
 }
 
+/**
+ * The shader picker.
+ *
+ * Built entirely from the installed package's registry — 189 effects across ten
+ * categories, none of them listed here. A package update changes what this
+ * offers without a line of code changing, which is the whole reason the
+ * registry is worth leaning on.
+ */
 function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
   const [category, setCategory] = useState<string>(SHADER_CATEGORIES[0] ?? "");
   const shown = ALL_SHADERS.filter((shader) => shader.category === category);
@@ -719,17 +813,12 @@ function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
 }
 
 interface PinterestTabProps {
-  boardTitle: string | null;
-  isResolving: boolean;
   onAdd: (pins: PinResult[]) => void;
+  /** Remembers a board so it can be pulled from again later. */
+  onAttach: (source: BoardSource) => void;
   onDetach: (id: string) => void;
-  onOpenSource: (url: string) => void;
-  onResolve: () => void;
-  onUrlChange: (url: string) => void;
-  pins: PinResult[];
   /** Boards already attached to this moodboard, so they can be reopened. */
   sources: BoardSource[];
-  url: string;
 }
 
 /**
@@ -741,17 +830,64 @@ interface PinterestTabProps {
  * rather than left to be discovered by counting.
  */
 function PinterestTab({
-  boardTitle,
-  isResolving,
   onAdd,
+  onAttach,
   onDetach,
-  onOpenSource,
-  onResolve,
-  onUrlChange,
-  pins,
   sources,
-  url,
 }: PinterestTabProps) {
+  // The tab's own working state. It used to live in the panel along with every
+  // other tab's, which is what pushed that component past the complexity limit.
+  const [url, onUrlChange] = useState("");
+  const [pins, setPins] = useState<PinResult[]>([]);
+  const [boardTitle, setBoardTitle] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+
+  /**
+   * One field for both shapes.
+   *
+   * A pin link has /pin/<id>/ in it and anything else on pinterest.com is a
+   * board, so the distinction is free — asking someone to say which they pasted
+   * would be asking them to tell us what we can already see.
+   */
+  const load = async (override?: string) => {
+    const target = (override ?? url).trim();
+    if (!target) {
+      return;
+    }
+    setIsResolving(true);
+    setPins([]);
+    setBoardTitle(null);
+    try {
+      if (PIN_PATH.test(target)) {
+        setPins([await pinterestApi.resolve(target)]);
+      } else {
+        const board = await pinterestApi.board(target);
+        setPins(board.pins);
+        setBoardTitle(board.title);
+        // Remembered as soon as it resolves, not when a pin is added: the point
+        // is to be able to come back to it, which is true whether or not
+        // anything was taken from it this time.
+        onAttach({
+          id: newItemId(),
+          provider: "pinterest",
+          title: board.title,
+          url: target,
+        });
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not read that link"
+      );
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const onResolve = () => void load();
+  const onOpenSource = (sourceUrl: string) => {
+    onUrlChange(sourceUrl);
+    void load(sourceUrl);
+  };
   return (
     <div className="space-y-3">
       <form
@@ -865,40 +1001,44 @@ function PinterestTab({
   );
 }
 
-interface IconTabProps {
-  icon: GeneratedIcon | null;
-  isDrawing: boolean;
-  onAdd: () => void;
-  onDraw: () => void;
-  onPrompt: (prompt: string) => void;
-  onStyle: (style: IconStyle) => void;
-  prompt: string;
-  style: IconStyle;
-}
-
 /**
  * Drawing an icon from a description.
  *
  * Its own component, but its state belongs to the panel: switching to Unsplash
  * and back must not discard an icon that has just been paid for.
  */
-function IconTab({
-  icon,
-  isDrawing,
-  onAdd,
-  onDraw,
-  onPrompt,
-  onStyle,
-  prompt,
-  style,
-}: IconTabProps) {
+function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
+  // Held here rather than in the panel. The panel was carrying the state of
+  // every tab at once, which is what pushed it past the complexity limit as
+  // the ninth tab landed — a tab's working state belongs to the tab.
+  const [prompt, onPrompt] = useState("");
+  const [style, onStyle] = useState<IconStyle>(ICON_STYLES[0]);
+  const [icon, setIcon] = useState<GeneratedIcon | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const onDraw = async () => {
+    const text = prompt.trim();
+    if (!text) {
+      return;
+    }
+    setIsDrawing(true);
+    setIcon(null);
+    try {
+      setIcon(await aiApi.generateIcon(text, style));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not draw that");
+    } finally {
+      setIsDrawing(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <form
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          onDraw();
+          void onDraw();
         }}
       >
         <Input
@@ -951,7 +1091,16 @@ function IconTab({
           </div>
           <Button
             className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-            onClick={onAdd}
+            onClick={() =>
+              onAdd({
+                altText: prompt.slice(0, 200),
+                // Generated, so there is no one to credit.
+                creditName: null,
+                creditUrl: null,
+                imageUrl: icon.url,
+                thumbUrl: icon.url,
+              })
+            }
             type="button"
             variant="outline"
           >

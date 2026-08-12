@@ -3,9 +3,11 @@ import {
   Cancel01Icon,
   FrameIcon,
   Image01Icon,
+  LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
   PlayIcon,
+  SearchVisualIcon,
   SparklesIcon,
   StopIcon,
   TextIcon,
@@ -31,7 +33,17 @@ import {
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
-import { BoardCanvas } from "../../boards/BoardCanvas";
+import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
+import { BoardDrawTools } from "../../boards/BoardDrawTools";
+import type { DrawStyle } from "../../boards/DrawToolbar";
+import {
+  DEFAULT_STROKE,
+  DEFAULT_STROKE_WIDTH,
+  type DrawingConfig,
+  type DrawTool,
+  isFreehand,
+  NO_FILL,
+} from "../../boards/drawing";
 import { InsertPalette } from "../../boards/InsertPalette";
 import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
@@ -145,6 +157,13 @@ export function BoardEditor({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
+  const [drawTool, setDrawTool] = useState<DrawTool | null>(null);
+  const [selectedItem, setSelectedItem] = useState<BoardItem | null>(null);
+  const [drawStyle, setDrawStyle] = useState<DrawStyle>({
+    fill: NO_FILL,
+    stroke: DEFAULT_STROKE,
+    strokeWidth: DEFAULT_STROKE_WIDTH,
+  });
 
   /**
    * Publishing mints the slug server-side, so the link only exists once the
@@ -319,6 +338,20 @@ export function BoardEditor({
       if ((e.metaKey || e.ctrlKey) && e.key === "/") {
         e.preventDefault();
         setIsInserting((open) => !open);
+        return;
+      }
+      // Escape puts the pointer back. Without it a chosen tool is a mode you
+      // can only leave by finding the toolbar again, and since a tool draws on
+      // every press it also means nothing on the board can be moved — which
+      // reads as the cursor being stuck rather than as a mode being on.
+      if (e.key === "Escape") {
+        setDrawTool((current) => {
+          if (current === null) {
+            return current;
+          }
+          e.preventDefault();
+          return null;
+        });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -743,6 +776,36 @@ export function BoardEditor({
     ]);
   };
 
+  /**
+   * A finished mark becomes an item.
+   *
+   * The tool stays selected afterwards: drawing one shape almost always means
+   * drawing several, and dropping back to the pointer after every stroke would
+   * make the toolbar the thing you interact with most.
+   */
+  const addDrawing = (config: DrawingConfig, box: Box) => {
+    // A shape is usually placed once, so the pointer comes back afterwards and
+    // the new shape can be moved straight away. Pen and brush stay chosen,
+    // because sketching is many strokes in a row.
+    if (!isFreehand(config.tool)) {
+      setDrawTool(null);
+    }
+    change([
+      ...items,
+      {
+        ...BLANK_ITEM,
+        config: config as unknown as Record<string, unknown>,
+        height: Math.round(box.height),
+        id: newItemId(),
+        kind: "drawing",
+        width: Math.round(box.width),
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        z: items.length + 1,
+      },
+    ]);
+  };
+
   const close = async () => {
     if (isDirty) {
       await save();
@@ -805,6 +868,18 @@ export function BoardEditor({
           >
             <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
             Generate
+          </Button>
+          <Button
+            onClick={() => addNode("describe")}
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
+            Analyse
+          </Button>
+          <Button onClick={() => addNode("join")} type="button" variant="ghost">
+            <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
+            Combine
           </Button>
           <Button onClick={() => addNode("icon")} type="button" variant="ghost">
             <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
@@ -880,16 +955,36 @@ export function BoardEditor({
       </header>
 
       <div className="relative min-h-0 flex-1">
+        {/* Floating over the canvas rather than in the header: the header
+            already wraps at laptop width, and a drawing tool wants to be near
+            what it is drawing on. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+          <div className="pointer-events-auto">
+            <BoardDrawTools
+              onConfigChange={changeConfig}
+              onStyle={setDrawStyle}
+              onTool={setDrawTool}
+              selected={selectedItem}
+              style={drawStyle}
+              tool={drawTool}
+            />
+          </div>
+        </div>
+
         <BoardCanvas
           autoEditId={autoEditId}
+          drawStyle={drawStyle}
+          drawTool={drawTool}
           items={items}
           keyOf={keyOf}
           onChange={change}
           onConfigChange={changeConfig}
           onCreateFromPort={createFromPort}
+          onDraw={addDrawing}
           onDropFiles={(files, point) => void dropFiles(files, point)}
           onDropImage={dropImage}
           onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
+          onSelectionChange={setSelectedItem}
           onWiresChange={changeWires}
           wires={wires}
         />
@@ -919,6 +1014,12 @@ export function BoardEditor({
         {isPicking ? (
           <BoardInsertPanel
             onAddExternal={addExternal}
+            onAddFiles={(files) =>
+              void dropFiles(
+                files,
+                dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
+              )
+            }
             onAddNode={addNode}
             onAddPhoto={addPhoto}
             onAddShader={addShader}

@@ -22,7 +22,11 @@ interface OpNodeViewProps {
   item: BoardItem;
   onConfigChange: (config: Record<string, unknown>) => void;
   onRun: (force: boolean) => void;
+  /** What this node computes from its inputs — a Combine node’s joined text. */
+  outputText?: string | null;
   readOnly: boolean;
+  /** The words that wire is carrying, so the node can show them. */
+  wiredPrompt?: string | null;
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -279,10 +283,20 @@ function RunningGlow() {
 function PublishedResult({
   images,
   selected,
+  text,
 }: {
   images: BoardItemVariation[];
   selected: number;
+  /** An Analyse node's words, when that is what this node made. */
+  text?: string | null;
 }) {
+  if (text) {
+    return (
+      <p className="whitespace-pre-wrap text-[12px] text-white/80 leading-relaxed">
+        {text}
+      </p>
+    );
+  }
   const shown = images[Math.min(selected, images.length - 1)];
   if (!shown) {
     return null;
@@ -300,9 +314,11 @@ function PublishedResult({
 
 export function OpNodeView({
   hasWiredPrompt,
+  wiredPrompt,
   item,
   onConfigChange,
   onRun,
+  outputText,
   readOnly,
 }: OpNodeViewProps) {
   const type = nodeTypeFor(item.nodeType);
@@ -310,13 +326,27 @@ export function OpNodeView({
   const config = item.config ?? {};
   const isRunning = state === "running";
   const stored = item.result;
+  // Words rather than pictures. Shown as text because that is what it is, and
+  // because it is meant to be read and edited before being wired onward.
+  // Either words a run produced, or a value the node computes without running —
+  // a Combine node holds no result at all, yet has plenty to show.
+  const analysed =
+    (typeof stored?.text === "string" && stored.text.trim()
+      ? stored.text
+      : null) ?? (outputText?.trim() ? outputText : null);
   const images = pickImages(stored).filter((v) => Boolean(v?.url));
 
   // On a published board a node is not a node: it is whatever it produced.
   // The header, the state, the prompt and the version strip are all working
   // material, and a visitor came to look at the picture.
   if (readOnly) {
-    return <PublishedResult images={images} selected={selectedIndex(config)} />;
+    return (
+      <PublishedResult
+        images={images}
+        selected={selectedIndex(config)}
+        text={analysed}
+      />
+    );
   }
 
   if (!type) {
@@ -331,9 +361,6 @@ export function OpNodeView({
   // shows no run state — a Prompt node reading "Ready" would be promising
   // something that is never going to happen.
   const isSource = !type.capability;
-  const set = (key: string, value: string) =>
-    onConfigChange({ ...config, [key]: value });
-
   return (
     <>
       {isRunning ? <RunningGlow /> : null}
@@ -357,71 +384,18 @@ export function OpNodeView({
           )}
         </header>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
-          {/* A batch lays its variations out as a grid so they can be compared
-              at a glance, which is the entire reason for asking for several. */}
-          <ResultImages
-            images={images}
-            onSelect={(index) =>
-              onConfigChange({ ...config, selectedVersion: index })
-            }
-            selected={selectedIndex(config)}
-          />
-
-          {/* A prompt arriving down a wire wins over one typed here, so saying
-              so is better than leaving a field that looks live but is ignored. */}
-          {hasWiredPrompt ? (
-            <p className="text-[10px] text-sky-300/70">
-              Prompt is wired in; the text below is not used.
-            </p>
-          ) : null}
-
-          {type.settings.map((setting) => (
-            <SettingField
-              key={setting.key}
-              onChange={(value) => set(setting.key, value)}
-              // Only the prompt is superseded by a wire. Disabling every
-              // setting locked the model and variation count too, which have
-              // nothing to do with where the prompt came from.
-              readOnly={
-                readOnly || (hasWiredPrompt && setting.key === "prompt")
-              }
-              setting={setting}
-              value={
-                typeof config[setting.key] === "string" ||
-                typeof config[setting.key] === "number"
-                  ? String(config[setting.key])
-                  : ""
-              }
-            />
-          ))}
-
-          {/* A run that reported success but drew nothing would otherwise look
-              identical to one that never ran. Saying so is what keeps a broken
-              result visible instead of silently blank. */}
-          {state === "succeeded" && images.length === 0 ? (
-            <p className="text-[10px] text-amber-300/70 leading-relaxed">
-              Ran, but returned no image. Try again, or check the model.
-            </p>
-          ) : null}
-
-          {item.runError ? (
-            <p className="flex items-start gap-1 text-[10px] text-red-300/90 leading-relaxed">
-              <HugeiconsIcon aria-hidden icon={Alert02Icon} size={11} />
-              {item.runError}
-            </p>
-          ) : null}
-
-          {/* Stated on the node rather than left to be discovered by zooming
-              in: a raster glyph turns to mush at 300% and there is nothing on
-              the board to say why. */}
-          {item.result?.isVector === false ? (
-            <p className="text-[10px] text-amber-300/70 leading-relaxed">
-              Came back as a raster, not vector. It will not stay sharp zoomed
-              in.
-            </p>
-          ) : null}
-        </div>
+        <NodeBody
+          analysed={analysed}
+          config={config}
+          hasWiredPrompt={hasWiredPrompt}
+          images={images}
+          item={item}
+          onConfigChange={onConfigChange}
+          readOnly={readOnly}
+          state={state}
+          type={type}
+          wiredPrompt={wiredPrompt}
+        />
 
         {readOnly || isSource ? null : (
           // Deliberately NOT counter-scaled, unlike the floating chrome in
@@ -457,5 +431,132 @@ export function OpNodeView({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * What a setting's field shows.
+ *
+ * A wired prompt is shown in the field it replaces, rather than leaving the
+ * typed text on screen while something else is actually used. Seeing the words
+ * arrive is the only way to tell a wire is live — a note saying one exists
+ * proves nothing about what it carries.
+ */
+const fieldValue = (
+  key: string,
+  config: Record<string, unknown>,
+  wiredPrompt?: string | null
+): string => {
+  if (key === "prompt" && wiredPrompt) {
+    return wiredPrompt;
+  }
+  const stored = config[key];
+  return typeof stored === "string" || typeof stored === "number"
+    ? String(stored)
+    : "";
+};
+
+interface NodeBodyProps {
+  analysed: string | null;
+  config: Record<string, unknown>;
+  hasWiredPrompt: boolean;
+  images: BoardItemVariation[];
+  item: BoardItem;
+  onConfigChange: (config: Record<string, unknown>) => void;
+  readOnly: boolean;
+  state: string;
+  type: NonNullable<ReturnType<typeof nodeTypeFor>>;
+  wiredPrompt?: string | null;
+}
+
+/**
+ * Everything below a node's header: what it made, its settings, its complaints.
+ *
+ * Split out because the node grew a second kind of result. OpNodeView was
+ * deciding the header, the run state, the settings, three sorts of notice and
+ * now text-or-images all in one function, which is more branching than one
+ * component should carry.
+ */
+function NodeBody({
+  analysed,
+  config,
+  hasWiredPrompt,
+  wiredPrompt,
+  images,
+  item,
+  onConfigChange,
+  readOnly,
+  state,
+  type,
+}: NodeBodyProps) {
+  const set = (key: string, value: string) =>
+    onConfigChange({ ...config, [key]: value });
+
+  return (
+    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+      {/* What an Analyse node produced. Selectable, because the usual next
+              move is to take part of it into a prompt by hand. */}
+      {analysed ? (
+        <p className="select-text whitespace-pre-wrap rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white/80 leading-relaxed">
+          {analysed}
+        </p>
+      ) : null}
+
+      {/* A batch lays its variations out as a grid so they can be compared
+              at a glance, which is the entire reason for asking for several. */}
+      <ResultImages
+        images={images}
+        onSelect={(index) =>
+          onConfigChange({ ...config, selectedVersion: index })
+        }
+        selected={selectedIndex(config)}
+      />
+
+      {/* A prompt arriving down a wire wins over one typed here, so saying
+              so is better than leaving a field that looks live but is ignored. */}
+      {hasWiredPrompt ? (
+        <p className="text-[10px] text-sky-300/70">
+          Prompt is wired in; the text below is not used.
+        </p>
+      ) : null}
+
+      {type.settings.map((setting) => (
+        <SettingField
+          key={setting.key}
+          onChange={(value) => set(setting.key, value)}
+          // Only the prompt is superseded by a wire. Disabling every
+          // setting locked the model and variation count too, which have
+          // nothing to do with where the prompt came from.
+          readOnly={readOnly || (hasWiredPrompt && setting.key === "prompt")}
+          setting={setting}
+          value={fieldValue(setting.key, config, wiredPrompt)}
+        />
+      ))}
+
+      {/* A run that reported success but drew nothing would otherwise look
+              identical to one that never ran. Saying so is what keeps a broken
+              result visible instead of silently blank. */}
+      {state === "succeeded" && images.length === 0 ? (
+        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+          Ran, but returned no image. Try again, or check the model.
+        </p>
+      ) : null}
+
+      {item.runError ? (
+        <p className="flex items-start gap-1 text-[10px] text-red-300/90 leading-relaxed">
+          <HugeiconsIcon aria-hidden icon={Alert02Icon} size={11} />
+          {item.runError}
+        </p>
+      ) : null}
+
+      {/* Stated on the node rather than left to be discovered by zooming
+              in: a raster glyph turns to mush at 300% and there is nothing on
+              the board to say why. */}
+      {item.result?.isVector === false ? (
+        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+          Came back as a raster, not vector. It will not stay sharp zoomed in.
+        </p>
+      ) : null}
+    </div>
   );
 }

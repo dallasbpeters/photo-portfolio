@@ -2,8 +2,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FrameIcon,
   Image01Icon,
+  LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
+  SearchVisualIcon,
   SparklesIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
@@ -24,7 +26,10 @@ import { ALL_SHADERS } from "./shaderConfig";
 export type InsertAction =
   | { kind: "frame" }
   | { kind: "images" }
-  | { kind: "node"; nodeType: "generate" | "icon" | "prompt" }
+  | {
+      kind: "node";
+      nodeType: "describe" | "generate" | "icon" | "join" | "prompt";
+    }
   | { kind: "shader"; name: string }
   | { kind: "writable"; writable: "note" | "text" };
 
@@ -78,6 +83,20 @@ const BASE_ENTRIES: Entry[] = [
     hint: "svg vector glyph magnific",
     icon: MagicWand01Icon,
     label: "Icon",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "describe" },
+    hint: "analyse describe style caption reference vision",
+    icon: SearchVisualIcon,
+    label: "Analyse",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "join" },
+    hint: "combine join merge concatenate text prompt",
+    icon: LinkSquare01Icon,
+    label: "Combine",
     section: "Nodes",
   },
   {

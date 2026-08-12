@@ -1,7 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FrameIcon,
+  LinkSquare01Icon,
   MagicWand01Icon,
+  SearchVisualIcon,
   SparklesIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
@@ -22,9 +24,11 @@ export interface PortTarget {
 }
 
 const ICONS: Record<string, typeof SparklesIcon> = {
+  describe: SearchVisualIcon,
   frame: FrameIcon,
   generate: SparklesIcon,
   icon: MagicWand01Icon,
+  join: LinkSquare01Icon,
   prompt: TextIcon,
 };
 

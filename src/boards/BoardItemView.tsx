@@ -16,6 +16,8 @@ import {
 } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import type { BoardItem } from "../types";
+import { DrawingView } from "./DrawingView";
+import { isDrawingConfig } from "./drawing";
 import { OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
 import { ShaderControls } from "./ShaderControls";
@@ -85,11 +87,15 @@ interface BoardItemViewProps {
   onResizeStart: (index: number, clientX: number, clientY: number) => void;
   onRun?: (force: boolean) => void;
   onSelect: (index: number, clientX: number, clientY: number) => void;
+  /** What a node computes from its inputs, for the kinds that show it. */
+  outputText?: string | null;
   ports?: PortHandlers;
   /** Viewing a published board: no controls at all, not merely disabled ones. */
   readOnly?: boolean;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
   scale: number;
+  /** The words arriving on this item's prompt input, if any. */
+  wiredPrompt?: string | null;
 }
 
 interface PortHandlesProps {
@@ -477,7 +483,9 @@ interface ItemContentProps {
   onConfigChange?: (config: Record<string, unknown>) => void;
   onEditBody: (body: string) => void;
   onRun?: (force: boolean) => void;
+  outputText?: string | null;
   readOnly: boolean;
+  wiredPrompt?: string | null;
 }
 
 /**
@@ -492,18 +500,29 @@ function ItemContent({
   fontSize,
   hasWiredPrompt,
   imageUrl,
+  wiredPrompt,
   isEditing,
   isSelected,
   item,
   onConfigChange,
   onEditBody,
   onRun,
+  outputText,
   readOnly,
 }: ItemContentProps) {
   if (item.kind === "frame") {
     return (
       <FrameBody item={item} onEditBody={onEditBody} readOnly={readOnly} />
     );
+  }
+  if (item.kind === "drawing") {
+    return isDrawingConfig(item.config) ? (
+      <DrawingView
+        config={item.config}
+        height={item.height}
+        width={item.width}
+      />
+    ) : null;
   }
   if (item.kind === "shader") {
     return (
@@ -523,7 +542,9 @@ function ItemContent({
         item={item}
         onConfigChange={onConfigChange ?? (() => undefined)}
         onRun={onRun ?? (() => undefined)}
+        outputText={outputText}
         readOnly={readOnly}
+        wiredPrompt={wiredPrompt}
       />
     );
   }
@@ -542,6 +563,8 @@ function ItemContent({
 export function BoardItemView({
   hasWiredPrompt = false,
   imageUrl,
+  outputText,
+  wiredPrompt,
   index,
   isEditing,
   isSelected,
@@ -583,7 +606,7 @@ export function BoardItemView({
   return (
     <div
       className={`group absolute ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-white/80" : "ring-1 ring-white/10"
+        isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-white/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
       onPointerDown={(e) => {
         // While editing, the press belongs to the field — placing a caret or
@@ -620,7 +643,9 @@ export function BoardItemView({
         onConfigChange={onConfigChange}
         onEditBody={onEditBody}
         onRun={onRun}
+        outputText={outputText}
         readOnly={readOnly}
+        wiredPrompt={wiredPrompt}
       />
 
       {/* Absent as a unit on a published board, which has no wiring at all. */}

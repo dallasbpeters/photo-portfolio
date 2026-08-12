@@ -1,4 +1,4 @@
-import type { BoardItem, BoardItemVariation } from "../types";
+import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
 
 /**
  * Drag-and-drop type for an image pulled off a node.
@@ -42,6 +42,55 @@ export const pickImages = (
 /** Which stored version the node is showing; the first until one is picked. */
 export const selectedIndex = (config: Record<string, unknown>): number =>
   typeof config.selectedVersion === "number" ? config.selectedVersion : 0;
+
+/**
+ * The words this item sends downstream, or null if it sends none.
+ *
+ * Mirrors singleOutputOf on the server, which is the authority — this exists so
+ * a node can *show* what is arriving on its prompt rather than merely saying
+ * that something is. A wire you cannot read is a wire you have to trust.
+ */
+/** A chain of Combine nodes longer than this is a mistake, not a design. */
+const MAX_JOIN_DEPTH = 8;
+
+export const outputTextOf = (
+  item: BoardItem,
+  /** Needed only to resolve a Combine node, whose value is its inputs. */
+  graph?: { items: BoardItem[]; wires: BoardWire[] },
+  depth = 0
+): string | null => {
+  // Mirrors singleOutputOf on the server. Duplicated deliberately: the server
+  // is the authority on what actually runs, and this exists so the canvas can
+  // *show* the same answer without asking it.
+  if (item.nodeType === "join" && graph && depth <= MAX_JOIN_DEPTH) {
+    const parts = graph.wires
+      .filter((w) => w.targetItemId === item.id && w.targetPort === "text")
+      .map((w) => graph.items.find((i) => i.id === w.sourceItemId))
+      .map((source) => (source ? outputTextOf(source, graph, depth + 1) : null))
+      .filter((part): part is string => Boolean(part?.trim()));
+    if (parts.length === 0) {
+      return null;
+    }
+    const separator = item.config?.separator;
+    return parts.join(typeof separator === "string" ? separator : ", ");
+  }
+  if (item.kind === "note" || item.kind === "text") {
+    return item.body?.trim() || null;
+  }
+  if (item.kind !== "op") {
+    return null;
+  }
+  // A produced description, when the node ran and made words.
+  const produced = item.result?.text;
+  if (typeof produced === "string" && produced.trim()) {
+    return produced;
+  }
+  // A source node holds its value in settings and never runs, so there is no
+  // result to read — a Prompt node keeps it under `text`, the others `prompt`.
+  const config = item.config ?? {};
+  const typed = config.text ?? config.prompt;
+  return typeof typed === "string" && typed.trim() ? typed : null;
+};
 
 /**
  * The single image this item sends downstream, or null if it has none yet.

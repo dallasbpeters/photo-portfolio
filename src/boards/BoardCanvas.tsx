@@ -9,7 +9,18 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
-import { BOARD_IMAGE_TYPE, outputImageOf } from "./itemOutput";
+import {
+  boundsOf,
+  CORNER_RADIUS,
+  type DrawingConfig,
+  type DrawTool,
+  isFreehand,
+  isTransparent,
+  type Point,
+  pathFor,
+  toUnitSpace,
+} from "./drawing";
+import { BOARD_IMAGE_TYPE, outputImageOf, outputTextOf } from "./itemOutput";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { useCanvasViewport } from "./useCanvasViewport";
@@ -18,12 +29,24 @@ import { WireLayer } from "./WireLayer";
 
 const NO_WIRES: BoardWire[] = [];
 
+/** Where a mark ended up, in canvas units. */
+export interface Box {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
 /** A pasted address worth treating as an image. No whitespace: one URL, not prose. */
 const HTTP_URL = /^https?:\/\/\S+$/i;
 
 interface BoardCanvasProps {
   /** Item to open for typing as soon as it appears — a just-placed note. */
   autoEditId?: string | null;
+  /** Colours and weight the next mark is drawn with. */
+  drawStyle?: { fill: string; stroke: string; strokeWidth: number };
+  /** The active drawing tool, or null when the pointer selects and pans. */
+  drawTool?: DrawTool | null;
   items: BoardItem[];
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
@@ -41,6 +64,13 @@ interface BoardCanvasProps {
     sourcePort: string,
     target: PortTarget
   ) => void;
+  /**
+   * A mark drawn on the board, in canvas units.
+   *
+   * The canvas owns the gesture because only it can turn a pointer into a board
+   * coordinate; the editor turns the result into an item.
+   */
+  onDraw?: (config: DrawingConfig, box: Box) => void;
   /**
    * Image files dragged onto the board, with the canvas point they landed on.
    *
@@ -62,6 +92,14 @@ interface BoardCanvasProps {
   ) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
   onRun?: (itemId: string, force: boolean) => void;
+  /**
+   * The item currently selected, or null.
+   *
+   * Reported up so the editor can offer controls for it — a drawing's colours
+   * are edited by the same toolbar that set them, which only works if the
+   * toolbar knows what is selected.
+   */
+  onSelectionChange?: (item: BoardItem | null) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
   /**
    * Viewing rather than editing. Pan and zoom remain, since a published board
@@ -134,9 +172,13 @@ export function BoardCanvas({
   onChange,
   onConfigChange,
   onCreateFromPort,
+  drawTool = null,
+  drawStyle,
+  onDraw,
   onDropFiles,
   onDropImage,
   onRun,
+  onSelectionChange,
   onWiresChange,
   keyOf,
   autoEditId,
@@ -166,6 +208,86 @@ export function BoardCanvas({
     }
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
+
+  // Reported from an effect rather than at each call site: selection is cleared
+  // in half a dozen places — a background press, a delete, a drawing gesture —
+  // and every one of them would otherwise have to remember to announce it.
+  const selectedItem = selected === null ? null : (items[selected] ?? null);
+  // Held in a ref so the effect below can read the current item without
+  // depending on it: the item is a new object on every edit, and depending on
+  // it would re-announce the selection on each keystroke.
+  const selectedRef = useRef(selectedItem);
+  selectedRef.current = selectedItem;
+  const selectedId = selectedItem?.id ?? null;
+  useEffect(() => {
+    // selectedId is what makes this fire, and reading it here rather than
+    // relying on it only as a dependency keeps that visible — the ref supplies
+    // the item, the id decides when.
+    onSelectionChange?.(selectedId === null ? null : selectedRef.current);
+  }, [selectedId, onSelectionChange]);
+
+  /**
+   * The mark being drawn right now, in canvas units.
+   *
+   * Held in state rather than a ref because it has to render as it grows —
+   * drawing you cannot see until you let go is not drawing.
+   */
+  const [stroke, setStroke] = useState<Point[] | null>(null);
+
+  const isDrawing = drawTool !== null && !readOnly && Boolean(onDraw);
+
+  /** Ends the mark, handing the editor a config and the box it occupies. */
+  const finishStroke = useCallback(
+    (points: Point[]) => {
+      setStroke(null);
+      if (!(drawTool && onDraw && drawStyle) || points.length === 0) {
+        return;
+      }
+      const [first] = points;
+      const last = points.at(-1);
+      if (!(first && last)) {
+        return;
+      }
+
+      if (isFreehand(drawTool)) {
+        const box = boundsOf(points, drawStyle.strokeWidth);
+        onDraw(
+          {
+            fill: null,
+            points: toUnitSpace(points, box),
+            stroke: drawStyle.stroke,
+            strokeWidth: drawStyle.strokeWidth,
+            tool: drawTool,
+          },
+          box
+        );
+        return;
+      }
+
+      // A shape is defined by where the drag began and ended, in either
+      // direction — dragging up and left is as natural as down and right.
+      const box = {
+        height: Math.abs(last.y - first.y),
+        width: Math.abs(last.x - first.x),
+        x: Math.min(first.x, last.x),
+        y: Math.min(first.y, last.y),
+      };
+      if (box.width < MIN_ITEM_SIZE || box.height < MIN_ITEM_SIZE) {
+        // A click rather than a drag. Nothing was asked for.
+        return;
+      }
+      onDraw(
+        {
+          fill: drawStyle.fill,
+          stroke: drawStyle.stroke,
+          strokeWidth: drawStyle.strokeWidth,
+          tool: drawTool,
+        },
+        box
+      );
+    },
+    [drawStyle, drawTool, onDraw]
+  );
 
   /**
    * Where something arriving without a pointer position should go: the middle of
@@ -271,6 +393,24 @@ export function BoardCanvas({
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
   );
+
+  /**
+   * The words arriving on an item's prompt input, so the node can show them.
+   *
+   * Resolved here because only the canvas holds the wires; the node itself
+   * knows nothing about what feeds it.
+   */
+  const wiredTextFor = (itemId: string): string | null => {
+    const wire = wires.find(
+      (candidate) =>
+        candidate.targetItemId === itemId && candidate.targetPort === "prompt"
+    );
+    if (!wire) {
+      return null;
+    }
+    const source = items.find((item) => item.id === wire.sourceItemId);
+    return source ? outputTextOf(source, { items, wires }) : null;
+  };
 
   /**
    * The picture feeding an item's image input, for the kinds that render one
@@ -541,7 +681,11 @@ export function BoardCanvas({
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the pan/zoom surface is scenery, not a control — keyboard users reach the items themselves, which are focusable */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same — this element exists to receive pointer gestures and file drops aimed at the board as a whole */}
       <div
-        className={`h-full w-full touch-none ${view.isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`h-full w-full touch-none ${
+          isDrawing
+            ? "cursor-crosshair"
+            : (view.isPanning && "cursor-grabbing") || "cursor-grab"
+        }`}
         onDragOver={
           onDropFiles || onDropImage
             ? (e) => {
@@ -582,11 +726,27 @@ export function BoardCanvas({
               }
             : undefined
         }
-        onPointerCancel={endGesture}
+        onPointerCancel={(e) => {
+          if (stroke) {
+            finishStroke(stroke);
+            return;
+          }
+          endGesture(e);
+        }}
         onPointerDown={(e) => {
           // A press that began on a port is already a wire drag; the surface
           // must not also start panning underneath it.
           if (wiring.isDragging) {
+            return;
+          }
+          // A tool is chosen, so a press is a mark rather than a selection or a
+          // pan. Capture the pointer so a stroke that leaves the element still
+          // finishes here instead of being abandoned mid-line.
+          if (isDrawing) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            setSelected(null);
+            setEditingId(null);
+            setStroke([view.toCanvas(e.clientX, e.clientY)]);
             return;
           }
           // Landing on the background clears the selection and starts a pan.
@@ -596,8 +756,34 @@ export function BoardCanvas({
             view.onPointerDown(e);
           }
         }}
-        onPointerMove={onPointerMove}
-        onPointerUp={endGesture}
+        onPointerMove={(e) => {
+          if (stroke) {
+            const point = view.toCanvas(e.clientX, e.clientY);
+            // A shape only ever needs where it started and where it is now;
+            // keeping every sample would make its box jitter with the pointer.
+            setStroke((current) => {
+              if (!current) {
+                return current;
+              }
+              const [first] = current;
+              if (!(first && drawTool)) {
+                return current;
+              }
+              return isFreehand(drawTool)
+                ? [...current, point]
+                : [first, point];
+            });
+            return;
+          }
+          onPointerMove(e);
+        }}
+        onPointerUp={(e) => {
+          if (stroke) {
+            finishStroke(stroke);
+            return;
+          }
+          endGesture(e);
+        }}
         ref={containerRef}
       >
         <div
@@ -655,6 +841,35 @@ export function BoardCanvas({
             wires={wires}
           />
 
+          {/* The mark as it is being made. Rendered here, inside the canvas
+              transform, so it sits in the same coordinate space it will occupy
+              once it becomes an item — no jump on release. */}
+          {stroke && drawTool && drawStyle ? (
+            <svg
+              className="pointer-events-none absolute inset-0 overflow-visible"
+              height={CANVAS_HEIGHT}
+              width={CANVAS_WIDTH}
+            >
+              <title>Drawing in progress</title>
+              {isFreehand(drawTool) ? (
+                <path
+                  d={pathFor(stroke, drawTool === "brush")}
+                  fill="none"
+                  stroke={drawStyle.stroke}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={drawStyle.strokeWidth}
+                />
+              ) : (
+                <PreviewShape
+                  points={stroke}
+                  style={drawStyle}
+                  tool={drawTool}
+                />
+              )}
+            </svg>
+          ) : null}
+
           {items.map((item, index) => (
             <BoardItemView
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
@@ -684,6 +899,11 @@ export function BoardCanvas({
               onResizeStart={readOnly ? () => undefined : beginResize}
               onRun={(force) => onRun?.(item.id, force)}
               onSelect={readOnly ? () => undefined : beginMove}
+              outputText={
+                item.nodeType === "join"
+                  ? outputTextOf(item, { items, wires })
+                  : null
+              }
               ports={
                 readOnly
                   ? undefined
@@ -703,6 +923,7 @@ export function BoardCanvas({
               }
               readOnly={readOnly}
               scale={view.viewport.scale}
+              wiredPrompt={wiredTextFor(item.id)}
             />
           ))}
         </div>
@@ -749,5 +970,59 @@ export function BoardCanvas({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The outline of a shape while it is still being dragged out.
+ *
+ * Separate from DrawingView because that renders a finished item inside its own
+ * box, whereas this lives in canvas space and has no box yet — the box is what
+ * the drag is deciding.
+ */
+function PreviewShape({
+  points,
+  style,
+  tool,
+}: {
+  points: Point[];
+  style: { fill: string; stroke: string; strokeWidth: number };
+  tool: DrawTool;
+}) {
+  const [first] = points;
+  const last = points.at(-1);
+  if (!(first && last)) {
+    return null;
+  }
+  const x = Math.min(first.x, last.x);
+  const y = Math.min(first.y, last.y);
+  const width = Math.abs(last.x - first.x);
+  const height = Math.abs(last.y - first.y);
+  const fill = isTransparent(style.fill) ? "none" : style.fill;
+
+  if (tool === "ellipse") {
+    return (
+      <ellipse
+        cx={x + width / 2}
+        cy={y + height / 2}
+        fill={fill}
+        rx={width / 2}
+        ry={height / 2}
+        stroke={style.stroke}
+        strokeWidth={style.strokeWidth}
+      />
+    );
+  }
+  return (
+    <rect
+      fill={fill}
+      height={height}
+      rx={tool === "rounded" ? CORNER_RADIUS : 0}
+      stroke={style.stroke}
+      strokeWidth={style.strokeWidth}
+      width={width}
+      x={x}
+      y={y}
+    />
   );
 }

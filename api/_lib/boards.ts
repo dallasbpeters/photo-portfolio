@@ -27,7 +27,8 @@ export type BoardItemKind =
   | "text"
   | "op"
   | "frame"
-  | "shader";
+  | "shader"
+  | "drawing";
 
 export interface BoardRow {
   cover_url: string | null;
@@ -268,7 +269,8 @@ export const isBoardItemKind = (value: unknown): value is BoardItemKind =>
   value === "text" ||
   value === "op" ||
   value === "frame" ||
-  value === "shader";
+  value === "shader" ||
+  value === "drawing";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -462,6 +464,57 @@ const parseLayers = (raw: unknown, depth: number): ShaderLayerDto[] => {
   return parsed;
 };
 
+/** The tools a drawing may claim to be, mirroring DRAW_TOOLS on the client. */
+const DRAW_TOOLS = new Set(["pen", "brush", "rect", "rounded", "ellipse"]);
+
+/** A freehand path this long is a mistake or an attack, not a drawing. */
+const MAX_DRAW_POINTS = 4000;
+
+/**
+ * A drawn mark: shape only, never appearance.
+ *
+ * Colours are passed through as given rather than parsed. They are written into
+ * an SVG attribute, not into markup, so a malformed one paints nothing — and
+ * the length cap is what stops the column being used as storage for something
+ * that is not a colour.
+ *
+ * The point cap matters more: a freehand path is the one field here whose size
+ * is chosen by whoever is drawing, and an unbounded array of coordinates is an
+ * unbounded row.
+ */
+const parseDrawingConfig = (raw: unknown): Record<string, unknown> | null => {
+  if (typeof raw !== "object" || raw === null) {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const tool =
+    typeof o.tool === "string" && DRAW_TOOLS.has(o.tool) ? o.tool : null;
+  if (!tool) {
+    return null;
+  }
+
+  const config: Record<string, unknown> = {
+    fill: text(o.fill, 32),
+    stroke: text(o.stroke, 32) ?? "#ffffff",
+    strokeWidth: clamp(num(o.strokeWidth, 4), 1, 200),
+    tool,
+  };
+
+  if (Array.isArray(o.points)) {
+    config.points = o.points
+      .slice(0, MAX_DRAW_POINTS)
+      .filter(
+        (point): point is { x: number; y: number } =>
+          typeof point === "object" &&
+          point !== null &&
+          Number.isFinite((point as { x?: unknown }).x) &&
+          Number.isFinite((point as { y?: unknown }).y)
+      )
+      .map((point) => ({ x: point.x, y: point.y }));
+  }
+  return config;
+};
+
 const parseShaderConfig = (raw: unknown): Record<string, unknown> | null => {
   if (typeof raw !== "object" || raw === null) {
     return null;
@@ -550,9 +603,11 @@ const hasRequiredContent = (
       return content.body !== null;
     case "op":
       return Boolean(content.nodeType);
-    // A shader is defined entirely by its config; without one there is nothing
-    // to render. Mirrors board_items_shape.
+    // A shader stack and a drawn mark are both defined entirely by their
+    // config; without one there is nothing to render. Mirrors
+    // board_items_shape.
     case "shader":
+    case "drawing":
       return content.config !== null;
     default:
       return true;
@@ -599,6 +654,8 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
   let config: Record<string, unknown> | null = null;
   if (o.kind === "shader") {
     config = parseShaderConfig(o.config);
+  } else if (o.kind === "drawing") {
+    config = parseDrawingConfig(o.config);
   } else if (nodeType) {
     config = parseNodeConfig(nodeType, o.config);
   }
