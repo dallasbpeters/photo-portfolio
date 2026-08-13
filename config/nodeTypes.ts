@@ -279,6 +279,29 @@ export const FAL_MODELS = [
     vector: true,
   },
   {
+    /*
+     * Puts an existing picture into a scene: a sticker on a laptop lid, a mark
+     * on a shop front, a card in someone's hand. It edits by instruction and
+     * keeps the artwork faithful, which is what separates a mockup from
+     * generating a fresh image that merely resembles yours.
+     *
+     * Both required — nothing to place without a picture, nowhere to put it
+     * without a description.
+     */
+    id: "fal-ai/flux-pro/kontext",
+    input: "prompt-and-image",
+    label: "Mockup · place in a scene",
+    vector: false,
+  },
+  {
+    // The same, with more care taken over the result. Slower and dearer, for
+    // when the mockup is the deliverable rather than a look at an idea.
+    id: "fal-ai/flux-pro/kontext/max",
+    input: "prompt-and-image",
+    label: "Mockup · place in a scene (max)",
+    vector: false,
+  },
+  {
     // Traces an existing image into vector art rather than inventing one, so it
     // is the only model here that needs an image and has no use for a prompt.
     id: "fal-ai/recraft/vectorize",
