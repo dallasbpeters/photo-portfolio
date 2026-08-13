@@ -334,11 +334,23 @@ const batchOutputsOf = (
       );
       return source ? outputsOf(source, rows, wires, depth + 1) : [];
     });
+  // Struck off by address rather than by position: a batch resolves fresh
+  // every run, so an index would come to mean a different picture as soon as
+  // anything upstream changed.
+  const config = asObject(row.config);
+  const excluded = new Set(
+    Array.isArray(config.excluded)
+      ? (config.excluded as unknown[]).filter(
+          (url): url is string => typeof url === "string"
+        )
+      : []
+  );
+  const kept = all.filter((url) => !excluded.has(url));
   // "Only the first N", so a frame of forty can be tried three at a time
   // before committing to the rest. Zero means all of them.
-  const raw = Number(asObject(row.config).limit);
+  const raw = Number(config.limit);
   const limit = Number.isFinite(raw) ? Math.trunc(raw) : 0;
-  return limit > 0 ? all.slice(0, limit) : all;
+  return limit > 0 ? kept.slice(0, limit) : kept;
 };
 
 const joinedOutputOf = (

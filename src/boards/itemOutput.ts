@@ -322,6 +322,22 @@ export const outputTextOf = (
  * Mirrors outputsOf on the server, which remains the authority — this exists so
  * the canvas can show the batch before anything is spent on it.
  */
+/**
+ * The pictures struck off a Batch node.
+ *
+ * Kept as addresses rather than positions: a batch is resolved fresh every
+ * time, so an index would come to mean a different picture the moment anything
+ * upstream moved, and a run would quietly skip the wrong one.
+ */
+export const excludedFrom = (config: unknown): Set<string> => {
+  const raw = (config as { excluded?: unknown } | null)?.excluded;
+  return new Set(
+    Array.isArray(raw)
+      ? raw.filter((u): u is string => typeof u === "string")
+      : []
+  );
+};
+
 export const outputImagesOf = (
   item: BoardItem | null,
   graph: { items: BoardItem[]; wires: BoardWire[] },
@@ -345,9 +361,10 @@ export const outputImagesOf = (
           depth + 1
         )
       );
+    const kept = all.filter((url) => !excludedFrom(item.config).has(url));
     const raw = Number(item.config?.limit);
     const limit = Number.isFinite(raw) ? Math.trunc(raw) : 0;
-    return limit > 0 ? all.slice(0, limit) : all;
+    return limit > 0 ? kept.slice(0, limit) : kept;
   }
   const one = outputImageOf(item, graph.items);
   return one ? [one] : [];

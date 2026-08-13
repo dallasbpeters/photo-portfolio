@@ -16,7 +16,12 @@ import {
 } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
 import { downloadImage } from "./downloadImage";
-import { BOARD_IMAGE_TYPE, pickImages, selectedIndex } from "./itemOutput";
+import {
+  BOARD_IMAGE_TYPE,
+  excludedFrom,
+  pickImages,
+  selectedIndex,
+} from "./itemOutput";
 import { PaletteSwatches } from "./PaletteSwatches";
 
 interface OpNodeViewProps {
@@ -376,23 +381,42 @@ function PublishedResult({
  */
 export function BatchList({
   images,
-  limit,
+  item,
+  onConfigChange,
+  readOnly,
 }: {
   images: string[];
-  limit: unknown;
+  item: BoardItem;
+  onConfigChange?: (config: Record<string, unknown>) => void;
+  readOnly?: boolean;
 }) {
-  const capped = Number(limit) > 0;
+  const config = item.config ?? {};
+  const excluded = excludedFrom(config);
+  const limit = Number(config.limit) > 0 ? Number(config.limit) : 0;
+
+  const strike = (url: string) =>
+    onConfigChange?.({ ...config, excluded: [...excluded, url] });
+  const restore = () => onConfigChange?.({ ...config, excluded: [] });
+
   return (
     <div className="flex h-full w-full flex-col gap-1.5 bg-neutral-900 p-2.5">
-      <p className="flex items-baseline gap-1.5 text-[11px] text-white/70">
+      <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-white/70">
         <span className="font-medium text-white tabular-nums">
           {images.length}
         </span>
         <span>{images.length === 1 ? "image" : "images"}</span>
-        {capped ? (
-          <span className="text-amber-300/80">
-            · limited to {Number(limit)}
-          </span>
+        {limit > 0 ? (
+          <span className="text-amber-300/80">· first {limit} only</span>
+        ) : null}
+        {excluded.size > 0 ? (
+          <button
+            className="text-sky-300/80 underline-offset-2 hover:underline"
+            onClick={restore}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            · {excluded.size} removed, restore
+          </button>
         ) : null}
       </p>
 
@@ -405,7 +429,7 @@ export function BatchList({
         <div className="grid grow auto-rows-min grid-cols-4 gap-1 overflow-y-auto">
           {images.map((url, index) => (
             <div
-              className="relative aspect-square overflow-hidden rounded border border-white/10 bg-black/40"
+              className="group/b relative aspect-square overflow-hidden rounded border border-white/10 bg-black/40"
               // Position is the identity: the same picture may legitimately
               // appear twice in a batch.
               // biome-ignore lint/suspicious/noArrayIndexKey: a batch entry has no identity but its place
@@ -415,8 +439,6 @@ export function BatchList({
                 alt=""
                 className="h-full w-full object-cover"
                 decoding="async"
-                // Square cells, so the intrinsic size is the cell rather than
-                // the picture's own — which is unknown until it loads.
                 height={64}
                 loading="lazy"
                 src={url}
@@ -425,6 +447,17 @@ export function BatchList({
               <span className="absolute bottom-0 left-0 bg-black/70 px-1 text-[8px] text-white/70 tabular-nums">
                 {index + 1}
               </span>
+              {readOnly ? null : (
+                <button
+                  aria-label={`Remove image ${index + 1} from the batch`}
+                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-black/80 text-white/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/b:opacity-100"
+                  onClick={() => strike(url)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  type="button"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={9} />
+                </button>
+              )}
             </div>
           ))}
         </div>

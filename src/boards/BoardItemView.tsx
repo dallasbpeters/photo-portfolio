@@ -551,7 +551,12 @@ function ItemContent({
   // which is about running things and has none of this to say.
   if (item.nodeType === "batch") {
     return (
-      <BatchList images={previewImages ?? []} limit={item.config?.limit} />
+      <BatchList
+        images={previewImages ?? []}
+        item={item}
+        onConfigChange={onConfigChange}
+        readOnly={readOnly}
+      />
     );
   }
   if (item.kind === "frame") {
