@@ -20,7 +20,7 @@ import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
 import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
-import { OpNodeView } from "./OpNodeView";
+import { BatchList, OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
 import { ShaderControls } from "./ShaderControls";
 import { ShaderView } from "./ShaderView";
@@ -101,6 +101,8 @@ interface BoardItemViewProps {
   /** What a node computes from its inputs, for the kinds that show it. */
   outputText?: string | null;
   ports?: PortHandlers;
+  /** The pictures a Batch node is holding, so it can list them. */
+  previewImages?: string[];
   /** Viewing a published board: no controls at all, not merely disabled ones. */
   readOnly?: boolean;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
@@ -512,6 +514,8 @@ interface ItemContentProps {
   onRun?: (force: boolean) => void;
   onSendVersions?: () => void;
   outputText?: string | null;
+  /** The pictures a Batch node is holding, so it can list them. */
+  previewImages?: string[];
   readOnly: boolean;
   wiredPrompt?: string | null;
 }
@@ -539,8 +543,17 @@ function ItemContent({
   onRun,
   onSendVersions,
   outputText,
+  previewImages,
   readOnly,
 }: ItemContentProps) {
+  // A Batch node is a window onto whatever is wired into it: no run state, no
+  // versions, nothing of its own. Answered here rather than inside OpNodeView,
+  // which is about running things and has none of this to say.
+  if (item.nodeType === "batch") {
+    return (
+      <BatchList images={previewImages ?? []} limit={item.config?.limit} />
+    );
+  }
   if (item.kind === "frame") {
     return (
       <FrameBody item={item} onEditBody={onEditBody} readOnly={readOnly} />
@@ -601,6 +614,7 @@ export function BoardItemView({
   onRemoveVersion,
   onSendVersions,
   outputText,
+  previewImages,
   wiredPrompt,
   index,
   isEditing,
@@ -697,6 +711,7 @@ export function BoardItemView({
         onRun={onRun}
         onSendVersions={onSendVersions}
         outputText={outputText}
+        previewImages={previewImages}
         readOnly={readOnly}
         wiredPrompt={wiredPrompt}
       />

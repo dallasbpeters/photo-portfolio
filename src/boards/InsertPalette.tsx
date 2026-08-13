@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  FileStackIcon,
   FrameIcon,
   GroupLayersIcon,
   Image01Icon,
@@ -108,6 +109,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "combine join merge concatenate text prompt",
     icon: LinkSquare01Icon,
     label: "Combine",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "batch" },
+    hint: "batch list queue images many each one at a time frame",
+    icon: FileStackIcon,
+    label: "Batch",
     section: "Nodes",
   },
   {

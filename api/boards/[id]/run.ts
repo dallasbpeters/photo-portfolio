@@ -308,6 +308,39 @@ const paletteTextOf = (config: Record<string, unknown>): string | null => {
  * The depth limit is a backstop only. hasCycle already refuses a graph that
  * loops, and this recursion is bounded by that same acyclic structure.
  */
+/**
+ * Everything wired into a Batch node, flattened in wire order.
+ *
+ * Recurses through outputsOf rather than singleOutputOf, so a frame wired into
+ * a batch contributes all of its pictures rather than only its first — which
+ * is the whole point of putting one there.
+ */
+const batchOutputsOf = (
+  row: BoardItemRow,
+  rows: BoardItemRow[],
+  wires: GraphWire[],
+  depth: number
+): string[] => {
+  if (depth > MAX_JOIN_DEPTH) {
+    return [];
+  }
+  const all = wires
+    .filter(
+      (wire) => wire.targetItemId === row.id && wire.targetPort === "image"
+    )
+    .flatMap((wire) => {
+      const source = rows.find(
+        (candidate) => candidate.id === wire.sourceItemId
+      );
+      return source ? outputsOf(source, rows, wires, depth + 1) : [];
+    });
+  // "Only the first N", so a frame of forty can be tried three at a time
+  // before committing to the rest. Zero means all of them.
+  const raw = Number(asObject(row.config).limit);
+  const limit = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+  return limit > 0 ? all.slice(0, limit) : all;
+};
+
 const joinedOutputOf = (
   row: BoardItemRow,
   rows: BoardItemRow[],
@@ -401,6 +434,12 @@ const outputsOf = (
   wires: GraphWire[],
   depth = 0
 ): string[] => {
+  // A Batch node is a window onto its inputs: everything wired into it, in
+  // wire order, passed straight through. Plural like a frame, and for the same
+  // reason — one wire out of it is many runs.
+  if (row.node_type === "batch") {
+    return batchOutputsOf(row, rows, wires, depth);
+  }
   // The two nodes whose output is plural by design.
   if (row.node_type === "iterate") {
     return iteratedOutputsOf(row, rows, wires, depth);

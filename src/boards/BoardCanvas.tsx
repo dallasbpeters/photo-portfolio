@@ -24,6 +24,7 @@ import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
   outputImageOf,
+  outputImagesOf,
   outputListOf,
   outputTextOf,
 } from "./itemOutput";
@@ -575,6 +576,17 @@ export function BoardCanvas({
    * per value, numbered, because seeing "3 prompts" and what they say is the
    * only way to know a batch is set up the way you meant.
    */
+  /**
+   * The pictures a Batch node is holding, so it can show them.
+   *
+   * Only for that node: resolving every image behind every node on every
+   * render would walk the graph once per node, and nothing else displays one.
+   */
+  const previewImagesFor = (item: BoardItem): string[] | undefined =>
+    item.nodeType === "batch"
+      ? outputImagesOf(item, { items, wires })
+      : undefined;
+
   const previewTextFor = (item: BoardItem): string | null => {
     if (item.nodeType === "join" || item.nodeType === "palette") {
       return outputTextOf(item, { items, wires });
@@ -1270,6 +1282,7 @@ export function BoardCanvas({
                       onPortLeave: wiring.leavePort,
                     }
               }
+              previewImages={previewImagesFor(item)}
               readOnly={readOnly}
               scale={view.viewport.scale}
               wiredPrompt={wiredTextFor(item.id)}

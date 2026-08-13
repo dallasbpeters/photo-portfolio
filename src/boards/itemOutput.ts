@@ -311,6 +311,48 @@ export const outputTextOf = (
  * should mean the same thing everywhere. Mirrors what the run endpoint does
  * server-side when it resolves an upstream node's output.
  */
+/**
+ * Every picture an item hands downstream, not just the first.
+ *
+ * The plural counterpart to outputImageOf, and the reason a Batch node can show
+ * what it is about to process. A frame contributes all of its pictures; a node
+ * contributes the version currently chosen on it; a Batch contributes whatever
+ * is wired into it, which is what makes them nestable.
+ *
+ * Mirrors outputsOf on the server, which remains the authority — this exists so
+ * the canvas can show the batch before anything is spent on it.
+ */
+export const outputImagesOf = (
+  item: BoardItem | null,
+  graph: { items: BoardItem[]; wires: BoardWire[] },
+  depth = 0
+): string[] => {
+  if (!item || depth > MAX_JOIN_DEPTH) {
+    return [];
+  }
+  if (item.kind === "frame") {
+    return containedBy(item, graph.items)
+      .sort((a, b) => a.z - b.z)
+      .flatMap((inside) => outputImagesOf(inside, graph, depth + 1));
+  }
+  if (item.nodeType === "batch") {
+    const all = graph.wires
+      .filter((w) => w.targetItemId === item.id && w.targetPort === "image")
+      .flatMap((w) =>
+        outputImagesOf(
+          graph.items.find((i) => i.id === w.sourceItemId) ?? null,
+          graph,
+          depth + 1
+        )
+      );
+    const raw = Number(item.config?.limit);
+    const limit = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+    return limit > 0 ? all.slice(0, limit) : all;
+  }
+  const one = outputImageOf(item, graph.items);
+  return one ? [one] : [];
+};
+
 export const outputImageOf = (
   item: BoardItem,
   /**

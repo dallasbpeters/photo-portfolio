@@ -367,6 +367,72 @@ function PublishedResult({
   );
 }
 
+/**
+ * The pictures a Batch node is about to hand on, listed and counted.
+ *
+ * Thumbnails rather than a number, because "42 images" is not checkable and a
+ * contact sheet is: a batch that quietly resolved to the wrong forty looked
+ * exactly like one that worked, and there was no way to tell but to run it.
+ */
+export function BatchList({
+  images,
+  limit,
+}: {
+  images: string[];
+  limit: unknown;
+}) {
+  const capped = Number(limit) > 0;
+  return (
+    <div className="flex h-full w-full flex-col gap-1.5 bg-neutral-900 p-2.5">
+      <p className="flex items-baseline gap-1.5 text-[11px] text-white/70">
+        <span className="font-medium text-white tabular-nums">
+          {images.length}
+        </span>
+        <span>{images.length === 1 ? "image" : "images"}</span>
+        {capped ? (
+          <span className="text-amber-300/80">
+            · limited to {Number(limit)}
+          </span>
+        ) : null}
+      </p>
+
+      {images.length === 0 ? (
+        <p className="text-[11px] text-white/35 leading-relaxed">
+          Wire a frame in, or images directly. Everything here is sent onward
+          one at a time.
+        </p>
+      ) : (
+        <div className="grid grow auto-rows-min grid-cols-4 gap-1 overflow-y-auto">
+          {images.map((url, index) => (
+            <div
+              className="relative aspect-square overflow-hidden rounded border border-white/10 bg-black/40"
+              // Position is the identity: the same picture may legitimately
+              // appear twice in a batch.
+              // biome-ignore lint/suspicious/noArrayIndexKey: a batch entry has no identity but its place
+              key={`${url}-${index}`}
+            >
+              <img
+                alt=""
+                className="h-full w-full object-cover"
+                decoding="async"
+                // Square cells, so the intrinsic size is the cell rather than
+                // the picture's own — which is unknown until it loads.
+                height={64}
+                loading="lazy"
+                src={url}
+                width={64}
+              />
+              <span className="absolute bottom-0 left-0 bg-black/70 px-1 text-[8px] text-white/70 tabular-nums">
+                {index + 1}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OpNodeView({
   hasWiredPrompt,
   wiredPrompt,
