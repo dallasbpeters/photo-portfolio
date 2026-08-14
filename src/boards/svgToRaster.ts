@@ -102,18 +102,21 @@ export const isImageDrop = (file: File): boolean =>
   file.type.startsWith("image/") || isSvgFile(file);
 
 /**
- * Rasterises an SVG file to a WebP one, keeping its aspect and its name.
+ * Rasterises an SVG file to a bitmap one, keeping its aspect and its name.
  *
  * Drawn on a transparent canvas rather than a white one: logos and icons are
  * usually meant to sit on something, and flattening them onto white is a
- * decision that cannot be undone later. WebP keeps the alpha.
+ * decision that cannot be undone later. Both PNG and WebP keep the alpha.
  *
  * Rejects rather than falling back to the original file. An SVG that cannot be
  * rasterised — one referencing a font or an image we cannot fetch — would
  * otherwise be uploaded as an SVG and fail further along, where the reason is
  * much harder to see.
  */
-export const svgToWebp = async (file: File): Promise<File> => {
+export const svgToRaster = async (
+  file: File,
+  mime: "image/png" | "image/webp"
+): Promise<File> => {
   const source = await file.text();
   const size = rasterSize(intrinsicSize(source));
 
@@ -148,16 +151,29 @@ export const svgToWebp = async (file: File): Promise<File> => {
     context.drawImage(image, 0, 0, size.width, size.height);
 
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((result) => resolve(result), "image/webp", 0.92);
+      canvas.toBlob((result) => resolve(result), mime, 0.92);
     });
     if (!blob) {
       throw new Error("That SVG could not be converted");
     }
 
-    return new File([blob], `${file.name.replace(SVG_EXTENSION, "")}.webp`, {
-      type: "image/webp",
-    });
+    const extension = mime === "image/png" ? "png" : "webp";
+    return new File(
+      [blob],
+      `${file.name.replace(SVG_EXTENSION, "")}.${extension}`,
+      {
+        type: mime,
+      }
+    );
   } finally {
     URL.revokeObjectURL(url);
   }
 };
+
+/** Rasterises an SVG to a PNG, for when a vector is wanted as pixels. */
+export const svgToPng = (file: File): Promise<File> =>
+  svgToRaster(file, "image/png");
+
+/** The historical default: rasterises an SVG to a compact WebP. */
+export const svgToWebp = (file: File): Promise<File> =>
+  svgToRaster(file, "image/webp");

@@ -1,10 +1,70 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { nodeTypeFor } from "../../config/nodeTypes";
 import { BoardCanvas } from "../boards/BoardCanvas";
+import { CommentDialog } from "../boards/CommentDialog";
+import { CommentsPanel } from "../boards/CommentsPanel";
 import { ShareButtons } from "../components/ShareButtons";
+import { type BoardComment, commentsApi } from "../services/comments";
 import { boardsApi } from "../services/portfolioService";
 import { useSiteSettings } from "../theme/SiteSettingsProvider";
 import type { Board, BoardItem } from "../types";
+
+const itemLabel = (item: BoardItem | undefined): string => {
+  if (!item) {
+    return "this item";
+  }
+  if (item.kind === "op") {
+    return nodeTypeFor(item.nodeType)?.label ?? "this node";
+  }
+  return "this image";
+};
+
+/** The public page's actions: comment mode, the sidebar, and sharing. */
+function PublishedActions({
+  board,
+  commentMode,
+  commentCount,
+  onToggleCommentMode,
+  onToggleComments,
+}: {
+  board: Board;
+  commentMode: boolean;
+  commentCount: number;
+  onToggleCommentMode: () => void;
+  onToggleComments: () => void;
+}) {
+  const { settings } = useSiteSettings();
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        className={`rounded border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-colors ${
+          commentMode
+            ? "border-amber-300/60 bg-amber-300/10 text-amber-300"
+            : "border-white/15 text-white/70 hover:text-white"
+        }`}
+        onClick={onToggleCommentMode}
+        type="button"
+      >
+        {commentMode ? "Cancel comment" : "Leave a comment"}
+      </button>
+      <button
+        className="rounded border border-white/15 px-2.5 py-1.5 text-[10px] text-white/70 uppercase tracking-[0.16em] transition-colors hover:text-white"
+        onClick={onToggleComments}
+        type="button"
+      >
+        Comments{commentCount > 0 ? ` (${commentCount})` : ""}
+      </button>
+      <ShareButtons
+        description={board.title}
+        imageUrl={board.coverUrl ?? undefined}
+        title={`${board.title} — ${settings.name}`}
+        url={`/board/${board.slug ?? ""}`}
+      />
+    </div>
+  );
+}
 
 /**
  * A published board, read-only, at its own address.
@@ -12,12 +72,21 @@ import type { Board, BoardItem } from "../types";
  * No authentication: publishing is what makes a board readable, and the API
  * returns 404 for one that is not published rather than 403 — a private board
  * should not be discoverable by the difference between the two.
+ *
+ * Visitors can leave a comment on any item: clicking an item in comment mode
+ * opens a small form, and the run of comments lives in the sidebar. Comments
+ * are public; marking one resolved is not.
  */
 export function BoardViewPage() {
   const { slug } = useParams<{ slug: string }>();
   const { settings } = useSiteSettings();
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<BoardComment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [commentMode, setCommentMode] = useState(false);
+  const [commentTarget, setCommentTarget] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!slug) {
@@ -30,6 +99,10 @@ export function BoardViewPage() {
         if (!cancelled) {
           setBoard(loaded);
         }
+        const list = await commentsApi.list(loaded.id);
+        if (!cancelled) {
+          setComments(list);
+        }
       } catch {
         if (!cancelled) {
           setError("This board is not available.");
@@ -41,6 +114,33 @@ export function BoardViewPage() {
     };
   }, [slug]);
 
+  const createComment = useCallback(
+    async (name: string, body: string) => {
+      if (!(board && commentTarget)) {
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const created = await commentsApi.create({
+          authorName: name,
+          boardId: board.id,
+          body,
+          itemId: commentTarget,
+        });
+        setComments((current) => [...current, created]);
+        setCommentTarget(null);
+        toast.success("Comment posted");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Could not post the comment"
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [board, commentTarget]
+  );
+
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -50,6 +150,10 @@ export function BoardViewPage() {
       </div>
     );
   }
+
+  const targetItem = commentTarget
+    ? board?.items?.find((item) => item.id === commentTarget)
+    : undefined;
 
   return (
     // `board-fixed` pins the canvas to the dark board palette. A published board
@@ -66,23 +170,32 @@ export function BoardViewPage() {
             {settings.name}
           </p>
         </div>
-        {board ? (
-          <ShareButtons
-            description={board.title}
-            imageUrl={board.coverUrl ?? undefined}
-            title={`${board.title} — ${settings.name}`}
-            url={`/board/${board.slug ?? ""}`}
-          />
-        ) : null}
+        <div className="flex items-center gap-2">
+          {board ? (
+            <PublishedActions
+              board={board}
+              commentCount={comments.length}
+              commentMode={commentMode}
+              onToggleCommentMode={() => setCommentMode((mode) => !mode)}
+              onToggleComments={() => setShowComments((open) => !open)}
+            />
+          ) : null}
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         <BoardCanvas
+          commentMode={commentMode}
+          comments={comments}
           items={board?.items ?? []}
           keyOf={(item: BoardItem) => item.id}
           // Nothing here can change the board; the setter exists only because
           // the canvas is shared with the editor.
           onChange={() => undefined}
+          onCommentItem={(itemId) => {
+            setCommentTarget(itemId);
+            setCommentMode(false);
+          }}
           readOnly
           // Wires render for a visitor too. On a graph they are the account of
           // how the images were made, which is most of the reason to publish
@@ -90,6 +203,23 @@ export function BoardViewPage() {
           // refused by the API regardless of what this page offers.
           wires={board?.wires ?? []}
         />
+
+        {showComments && board ? (
+          <CommentsPanel
+            comments={comments}
+            items={board.items ?? []}
+            onClose={() => setShowComments(false)}
+          />
+        ) : null}
+
+        {commentTarget && board ? (
+          <CommentDialog
+            itemLabel={itemLabel(targetItem)}
+            onCancel={() => setCommentTarget(null)}
+            onCreate={(name, body) => void createComment(name, body)}
+            submitting={submitting}
+          />
+        ) : null}
       </div>
     </div>
   );

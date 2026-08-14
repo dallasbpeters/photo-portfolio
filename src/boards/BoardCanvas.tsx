@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Layers01Icon } from "@hugeicons-pro/core-stroke-standard";
 import type { MutableRefObject, MouseEvent as ReactMouseEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
@@ -9,6 +9,7 @@ import {
 } from "../../config/canvas.js";
 import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
+import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
 import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
@@ -67,6 +68,10 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
 interface BoardCanvasProps {
   /** Item to open for typing as soon as it appears — a just-placed note. */
   autoEditId?: string | null;
+  /** When true, clicking an item targets it for a comment rather than selecting. */
+  commentMode?: boolean;
+  /** Comments on the board's items, shown as badges and in the sidebar. */
+  comments?: BoardComment[];
   /** Colours and weight the next mark is drawn with. */
   drawStyle?: { fill: string; stroke: string; strokeWidth: number };
   /** The active drawing tool, or null when the pointer selects and pans. */
@@ -93,6 +98,8 @@ interface BoardCanvasProps {
   /** Stops whatever run is in flight. */
   onCancel?: () => void;
   onChange: (items: BoardItem[]) => void;
+  /** Called when an item is clicked while in comment mode. */
+  onCommentItem?: (itemId: string) => void;
   /** Settings edited on an operation node. */
   onConfigChange?: (itemId: string, config: Record<string, unknown>) => void;
   /**
@@ -199,6 +206,31 @@ const SNAP_PX = 6;
 /** Pointer movement (screen px) that counts as a drag rather than a click. */
 const DRAG_RAISE_PX = 4;
 
+/**
+ * The new size of a corner-resized item.
+ *
+ * Without the lock both dimensions follow the pointer freely. With it, the
+ * aspect is preserved: whichever side moved further dominates, and the other
+ * follows so the ratio never changes — the standard shift-drag resize.
+ */
+const resizedSize = (
+  originW: number,
+  originH: number,
+  dx: number,
+  dy: number,
+  lockAspect: boolean
+): { height: number; width: number } => {
+  const width = Math.max(MIN_ITEM_SIZE, originW + dx);
+  const height = Math.max(MIN_ITEM_SIZE, originH + dy);
+  if (!lockAspect || originW <= 0 || originH <= 0) {
+    return { height, width };
+  }
+  const ratio = originW / originH;
+  return width / originW >= height / originH
+    ? { height: width / ratio, width }
+    : { height, width: height * ratio };
+};
+
 /** True when a canvas point falls inside an item's box. */
 const covers = (item: BoardItem, point: Point): boolean =>
   point.x >= item.x &&
@@ -301,6 +333,9 @@ export function BoardCanvas({
   onSendToCanva,
   onSelectionChange,
   onSendVersions,
+  comments,
+  commentMode,
+  onCommentItem,
   onVectorize,
   onWiresChange,
   viewCentreRef = NO_VIEW_CENTRE,
@@ -353,6 +388,22 @@ export function BoardCanvas({
   // with several picked there is no single item its controls could mean.
   const selectedItem =
     selection.length === 1 ? (items[selection[0] ?? -1] ?? null) : null;
+
+  // Open comments per item, for the badges the canvas draws on top of them.
+  const openCommentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const comment of comments ?? []) {
+      if (!comment.resolved) {
+        counts.set(comment.itemId, (counts.get(comment.itemId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [comments]);
+
+  // Selecting vs commenting: comment targeting happens on the item's click
+  // (see onCommentTarget below), so a read-only board just never selects.
+  const selectFor = () => (readOnly ? () => undefined : beginMove);
+
   // Held in a ref so the effect below can read the current item without
   // depending on it: the item is a new object on every edit, and depending on
   // it would re-announce the selection on each keystroke.
@@ -975,15 +1026,10 @@ export function BoardCanvas({
         return;
       }
 
+      const size = resizedSize(g.originW, g.originH, dx, dy, e.shiftKey);
       onChange(
         items.map((it, i) =>
-          i === g.index
-            ? {
-                ...it,
-                height: Math.max(MIN_ITEM_SIZE, g.originH + dy),
-                width: Math.max(MIN_ITEM_SIZE, g.originW + dx),
-              }
-            : it
+          i === g.index ? { ...it, height: size.height, width: size.width } : it
         )
       );
     },
@@ -1272,6 +1318,7 @@ export function BoardCanvas({
 
           {items.map((item, index) => (
             <BoardItemView
+              commentCount={openCommentCounts.get(item.id) ?? 0}
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
               imageUrl={wiredImageFor(item.id)}
               index={index}
@@ -1285,6 +1332,11 @@ export function BoardCanvas({
                 }
               }}
               onCancel={onCancel}
+              onCommentTarget={
+                commentMode && onCommentItem
+                  ? () => onCommentItem(item.id)
+                  : undefined
+              }
               onConfigChange={(config) => onConfigChange?.(item.id, config)}
               onDelete={() => removeItem(index)}
               onEditBody={(body) =>
@@ -1304,7 +1356,7 @@ export function BoardCanvas({
               }
               onResizeStart={readOnly ? () => undefined : beginResize}
               onRun={(force) => onRun?.(item.id, force)}
-              onSelect={readOnly ? () => undefined : beginMove}
+              onSelect={selectFor()}
               onSendVersions={
                 onSendVersions ? () => onSendVersions(item.id) : undefined
               }

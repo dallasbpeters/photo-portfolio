@@ -239,6 +239,10 @@ export function useGraphRun({
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
+  // Guards re-entry: without it a run whose preparation takes a moment (masks
+  // and composites are rendered in beforeRun) leaves the button showing "Run"
+  // and repeated clicks queue duplicate generations — each a paid request.
+  const runningRef = useRef<boolean>(false);
 
   /** Aborts the request in flight and stops the executor starting another. */
   const cancel = useCallback(() => {
@@ -293,14 +297,19 @@ export function useGraphRun({
   /** A single node, run on its own from the node's own control. */
   const runNode = useCallback(
     async (itemId: string, force: boolean) => {
-      await beforeRun();
-      // Registered here as well as in runBoard, so cancel() reaches a node run
-      // too. Without it a batch of eight started from a node's own button had
-      // no way to be stopped, and the Stop control on the node did nothing.
+      if (runningRef.current === true) {
+        return;
+      }
+      runningRef.current = true;
+      // Running before the preparation below: a node run renders masks and
+      // composites in beforeRun, which can take a moment — the button has to
+      // read as busy immediately, or a click looks like nothing happened and
+      // gets repeated (each repeat being a fresh paid generation).
+      setIsRunning(true);
       const controller = new AbortController();
       abort.current = controller;
-      setIsRunning(true);
       try {
+        await beforeRun();
         await runOne(itemId, force, controller.signal);
       } catch (e) {
         // An abort is a choice, not a failure. Marking the node failed would
@@ -313,6 +322,7 @@ export function useGraphRun({
           onPatch(itemId, { runError: message, runState: "failed" });
         }
       } finally {
+        runningRef.current = false;
         setIsRunning(false);
         if (abort.current === controller) {
           abort.current = null;
@@ -331,6 +341,9 @@ export function useGraphRun({
    * screen — the wall clock is not the scarce thing.
    */
   const runBoard = useCallback(async () => {
+    if (runningRef.current === true) {
+      return;
+    }
     setError(null);
     const graphItems = toGraphItems(items);
     const graphWires = toGraphWires(wires);
@@ -341,11 +354,21 @@ export function useGraphRun({
       return;
     }
 
-    await beforeRun();
-
+    // Busy before the preparation, so a board whose run takes a moment to
+    // start does not invite repeated clicks.
+    runningRef.current = true;
+    setIsRunning(true);
     const controller = new AbortController();
     abort.current = controller;
-    setIsRunning(true);
+
+    try {
+      await beforeRun();
+    } catch {
+      runningRef.current = false;
+      setIsRunning(false);
+      abort.current = null;
+      return;
+    }
 
     // Everything downstream of a failure, accumulated as failures happen. A
     // node in here is marked skipped without a request being sent, so one
@@ -381,6 +404,7 @@ export function useGraphRun({
         }
       }
     } finally {
+      runningRef.current = false;
       setIsRunning(false);
       abort.current = null;
     }

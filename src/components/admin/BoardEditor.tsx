@@ -41,6 +41,7 @@ import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
 import { BoardDrawTools } from "../../boards/BoardDrawTools";
+import { CommentsPanel } from "../../boards/CommentsPanel";
 import { compositeSources, renderComposite } from "../../boards/composite";
 import { copyOfFrame } from "../../boards/copyToBoard";
 import type { DrawStyle } from "../../boards/DrawToolbar";
@@ -72,11 +73,12 @@ import { newItemId } from "../../boards/newItemId";
 import type { PortTarget } from "../../boards/PortMenu";
 import { findFreeSpot } from "../../boards/placement";
 import { newShaderConfig } from "../../boards/shaderConfig";
-import { isSvgFile, svgToWebp } from "../../boards/svgToRaster";
+import { isSvgFile, svgToPng } from "../../boards/svgToRaster";
 import { useAffinityBridge } from "../../boards/useAffinityBridge";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
 import ThemeToggle from "../../components/ThemeToggle";
+import { type BoardComment, commentsApi } from "../../services/comments";
 import {
   authStorage,
   boardsApi,
@@ -96,12 +98,107 @@ import { Card } from "../ui/card";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCursor";
 import { SendToCanvaModal } from "./SendToCanvaModal";
+import { SvgImportDialog } from "./SvgImportDialog";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
 
 /** How long after the last change before the board saves itself. */
 const AUTOSAVE_DELAY_MS = 1200;
+
+/** The board header's actions: run, comment, share, publish, close. */
+function BoardHeaderActions({
+  commentCount,
+  hasNodes,
+  isPublic,
+  isPublishing,
+  isRunning,
+  onCancelRun,
+  onClose,
+  onPublish,
+  onRun,
+  onToggleComments,
+  publicUrl,
+  showComments,
+}: {
+  commentCount: number;
+  hasNodes: boolean;
+  isPublic: boolean;
+  isPublishing: boolean;
+  isRunning: boolean;
+  onCancelRun: () => void;
+  onClose: () => void;
+  onPublish: () => void;
+  onRun: () => void;
+  onToggleComments: () => void;
+  publicUrl: string | null;
+  showComments: boolean;
+}) {
+  return (
+    <>
+      {/* Only offered once there is a graph to run. A board of pinned
+          photographs has nothing to execute, and a control that would always
+          be a no-op is noise. */}
+      {hasNodes ? (
+        <Button
+          onClick={isRunning ? onCancelRun : onRun}
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon
+            aria-hidden
+            icon={isRunning ? StopIcon : PlayIcon}
+            size={14}
+          />
+          {isRunning ? "Cancel" : "Run board"}
+        </Button>
+      ) : null}
+      <button
+        aria-label="Comments"
+        className={`min-h-11 rounded px-2 text-[10px] uppercase tracking-[0.18em] transition-colors ${
+          showComments
+            ? "bg-amber-300/15 text-amber-300"
+            : "text-board-ink/70 hover:text-board-ink"
+        }`}
+        onClick={onToggleComments}
+        type="button"
+      >
+        Comments{commentCount > 0 ? ` (${commentCount})` : ""}
+      </button>
+      {publicUrl ? (
+        <button
+          className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
+          onClick={() => {
+            void navigator.clipboard.writeText(publicUrl);
+            toast.success("Link copied");
+          }}
+          type="button"
+        >
+          {publicUrl.replace(SCHEME, "")}
+        </button>
+      ) : null}
+      <Button
+        className="min-h-11 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:text-board-ink"
+        disabled={isPublishing}
+        onClick={onPublish}
+        type="button"
+        variant="ghost"
+      >
+        {isPublic ? "Unpublish" : "Publish"}
+      </Button>
+      <ThemeToggle />
+      <Button
+        aria-label="Close board"
+        className="min-h-11 text-board-ink/80 hover:text-board-ink"
+        onClick={onClose}
+        type="button"
+        variant="ghost"
+      >
+        <HugeiconsIcon icon={Cancel01Icon} size={18} />
+      </Button>
+    </>
+  );
+}
 
 /** New items land near the middle of the canvas, offset so they do not stack. */
 /** How far a port-created node sits from the thing feeding it, in canvas units. */
@@ -247,6 +344,8 @@ export function BoardEditor({
    */
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [comments, setComments] = useState<BoardComment[]>([]);
+  const [showComments, setShowComments] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
   /**
    * The selection waiting to be named, or null when nothing is being saved.
@@ -312,9 +411,10 @@ export function BoardEditor({
     let cancelled = false;
     void (async () => {
       try {
-        const [loaded, photoList] = await Promise.all([
+        const [loaded, photoList, commentList] = await Promise.all([
           boardsApi.get(boardId),
           portfolioService.getPhotos(),
+          commentsApi.list(boardId),
         ]);
         if (cancelled) {
           return;
@@ -325,6 +425,7 @@ export function BoardEditor({
         setSources(loaded.sources ?? []);
         setIsLoaded(true);
         setPhotos(photoList);
+        setComments(commentList);
       } catch (err) {
         if (!cancelled) {
           toast.error(
@@ -1198,7 +1299,20 @@ export function BoardEditor({
    * row is written to `photos`, which this deliberately never does. Uploading
    * and publishing stay different decisions.
    */
-  const dropFiles = async (files: File[], point: { x: number; y: number }) => {
+  /**
+   * Uploads already-prepared files and places them on the board.
+   *
+   * Shared by the immediate path (non-SVG drops) and the SVG chooser, so both
+   * land identically. Files arrive rasterised or kept as vectors before this
+   * is called.
+   */
+  const placeUploaded = async (
+    files: File[],
+    point: { x: number; y: number }
+  ) => {
+    if (files.length === 0) {
+      return;
+    }
     const toastId = toast.loading(
       files.length === 1 ? "Uploading image…" : `Uploading ${files.length}…`
     );
@@ -1206,16 +1320,8 @@ export function BoardEditor({
     // to blob storage and never touch a function, so several at once is the
     // normal case and a queue would only make a folder of images slower.
     const results = await Promise.allSettled(
-      files.map(async (file) =>
-        portfolioService.uploadImageFile(
-          // Rasterised on the way in rather than rejected. The upload takes no
-          // vectors, so an SVG dropped on a board used to fail outright — and
-          // nothing downstream wants the vector anyway, since a model is sent a
-          // bitmap and a canvas cannot read pixels back out of an SVG.
-          isSvgFile(file) ? await svgToWebp(file) : file,
-          undefined,
-          "boards/uploads"
-        )
+      files.map((file) =>
+        portfolioService.uploadImageFile(file, undefined, "boards/uploads")
       )
     );
 
@@ -1253,6 +1359,36 @@ export function BoardEditor({
         added.length === 1 ? "Image added" : `${added.length} images added`
       );
     }
+  };
+
+  /** An SVG waiting for the user to say whether to keep it vector. */
+  const [pendingSvg, setPendingSvg] = useState<{
+    files: File[];
+    point: { x: number; y: number };
+  } | null>(null);
+
+  const dropFiles = async (files: File[], point: { x: number; y: number }) => {
+    // An SVG gets a say — vector or raster is the dragger's call, not ours.
+    // Everything else goes straight in.
+    const svgs = files.filter(isSvgFile);
+    const rest = files.filter((file) => !isSvgFile(file));
+    if (svgs.length > 0) {
+      setPendingSvg({ files: svgs, point });
+    }
+    await placeUploaded(rest, point);
+  };
+
+  /** Applies the SVG drop choice, then uploads the resulting files. */
+  const importSvg = async (keepSvg: boolean) => {
+    if (!pendingSvg) {
+      return;
+    }
+    const { files, point } = pendingSvg;
+    setPendingSvg(null);
+    const prepared = keepSvg
+      ? files
+      : await Promise.all(files.map((file) => svgToPng(file)));
+    await placeUploaded(prepared, point);
   };
 
   /**
@@ -1618,6 +1754,19 @@ export function BoardEditor({
     });
   };
 
+  const resolveComment = async (commentId: string, resolved: boolean) => {
+    try {
+      const updated = await commentsApi.resolve(boardId, commentId, resolved);
+      setComments((current) =>
+        current.map((comment) => (comment.id === commentId ? updated : comment))
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not update the comment"
+      );
+    }
+  };
+
   /**
    * Puts every version a node has made onto the board as its own image.
    *
@@ -1692,60 +1841,20 @@ export function BoardEditor({
           </div>
 
           <div className="flex flex-1 items-center justify-end gap-2">
-            {/* Only offered once there is a graph to run. A board of pinned
-              photographs has nothing to execute, and a control that would
-              always be a no-op is noise. */}
-            {items.some((item) => item.kind === "op") ? (
-              <Button
-                onClick={() => {
-                  if (graphRun.isRunning) {
-                    graphRun.cancel();
-                  } else {
-                    void graphRun.runBoard();
-                  }
-                }}
-                type="button"
-                variant="ghost"
-              >
-                <HugeiconsIcon
-                  aria-hidden
-                  icon={graphRun.isRunning ? StopIcon : PlayIcon}
-                  size={14}
-                />
-                {graphRun.isRunning ? "Cancel" : "Run board"}
-              </Button>
-            ) : null}
-            {publicUrl ? (
-              <button
-                className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
-                onClick={() => {
-                  void navigator.clipboard.writeText(publicUrl);
-                  toast.success("Link copied");
-                }}
-                type="button"
-              >
-                {publicUrl.replace(SCHEME, "")}
-              </button>
-            ) : null}
-            <Button
-              className="min-h-11 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:text-board-ink"
-              disabled={isPublishing}
-              onClick={() => void publish(!board?.isPublic)}
-              type="button"
-              variant="ghost"
-            >
-              {board?.isPublic ? "Unpublish" : "Publish"}
-            </Button>
-            <ThemeToggle />
-            <Button
-              aria-label="Close board"
-              className="min-h-11 text-board-ink/80 hover:text-board-ink"
-              onClick={() => void close()}
-              type="button"
-              variant="ghost"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} />
-            </Button>
+            <BoardHeaderActions
+              commentCount={comments.length}
+              hasNodes={items.some((item) => item.kind === "op")}
+              isPublic={board?.isPublic ?? false}
+              isPublishing={isPublishing}
+              isRunning={graphRun.isRunning}
+              onCancelRun={() => graphRun.cancel()}
+              onClose={() => void close()}
+              onPublish={() => void publish(!board?.isPublic)}
+              onRun={() => void graphRun.runBoard()}
+              onToggleComments={() => setShowComments((open) => !open)}
+              publicUrl={publicUrl}
+              showComments={showComments}
+            />
           </div>
         </header>
 
@@ -1856,6 +1965,7 @@ export function BoardEditor({
 
           <BoardCanvas
             autoEditId={autoEditId}
+            comments={comments}
             drawStyle={drawStyle}
             drawTool={drawTool}
             items={items}
@@ -1894,6 +2004,26 @@ export function BoardEditor({
               imageUrl={canvaTarget.imageUrl}
               name={canvaTarget.name}
               onClose={() => setCanvaTarget(null)}
+            />
+          ) : null}
+
+          {pendingSvg ? (
+            <SvgImportDialog
+              count={pendingSvg.files.length}
+              onCancel={() => setPendingSvg(null)}
+              onConvertPng={() => void importSvg(false)}
+              onKeepSvg={() => void importSvg(true)}
+            />
+          ) : null}
+
+          {showComments ? (
+            <CommentsPanel
+              comments={comments}
+              items={items}
+              onClose={() => setShowComments(false)}
+              onResolve={(commentId, resolved) =>
+                void resolveComment(commentId, resolved)
+              }
             />
           ) : null}
 

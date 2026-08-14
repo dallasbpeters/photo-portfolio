@@ -61,6 +61,10 @@ export const MAX_WIRES = 600;
  */
 export const PORT_RADIUS_PX = 7;
 
+/** The minimum on-screen hit target around a port, so a wire can land on one
+ * without pixel-perfect aim — far larger than the visible dot. */
+export const PORT_HIT_PX = 28;
+
 /**
  * Wire thickness, and the wider invisible band that catches the pointer.
  *

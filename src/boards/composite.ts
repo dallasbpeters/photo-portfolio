@@ -183,13 +183,29 @@ export const renderComposite = async (
     if (!source) {
       return;
     }
-    context.drawImage(
-      image,
-      (source.x - box.x) * scale,
-      (source.y - box.y) * scale,
-      source.width * scale,
-      source.height * scale
+    const dx = (source.x - box.x) * scale;
+    const dy = (source.y - box.y) * scale;
+    const boxW = source.width * scale;
+    const boxH = source.height * scale;
+
+    // The item's box, in output pixels. The image is drawn to *cover* it —
+    // scaled to fill, cropped where it overflows — because that is how the
+    // canvas shows the same picture (object-cover). Drawing it at the box's
+    // size instead stretched any item whose box did not match the image's own
+    // aspect, which made the composite disagree with what was on the board.
+    context.save();
+    context.beginPath();
+    context.rect(dx, dy, boxW, boxH);
+    context.clip();
+
+    const cover = Math.max(
+      boxW / image.naturalWidth,
+      boxH / image.naturalHeight
     );
+    const w = image.naturalWidth * cover;
+    const h = image.naturalHeight * cover;
+    context.drawImage(image, dx + (boxW - w) / 2, dy + (boxH - h) / 2, w, h);
+    context.restore();
   });
 
   return await new Promise<Blob>((resolve, reject) => {

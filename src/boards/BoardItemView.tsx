@@ -12,6 +12,7 @@ import {
   DEFAULT_TEXT_FONT_SIZE,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
+  PORT_HIT_PX,
   PORT_RADIUS_PX,
 } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
@@ -71,6 +72,8 @@ export interface PortHandlers {
 }
 
 interface BoardItemViewProps {
+  /** Open comments pinned to this item, for the badge. */
+  commentCount?: number;
   /** True when an operation node's prompt arrives down a wire. */
   hasWiredPrompt?: boolean;
   /** A picture wired into this item's image input, if it has one. */
@@ -84,6 +87,8 @@ interface BoardItemViewProps {
   onBeginEdit: () => void;
   /** Stops a run in flight. */
   onCancel?: () => void;
+  /** Called on a click when the board is in comment-targeting mode. */
+  onCommentTarget?: () => void;
   onConfigChange?: (config: Record<string, unknown>) => void;
   onDelete: () => void;
   onEditBody: (body: string) => void;
@@ -124,21 +129,27 @@ interface PortHandlesProps {
  * canvas chrome: a handle that scaled would be untappable on a board fitted to
  * the window and absurd at 300%.
  *
+ * The hit target is far larger than the visible dot — the button is the target,
+ * the dot is drawn inside it — so a wire can be landed on an input without
+ * pixel-perfect aim, which was the friction that made connecting images to
+ * nodes a matter of luck.
+ *
  * Positions come from portGeometry, the same module the wires themselves use,
  * so a curve always terminates exactly on its handle.
  */
 function PortHandles({ handlers, item, scale }: PortHandlesProps) {
-  const size = (PORT_RADIUS_PX * 2) / scale;
+  const hit = PORT_HIT_PX / scale;
+  const dot = (PORT_RADIUS_PX * 2) / scale;
   const inputs = inputPoints(item);
   const outputs = outputPoints(item);
 
   const style = (point: { x: number; y: number }) => ({
-    height: size,
+    height: hit,
     left: point.x - item.x,
-    marginLeft: -size / 2,
-    marginTop: -size / 2,
+    marginLeft: -hit / 2,
+    marginTop: -hit / 2,
     top: point.y - item.y,
-    width: size,
+    width: hit,
   });
 
   return (
@@ -148,7 +159,7 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
         return point ? (
           <button
             aria-label={`Drag a connection from ${port.label}`}
-            className="absolute rounded-full border border-sky-300/70 bg-sky-400/80 hover:bg-sky-300"
+            className="absolute grid place-items-center rounded-full"
             key={`out-${port.key}`}
             onPointerDown={(e) => {
               // The surface would read this as "pick the item up and drag it".
@@ -160,7 +171,13 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
             }}
             style={style(point)}
             type="button"
-          />
+          >
+            <span
+              aria-hidden
+              className="block rounded-full border border-sky-300/70 bg-sky-400/80 hover:bg-sky-300"
+              style={{ height: dot, width: dot }}
+            />
+          </button>
         ) : null;
       })}
 
@@ -179,16 +196,22 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
         return (
           <button
             aria-label={`Connect to ${port.label}`}
-            className={`absolute rounded-full border ${
-              isOpen ? "border-emerald-300 bg-emerald-400" : idle
-            }`}
+            className="absolute grid place-items-center rounded-full"
             key={`in-${port.key}`}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerEnter={() => handlers.onPortEnter(item.id, port.key)}
             onPointerLeave={() => handlers.onPortLeave(item.id, port.key)}
             style={style(point)}
             type="button"
-          />
+          >
+            <span
+              aria-hidden
+              className={`block rounded-full border ${
+                isOpen ? "border-emerald-300 bg-emerald-400" : idle
+              }`}
+              style={{ height: dot, width: dot }}
+            />
+          </button>
         );
       })}
     </>
@@ -695,6 +718,8 @@ export function BoardItemView({
   ports,
   readOnly = false,
   scale,
+  commentCount = 0,
+  onCommentTarget,
 }: BoardItemViewProps) {
   const isNote = item.kind === "note";
   const isText = item.kind === "text";
@@ -719,10 +744,21 @@ export function BoardItemView({
   const fieldRef = useEditingCaret(isEditing);
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the board is a canvas of individually addressable items; the click only matters in comment mode
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — the click aims a comment at the item, and the drag already uses pointer events the same way
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same — an item is a canvas surface, not a button
     <div
       className={`group absolute ${isText ? "" : "select-none"} ${
         isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-board-ink/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
+      onClick={
+        onCommentTarget
+          ? (e) => {
+              e.stopPropagation();
+              onCommentTarget();
+            }
+          : undefined
+      }
       onPointerDown={(e) => {
         // Only the primary button picks an item up. A right-click emits
         // pointerdown too, and letting it begin a drag meant the context menu
@@ -730,6 +766,13 @@ export function BoardItemView({
         // written back the moment it ended, undoing whatever the menu had just
         // done. The press still passes through, so the menu sees the selection.
         if (e.button !== 0) {
+          return;
+        }
+        // Comment targeting: the press belongs to the item, not to a pan —
+        // without stopping it the canvas would read it as panning and the
+        // click that aims the comment would never fire.
+        if (onCommentTarget) {
+          e.stopPropagation();
           return;
         }
         // While editing, the press belongs to the field — placing a caret or
@@ -827,6 +870,14 @@ export function BoardItemView({
         >
           <HugeiconsIcon icon={ResizeFieldIcon} size={32} />
         </div>
+      ) : null}
+
+      {/* Open comments pinned to this item: the count, so a visitor can see at
+          a glance what has feedback on it. */}
+      {commentCount > 0 ? (
+        <span className="absolute -top-2 -right-2 grid min-w-5 place-items-center rounded-full bg-amber-300 px-1.5 py-0.5 font-semibold text-[10px] text-black shadow">
+          {commentCount}
+        </span>
       ) : null}
     </div>
   );

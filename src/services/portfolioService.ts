@@ -555,9 +555,12 @@ export const portfolioService = {
       "image/webp",
       "image/gif",
       "image/avif",
+      // SVG, so a vector dropped onto a board can be kept as a vector — the
+      // same allowance the server's upload handler now makes.
+      "image/svg+xml",
     ] as const;
     if (!(file.type && (allowed as readonly string[]).includes(file.type))) {
-      throw new Error("Choose a JPEG, PNG, WebP, AVIF or GIF image");
+      throw new Error("Choose a JPEG, PNG, WebP, AVIF, GIF or SVG image");
     }
 
     const token = getAuthToken();
@@ -635,6 +638,29 @@ export const authStorage = {
 };
 
 export const authApi = {
+  /** Changes the signed-in user's password, after checking the current one. */
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/auth/change-password`, {
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(
+        data.error || `Could not change password (${res.status})`
+      );
+    }
+  },
   login: async (
     email: string,
     password: string

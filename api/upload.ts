@@ -9,6 +9,10 @@ const ALLOWED_TYPES = [
   "image/webp",
   "image/gif",
   "image/avif",
+  // SVG, so a vector dropped onto a board can be kept as a vector rather than
+  // always being rasterised. Nothing downstream minds: the run endpoint
+  // rasterises an SVG the moment a model needs pixels.
+  "image/svg+xml",
 ];
 
 /**
