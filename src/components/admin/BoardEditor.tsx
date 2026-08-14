@@ -36,6 +36,8 @@ import {
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
+import { OUTPUT_PORT_KEY } from "../../../config/nodeTypes.js";
+import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
 import { BoardDrawTools } from "../../boards/BoardDrawTools";
@@ -50,8 +52,15 @@ import {
   isFreehand,
   NO_FILL,
 } from "../../boards/drawing";
+import { ElementModal } from "../../boards/ElementModal";
 import { InsertPalette } from "../../boards/InsertPalette";
+import {
+  outputImageOf,
+  outputImagesOf,
+  outputTextOf,
+} from "../../boards/itemOutput";
 import { MaskControls } from "../../boards/MaskControls";
+import { ModelsProvider } from "../../boards/ModelsContext";
 import {
   type MaskConfig,
   type MaskStroke,
@@ -64,8 +73,10 @@ import type { PortTarget } from "../../boards/PortMenu";
 import { findFreeSpot } from "../../boards/placement";
 import { newShaderConfig } from "../../boards/shaderConfig";
 import { isSvgFile, svgToWebp } from "../../boards/svgToRaster";
+import { useAffinityBridge } from "../../boards/useAffinityBridge";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
+import ThemeToggle from "../../components/ThemeToggle";
 import {
   authStorage,
   boardsApi,
@@ -74,14 +85,16 @@ import {
 import type {
   Board,
   BoardItem,
+  BoardItemResult,
   BoardSource,
   BoardWire,
+  Element,
   Photo,
 } from "../../types";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
-import { CustomCursor } from "./CustomCurstor";
+import { CustomCursor } from "./CustomCursor";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
@@ -234,6 +247,25 @@ export function BoardEditor({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
+  /**
+   * The selection waiting to be named, or null when nothing is being saved.
+   *
+   * Held here rather than in the modal because it is gathered from the board —
+   * once the panel is open the selection may have moved on, and what is being
+   * saved should be what was chosen when it was chosen.
+   */
+  const [elementDraft, setElementDraft] = useState<{
+    description: string;
+    images: string[];
+  } | null>(null);
+  /**
+   * Which tab the insert panel opens on, or undefined for its own default.
+   *
+   * Decided by whoever opens it. Naming an element ends on the library it was
+   * just added to, so the thing that was named can be placed without hunting
+   * for it; the toolbar opens where it always did.
+   */
+  const [pickAt, setPickAt] = useState<"elements" | undefined>();
   const history = useBoardHistory();
   const [drawTool, setDrawTool] = useState<DrawTool | null>(null);
   const [selectedItem, setSelectedItem] = useState<BoardItem | null>(null);
@@ -309,17 +341,19 @@ export function BoardEditor({
     /**
      * `override` is for a caller that has just computed the items and cannot
      * wait for React to re-render with them — rendering masks before a run is
-     * the case. Without it that save would write the state from before the
-     * masks were attached, and the run would read a board that lacks them.
+     * the case, and so is a node created the same moment it is run. Without it
+     * that save would write the state from before the masks were attached (or
+     * the node was added), and the run would read a board that lacks them.
      */
-    async (override?: BoardItem[]) => {
+    async (override?: { items?: BoardItem[]; wires?: BoardWire[] }) => {
       // Refuses to write a board it has not read. Without this the first
       // debounce after any early edit replaces the stored arrangement with the
       // empty one this component starts with.
       if (!isLoaded) {
         return;
       }
-      const saving = override ?? items;
+      const saving = override?.items ?? items;
+      const savingWires = override?.wires ?? wires;
       setIsSaving(true);
       try {
         await boardsApi.update(boardId, {
@@ -332,7 +366,7 @@ export function BoardEditor({
             )?.imageUrl ?? undefined,
           items: saving,
           sources,
-          wires,
+          wires: savingWires,
         });
         // Deliberately does not adopt saved.items. The canvas is the source of
         // truth while it is open, and replacing state here discarded anything
@@ -755,7 +789,7 @@ export function BoardEditor({
       setItems(composed);
       // Saved explicitly with these items: the run reads the board from the
       // database, and React has not re-rendered with them yet.
-      await save(composed);
+      await save({ items: composed });
       return;
     }
     if (pending.current.isDirty) {
@@ -834,6 +868,74 @@ export function BoardEditor({
         z: items.length + 1,
       },
     ]);
+  };
+
+  /**
+   * Places a saved style on the canvas.
+   *
+   * The key image, the name, and the words are copied onto the node so the
+   * canvas can draw them without a request per node. The id travels with them,
+   * and it is the id the run endpoint reads — so what a run actually sends is
+   * whatever the library holds now, not what it held the day this node was
+   * placed. The copies exist only so a board still shows what it was built with
+   * after the element is deleted out from under it.
+   *
+   * Square-ish, because what it shows is a picture rather than a stack of
+   * settings: the tall default node shape left an element mostly empty.
+   */
+  const addElement = (element: Element) => {
+    const size = DEFAULT_NODE_WIDTH;
+    const p = dropPoint(items, size, size);
+    change([
+      ...items,
+      {
+        ...BLANK_ITEM,
+        config: {
+          description: element.description ?? "",
+          elementId: element.id,
+          imageUrl: element.coverUrl ?? "",
+          name: element.name,
+        },
+        height: size,
+        id: newItemId(),
+        kind: "op",
+        nodeType: "element",
+        runState: "idle",
+        width: size,
+        x: p.x,
+        y: p.y,
+        z: items.length + 1,
+      },
+    ]);
+  };
+
+  /**
+   * Gathers a selection into the draft the naming panel opens on.
+   *
+   * The pictures are resolved the way a wire would resolve them, so a frame
+   * offers what sits on it and a node offers the version chosen on it — the
+   * same list the menu counted. Repeats are dropped: selecting a frame and
+   * something on it means one picture, not two.
+   *
+   * The words come from a Describe node in the selection when there is one,
+   * because that reading of what the references have in common is the thing an
+   * element carries down the wire; otherwise the panel opens with an empty
+   * description to write by hand.
+   */
+  const beginElement = (chosen: BoardItem[]) => {
+    const graph = { items, wires };
+    const images = [
+      ...new Set(chosen.flatMap((item) => outputImagesOf(item, graph))),
+    ];
+    if (images.length === 0) {
+      toast.error("Nothing in that selection to save");
+      return;
+    }
+    const described = chosen.find((item) => item.nodeType === "describe");
+    setElementDraft({
+      description: described ? (outputTextOf(described, graph) ?? "") : "",
+      images,
+    });
   };
 
   /**
@@ -1327,6 +1429,139 @@ export function BoardEditor({
   };
 
   /**
+   * The edit Affinity made, stored into the node's state.
+   *
+   * Same contract as removing a version: the endpoint owns `result`, the canvas
+   * owns `config`, so the selected version moves here to the newest entry. An
+   * item without a result — a reference whose source is the SVG — has no
+   * versions, so the edit simply replaces the picture it shows.
+   */
+  const applyEditedSvg = useCallback(
+    (itemId: string, writeback: AffinityWriteback) => {
+      setItems((current) =>
+        current.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+          if (writeback.result) {
+            const historyLength =
+              (writeback.result as BoardItemResult).history?.length ?? 0;
+            return {
+              ...item,
+              config: {
+                ...item.config,
+                selectedVersion: Math.max(0, historyLength - 1),
+              },
+              result: writeback.result as BoardItemResult,
+            };
+          }
+          if (writeback.imageUrl) {
+            return {
+              ...item,
+              imageUrl: writeback.imageUrl,
+              thumbUrl: writeback.imageUrl,
+            };
+          }
+          return item;
+        })
+      );
+      setIsDirty(true);
+    },
+    []
+  );
+
+  const { openInAffinity } = useAffinityBridge(boardId, applyEditedSvg);
+
+  /**
+   * Opens a node's SVG in Affinity Designer, through the local bridge.
+   *
+   * The bridge download-and-opens; edits are picked up by the bridge's poll and
+   * written back through the app, so a save in Affinity is all the user needs
+   * to do to land a new version on the node.
+   */
+  const openItemInAffinity = async (itemId: string) => {
+    const node = items.find((item) => item.id === itemId);
+    const url = node ? outputImageOf(node, items) : null;
+    if (!(node && url)) {
+      toast.error("That node has no image to edit");
+      return;
+    }
+    if (!isSvgUrl(url)) {
+      toast.error("Only SVG results can be opened in Affinity");
+      return;
+    }
+    try {
+      await openInAffinity(itemId, url);
+      toast.success("Open in Affinity — save there and it comes back");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not open Affinity"
+      );
+    }
+  };
+
+  /** The model that traces a picture into vector art. A Generate node runs it. */
+  const VECTORIZE_MODEL = "fal-ai/recraft/vectorize";
+
+  /**
+   * Traces a placed image into vector art, in one gesture.
+   *
+   * Runs the Recraft vectorizer by building what the canvas would: a Generate
+   * node set to that model, the picture wired into its image port, then a run.
+   * Placed beside the source so the wire is short and the result obvious.
+   *
+   * Saved before it runs, because the run endpoint reads the *stored* graph —
+   * the same rule every other run obeys — so the node has to exist in the
+   * database before its inputs are resolved.
+   */
+  const vectorizeItem = async (itemId: string) => {
+    const source = pending.current.items.find((item) => item.id === itemId);
+    if (
+      !(
+        source &&
+        (source.kind === "photo" || source.kind === "reference") &&
+        source.imageUrl
+      )
+    ) {
+      toast.error("That placed image has nothing to vectorize");
+      return;
+    }
+    const node: BoardItem = {
+      ...BLANK_ITEM,
+      config: { model: VECTORIZE_MODEL },
+      height: DEFAULT_NODE_HEIGHT,
+      id: newItemId(),
+      kind: "op",
+      nodeType: "generate",
+      runState: "idle",
+      width: DEFAULT_NODE_WIDTH,
+      x: source.x + source.width + PORT_SPAWN_GAP,
+      y: source.y + source.height / 2 - DEFAULT_NODE_HEIGHT / 2,
+      z: pending.current.items.length + 1,
+    };
+    const wire: BoardWire = {
+      id: newItemId(),
+      sourceItemId: source.id,
+      sourcePort: OUTPUT_PORT_KEY,
+      targetItemId: node.id,
+      targetPort: "image",
+    };
+    const nextItems = [...pending.current.items, node];
+    const nextWires = [...pending.current.wires, wire];
+    setItems(nextItems);
+    setWires(nextWires);
+    setIsDirty(true);
+    try {
+      await save({ items: nextItems, wires: nextWires });
+      await graphRun.runNode(node.id, false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not vectorize the image"
+      );
+    }
+  };
+
+  /**
    * Puts every version a node has made onto the board as its own image.
    *
    * A node's gallery is for comparing; once you have compared, the usual next
@@ -1370,251 +1605,299 @@ export function BoardEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      <CustomCursor cursorColor="#9100FF" userName={displayName} />
-      {/* Wraps rather than overflowing: the palette has grown past what fits on
+    <ModelsProvider>
+      {/* `text-board-ink` establishes the board's own writing color for
+          everything inside. Without it the subtree inherits the *site's*
+          foreground — the branded near-white that SiteSettingsProvider pins to
+          <html> — so anything without an explicit color came out white on a
+          white board. The site's palette is right for the site and has no say
+          here. */}
+      <div className="fixed inset-0 z-50 flex flex-col bg-board-surface text-board-ink">
+        <CustomCursor cursorColor="#9100FF" userName={displayName} />
+        {/* Wraps rather than overflowing: the palette has grown past what fits on
           one line at laptop width, and a row of shrink-0 buttons pushed Publish
           and Close off the edge instead of moving them down. */}
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-white/10 border-b px-4 py-3">
-        <div className="min-w-0">
-          <h2 className="truncate font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-            {board?.title ?? "Board"}
-          </h2>
-          <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
-            {isSaving ? "Saving…" : null}
-            {!isSaving && isDirty ? "Unsaved changes" : null}
-            {isSaving || isDirty ? null : (
-              <span className="flex items-center gap-1">
-                <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
-                Saved
-              </span>
-            )}
-          </p>
-        </div>
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-board-ink/10 border-b px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate font-light text-board-ink/90 text-sm uppercase tracking-[0.2em]">
+              {board?.title ?? "Board"}
+            </h2>
+            <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.2em]">
+              {isSaving ? "Saving…" : null}
+              {!isSaving && isDirty ? "Unsaved changes" : null}
+              {isSaving || isDirty ? null : (
+                <span className="flex items-center gap-1">
+                  <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
+                  Saved
+                </span>
+              )}
+            </p>
+          </div>
 
-        <div className="flex flex-1 justify-end gap-2">
-          {/* Only offered once there is a graph to run. A board of pinned
+          <div className="flex flex-1 items-center justify-end gap-2">
+            {/* Only offered once there is a graph to run. A board of pinned
               photographs has nothing to execute, and a control that would
               always be a no-op is noise. */}
-          {items.some((item) => item.kind === "op") ? (
+            {items.some((item) => item.kind === "op") ? (
+              <Button
+                onClick={() => {
+                  if (graphRun.isRunning) {
+                    graphRun.cancel();
+                  } else {
+                    void graphRun.runBoard();
+                  }
+                }}
+                type="button"
+                variant="ghost"
+              >
+                <HugeiconsIcon
+                  aria-hidden
+                  icon={graphRun.isRunning ? StopIcon : PlayIcon}
+                  size={14}
+                />
+                {graphRun.isRunning ? "Cancel" : "Run board"}
+              </Button>
+            ) : null}
+            {publicUrl ? (
+              <button
+                className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
+                onClick={() => {
+                  void navigator.clipboard.writeText(publicUrl);
+                  toast.success("Link copied");
+                }}
+                type="button"
+              >
+                {publicUrl.replace(SCHEME, "")}
+              </button>
+            ) : null}
             <Button
-              onClick={() => {
-                if (graphRun.isRunning) {
-                  graphRun.cancel();
-                } else {
-                  void graphRun.runBoard();
-                }
-              }}
+              className="min-h-11 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:text-board-ink"
+              disabled={isPublishing}
+              onClick={() => void publish(!board?.isPublic)}
               type="button"
               variant="ghost"
             >
-              <HugeiconsIcon
-                aria-hidden
-                icon={graphRun.isRunning ? StopIcon : PlayIcon}
-                size={14}
-              />
-              {graphRun.isRunning ? "Cancel" : "Run board"}
+              {board?.isPublic ? "Unpublish" : "Publish"}
             </Button>
-          ) : null}
-          {publicUrl ? (
-            <button
-              className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
-              onClick={() => {
-                void navigator.clipboard.writeText(publicUrl);
-                toast.success("Link copied");
-              }}
+            <ThemeToggle />
+            <Button
+              aria-label="Close board"
+              className="min-h-11 text-board-ink/80 hover:text-board-ink"
+              onClick={() => void close()}
               type="button"
+              variant="ghost"
             >
-              {publicUrl.replace(SCHEME, "")}
-            </button>
-          ) : null}
-          <Button
-            className="min-h-11 text-[10px] text-white/80 uppercase tracking-[0.18em] hover:text-white"
-            disabled={isPublishing}
-            onClick={() => void publish(!board?.isPublic)}
-            type="button"
-            variant="ghost"
-          >
-            {board?.isPublic ? "Unpublish" : "Publish"}
-          </Button>
-          <Button
-            aria-label="Close board"
-            className="min-h-11 text-white/80 hover:text-white"
-            onClick={() => void close()}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} size={18} />
-          </Button>
-        </div>
-      </header>
+              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+            </Button>
+          </div>
+        </header>
 
-      <div className="relative min-h-0 flex-1">
-        {/* Floating over the canvas rather than in the header: the header
+        <div className="relative min-h-0 flex-1">
+          {/* Floating over the canvas rather than in the header: the header
             already wraps at laptop width, and a drawing tool wants to be near
             what it is drawing on. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
-          <div className="pointer-events-auto">
-            <MaskControls onChange={changeMask} selected={selectedItem} />
-            <BoardDrawTools
-              onConfigChange={changeConfig}
-              onStyle={setDrawStyle}
-              onTool={setDrawTool}
-              selected={selectedItem}
-              style={drawStyle}
-              tool={drawTool}
-            />
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+            <div className="pointer-events-auto">
+              <MaskControls onChange={changeMask} selected={selectedItem} />
+              <BoardDrawTools
+                onConfigChange={changeConfig}
+                onStyle={setDrawStyle}
+                onTool={setDrawTool}
+                selected={selectedItem}
+                style={drawStyle}
+                tool={drawTool}
+              />
+            </div>
           </div>
-        </div>
 
-        <Card className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-black text-white">
-          <Button
-            onClick={() => addWritable("note")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
-            Note
-          </Button>
-          <Button
-            onClick={() => addWritable("text")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
-            Text
-          </Button>
-          <Button
-            onClick={() => setIsPicking((v) => !v)}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
-            Image
-          </Button>
-          <Button
-            onClick={() => addNode("generate")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
-            Generate
-          </Button>
-          <Button
-            onClick={() => addNode("describe")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
-            Analyse
-          </Button>
-          <Button onClick={() => addNode("join")} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
-            Combine
-          </Button>
-          <Button
-            onClick={() => addNode("iterate")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
-            Iterate
-          </Button>
-          <Button onClick={() => addNode("icon")} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
-            Icon
-          </Button>
-          <Button
-            onClick={() => addNode("palette")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={PaintBoardIcon} size={14} />
-            Palette
-          </Button>
-          <Button
-            onClick={() => addNode("prompt")}
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
-            Prompt
-          </Button>
-          <Button onClick={addFrame} type="button" variant="ghost">
-            <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
-            Frame
-          </Button>
-        </Card>
+          <Card className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-board-surface text-board-ink">
+            <Button
+              onClick={() => addWritable("note")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
+              Note
+            </Button>
+            <Button
+              onClick={() => addWritable("text")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
+              Text
+            </Button>
+            <Button
+              onClick={() => setIsPicking((v) => !v)}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
+              Image
+            </Button>
+            <Button
+              onClick={() => addNode("generate")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+              Generate
+            </Button>
+            <Button
+              onClick={() => addNode("describe")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
+              Analyse
+            </Button>
+            <Button
+              onClick={() => addNode("join")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
+              Combine
+            </Button>
+            <Button
+              onClick={() => addNode("iterate")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
+              Iterate
+            </Button>
+            <Button
+              onClick={() => addNode("icon")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
+              Icon
+            </Button>
+            <Button
+              onClick={() => addNode("palette")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={PaintBoardIcon} size={14} />
+              Palette
+            </Button>
+            <Button
+              onClick={() => addNode("prompt")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
+              Prompt
+            </Button>
+            <Button onClick={addFrame} type="button" variant="ghost">
+              <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
+              Frame
+            </Button>
+          </Card>
 
-        <BoardCanvas
-          autoEditId={autoEditId}
-          drawStyle={drawStyle}
-          drawTool={drawTool}
-          items={items}
-          keyOf={keyOf}
-          onArrangeFrame={autoArrange}
-          onCancel={graphRun.cancel}
-          onChange={change}
-          onConfigChange={changeConfig}
-          onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
-          onCreateFromPort={createFromPort}
-          onDraw={addDrawing}
-          onDropFiles={(files, point) => void dropFiles(files, point)}
-          onDropImage={dropImage}
-          onExportItem={(itemId) => void exportItem(itemId)}
-          onGroupIntoFrame={groupIntoFrame}
-          onMaskStroke={addMaskStroke}
-          onRemoveVersion={(itemId, index) => void removeVersion(itemId, index)}
-          onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
-          onSelectionChange={setSelectedItem}
-          onSendVersions={sendVersions}
-          onWiresChange={changeWires}
-          viewCentreRef={viewCentreRef}
-          wires={wires}
-        />
-
-        {isInserting ? (
-          <InsertPalette
-            onChoose={(action) => {
-              setIsInserting(false);
-              if (action.kind === "writable") {
-                addWritable(action.writable);
-              } else if (action.kind === "frame") {
-                addFrame();
-              } else if (action.kind === "node") {
-                addNode(action.nodeType);
-              } else if (action.kind === "shader") {
-                addShader(action.name);
-              } else {
-                // Images need a source chosen, so the palette hands over to the
-                // panel that can ask rather than guessing one.
-                setIsPicking(true);
-              }
-            }}
-            onDismiss={() => setIsInserting(false)}
-          />
-        ) : null}
-
-        {isPicking ? (
-          <BoardInsertPanel
-            onAddExternal={addExternal}
-            onAddFiles={(files) =>
-              void dropFiles(
-                files,
-                dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
-              )
+          <BoardCanvas
+            autoEditId={autoEditId}
+            drawStyle={drawStyle}
+            drawTool={drawTool}
+            items={items}
+            keyOf={keyOf}
+            onArrangeFrame={autoArrange}
+            onCancel={graphRun.cancel}
+            onChange={change}
+            onConfigChange={changeConfig}
+            onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
+            onCreateFromPort={createFromPort}
+            onDraw={addDrawing}
+            onDropFiles={(files, point) => void dropFiles(files, point)}
+            onDropImage={dropImage}
+            onExportItem={(itemId) => void exportItem(itemId)}
+            onGroupIntoFrame={groupIntoFrame}
+            onMaskStroke={addMaskStroke}
+            onOpenInAffinity={(itemId) => void openItemInAffinity(itemId)}
+            onRemoveVersion={(itemId, index) =>
+              void removeVersion(itemId, index)
             }
-            onAddNode={addNode}
-            onAddPhoto={addPhoto}
-            onAddShader={addShader}
-            onAttachSource={attachSource}
-            onClose={() => setIsPicking(false)}
-            onDetachSource={detachSource}
-            photos={photos}
-            sources={sources}
+            onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
+            onSaveElement={beginElement}
+            onSelectionChange={setSelectedItem}
+            onSendVersions={sendVersions}
+            onVectorize={(itemId) => void vectorizeItem(itemId)}
+            onWiresChange={changeWires}
+            viewCentreRef={viewCentreRef}
+            wires={wires}
           />
-        ) : null}
+
+          {isInserting ? (
+            <InsertPalette
+              onChoose={(action) => {
+                setIsInserting(false);
+                if (action.kind === "writable") {
+                  addWritable(action.writable);
+                } else if (action.kind === "frame") {
+                  addFrame();
+                } else if (action.kind === "node") {
+                  addNode(action.nodeType);
+                } else if (action.kind === "shader") {
+                  addShader(action.name);
+                } else {
+                  // Images need a source chosen, so the palette hands over to the
+                  // panel that can ask rather than guessing one.
+                  setIsPicking(true);
+                }
+              }}
+              onDismiss={() => setIsInserting(false)}
+            />
+          ) : null}
+
+          {isPicking ? (
+            <BoardInsertPanel
+              initialTab={pickAt}
+              onAddElement={(element) => {
+                addElement(element);
+                setIsPicking(false);
+              }}
+              onAddExternal={addExternal}
+              onAddFiles={(files) =>
+                void dropFiles(
+                  files,
+                  dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
+                )
+              }
+              onAddNode={addNode}
+              onAddPhoto={addPhoto}
+              onAddShader={addShader}
+              onAttachSource={attachSource}
+              onClose={() => {
+                setIsPicking(false);
+                // Cleared on close so the next opening goes back to the usual
+                // first tab — being sent to the library once does not mean the
+                // panel now lives there.
+                setPickAt(undefined);
+              }}
+              onDetachSource={detachSource}
+              photos={photos}
+              sources={sources}
+            />
+          ) : null}
+
+          {elementDraft ? (
+            <ElementModal
+              description={elementDraft.description}
+              images={elementDraft.images}
+              onCancel={() => setElementDraft(null)}
+              onSaved={() => {
+                // Ends on the library the element was just added to, so the thing
+                // that was named can be placed without hunting for it.
+                setElementDraft(null);
+                setPickAt("elements");
+                setIsPicking(true);
+              }}
+            />
+          ) : null}
+        </div>
       </div>
-    </div>
+    </ModelsProvider>
   );
 }

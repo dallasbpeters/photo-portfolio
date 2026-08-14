@@ -126,3 +126,45 @@ export const persistGenerated = async (
   );
   return blob.url;
 };
+
+/**
+ * Stores an SVG we already hold as text — the write-back from an edit made in
+ * Affinity — rather than fetching one. Same store and same public access as the
+ * generated copies; an edited vector is still just a vector to the rest of the
+ * app, so it should live where they do.
+ */
+export const persistSvgText = async (
+  svg: string,
+  /** Folder under the blob store; the caller picks "boards/svg". */
+  prefix: string
+): Promise<string> => {
+  const blob = await put(`${prefix}/${crypto.randomUUID()}.svg`, svg, {
+    access: "public",
+    contentType: "image/svg+xml",
+  });
+  return blob.url;
+};
+
+/**
+ * Stores bytes we already hold — a rasterised SVG, say — rather than fetching a
+ * URL. The type is the caller's word, unlike persistGenerated which sniffs it
+ * from the bytes; a buffer produced locally has no server to disagree.
+ */
+export const persistBytes = async (
+  bytes: ArrayBuffer | Buffer,
+  /** Folder under the blob store, e.g. "boards/ai". */
+  prefix: string,
+  contentType: string
+): Promise<string> => {
+  const extension =
+    EXTENSIONS[contentType.split(";")[0]?.trim() ?? ""] ?? "jpg";
+  const blob = await put(
+    `${prefix}/${crypto.randomUUID()}.${extension}`,
+    bytes,
+    {
+      access: "public",
+      contentType,
+    }
+  );
+  return blob.url;
+};

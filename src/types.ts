@@ -1,4 +1,4 @@
-import type { RunState } from "../config/nodeTypes.js";
+import type { FalModelInput, RunState } from "../config/nodeTypes.js";
 
 export type { RunState } from "../config/nodeTypes.js";
 
@@ -237,4 +237,79 @@ export interface Board {
   updatedAt: string;
   /** On detail responses only; empty for a board with no graph. */
   wires?: BoardWire[];
+}
+
+/**
+ * A style already found, kept so it can be used again.
+ *
+ * Half a dozen references that share a look, the words for what they share, and
+ * a name. Deliberately not a board: a board is a place you work, an element is
+ * a conclusion you reached there, so it outlives the board that produced it.
+ *
+ * `description` is the substance rather than a note about it — it travels down
+ * the wire into the prompt of whatever the element feeds.
+ */
+export interface Element {
+  /** The key image: what the panel shows, and what a wired element hands over. */
+  coverUrl: string | null;
+  createdAt: string;
+  description: string | null;
+  id: string;
+  imageUrls: string[];
+  name: string;
+  updatedAt: string;
+}
+
+/**
+ * A fal.ai model a Generate node may ask for.
+ *
+ * The list is data, edited from /admin/models rather than in code, so the
+ * picker, the run endpoint and the admin panel all read the same rows.
+ */
+export interface AiModel {
+  createdAt: string;
+  enabled: boolean;
+  /** The exact fal.ai model id, or a namespaced "lora/..." one. */
+  id: string;
+  imageParam: "image_url" | "image_urls";
+  input: FalModelInput;
+  /** Shown on the node — model ids are too long and too alike to read. */
+  label: string;
+  lora: {
+    endpoint: string | null;
+    imageEndpoint: string | null;
+    /** URL to the safetensors weights, ours or Hugging Face's. */
+    path: string | null;
+    scale: number | null;
+    trigger: string | null;
+  } | null;
+  sortOrder: number;
+  updatedAt: string;
+  /** True when the model returns vector art rather than a raster. */
+  vector: boolean;
+}
+
+/** The LoRA fields of a model, as stored and as sent. */
+export interface AiModelLora {
+  endpoint: string | null;
+  imageEndpoint: string | null;
+  /** URL to the safetensors weights, ours or Hugging Face's. */
+  path: string | null;
+  scale: number | null;
+  trigger: string | null;
+}
+
+/**
+ * The settable fields of a model. `id` is only read on create; `lora` is
+ * `null` to clear a LoRA and absent to leave it alone.
+ */
+export interface AiModelInput {
+  enabled?: boolean;
+  id?: string;
+  imageParam?: "image_url" | "image_urls";
+  input?: FalModelInput;
+  label?: string;
+  lora?: AiModelLora | null;
+  sortOrder?: number;
+  vector?: boolean;
 }

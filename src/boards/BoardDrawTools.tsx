@@ -10,11 +10,11 @@ import { type DrawTool, isDrawingConfig, NO_FILL } from "./drawing";
  * in the project.
  *
  * The rule: with a drawing selected, the controls edit *that mark*. With
- * nothing selected they set what the next mark will look like. Picking a colour
+ * nothing selected they set what the next mark will look like. Picking a color
  * and watching the selected shape ignore it is the behaviour anyone would call
  * broken — which is exactly what happened before this existed.
  *
- * A drawing only. Selecting a photograph and changing a colour must not
+ * A drawing only. Selecting a photograph and changing a color must not
  * silently rewrite the pen settings, and there is nothing on a photograph for
  * these controls to mean.
  */

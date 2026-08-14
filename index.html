@@ -18,6 +18,32 @@
     <!-- Served from the database so name/theme changes need no rebuild. -->
     <link href="/api/manifest" rel="manifest" type="application/manifest+json">
     <title>%SITE_NAME%</title>
+    <!--
+      The theme, before the first paint.
+
+      React cannot do this: by the time it mounts, the page has already been
+      drawn once in the wrong colours, which is the white flash every dark-mode
+      app is known for. Deliberately duplicates the few lines in src/theme/theme.ts
+      rather than importing them — a module import is a round trip, and a round
+      trip here is exactly the delay this exists to avoid. Keep the two in step.
+    -->
+    <script>
+    "use strict";
+    (() => {
+      try {
+        const saved = localStorage.getItem("theme");
+        const choice = saved === "dark" || saved === "light" ? saved : "system";
+        const dark =
+          choice === "dark" ||
+          (choice === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      } catch {
+        // A browser with storage denied still gets a page, in whatever the
+        // stylesheet's own default is. Not worth breaking the load over.
+      }
+    })();
+    </script>
   </head>
 
   <body>

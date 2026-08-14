@@ -15,6 +15,7 @@ import { newItemId } from "../../boards/newItemId";
 import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
   aiApi,
+  elementsApi,
   type FalLibraryItem,
   type FramerImage,
   falLibraryApi,
@@ -26,7 +27,7 @@ import {
   type UnsplashResult,
   unsplashApi,
 } from "../../services/portfolioService";
-import type { BoardSource, Photo } from "../../types";
+import type { BoardSource, Element, Photo } from "../../types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
@@ -40,6 +41,10 @@ export interface ExternalImage {
 }
 
 interface BoardInsertPanelProps {
+  /** Which source to open on, for a panel opened *at* something. */
+  initialTab?: Tab;
+  /** Places a saved style on the canvas as an Element node. */
+  onAddElement: (element: Element) => void;
   onAddExternal: (image: ExternalImage) => void;
   /** Uploads and pins picked files — the same path a dragged file takes. */
   onAddFiles: (files: File[]) => void;
@@ -57,6 +62,7 @@ interface BoardInsertPanelProps {
 }
 
 type Tab =
+  | "elements"
   | "yours"
   | "drive"
   | "framer"
@@ -68,6 +74,9 @@ type Tab =
   | "shader";
 
 const TABS: { id: Tab; label: string }[] = [
+  // First, and deliberately: a style you have already found and named beats
+  // going looking for the same look again.
+  { id: "elements", label: "Elements" },
   { id: "yours", label: "Your photos" },
   { id: "drive", label: "Google Drive" },
   { id: "framer", label: "Framer site" },
@@ -94,6 +103,8 @@ const SCHEME_AND_HOST = /^https?:\/\/[^/]+\//;
  * found on Unsplash is usually the starting point for a generated variation.
  */
 export function BoardInsertPanel({
+  initialTab,
+  onAddElement,
   onAddExternal,
   onAddFiles,
   onAddNode,
@@ -105,7 +116,7 @@ export function BoardInsertPanel({
   photos,
   sources,
 }: BoardInsertPanelProps) {
-  const [tab, setTab] = useState<Tab>("yours");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "yours");
 
   // Seeded from what they already shoot, then edited freely.
   const [prompt, setPrompt] = useState(() => defaultPrompt(photos));
@@ -149,16 +160,16 @@ export function BoardInsertPanel({
   };
 
   return (
-    <div className="absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-white/10 border-l bg-black/95 backdrop-blur">
+    <div className="absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-board-ink/10 border-l bg-board-surface/95 backdrop-blur">
       {/* A select rather than a row of tabs. Nine sources do not fit across the
           panel at any sensible size — the row wrapped mid-label, putting "fal"
           above "library" — and a tab strip that wraps is worse than a list,
           because it reflows as the panel resizes and nothing stays where you
           last saw it. */}
-      <div className="flex items-center gap-2 border-white/10 border-b px-2 py-2">
+      <div className="flex items-center gap-2 border-board-ink/10 border-b px-2 py-2">
         <select
           aria-label="Where to insert from"
-          className="min-h-9 flex-1 rounded border border-white/10 bg-black/60 px-2 text-[11px] text-white uppercase tracking-[0.18em] outline-none focus:border-white/40"
+          className="min-h-9 flex-1 rounded border border-board-ink/10 bg-board-surface/60 px-2 text-[11px] text-board-ink uppercase tracking-[0.18em] outline-none focus:border-board-ink/40"
           onChange={(e) => setTab(e.target.value as Tab)}
           value={tab}
         >
@@ -170,7 +181,7 @@ export function BoardInsertPanel({
         </select>
         <button
           aria-label="Close insert panel"
-          className="min-h-9 px-2 text-white/50 hover:text-white"
+          className="min-h-9 px-2 text-board-ink/50 hover:text-board-ink"
           onClick={onClose}
           type="button"
         >
@@ -179,15 +190,19 @@ export function BoardInsertPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {tab === "elements" ? <ElementsTab onAdd={onAddElement} /> : null}
+
         {tab === "yours" ? (
           <>
             {photos.length === 0 ? (
-              <p className="text-[12px] text-white/50">No photographs yet.</p>
+              <p className="text-[12px] text-board-ink/50">
+                No photographs yet.
+              </p>
             ) : null}
             <div className="grid grid-cols-2 gap-2">
               {photos.map((photo) => (
                 <button
-                  className="overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
+                  className="overflow-hidden rounded border border-board-ink/10 transition-colors hover:border-board-ink/50"
                   key={photo.id}
                   onClick={() => onAddPhoto(photo)}
                   type="button"
@@ -236,102 +251,20 @@ export function BoardInsertPanel({
         ) : null}
 
         {tab === "ai" ? (
-          <div className="space-y-3">
-            {source ? (
-              <div className="flex items-center gap-2 rounded border border-white/10 p-2">
-                <img
-                  alt=""
-                  className="size-12 rounded object-cover"
-                  height={48}
-                  src={source.thumbUrl}
-                  width={48}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-white/70 uppercase tracking-widest">
-                    Based on
-                  </p>
-                  <p className="truncate text-[10px] text-white/40">
-                    {source.creditName}
-                  </p>
-                </div>
-                <button
-                  aria-label="Remove source image"
-                  className="text-white/50 hover:text-white"
-                  onClick={() => setSource(null)}
-                  type="button"
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} size={14} />
-                </button>
-              </div>
-            ) : null}
-
-            <textarea
-              className="min-h-28 w-full resize-y rounded border border-white/10 bg-black/40 p-2 text-[13px] text-white leading-relaxed outline-none focus:border-white/40"
-              onChange={(e) => setPrompt(e.target.value)}
-              value={prompt}
-            />
-
-            {/* The node is the better answer and is offered first.
-                Generating here pins a flat image and throws the prompt away
-                when this panel closes; a node keeps the prompt on the board,
-                re-runnable, and able to feed the next node along. */}
-            <Button
-              className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-              onClick={() => {
-                onAddNode("generate", { prompt });
-                onClose();
-              }}
-              type="button"
-              variant="outline"
-            >
-              <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
-              Add as a node
-            </Button>
-
-            <Button
-              className="min-h-11 w-full border-white/10 text-[10px] text-white/60 uppercase tracking-[0.18em] hover:bg-white/10"
-              disabled={isGenerating}
-              onClick={() => void generate()}
-              type="button"
-              variant="outline"
-            >
-              {isGenerating ? "Generating…" : "Generate a one-off instead"}
-            </Button>
-
-            {generated ? (
-              <div className="space-y-2">
-                <img
-                  alt="Generated"
-                  className="h-auto w-full rounded border border-white/10"
-                  height={generated.height ?? undefined}
-                  src={generated.url}
-                  width={generated.width ?? undefined}
-                />
-                <Button
-                  className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-                  onClick={() =>
-                    onAddExternal({
-                      altText: prompt.slice(0, 200),
-                      // Generated, so there is no photographer to credit.
-                      creditName: null,
-                      creditUrl: null,
-                      imageUrl: generated.url,
-                      thumbUrl: generated.url,
-                    })
-                  }
-                  type="button"
-                  variant="outline"
-                >
-                  Add to board
-                </Button>
-              </div>
-            ) : null}
-
-            <p className="text-[10px] text-white/30 leading-relaxed">
-              Generated images are stored with the board, so they stay after the
-              model's temporary link expires.
-            </p>
-          </div>
+          <AiTab
+            generated={generated}
+            isGenerating={isGenerating}
+            onAddImage={onAddExternal}
+            onAddNode={() => {
+              onAddNode("generate", { prompt });
+              onClose();
+            }}
+            onClearSource={() => setSource(null)}
+            onGenerate={() => void generate()}
+            onPromptChange={setPrompt}
+            prompt={prompt}
+            source={source}
+          />
         ) : null}
 
         {tab === "drive" ? <DriveTab onAdd={onAddFiles} /> : null}
@@ -344,6 +277,134 @@ export function BoardInsertPanel({
 
         {tab === "icon" ? <IconTab onAdd={onAddExternal} /> : null}
       </div>
+    </div>
+  );
+}
+
+interface AiTabProps {
+  generated: GeneratedImage | null;
+  isGenerating: boolean;
+  onAddImage: (image: ExternalImage) => void;
+  /** Places the prompt on the board as a node and closes the panel. */
+  onAddNode: () => void;
+  onClearSource: () => void;
+  onGenerate: () => void;
+  onPromptChange: (text: string) => void;
+  prompt: string;
+  source: UnsplashResult | null;
+}
+
+/**
+ * Generating an image from a prompt.
+ *
+ * Its state stays on the panel rather than moving in here: "Make versions" on
+ * the Unsplash tab writes the prompt and the source image before switching to
+ * this one, so both have to outlive whichever tab is showing.
+ */
+function AiTab({
+  generated,
+  isGenerating,
+  onAddImage,
+  onAddNode,
+  onClearSource,
+  onGenerate,
+  onPromptChange,
+  prompt,
+  source,
+}: AiTabProps) {
+  return (
+    <div className="space-y-3">
+      {source ? (
+        <div className="flex items-center gap-2 rounded border border-board-ink/10 p-2">
+          <img
+            alt=""
+            className="size-12 rounded object-cover"
+            height={48}
+            src={source.thumbUrl}
+            width={48}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-board-ink/70 uppercase tracking-widest">
+              Based on
+            </p>
+            <p className="truncate text-[10px] text-board-ink/40">
+              {source.creditName}
+            </p>
+          </div>
+          <button
+            aria-label="Remove source image"
+            className="text-board-ink/50 hover:text-board-ink"
+            onClick={onClearSource}
+            type="button"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={14} />
+          </button>
+        </div>
+      ) : null}
+
+      <textarea
+        className="min-h-28 w-full resize-y rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[13px] text-board-ink leading-relaxed outline-none focus:border-board-ink/40"
+        onChange={(e) => onPromptChange(e.target.value)}
+        value={prompt}
+      />
+
+      {/* The node is the better answer and is offered first.
+          Generating here pins a flat image and throws the prompt away
+          when this panel closes; a node keeps the prompt on the board,
+          re-runnable, and able to feed the next node along. */}
+      <Button
+        className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
+        onClick={onAddNode}
+        type="button"
+        variant="outline"
+      >
+        <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+        Add as a node
+      </Button>
+
+      <Button
+        className="min-h-11 w-full border-board-ink/10 text-[10px] text-board-ink/60 uppercase tracking-[0.18em] hover:bg-board-ink/10"
+        disabled={isGenerating}
+        onClick={onGenerate}
+        type="button"
+        variant="outline"
+      >
+        {isGenerating ? "Generating…" : "Generate a one-off instead"}
+      </Button>
+
+      {generated ? (
+        <div className="space-y-2">
+          <img
+            alt="Generated"
+            className="h-auto w-full rounded border border-board-ink/10"
+            height={generated.height ?? undefined}
+            src={generated.url}
+            width={generated.width ?? undefined}
+          />
+          <Button
+            className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
+            onClick={() =>
+              onAddImage({
+                altText: prompt.slice(0, 200),
+                // Generated, so there is no photographer to credit.
+                creditName: null,
+                creditUrl: null,
+                imageUrl: generated.url,
+                thumbUrl: generated.url,
+              })
+            }
+            type="button"
+            variant="outline"
+          >
+            Add to board
+          </Button>
+        </div>
+      ) : null}
+
+      <p className="text-[10px] text-board-ink/30 leading-relaxed">
+        Generated images are stored with the board, so they stay after the
+        model's temporary link expires.
+      </p>
     </div>
   );
 }
@@ -397,14 +458,14 @@ function UnsplashTab({
         }}
       >
         <Input
-          className="min-h-10 border-white/10 bg-black/40 text-base"
+          className="min-h-10 border-board-ink/10 bg-board-surface/40 text-base"
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search references…"
           value={query}
         />
         <Button
           aria-label="Search"
-          className="min-h-10 border-white/20"
+          className="min-h-10 border-board-ink/20"
           type="submit"
           variant="outline"
         >
@@ -413,7 +474,7 @@ function UnsplashTab({
       </form>
 
       {isSearching ? (
-        <p className="text-[11px] text-white/50 uppercase tracking-widest">
+        <p className="text-[11px] text-board-ink/50 uppercase tracking-widest">
           Searching…
         </p>
       ) : null}
@@ -422,7 +483,7 @@ function UnsplashTab({
         {results.map((result) => (
           <div className="group relative" key={result.id}>
             <button
-              className="block w-full overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
+              className="block w-full overflow-hidden rounded border border-board-ink/10 transition-colors hover:border-board-ink/50"
               onClick={() => onAdd(result)}
               type="button"
             >
@@ -437,11 +498,11 @@ function UnsplashTab({
             </button>
             {/* Credit is shown here as well as on the board, so it is
                       visible before the photograph is chosen. */}
-            <p className="truncate pt-1 text-[9px] text-white/40">
+            <p className="truncate pt-1 text-[9px] text-board-ink/40">
               {result.creditName}
             </p>
             <button
-              className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-1 bg-black/80 py-1 text-[9px] text-white uppercase tracking-widest opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-1 bg-board-surface/80 py-1 text-[9px] text-board-ink uppercase tracking-widest opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
               onClick={() => onMakeVersions(result)}
               type="button"
             >
@@ -490,7 +551,7 @@ function DriveTab({ onAdd }: { onAdd: (files: File[]) => void }) {
       >
         {isPicking ? "Waiting for Google…" : "Choose from Drive"}
       </Button>
-      <p className="text-[10px] text-white/35 leading-relaxed">
+      <p className="text-[10px] text-board-ink/35 leading-relaxed">
         Only the files you pick are shared with this site. They are copied here,
         so a board keeps working if the original moves.
       </p>
@@ -561,11 +622,11 @@ function FramerTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
       {images.length > 0 ? (
         <>
           <div className="flex items-center justify-between">
-            <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+            <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
               {images.length} found
             </p>
             <button
-              className="text-[9px] text-white/50 uppercase tracking-[0.14em] hover:text-white"
+              className="text-[9px] text-board-ink/50 uppercase tracking-[0.14em] hover:text-board-ink"
               onClick={() => {
                 for (const image of images) {
                   onAdd({
@@ -585,7 +646,7 @@ function FramerTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
           <div className="grid grid-cols-3 gap-2">
             {images.map((image) => (
               <button
-                className="overflow-hidden rounded border border-white/10 hover:border-white/40"
+                className="overflow-hidden rounded border border-board-ink/10 hover:border-board-ink/40"
                 key={image.imageUrl}
                 onClick={() =>
                   onAdd({
@@ -600,7 +661,7 @@ function FramerTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
               >
                 <img
                   alt={image.altText ?? "Framer asset"}
-                  className="aspect-square w-full bg-neutral-900 object-cover"
+                  className="aspect-square w-full bg-board-panel object-cover"
                   height={160}
                   loading="lazy"
                   src={image.thumbUrl}
@@ -683,7 +744,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
     return (
       <div className="space-y-2">
         <p className="text-[11px] text-amber-300/80">{error}</p>
-        <p className="text-[10px] text-white/35 leading-relaxed">
+        <p className="text-[10px] text-board-ink/35 leading-relaxed">
           fal's history endpoint is undocumented and still marked alpha, so it
           may simply have moved. Everything else on this panel is unaffected.
         </p>
@@ -697,7 +758,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
   return (
     <div className="space-y-2">
       {items.length === 0 && !isLoading ? (
-        <p className="text-[11px] text-white/40">
+        <p className="text-[11px] text-board-ink/40">
           Nothing generated on this fal account in the last 90 days.
         </p>
       ) : null}
@@ -705,7 +766,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
       <div className="grid grid-cols-3 gap-2">
         {items.map((item) => (
           <button
-            className="group relative overflow-hidden rounded border border-white/10 hover:border-white/40 disabled:opacity-40"
+            className="group relative overflow-hidden rounded border border-board-ink/10 hover:border-board-ink/40 disabled:opacity-40"
             disabled={adopting !== null}
             key={item.id}
             onClick={() => void adopt(item)}
@@ -714,7 +775,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
           >
             <img
               alt={item.prompt ?? "Generated image"}
-              className="aspect-square w-full bg-neutral-900 object-cover"
+              className="aspect-square w-full bg-board-panel object-cover"
               // Square by CSS regardless of the real aspect, so the grid stays
               // a grid; the intrinsic size is only a hint against layout shift.
               height={160}
@@ -722,7 +783,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
               src={item.previewUrl}
               width={160}
             />
-            <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] text-white/60">
+            <span className="absolute inset-x-0 bottom-0 truncate bg-board-surface/70 px-1 py-0.5 text-[8px] text-board-ink/60">
               {adopting === item.id ? "Saving…" : shortEndpoint(item.endpoint)}
             </span>
           </button>
@@ -730,7 +791,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
       </div>
 
       {isLoading ? (
-        <p className="text-[10px] text-white/40 uppercase tracking-[0.18em]">
+        <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.18em]">
           Loading…
         </p>
       ) : null}
@@ -768,8 +829,8 @@ function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
           <button
             className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
               category === name
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/80"
+                ? "bg-board-ink/10 text-board-ink"
+                : "text-board-ink/40 hover:text-board-ink/80"
             }`}
             key={name}
             onClick={() => setCategory(name)}
@@ -783,13 +844,13 @@ function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
       <div className="space-y-1">
         {shown.map((shader) => (
           <button
-            className="block w-full rounded border border-white/10 px-2 py-2 text-left transition-colors hover:border-white/40"
+            className="block w-full rounded border border-board-ink/10 px-2 py-2 text-left transition-colors hover:border-board-ink/40"
             key={shader.name}
             onClick={() => onAdd(shader.name)}
             type="button"
           >
             <span className="flex items-center justify-between gap-2">
-              <span className="truncate text-[12px] text-white/85">
+              <span className="truncate text-[12px] text-board-ink/85">
                 {shader.name}
               </span>
               {/* Half the library transforms whatever sits inside it rather
@@ -801,7 +862,7 @@ function ShaderTab({ onAdd }: { onAdd: (name: string) => void }) {
               ) : null}
             </span>
             {shader.description ? (
-              <span className="mt-0.5 block truncate text-[10px] text-white/35">
+              <span className="mt-0.5 block truncate text-[10px] text-board-ink/35">
                 {shader.description}
               </span>
             ) : null}
@@ -898,14 +959,14 @@ function PinterestTab({
         }}
       >
         <Input
-          className="min-h-10 border-white/10 bg-black/40 text-base"
+          className="min-h-10 border-board-ink/10 bg-board-surface/40 text-base"
           onChange={(e) => onUrlChange(e.target.value)}
           placeholder="Paste a board or pin link…"
           value={url}
         />
         <Button
           aria-label="Load from Pinterest"
-          className="min-h-10 border-white/20"
+          className="min-h-10 border-board-ink/20"
           disabled={isResolving}
           type="submit"
           variant="outline"
@@ -920,11 +981,11 @@ function PinterestTab({
         <div className="flex flex-wrap gap-1">
           {sources.map((source) => (
             <span
-              className="flex items-center gap-1 rounded-full border border-white/15 py-1 pr-1 pl-2 text-[10px] text-white/60"
+              className="flex items-center gap-1 rounded-full border border-board-ink/15 py-1 pr-1 pl-2 text-[10px] text-board-ink/60"
               key={source.id}
             >
               <button
-                className="max-w-36 truncate hover:text-white"
+                className="max-w-36 truncate hover:text-board-ink"
                 onClick={() => onOpenSource(source.url)}
                 type="button"
               >
@@ -932,7 +993,7 @@ function PinterestTab({
               </button>
               <button
                 aria-label={`Detach ${source.title ?? "board"}`}
-                className="text-white/30 hover:text-white"
+                className="text-board-ink/30 hover:text-board-ink"
                 onClick={() => onDetach(source.id)}
                 type="button"
               >
@@ -944,7 +1005,7 @@ function PinterestTab({
       ) : null}
 
       {isResolving ? (
-        <p className="text-[11px] text-white/50 uppercase tracking-widest">
+        <p className="text-[11px] text-board-ink/50 uppercase tracking-widest">
           Reading…
         </p>
       ) : null}
@@ -952,12 +1013,12 @@ function PinterestTab({
       {pins.length > 0 ? (
         <>
           <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-[10px] text-white/50 uppercase tracking-[0.18em]">
+            <p className="min-w-0 truncate text-[10px] text-board-ink/50 uppercase tracking-[0.18em]">
               {boardTitle ?? "Pinterest"} · {pins.length}
             </p>
             {pins.length > 1 ? (
               <button
-                className="shrink-0 text-[10px] text-white/70 uppercase tracking-[0.14em] hover:text-white"
+                className="shrink-0 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink"
                 onClick={() => onAdd(pins)}
                 type="button"
               >
@@ -969,7 +1030,7 @@ function PinterestTab({
           <div className="grid grid-cols-2 gap-2">
             {pins.map((pin) => (
               <button
-                className="overflow-hidden rounded border border-white/10 transition-colors hover:border-white/50"
+                className="overflow-hidden rounded border border-board-ink/10 transition-colors hover:border-board-ink/50"
                 key={pin.creditUrl}
                 onClick={() => onAdd([pin])}
                 type="button"
@@ -991,7 +1052,7 @@ function PinterestTab({
       {/* Said plainly rather than buried: Pinterest grants no licence of its
           own, and most pins are someone else's photograph. A link back to the
           pin travels with the item, but that is provenance, not permission. */}
-      <p className="text-[10px] text-white/30 leading-relaxed">
+      <p className="text-[10px] text-board-ink/30 leading-relaxed">
         A board link pulls the pins its public feed lists — recent ones, not the
         whole board. Pins are hot-linked and keep a link back. Most are someone
         else's work: fine as private reference, worth checking before you
@@ -1042,7 +1103,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
         }}
       >
         <Input
-          className="min-h-10 border-white/10 bg-black/40 text-base"
+          className="min-h-10 border-board-ink/10 bg-board-surface/40 text-base"
           onChange={(e) => onPrompt(e.target.value)}
           placeholder="Describe an icon…"
           value={prompt}
@@ -1053,8 +1114,8 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
             <button
               className={`min-h-8 px-2 text-[10px] uppercase tracking-[0.14em] transition-colors ${
                 style === option
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white/80"
+                  ? "bg-board-ink/10 text-board-ink"
+                  : "text-board-ink/40 hover:text-board-ink/80"
               }`}
               key={option}
               onClick={() => onStyle(option)}
@@ -1066,7 +1127,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
         </div>
 
         <Button
-          className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+          className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
           disabled={isDrawing}
           type="submit"
           variant="outline"
@@ -1080,7 +1141,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
         <div className="space-y-2">
           {/* Pale backing: a solid icon is usually dark, and against the
               panel's black it would look like an empty box. */}
-          <div className="flex items-center justify-center rounded border border-white/10 bg-white/90 p-4">
+          <div className="flex items-center justify-center rounded border border-board-ink/10 bg-board-ink/90 p-4">
             <img
               alt="Generated icon"
               className="h-24 w-24 object-contain"
@@ -1090,7 +1151,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
             />
           </div>
           <Button
-            className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+            className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
             onClick={() =>
               onAdd({
                 altText: prompt.slice(0, 200),
@@ -1117,10 +1178,132 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
         </p>
       ) : null}
 
-      <p className="text-[10px] text-white/30 leading-relaxed">
+      <p className="text-[10px] text-board-ink/30 leading-relaxed">
         Icons are drawn as SVG so they stay sharp at any zoom, falling back to
         PNG when the vectoriser is down. Simple shapes vectorise best.
       </p>
+    </div>
+  );
+}
+
+/**
+ * The library of styles, as covers.
+ *
+ * Only the key image is shown. An element is a handful of pictures, but laying
+ * all of them out would turn a library of a dozen styles into a hundred
+ * thumbnails to read — the cover exists precisely so the style can be
+ * recognised in one glance.
+ *
+ * Loaded when the tab is first opened rather than with the board: most sessions
+ * never come in here, and this is a request that can wait until it is wanted.
+ */
+function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
+  const [elements, setElements] = useState<Element[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    elementsApi
+      .list()
+      .then((found) => {
+        if (!cancelled) {
+          setElements(found);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Could not load elements");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const remove = async (element: Element) => {
+    setConfirming(null);
+    try {
+      await elementsApi.remove(element.id);
+      setElements(
+        (current) => current?.filter((one) => one.id !== element.id) ?? null
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete that");
+    }
+  };
+
+  if (error) {
+    return <p className="text-[12px] text-board-ink/50">{error}</p>;
+  }
+  if (!elements) {
+    return <p className="text-[12px] text-board-ink/40">Loading…</p>;
+  }
+  if (elements.length === 0) {
+    return (
+      <p className="text-[12px] text-board-ink/50 leading-relaxed">
+        No elements yet. Select the pictures that share a look on a board,
+        right-click, and save them as one.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {elements.map((element) => (
+        <div className="group relative" key={element.id}>
+          {/* Two presses, and the second one says what it is. Sits over the
+              cover rather than in the row below it, which is the only part of
+              the card that is not the button that places it. */}
+          {confirming === element.id ? (
+            <button
+              className="absolute top-1 right-1 z-10 rounded bg-red-500/90 px-1.5 py-0.5 text-[9px] text-white uppercase tracking-[0.14em]"
+              onClick={() => void remove(element)}
+              type="button"
+            >
+              Delete?
+            </button>
+          ) : (
+            <button
+              aria-label={`Delete ${element.name}`}
+              className="absolute top-1 right-1 z-10 grid size-5 place-items-center rounded bg-board-surface/70 text-board-ink/70 opacity-0 backdrop-blur-sm transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100"
+              onClick={() => setConfirming(element.id)}
+              type="button"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={11} />
+            </button>
+          )}
+          <button
+            className="block w-full overflow-hidden rounded-lg border border-board-ink/10 text-left transition-colors hover:border-board-ink/40"
+            onClick={() => onAdd(element)}
+            type="button"
+          >
+            <div className="aspect-square w-full overflow-hidden bg-board-surface/30">
+              {element.coverUrl ? (
+                <img
+                  alt=""
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                  height={160}
+                  loading="lazy"
+                  src={element.coverUrl}
+                  width={160}
+                />
+              ) : null}
+            </div>
+            <div className="px-2 py-1.5">
+              <span className="block truncate text-[11px] text-board-ink uppercase tracking-[0.14em]">
+                {element.name}
+              </span>
+              <span className="block truncate text-[10px] text-board-ink/40">
+                {element.imageUrls.length === 1
+                  ? "1 picture"
+                  : `${element.imageUrls.length} pictures`}
+              </span>
+            </div>
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

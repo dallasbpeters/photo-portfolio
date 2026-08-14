@@ -41,7 +41,7 @@ export const DEFAULT_MASK_WIDTH = 0.08;
  *
  * Here rather than in either component because three places draw a mask — the
  * stroke being painted, the finished overlay, and nothing else may disagree
- * with them. A preview in one colour that settles into another reads as the
+ * with them. A preview in one color that settles into another reads as the
  * stroke having been misunderstood.
  */
 export const MASK_PAINT = "#f43f5e";
@@ -92,7 +92,7 @@ export const rasterizeMask = (
 
   // Black ground, white paint — then inverted wholesale if the strokes meant
   // "keep" rather than "change". Inverting the finished bitmap rather than
-  // swapping the two colours keeps the anti-aliased stroke edges correct: a
+  // swapping the two colors keeps the anti-aliased stroke edges correct: a
   // half-covered pixel stays half-covered either way round.
   context.fillStyle = "#000000";
   context.fillRect(0, 0, size.width, size.height);

@@ -53,7 +53,7 @@ export function MaskOverlay({ height, mask, width }: MaskOverlayProps) {
             // biome-ignore lint/suspicious/noArrayIndexKey: a stroke has no identity but its order
             key={index}
             // Inverted means the paint marks what to *keep*, so it is shown in
-            // a different colour. Painting "protect this" and seeing the same
+            // a different color. Painting "protect this" and seeing the same
             // red that elsewhere means "replace this" is how a mask ends up
             // used backwards without anyone noticing.
             stroke={mask.invert ? MASK_KEEP : MASK_PAINT}

@@ -69,7 +69,7 @@ uniform float uShadows;
 uniform float uWhites;
 uniform float uBlacks;
 
-// Colour
+// Color
 uniform float uSaturation;
 uniform float uTemperature;
 uniform float uTint;
@@ -101,7 +101,7 @@ uniform sampler2D uLut;
 uniform float uLutSize;
 uniform float uLutAmount;
 
-// Eight colour bands, each with hue shift, saturation and luminance scale.
+// Eight color bands, each with hue shift, saturation and luminance scale.
 uniform vec3 uHsl[8];
 uniform float uHslAmount;
 
@@ -180,7 +180,7 @@ vec3 sampleLut(vec3 color) {
   return mix(slice0, slice1, zOffset);
 }
 
-/** Weight for a colour band, peaking at its centre hue and falling to zero between bands. */
+/** Weight for a color band, peaking at its centre hue and falling to zero between bands. */
 float bandWeight(float hue, float centre) {
   float d = abs(hue - centre);
   d = min(d, 1.0 - d);
@@ -211,7 +211,7 @@ void main() {
 
   // ── White balance ────────────────────────────────────────────────────────
   // Applied first, like a raw pipeline: everything downstream sees corrected
-  // colour rather than compounding a cast.
+  // color rather than compounding a cast.
   color.r += uTemperature * 0.12;
   color.b -= uTemperature * 0.12;
   color.g += uTint * 0.10;
@@ -242,7 +242,7 @@ void main() {
   color = clamp(color, 0.0, 1.0);
 
   // ── Tone curve ───────────────────────────────────────────────────────────
-  // Placed after the basic tone controls and before anything touches colour,
+  // Placed after the basic tone controls and before anything touches color,
   // which is where a film response curve belongs. Each channel is looked up
   // independently, so a curve can pull a crossover the linear controls cannot.
   if (uCurveAmount > 0.0) {
@@ -277,7 +277,7 @@ void main() {
 
   // ── HSL bands ────────────────────────────────────────────────────────────
   // Eight bands centred every 45 degrees. Weights overlap and are normalised,
-  // so a colour between two bands takes a blend rather than snapping to one.
+  // so a color between two bands takes a blend rather than snapping to one.
   if (uHslAmount > 0.0) {
     vec3 hsl = rgbToHsl(color);
     float hueShift = 0.0;

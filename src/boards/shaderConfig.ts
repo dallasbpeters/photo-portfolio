@@ -205,7 +205,7 @@ export const newLayerId = (): string =>
 /**
  * What an effect gets to work on when it is picked on its own.
  *
- * Chosen for being obviously *there*: a plasma moves and has colour, so an
+ * Chosen for being obviously *there*: a plasma moves and has color, so an
  * effect over it reads immediately. A flat fill would leave several effects
  * still looking broken.
  */

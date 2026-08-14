@@ -9,6 +9,8 @@ import {
   falModelMasks,
   HEX_COLOUR,
 } from "../../config/nodeTypes.js";
+import { getSql } from "./db.js";
+import { loadModelDefs } from "./models.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
@@ -19,11 +21,12 @@ import { persistGenerated } from "./persistGenerated.js";
  * one you already have, and the edit endpoint takes an array of source images
  * even when there is only one.
  *
- * A caller may instead name any model on the allowlist in
- * config/nodeTypes.ts — including Recraft's vector models, which is why the
- * request body is built from the model's declared input shape rather than from
- * whether an image happens to be present. Those endpoints disagree about their
- * parameters, and fal only says so after the call has been billed.
+ * A caller may instead name any model on the list in the `models` table — the
+ * same table the node's picker is built from, so the two cannot drift —
+ * including Recraft's vector models, which is why the request body is built
+ * from the model's declared input shape rather than from whether an image
+ * happens to be present. Those endpoints disagree about their parameters, and
+ * fal only says so after the call has been billed.
  */
 const TEXT_TO_IMAGE_MODEL = "fal-ai/nano-banana-pro";
 const EDIT_MODEL = "fal-ai/nano-banana/edit";
@@ -88,8 +91,8 @@ const falDetail = (json: FalResponse, status: number): string => {
  * The request body for a model, which is not the same shape for any two of them.
  *
  * fal rejects a body that does not match its endpoint, and only after the call
- * has been billed — so the shape comes from the model's declared input in
- * config/nodeTypes.ts rather than from whether an image happens to be present.
+ * has been billed — so the shape comes from the model's declared input in the
+ * `models` table rather than from whether an image happens to be present.
  */
 const bodyFor = (
   lora: ReturnType<typeof falModelLora>,
@@ -145,14 +148,14 @@ const bodyFor = (
     : { prompt };
 };
 
-/** Models that accept a colour palette as a parameter rather than as prose. */
+/** Models that accept a color palette as a parameter rather than as prose. */
 const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
 
 /**
  * The hex codes in a prompt, as the palette parameter Ideogram expects.
  *
  * Lifted back out of the prompt rather than carried on a wire of their own.
- * A palette node writes its colours into the text so that every model gets
+ * A palette node writes its colors into the text so that every model gets
  * something to go on — most can only be asked — and this turns the same line
  * into an actual constraint for the one model that can honour it.
  *
@@ -231,9 +234,9 @@ export const generateImage = async (
    * An explicit fal model id, or null/"auto" to keep choosing by whether a
    * source image is present.
    *
-   * Callers pass a value already checked against the allowlist in
-   * config/nodeTypes.ts — this is handed straight to fal, so an arbitrary
-   * string reaching here would be a paid request to a model that may not exist.
+   * Callers pass a value already checked against the `models` table — this is
+   * handed straight to fal, so an arbitrary string reaching here would be a
+   * paid request to a model that may not exist.
    */
   requestedModel?: string | null,
   /**
@@ -251,14 +254,19 @@ export const generateImage = async (
     throw new Error("Image generation is not configured");
   }
 
+  // The models are data now, read per request rather than imported: they are
+  // edited from the admin, and this function must behave exactly like the node
+  // the board is showing, so both read the same rows.
+  const models = await loadModelDefs(getSql());
+
   // A LoRA style is not its own endpoint. They all run on fal-ai/flux-lora and
   // differ only in the weights it loads, so the id chosen on the node is a
   // style name rather than something fal would recognise.
-  const lora = falModelLora(requestedModel);
+  const lora = falModelLora(models, requestedModel);
   // A mask only means anything applied to a picture, and only where the model
   // has an inpainting endpoint to apply it with.
   const masking = Boolean(
-    maskUrl && sourceImageUrl && falModelMasks(requestedModel ?? "auto")
+    maskUrl && sourceImageUrl && falModelMasks(models, requestedModel ?? "auto")
   );
   const model = endpointFor({
     lora,
@@ -269,14 +277,14 @@ export const generateImage = async (
 
   const body = bodyFor(
     lora,
-    falModelInput(requestedModel ?? "auto"),
+    falModelInput(models, requestedModel ?? "auto"),
     prompt,
     sourceImageUrl,
     // Keyed off the endpoint actually being called, not off what was asked
     // for. "auto" resolves to nano-banana/edit, which takes a list where most
     // take one URL — reading the parameter name off "auto" would send the
     // wrong field on every automatic edit.
-    falImageParam(model)
+    falImageParam(models, model)
   );
 
   // Inpainting endpoints take the picture as image_url whatever the chosen
@@ -293,6 +301,16 @@ export const generateImage = async (
     if (palette) {
       body.color_palette = palette;
     }
+  }
+
+  // The GPT family outputs a preset aspect unless told otherwise: the text
+  // model defaults to landscape, and the edit model's "auto" copies the input
+  // image's shape — feed it a portrait crop and it returns a portrait, which is
+  // how edits started coming back tall. Every other model on the board is
+  // square, so ask for square here or a node changes shape with its model. Same
+  // endpoint-quirk handling as the palette and mask overrides above.
+  if (model === "openai/gpt-image-2" || model === "openai/gpt-image-2/edit") {
+    body.image_size = "square";
   }
 
   const res = await fetch(`https://fal.run/${model}`, {

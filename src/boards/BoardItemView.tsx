@@ -174,8 +174,8 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
         const isOpen =
           handlers.isDragging && handlers.canDropOn(item.id, port.key);
         const idle = handlers.isDragging
-          ? "border-white/20 bg-neutral-700"
-          : "border-white/40 bg-neutral-800";
+          ? "border-board-ink/20 bg-board-panel"
+          : "border-board-ink/40 bg-board-panel";
         return (
           <button
             aria-label={`Connect to ${port.label}`}
@@ -263,7 +263,7 @@ function BoardItemBody({
           isNote
             ? "h-full w-full resize-none bg-amber-100/95 p-3 text-neutral-900 outline-none"
             : // Plain text: no card, no background — just words on the board.
-              "h-full w-full resize-none border-0 bg-transparent p-1 font-light text-white outline-none placeholder:text-white/30"
+              "h-full w-full resize-none border-0 bg-transparent p-1 font-light text-board-ink outline-none placeholder:text-board-ink/30"
         }
         onChange={(e) => onEditBody(e.target.value)}
         placeholder={isNote ? "Note…" : "Type…"}
@@ -323,7 +323,7 @@ function BoardItemBody({
           the image appears, so the credit renders with the item rather than
           living only in the database. */}
       {item.creditName ? (
-        <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-2 py-1 text-[10px] text-white/80">
+        <figcaption className="absolute inset-x-0 bottom-0 truncate bg-board-surface/60 px-2 py-1 text-[10px] text-board-ink/80">
           {item.creditName}
         </figcaption>
       ) : null}
@@ -348,24 +348,24 @@ function FontSizeControl({
 }) {
   return (
     <div
-      className="absolute bottom-full left-0 flex origin-bottom-left items-center gap-1 rounded-full border border-white/20 bg-black/90 p-1"
+      className="absolute bottom-full left-0 flex origin-bottom-left items-center gap-1 rounded-full border border-board-ink/20 bg-board-surface/90 p-1"
       style={chromeScale}
     >
       <button
         aria-label="Smaller text"
-        className="flex size-7 items-center justify-center text-white/70 hover:text-white"
+        className="flex size-7 items-center justify-center text-board-ink/70 hover:text-board-ink"
         onClick={() => onStep(-FONT_STEP)}
         onPointerDown={(e) => e.stopPropagation()}
         type="button"
       >
         <HugeiconsIcon icon={MinusSignIcon} size={13} />
       </button>
-      <span className="min-w-6 text-center text-[10px] text-white/50 tabular-nums">
+      <span className="min-w-6 text-center text-[10px] text-board-ink/50 tabular-nums">
         {Math.round(fontSize)}
       </span>
       <button
         aria-label="Larger text"
-        className="flex size-7 items-center justify-center text-white/70 hover:text-white"
+        className="flex size-7 items-center justify-center text-board-ink/70 hover:text-board-ink"
         onClick={() => onStep(FONT_STEP)}
         onPointerDown={(e) => e.stopPropagation()}
         type="button"
@@ -393,16 +393,72 @@ function FrameBody({
   readOnly: boolean;
 }) {
   return (
-    <div className="pointer-events-none h-full w-full rounded-lg border border-white/25 border-dashed bg-white/2">
+    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-cyan-500/50 border-dashed bg-board-ink/2">
       <input
         aria-label="Frame name"
-        className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-white/60 uppercase tracking-[0.18em] outline-none placeholder:text-white/20"
+        className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-board-ink uppercase tracking-[0.18em] outline-none placeholder:text-board-ink"
         disabled={readOnly}
         onChange={(e) => onEditBody(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         placeholder="Frame"
         value={item.body ?? ""}
       />
+    </div>
+  );
+}
+
+/**
+ * An element on the board: the style's cover, its name, and the words it
+ * carries into a prompt.
+ *
+ * Nothing here is editable. The library row is the authority — the copy kept on
+ * the node exists only so a board still shows and still runs after the element
+ * is deleted out from under it — so a field to type over it here would be a
+ * second copy, free to disagree with the library. See withElements in
+ * api/boards/[id]/run.ts.
+ */
+function ElementBody({ item }: { item: BoardItem }) {
+  const config = item.config ?? {};
+  const stored = typeof config.imageUrl === "string" ? config.imageUrl : null;
+  // The same picture the wire hands over, so what is on the canvas and what is
+  // sent are never two different things. See resolvedImageUrl in itemOutput.ts.
+  const cover = stored || item.imageUrl;
+  const name = typeof config.name === "string" ? config.name : null;
+  const storedWords =
+    typeof config.description === "string" ? config.description : null;
+  const words = item.body ?? storedWords;
+
+  return (
+    <div className="flex h-full w-full flex-col overflow-hidden bg-board-panel">
+      {cover ? (
+        <img
+          alt=""
+          className="min-h-0 w-full grow object-cover"
+          decoding="async"
+          draggable={false}
+          height={item.height}
+          loading="lazy"
+          src={cover}
+          width={item.width}
+        />
+      ) : (
+        <div className="flex min-h-0 grow items-center justify-center text-[11px] text-board-ink/35">
+          No cover yet
+        </div>
+      )}
+      <div className="shrink-0 px-2 py-1.5">
+        <p className="truncate font-medium text-[11px] text-board-ink">
+          {name ?? "Element"}
+        </p>
+        {/* The description is the substance of an element — it rides the wire
+            into the prompt — so it is shown rather than left to a side panel,
+            but clamped: this is a node on a canvas, not the library. */}
+        {words ? (
+          <p className="line-clamp-2 text-[10px] text-board-ink/60 leading-snug">
+            {words}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -474,7 +530,7 @@ function ShaderItem({
       {readOnly || !isSelected ? null : (
         <button
           aria-label={isEditing ? "Hide shader settings" : "Shader settings"}
-          className="absolute top-1 right-1 rounded bg-black/60 p-1 text-white/60 backdrop-blur hover:text-white"
+          className="absolute top-1 right-1 rounded bg-board-surface/60 p-1 text-board-ink/60 backdrop-blur hover:text-board-ink"
           onClick={() => setIsCollapsed((folded) => !folded)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -486,7 +542,7 @@ function ShaderItem({
       {isEditing && !readOnly ? (
         // overscroll-contain so reaching the end of the settings does not hand
         // the wheel back to the canvas and start zooming mid-scroll.
-        <div className="absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto overscroll-contain border-white/10 border-t bg-black/90 p-2 backdrop-blur">
+        <div className="absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto overscroll-contain border-board-ink/10 border-t bg-board-surface/90 p-2 backdrop-blur">
           <ShaderControls
             config={config}
             onChange={(next) =>
@@ -558,6 +614,9 @@ function ItemContent({
         readOnly={readOnly}
       />
     );
+  }
+  if (item.nodeType === "element") {
+    return <ElementBody item={item} />;
   }
   if (item.kind === "frame") {
     return (
@@ -662,7 +721,7 @@ export function BoardItemView({
   return (
     <div
       className={`group absolute ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-white/10"
+        isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-board-ink/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
       onPointerDown={(e) => {
         // Only the primary button picks an item up. A right-click emits
@@ -733,7 +792,7 @@ export function BoardItemView({
       {readOnly ? null : (
         <button
           aria-label="Remove from board"
-          className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-white/20 bg-black text-white/80 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100 ${
+          className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-board-ink/20 bg-board-surface text-board-ink/80 transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100 ${
             isSelected ? "opacity-100" : "opacity-0"
           }`}
           onClick={onDelete}
@@ -755,7 +814,7 @@ export function BoardItemView({
 
       {isSelected && !readOnly ? (
         <div
-          className="absolute right-0 bottom-0 grid size-12 origin-bottom-right cursor-nwse-resize place-items-center text-white/90"
+          className="absolute right-0 bottom-0 grid size-12 origin-bottom-right cursor-nwse-resize place-items-center text-board-ink/90"
           onPointerDown={(e) => {
             e.stopPropagation();
             // Primary button only, like the item body above.

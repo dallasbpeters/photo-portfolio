@@ -160,7 +160,7 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
 
   if (layers.length === 0) {
     return framed(
-      <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-[11px] text-white/40">
+      <div className="flex h-full w-full items-center justify-center bg-board-panel text-[11px] text-board-ink/40">
         No shader chosen
       </div>
     );
@@ -172,14 +172,14 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
   const empty = emptyEffect(layers);
   if (empty) {
     return framed(
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-neutral-900 p-3 text-center">
-        <p className="text-[11px] text-white/50">
-          <span className="text-white/80">{empty.name}</span> is an effect — it
-          changes a picture, and it is empty.
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-board-panel p-3 text-center">
+        <p className="text-[11px] text-board-ink/50">
+          <span className="text-board-ink/80">{empty.name}</span> is an effect —
+          it changes a picture, and it is empty.
         </p>
         {onAddSource ? (
           <button
-            className="rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 transition-colors hover:border-white/50 hover:text-white"
+            className="rounded border border-board-ink/20 px-2 py-1 text-[11px] text-board-ink/80 transition-colors hover:border-board-ink/50 hover:text-board-ink"
             onClick={() => onAddSource(empty.id)}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -193,14 +193,14 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
 
   if (typeof Shader !== "function") {
     return framed(
-      <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-[11px] text-red-300">
+      <div className="flex h-full w-full items-center justify-center bg-board-panel text-[11px] text-red-300">
         Shader runtime unavailable
       </div>
     );
   }
 
   return framed(
-    <div className="h-full w-full overflow-hidden bg-black">
+    <div className="h-full w-full overflow-hidden bg-board-surface">
       {/* Unmounted while off screen, which is the only way to stop it: the
           library's root component takes no `paused` prop, so a mounted shader
           animates on a GPU frame loop forever whether or not anyone can see

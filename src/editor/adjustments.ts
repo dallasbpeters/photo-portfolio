@@ -16,7 +16,7 @@ export type AdjustmentKey =
   | "shadows"
   | "whites"
   | "blacks"
-  // Colour
+  // Color
   | "saturation"
   | "temperature"
   | "tint"
@@ -94,7 +94,7 @@ export const ADJUSTMENT_GROUPS: AdjustmentGroup[] = [
       },
       { centered: true, key: "tint", label: "Tint", max: 1, min: -1 },
     ],
-    label: "Colour",
+    label: "Color",
   },
   {
     id: "presence",
@@ -161,7 +161,7 @@ export interface SplitColor {
   r: number;
 }
 
-/** Hue shift, saturation scale and luminance scale for one colour band. */
+/** Hue shift, saturation scale and luminance scale for one color band. */
 export interface HslBand {
   hue: number;
   luminance: number;

@@ -15,7 +15,7 @@ import { type MaskConfig, maskOf } from "./mask";
  * about making one.
  *
  * Sits beside the drawing toolbar rather than on the node: it belongs to the
- * selection, like the colour controls, and putting it on the picture would mean
+ * selection, like the color controls, and putting it on the picture would mean
  * chrome on top of the very thing the mask has to be judged against.
  */
 
@@ -31,8 +31,8 @@ export function MaskControls({ onChange, selected }: MaskControlsProps) {
   }
 
   return (
-    <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
-      <span className="px-1.5 text-[9px] text-white/40 uppercase tracking-[0.16em]">
+    <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
+      <span className="px-1.5 text-[9px] text-board-ink/40 uppercase tracking-[0.16em]">
         Mask
       </span>
 
@@ -58,7 +58,7 @@ export function MaskControls({ onChange, selected }: MaskControlsProps) {
 
       <button
         aria-label="Clear the mask"
-        className="rounded px-1.5 py-1 text-white/50 hover:text-red-300"
+        className="rounded px-1.5 py-1 text-board-ink/50 hover:text-red-300"
         onClick={() => onChange(selected.id, null)}
         title="Clear the mask"
         type="button"

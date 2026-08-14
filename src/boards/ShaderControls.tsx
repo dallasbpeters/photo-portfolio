@@ -63,9 +63,9 @@ function RangeControl({ onChange, prop, current }: ResolvedControlProps) {
     const n = asNumber(current, asNumber(prop.default, min));
     return (
       <label className="block space-y-1">
-        <span className="flex items-center justify-between text-[10px] text-white/45">
+        <span className="flex items-center justify-between text-[10px] text-board-ink/45">
           {prop.label}
-          <span className="text-white/70 tabular-nums">{n}</span>
+          <span className="text-board-ink/70 tabular-nums">{n}</span>
         </span>
         <input
           className="w-full accent-sky-400"
@@ -86,10 +86,10 @@ function ColorControl({ onChange, prop, current }: ResolvedControlProps) {
   {
     const hex = typeof current === "string" ? current : "#ffffff";
     return (
-      <label className="flex items-center justify-between gap-2 text-[10px] text-white/45">
+      <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/45">
         {prop.label}
         <input
-          className="h-6 w-10 cursor-pointer rounded border border-white/15 bg-transparent"
+          className="h-6 w-10 cursor-pointer rounded border border-board-ink/15 bg-transparent"
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           type="color"
@@ -103,9 +103,9 @@ function ColorControl({ onChange, prop, current }: ResolvedControlProps) {
 function SelectControl({ onChange, prop, current }: ResolvedControlProps) {
   return (
     <label className="block space-y-1">
-      <span className="text-[10px] text-white/45">{prop.label}</span>
+      <span className="text-[10px] text-board-ink/45">{prop.label}</span>
       <select
-        className="w-full rounded border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-white outline-none focus:border-white/40"
+        className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink outline-none focus:border-board-ink/40"
         onChange={(e) => onChange(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         value={typeof current === "string" ? current : ""}
@@ -122,7 +122,7 @@ function SelectControl({ onChange, prop, current }: ResolvedControlProps) {
 
 function CheckboxControl({ onChange, prop, current }: ResolvedControlProps) {
   return (
-    <label className="flex items-center justify-between gap-2 text-[10px] text-white/45">
+    <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/45">
       {prop.label}
       <input
         checked={current === true}
@@ -141,11 +141,11 @@ function PositionControl({ onChange, prop, current }: ResolvedControlProps) {
     const point = (current ?? { x: 0.5, y: 0.5 }) as { x?: number; y?: number };
     return (
       <div className="space-y-1">
-        <span className="text-[10px] text-white/45">{prop.label}</span>
+        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
         <div className="flex gap-1">
           {(["x", "y"] as const).map((axis) => (
             <input
-              className="w-full rounded border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-white tabular-nums outline-none focus:border-white/40"
+              className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink tabular-nums outline-none focus:border-board-ink/40"
               key={axis}
               onChange={(e) =>
                 onChange({ ...point, [axis]: Number(e.target.value) })
@@ -177,9 +177,9 @@ function OriginControl({ onChange, prop, current }: ResolvedControlProps) {
     ];
     return (
       <label className="block space-y-1">
-        <span className="text-[10px] text-white/45">{prop.label}</span>
+        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
         <select
-          className="w-full rounded border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-white outline-none focus:border-white/40"
+          className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink outline-none focus:border-board-ink/40"
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           value={typeof current === "string" ? current : "center"}
@@ -202,10 +202,10 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
       : [];
     return (
       <div className="space-y-1">
-        <span className="text-[10px] text-white/45">{prop.label}</span>
+        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
         {stops.length === 0 ? (
           <button
-            className="w-full rounded border border-white/15 py-1 text-[10px] text-white/50 hover:text-white"
+            className="w-full rounded border border-board-ink/15 py-1 text-[10px] text-board-ink/50 hover:text-board-ink"
             onClick={() =>
               onChange([
                 { color: "#ffffff", position: 0 },
@@ -219,10 +219,10 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
           </button>
         ) : (
           stops.map((stop, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a gradient stop has no identity but its place in the ramp — two stops may share a colour and a position, and reordering is what editing one means
+            // biome-ignore lint/suspicious/noArrayIndexKey: a gradient stop has no identity but its place in the ramp — two stops may share a color and a position, and reordering is what editing one means
             <div className="flex items-center gap-1" key={index}>
               <input
-                className="h-6 w-8 cursor-pointer rounded border border-white/15 bg-transparent"
+                className="h-6 w-8 cursor-pointer rounded border border-board-ink/15 bg-transparent"
                 onChange={(e) => {
                   const next = [...stops];
                   next[index] = { ...stop, color: e.target.value };
@@ -233,7 +233,7 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
                 value={stop.color}
               />
               <input
-                className="w-full rounded border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-white tabular-nums outline-none"
+                className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink tabular-nums outline-none"
                 max={1}
                 min={0}
                 onChange={(e) => {
@@ -278,7 +278,7 @@ function Control({ onChange, prop, value }: ControlProps) {
   const current = value === undefined ? prop.default : value;
   if (!Chosen) {
     return (
-      <p className="text-[10px] text-white/25">
+      <p className="text-[10px] text-board-ink/25">
         {prop.label} — not editable here
       </p>
     );
@@ -373,13 +373,13 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
   const [category, setCategory] = useState(categories[0] ?? "");
 
   return (
-    <div className="space-y-2 rounded border border-white/15 bg-black/60 p-2">
+    <div className="space-y-2 rounded border border-board-ink/15 bg-board-surface/60 p-2">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] text-white/40 uppercase tracking-[0.18em]">
+        <p className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
           {wanting === "source" ? "Something to draw" : "Something to apply"}
         </p>
         <button
-          className="text-[9px] text-white/40 uppercase tracking-[0.14em] hover:text-white"
+          className="text-[9px] text-board-ink/40 uppercase tracking-[0.14em] hover:text-board-ink"
           onClick={onCancel}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -392,8 +392,8 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
           <button
             className={`min-h-6 rounded px-1.5 text-[9px] tracking-[0.08em] transition-colors ${
               category === name
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/80"
+                ? "bg-board-ink/10 text-board-ink"
+                : "text-board-ink/40 hover:text-board-ink/80"
             }`}
             key={name}
             onClick={() => setCategory(name)}
@@ -409,7 +409,7 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
           .filter((shader) => shader.category === category)
           .map((shader) => (
             <button
-              className="w-full rounded px-2 py-1 text-left text-[11px] text-white/75 hover:bg-white/10 hover:text-white"
+              className="w-full rounded px-2 py-1 text-left text-[11px] text-board-ink/75 hover:bg-board-ink/10 hover:text-board-ink"
               key={shader.name}
               onClick={() => onPick(shader.name)}
               onPointerDown={(e) => e.stopPropagation()}
@@ -458,12 +458,12 @@ function LayerRow({
   const children = layer.children ?? [];
 
   return (
-    <div className="rounded border border-white/10 bg-black/40">
-      <div className="flex items-center gap-2 border-white/10 border-b px-2 py-1">
+    <div className="rounded border border-board-ink/10 bg-board-surface/40">
+      <div className="flex items-center gap-2 border-board-ink/10 border-b px-2 py-1">
         <button
           aria-expanded={isOpen}
           aria-label={`${isOpen ? "Collapse" : "Expand"} ${layer.name}`}
-          className="shrink-0 text-white/40 hover:text-white"
+          className="shrink-0 text-board-ink/40 hover:text-board-ink"
           onClick={() => setIsOpen((open) => !open)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -473,16 +473,16 @@ function LayerRow({
             size={12}
           />
         </button>
-        <span className="truncate text-[10px] text-white/70 uppercase tracking-[0.14em]">
+        <span className="truncate text-[10px] text-board-ink/70 uppercase tracking-[0.14em]">
           {layer.name}
         </span>
-        <span className="shrink-0 text-[8px] text-white/25 uppercase tracking-widest">
+        <span className="shrink-0 text-[8px] text-board-ink/25 uppercase tracking-widest">
           {effect ? "effect" : "source"}
         </span>
         <span className="grow" />
         <button
           aria-label={`Move ${layer.name} up`}
-          className="text-white/30 hover:text-white disabled:opacity-20"
+          className="text-board-ink/30 hover:text-board-ink disabled:opacity-20"
           disabled={!canMoveUp}
           onClick={() => onMove(layer.id, -1)}
           onPointerDown={(e) => e.stopPropagation()}
@@ -492,7 +492,7 @@ function LayerRow({
         </button>
         <button
           aria-label={`Move ${layer.name} down`}
-          className="text-white/30 hover:text-white disabled:opacity-20"
+          className="text-board-ink/30 hover:text-board-ink disabled:opacity-20"
           disabled={!canMoveDown}
           onClick={() => onMove(layer.id, 1)}
           onPointerDown={(e) => e.stopPropagation()}
@@ -502,7 +502,7 @@ function LayerRow({
         </button>
         <button
           aria-label={`Remove ${layer.name}`}
-          className="text-white/30 hover:text-white"
+          className="text-board-ink/30 hover:text-board-ink"
           onClick={() => onRemove(layer.id)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -512,8 +512,8 @@ function LayerRow({
       </div>
 
       {effect && isOpen ? (
-        <div className="space-y-2 border-white/10 border-b p-2">
-          <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+        <div className="space-y-2 border-board-ink/10 border-b p-2">
+          <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
             Applies to
           </p>
           {children.length === 0 ? (
@@ -545,7 +545,7 @@ function LayerRow({
           ) : (
             <div className="flex gap-1">
               <button
-                className="grow rounded border border-white/15 py-1 text-[9px] text-white/60 uppercase tracking-[0.14em] hover:text-white"
+                className="grow rounded border border-board-ink/15 py-1 text-[9px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
                 onClick={() => setAdding("source")}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -553,7 +553,7 @@ function LayerRow({
                 + Source
               </button>
               <button
-                className="grow rounded border border-white/15 py-1 text-[9px] text-white/60 uppercase tracking-[0.14em] hover:text-white"
+                className="grow rounded border border-board-ink/15 py-1 text-[9px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
                 onClick={() => setAdding("effect")}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -572,7 +572,7 @@ function LayerRow({
           </p>
         ) : null}
         {meta !== null && meta.props.length === 0 ? (
-          <p className="text-[10px] text-white/25">
+          <p className="text-[10px] text-board-ink/25">
             No settings — this one only holds what is inside it.
           </p>
         ) : null}
@@ -580,7 +580,7 @@ function LayerRow({
           ? null
           : groupProps(meta.props).map(({ group, props }) => (
               <div className="space-y-2" key={group}>
-                <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+                <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
                   {group}
                 </p>
                 {props.map((prop) => (
@@ -646,7 +646,7 @@ export function ShaderControls({ config, onChange }: ShaderControlsProps) {
       ) : (
         <div className="flex gap-1">
           <button
-            className="grow rounded border border-white/15 py-1.5 text-[10px] text-white/60 uppercase tracking-[0.14em] hover:text-white"
+            className="grow rounded border border-board-ink/15 py-1.5 text-[10px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
             onClick={() => setAdding("source")}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -654,7 +654,7 @@ export function ShaderControls({ config, onChange }: ShaderControlsProps) {
             Add source
           </button>
           <button
-            className="grow rounded border border-white/15 py-1.5 text-[10px] text-white/60 uppercase tracking-[0.14em] hover:text-white"
+            className="grow rounded border border-board-ink/15 py-1.5 text-[10px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
             onClick={() => setAdding("effect")}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -664,10 +664,10 @@ export function ShaderControls({ config, onChange }: ShaderControlsProps) {
         </div>
       )}
 
-      <p className="text-[9px] text-white/25 leading-relaxed">
-        A <span className="text-white/50">source</span> draws a picture. An{" "}
-        <span className="text-white/50">effect</span> changes whatever is inside
-        it — use Group to put several things inside one effect.
+      <p className="text-[9px] text-board-ink/25 leading-relaxed">
+        A <span className="text-board-ink/50">source</span> draws a picture. An{" "}
+        <span className="text-board-ink/50">effect</span> changes whatever is
+        inside it — use Group to put several things inside one effect.
       </p>
     </div>
   );

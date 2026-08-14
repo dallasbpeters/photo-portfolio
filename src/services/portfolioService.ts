@@ -1,6 +1,9 @@
 import type { IconStyle } from "../../config/iconStyles";
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
+import type { AffinityWriteback } from "../boards/affinity";
 import type {
+  AiModel,
+  AiModelInput,
   Board,
   BoardItem,
   BoardItemResult,
@@ -10,6 +13,7 @@ import type {
   DailyChallengeHistoryEntry,
   DailyChallengeJournal,
   DailyChallengeResponse,
+  Element,
   Photo,
   PhotoExifData,
   RunState,
@@ -39,6 +43,12 @@ export interface RunNodeResponse {
    * computing it, so the server stays the one authority on how many paid runs
    * a node amounts to.
    */
+  variationCount?: number;
+}
+
+/** A node run that failed, with the batch size it failed inside. */
+export interface RunNodeFailure extends Error {
+  /** How many jobs the run describes, known even when the first one failed. */
   variationCount?: number;
 }
 
@@ -1014,7 +1024,20 @@ export const boardsApi = {
       ...(options.signal ? { signal: options.signal } : {}),
     });
     if (!res.ok) {
-      throw new Error(await readPageError(res, "Could not run this node"));
+      // The batch size rides along even on a failure, so the caller can keep
+      // running the jobs that did not fail — a flaky model on one job must not
+      // sink the other fifteen.
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        variationCount?: number;
+      };
+      const failure = new Error(
+        body.error || `Could not run this node (${res.status})`
+      ) as RunNodeFailure;
+      if (typeof body.variationCount === "number") {
+        failure.variationCount = body.variationCount;
+      }
+      throw failure;
     }
     return (await res.json()) as RunNodeResponse;
   },
@@ -1047,6 +1070,30 @@ export const boardsApi = {
       throw new Error(await readPageError(res, "Could not save board"));
     }
     return (await res.json()) as Board;
+  },
+
+  /**
+   * Writes an SVG edited in Affinity back onto a node as a new version.
+   *
+   * Its own call because `result` is not written by the board save — see
+   * api/boards/[id]/svg.ts for why that column is left alone.
+   */
+  writebackSvg: async (
+    boardId: string,
+    itemId: string,
+    svg: string
+  ): Promise<AffinityWriteback> => {
+    const res = await fetch(`${apiBase()}/api/boards/${boardId}/svg`, {
+      body: JSON.stringify({ itemId, svg }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not save the edited SVG")
+      );
+    }
+    return (await res.json()) as AffinityWriteback;
   },
 };
 
@@ -1396,5 +1443,144 @@ export const siteSetupApi = {
       throw new Error(await readPageError(res, "Setup failed"));
     }
     return (await res.json()) as SetupResult;
+  },
+};
+
+const elementsPath = (): string => `${apiBase()}/api/elements`;
+
+/**
+ * The library of styles, which belongs to nobody's board.
+ *
+ * Separate from boardsApi because an element outlives the board it was found
+ * on: deleting that board must not take the style with it, and the same element
+ * is meant to turn up on the next board and the one after.
+ */
+export const elementsApi = {
+  /**
+   * Saves a selection as an element.
+   *
+   * The pictures are sent as the addresses they already have and copied into
+   * our own storage by the endpoint, not here — the browser cannot read the
+   * bytes of a Pinterest image at all, which is the same wall api/boards/adopt.ts
+   * exists to get past.
+   */
+  create: async (input: {
+    coverUrl: string | null;
+    description: string;
+    imageUrls: string[];
+    name: string;
+  }): Promise<Element & { dropped?: number }> => {
+    const res = await fetch(elementsPath(), {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save that element"));
+    }
+    return (await res.json()) as Element & { dropped?: number };
+  },
+
+  list: async (): Promise<Element[]> => {
+    const res = await fetch(elementsPath(), { headers: jsonHeaders() });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load elements"));
+    }
+    return (await res.json()) as Element[];
+  },
+
+  remove: async (id: string): Promise<void> => {
+    const res = await fetch(`${elementsPath()}/${encodeURIComponent(id)}`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not delete that element")
+      );
+    }
+  },
+
+  update: async (
+    id: string,
+    input: {
+      coverUrl?: string;
+      description?: string;
+      imageUrls?: string[];
+      name?: string;
+    }
+  ): Promise<Element> => {
+    const res = await fetch(`${elementsPath()}/${encodeURIComponent(id)}`, {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save that element"));
+    }
+    return (await res.json()) as Element;
+  },
+};
+
+const modelsPath = (): string => `${apiBase()}/api/models`;
+
+/**
+ * The models a Generate node may use.
+ *
+ * Read as data rather than compiled in: adding a model is an admin edit, and
+ * this is how the picker and the panel talk to the same table.
+ */
+export const modelsApi = {
+  create: async (input: AiModelInput): Promise<AiModel> => {
+    const res = await fetch(modelsPath(), {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not add that model"));
+    }
+    return (await res.json()) as AiModel;
+  },
+
+  /** Every model, hidden ones included, for the management panel. */
+  list: async (): Promise<AiModel[]> => {
+    const res = await fetch(`${modelsPath()}?all=true`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load models"));
+    }
+    return (await res.json()) as AiModel[];
+  },
+  /** The enabled models, for the picker. Public, like the ids themselves. */
+  listEnabled: async (): Promise<AiModel[]> => {
+    const res = await fetch(modelsPath());
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load models"));
+    }
+    return (await res.json()) as AiModel[];
+  },
+
+  remove: async (id: string): Promise<void> => {
+    const res = await fetch(`${modelsPath()}/${encodeURIComponent(id)}`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not delete that model"));
+    }
+  },
+
+  update: async (id: string, input: AiModelInput): Promise<AiModel> => {
+    const res = await fetch(`${modelsPath()}/${encodeURIComponent(id)}`, {
+      body: JSON.stringify(input),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save that model"));
+    }
+    return (await res.json()) as AiModel;
   },
 };

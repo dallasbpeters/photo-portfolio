@@ -47,8 +47,8 @@ export function StrokePreview({ points, style, tool }: StrokePreviewProps) {
         <path
           d={pathFor(points, tool === "brush")}
           fill="none"
-          // The mask brush previews in the colour the finished mask is drawn
-          // in, not in the pen colour: it is not making a mark in that colour,
+          // The mask brush previews in the color the finished mask is drawn
+          // in, not in the pen color: it is not making a mark in that color,
           // and a white "mask" over a pale photograph is invisible whatever
           // the z-index.
           stroke={masking ? MASK_PAINT : style.stroke}

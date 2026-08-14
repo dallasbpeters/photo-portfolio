@@ -16,12 +16,12 @@ import {
 } from "./drawing";
 
 /**
- * The drawing tools, and the colours the next mark is made in.
+ * The drawing tools, and the colors the next mark is made in.
  *
- * Colours are chosen before drawing rather than after, because that is how
- * every drawing tool works and because a mark that appears in the wrong colour
+ * Colors are chosen before drawing rather than after, because that is how
+ * every drawing tool works and because a mark that appears in the wrong color
  * and has to be corrected is a worse experience than picking first. Both
- * colours stay visible while drawing so there is never a question of what the
+ * colors stay visible while drawing so there is never a question of what the
  * next stroke will look like.
  *
  * "Select" is a tool too, not an escape hatch. Without it on the same row there
@@ -72,7 +72,9 @@ const WIDEST_PEN = 16;
 
 const buttonClass = (isActive: boolean): string =>
   `grid size-8 place-items-center rounded transition-colors ${
-    isActive ? "bg-white text-black" : "text-white/60 hover:bg-white/10"
+    isActive
+      ? "bg-board-ink text-board-surface"
+      : "text-board-ink/60 hover:bg-board-ink/10"
   }`;
 
 export function DrawToolbar({
@@ -84,7 +86,7 @@ export function DrawToolbar({
   const hasFill = !isTransparent(style.fill);
 
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
+    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
       <button
         aria-label="Select"
         aria-pressed={tool === null}
@@ -99,12 +101,12 @@ export function DrawToolbar({
       {/* Said out loud while a tool is on, because that is exactly when a
           person is wondering why nothing can be dragged any more. */}
       {tool === null ? null : (
-        <span className="px-1 text-[9px] text-white/35 uppercase tracking-[0.14em]">
+        <span className="px-1 text-[9px] text-board-ink/35 uppercase tracking-[0.14em]">
           esc to select
         </span>
       )}
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
+      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
 
       {TOOLS.map((entry) => (
         <button
@@ -138,23 +140,23 @@ export function DrawToolbar({
         </button>
       ))}
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
+      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
 
-      {/* Stroke and fill as separate wells, labelled, because "which colour am
+      {/* Stroke and fill as separate wells, labelled, because "which color am
           I setting" is the question a single swatch always raises. */}
-      <span className="flex items-center gap-1 text-[9px] text-white/40 uppercase tracking-[0.14em]">
+      <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
         Line
         <ColorWell
-          label="Stroke colour"
+          label="Stroke color"
           onChange={(stroke) => onStyle({ ...style, stroke })}
           value={style.stroke}
         />
       </span>
 
-      <span className="flex items-center gap-1 text-[9px] text-white/40 uppercase tracking-[0.14em]">
+      <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
         Fill
         <ColorWell
-          label="Fill colour"
+          label="Fill color"
           onChange={(fill) => onStyle({ ...style, fill })}
           value={style.fill}
         />
@@ -167,8 +169,8 @@ export function DrawToolbar({
         aria-pressed={hasFill}
         className={`rounded px-1.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
           hasFill
-            ? "text-white/70 hover:text-white"
-            : "text-white/30 hover:text-white/60"
+            ? "text-board-ink/70 hover:text-board-ink"
+            : "text-board-ink/30 hover:text-board-ink/60"
         }`}
         onClick={() =>
           onStyle({ ...style, fill: hasFill ? NO_FILL : "#ffffff" })
@@ -178,7 +180,7 @@ export function DrawToolbar({
         {hasFill ? "On" : "Off"}
       </button>
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-white/10" />
+      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
 
       <div className="flex items-center gap-0.5">
         {(tool === "mask" ? MASK_WIDTHS : WIDTHS).map((width) => (
@@ -186,14 +188,16 @@ export function DrawToolbar({
             aria-label={`Line weight ${width}`}
             aria-pressed={style.strokeWidth === width}
             className={`grid size-7 place-items-center rounded transition-colors ${
-              style.strokeWidth === width ? "bg-white/15" : "hover:bg-white/10"
+              style.strokeWidth === width
+                ? "bg-board-ink/15"
+                : "hover:bg-board-ink/10"
             }`}
             key={width}
             onClick={() => onStyle({ ...style, strokeWidth: width })}
             type="button"
           >
             <span
-              className="block rounded-full bg-white"
+              className="block rounded-full bg-board-ink"
               style={{
                 height: Math.min(width, 10),
                 width: Math.min(width, 10),

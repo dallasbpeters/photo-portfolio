@@ -1,13 +1,18 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Album02Icon,
   CopyIcon,
   Download01Icon,
   FrameIcon,
   GridIcon,
+  MagicWand01Icon,
+  PenTool01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import type { BoardItem, BoardWire } from "../types";
+import { isSvgUrl } from "./affinity";
 import { frameBoardTitle, frameSummary } from "./copyToBoard";
+import { outputImageOf, outputImagesOf } from "./itemOutput";
 
 /**
  * What the canvas offers on a right-click.
@@ -44,6 +49,12 @@ interface CanvasMenuProps {
   /** Downloads everything the frame holds, as one archive. */
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
+  /** Opens a node's SVG in Affinity, and syncs its edits back. */
+  onOpenInAffinity?: (itemId: string) => void;
+  /** Keeps the selection's pictures in the element library. */
+  onSaveElement: (items: BoardItem[]) => void;
+  /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
+  onVectorize?: (itemId: string) => void;
   wires: BoardWire[];
 }
 
@@ -74,12 +85,12 @@ function NamePanel({
 
   return (
     <div className="px-3 pt-2.5 pb-2.5">
-      <span className="mb-1 block text-[9px] text-white/35 uppercase tracking-[0.18em]">
+      <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
         New board name
       </span>
       <input
         aria-label="New board name"
-        className="w-full rounded border border-white/15 bg-black/40 px-2 py-1.5 text-[12px] text-white outline-none focus:border-white/45"
+        className="w-full rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
         onChange={(e) => onType(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -93,7 +104,7 @@ function NamePanel({
         ref={field}
         value={title}
       />
-      <p className="mt-1.5 text-[10px] text-white/40 leading-relaxed">
+      <p className="mt-1.5 text-[10px] text-board-ink/40 leading-relaxed">
         {summary?.count === 1
           ? "The frame alone"
           : `${summary?.count ?? 0} items`}
@@ -108,14 +119,14 @@ function NamePanel({
       </p>
       <div className="mt-2 flex justify-end gap-1.5">
         <button
-          className="rounded px-2 py-1 text-[11px] text-white/50 hover:text-white"
+          className="rounded px-2 py-1 text-[11px] text-board-ink/50 hover:text-board-ink"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="rounded bg-white/15 px-2.5 py-1 text-[11px] text-white hover:bg-white/25"
+          className="rounded bg-board-ink/15 px-2.5 py-1 text-[11px] text-board-ink hover:bg-board-ink/25"
           onClick={submit}
           type="button"
         >
@@ -151,6 +162,44 @@ function NodeRow({ count, onExport }: { count: number; onExport: () => void }) {
   );
 }
 
+/** Sends a node's SVG to Affinity, where it can be edited and saved back. */
+function AffinityRow({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button className={rowClass} onClick={onOpen} type="button">
+      <HugeiconsIcon aria-hidden icon={PenTool01Icon} size={14} />
+      <span>Open in Affinity</span>
+    </button>
+  );
+}
+
+/** Traces a placed picture into vector art with the Recraft vectorizer. */
+function VectorizeRow({ onVectorize }: { onVectorize: () => void }) {
+  return (
+    <button className={rowClass} onClick={onVectorize} type="button">
+      <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
+      <span>Vectorize</span>
+    </button>
+  );
+}
+
+/** What a selection can be turned into. */
+function GroupRows({ count, onGroup }: { count: number; onGroup: () => void }) {
+  return (
+    <>
+      <button className={rowClass} onClick={onGroup} type="button">
+        <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
+        <span>
+          Group {count === 1 ? "" : `${count} `}
+          into a frame
+        </span>
+      </button>
+      <p className="px-3 pb-2 text-[10px] text-board-ink/40 leading-relaxed">
+        Arrange them inside, then wire the frame into a Composite node.
+      </p>
+    </>
+  );
+}
+
 /** The things a frame under the pointer can do. */
 function FrameRows({
   canArrange,
@@ -171,7 +220,7 @@ function FrameRows({
     <>
       {canArrange ? (
         <button
-          className={`${rowClass} border-white/10 ${canGroup ? "border-t" : ""}`}
+          className={`${rowClass} border-board-ink/10 ${canGroup ? "border-t" : ""}`}
           onClick={onArrange}
           type="button"
         >
@@ -180,7 +229,7 @@ function FrameRows({
         </button>
       ) : null}
       <button
-        className={`${rowClass} border-white/10 ${canGroup || canArrange ? "border-t" : ""}`}
+        className={`${rowClass} border-board-ink/10 ${canGroup || canArrange ? "border-t" : ""}`}
         onClick={onExport}
         type="button"
       >
@@ -188,7 +237,7 @@ function FrameRows({
         <span>Download {count === 1 ? "it" : `all ${count}`}</span>
       </button>
       <button
-        className={`${rowClass} border-white/10 border-t`}
+        className={`${rowClass} border-board-ink/10 border-t`}
         onClick={onCopy}
         type="button"
       >
@@ -200,7 +249,114 @@ function FrameRows({
 }
 
 const rowClass =
-  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-white/85 transition-colors hover:bg-white/10 hover:text-white";
+  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-board-ink/85 transition-colors hover:bg-board-ink/10 hover:text-board-ink";
+
+/** Everything on offer before a name is being typed. */
+function MenuRows({
+  items,
+  menu,
+  onArrange,
+  onCopy,
+  onExport,
+  onGroup,
+  onSaveElement,
+  onOpenInAffinity,
+  onVectorize,
+  wires,
+}: {
+  items: BoardItem[];
+  menu: CanvasMenuTarget;
+  onArrange: (itemId: string) => void;
+  onCopy: (frame: BoardItem) => void;
+  onExport: (itemId: string) => void;
+  onGroup: (items: BoardItem[]) => void;
+  onSaveElement: (items: BoardItem[]) => void;
+  onOpenInAffinity?: (itemId: string) => void;
+  onVectorize?: (itemId: string) => void;
+  wires: BoardWire[];
+}) {
+  const { frame, selection } = menu;
+  const canGroup = selection.length > 0;
+  const summary = frame ? frameSummary(frame, items, wires) : null;
+
+  // A single selected node that has produced something can hand over the whole
+  // batch. More than one selected is a grouping gesture, not an export one.
+  const onlyPicked = selection.length === 1 ? selection[0] : null;
+  const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
+  // A node's SVG is what Affinity edits, and only an actual vector is worth
+  // offering that move for — a raster cannot be handed over as an SVG at all.
+  const pickedSvg = onlyPicked
+    ? isSvgUrl(outputImageOf(onlyPicked, items))
+    : false;
+
+  // A placed picture — photo or reference — is a raster waiting to be traced.
+  // The Recraft vectorizer needs a source, so a node with no image would have
+  // nothing to offer it; a frame offers its contents instead, but then the
+  // action belongs on the pictures inside it, not the frame itself. An SVG is
+  // already vector art, so offering to trace it is offering to fail.
+  const placedImage =
+    onlyPicked &&
+    (onlyPicked.kind === "photo" || onlyPicked.kind === "reference") &&
+    Boolean(onlyPicked.imageUrl) &&
+    !isSvgUrl(onlyPicked.imageUrl);
+
+  // Every picture the selection can hand over, resolved the way a wire would
+  // resolve it — so selecting a frame offers the pictures sitting on it, and
+  // selecting a node offers the version chosen on it, rather than nothing.
+  const pictures = selection.flatMap((item) =>
+    outputImagesOf(item, { items, wires })
+  );
+
+  return (
+    <>
+      {onlyPicked && madeCount > 0 ? (
+        <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
+      ) : null}
+
+      {onlyPicked && pickedSvg && onOpenInAffinity ? (
+        <AffinityRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
+      ) : null}
+
+      {onlyPicked && placedImage && onVectorize ? (
+        <VectorizeRow onVectorize={() => onVectorize(onlyPicked.id)} />
+      ) : null}
+
+      {canGroup ? (
+        <GroupRows
+          count={selection.length}
+          onGroup={() => onGroup(selection)}
+        />
+      ) : null}
+
+      {/* Offered only when there is something to keep. An element is its
+          pictures, so a selection of notes and wires has nothing to save. */}
+      {pictures.length > 0 ? (
+        <button
+          className={`${rowClass} border-board-ink/10 border-t`}
+          onClick={() => onSaveElement(selection)}
+          type="button"
+        >
+          <HugeiconsIcon aria-hidden icon={Album02Icon} size={14} />
+          <span>
+            Save {pictures.length === 1 ? "it" : `${pictures.length}`} as an
+            element
+          </span>
+        </button>
+      ) : null}
+
+      {frame ? (
+        <FrameRows
+          canArrange={(summary?.count ?? 0) > 1}
+          canGroup={canGroup}
+          count={summary?.count ?? 0}
+          onArrange={() => onArrange(frame.id)}
+          onCopy={() => onCopy(frame)}
+          onExport={() => onExport(frame.id)}
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function CanvasMenu({
   items,
@@ -210,17 +366,23 @@ export function CanvasMenu({
   onDismiss,
   onExport,
   onGroup,
+  onOpenInAffinity,
+  onSaveElement,
+  onVectorize,
   wires,
 }: CanvasMenuProps) {
   /**
-   * Null until "Copy frame to new board" is chosen; then the typed name.
+   * Null until "Copy frame to new board" is chosen; then the frame being
+   * copied and the name typed for it.
    *
    * Tagged with the menu it belongs to rather than reset by an effect: opening
    * a second frame's menu makes the stored name stale, and comparing is both
-   * cheaper than an effect and impossible to forget.
+   * cheaper than an effect and impossible to forget. The frame rides along so
+   * the panel has one without asking the menu again.
    */
   const [naming, setNaming] = useState<{
     for: CanvasMenuTarget;
+    frame: BoardItem;
     title: string;
   } | null>(null);
 
@@ -228,20 +390,13 @@ export function CanvasMenu({
     return null;
   }
 
-  const typed = naming?.for === menu ? naming.title : null;
+  const typing = naming?.for === menu ? naming : null;
 
   const { frame, point, selection } = menu;
   const canGroup = selection.length > 0;
   if (!(canGroup || frame)) {
     return null;
   }
-
-  const summary = frame ? frameSummary(frame, items, wires) : null;
-
-  // A single selected node that has produced something can hand over the whole
-  // batch. More than one selected is a grouping gesture, not an export one.
-  const onlyPicked = selection.length === 1 ? selection[0] : null;
-  const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
 
   return (
     <>
@@ -253,55 +408,38 @@ export function CanvasMenu({
         type="button"
       />
       <div
-        className="absolute z-50 w-60 overflow-hidden rounded-lg border border-white/15 bg-neutral-900/95 shadow-xl backdrop-blur"
+        className="absolute z-50 w-60 overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
-        {onlyPicked && madeCount > 0 && typed === null ? (
-          <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
-        ) : null}
-
-        {canGroup && typed === null ? (
-          <>
-            <button
-              className={rowClass}
-              onClick={() => onGroup(selection)}
-              type="button"
-            >
-              <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
-              <span>
-                Group {selection.length === 1 ? "" : `${selection.length} `}
-                into a frame
-              </span>
-            </button>
-            <p className="px-3 pb-2 text-[10px] text-white/40 leading-relaxed">
-              Arrange them inside, then wire the frame into a Composite node.
-            </p>
-          </>
-        ) : null}
-
-        {frame && typed === null ? (
-          <FrameRows
-            canArrange={(summary?.count ?? 0) > 1}
-            canGroup={canGroup}
-            count={summary?.count ?? 0}
-            onArrange={() => onArrange(frame.id)}
-            onCopy={() =>
-              setNaming({ for: menu, title: frameBoardTitle(frame) })
-            }
-            onExport={() => onExport(frame.id)}
-          />
-        ) : null}
-
-        {frame && typed !== null ? (
+        {typing ? (
           <NamePanel
-            frame={frame}
+            frame={typing.frame}
             onCancel={onDismiss}
             onConfirm={onCopyFrame}
-            onType={(title) => setNaming({ for: menu, title })}
-            summary={summary}
-            title={typed}
+            onType={(title) => setNaming({ ...typing, title })}
+            summary={frameSummary(typing.frame, items, wires)}
+            title={typing.title}
           />
-        ) : null}
+        ) : (
+          <MenuRows
+            items={items}
+            menu={menu}
+            onArrange={onArrange}
+            onCopy={(picked) =>
+              setNaming({
+                for: menu,
+                frame: picked,
+                title: frameBoardTitle(picked),
+              })
+            }
+            onExport={onExport}
+            onGroup={onGroup}
+            onOpenInAffinity={onOpenInAffinity}
+            onSaveElement={onSaveElement}
+            onVectorize={onVectorize}
+            wires={wires}
+          />
+        )}
       </div>
     </>
   );

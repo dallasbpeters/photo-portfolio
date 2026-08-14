@@ -48,7 +48,7 @@ export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
         return (
           <NavLink
             // The border stays on the box at all times and only changes
-            // colour, so the row does not jump by two pixels as you move
+            // color, so the row does not jump by two pixels as you move
             // between pages — dropping the border entirely would reflow it.
             className={({ isActive }) =>
               `group flex items-center gap-1.5 border-b-2 px-2 text-[0.9rem] text-shadow-2xs text-shadow-a-contrast leading-loose tracking-[0.2em] transition-colors duration-300 ${base} ${

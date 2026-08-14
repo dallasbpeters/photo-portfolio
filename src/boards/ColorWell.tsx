@@ -11,11 +11,11 @@ const PICKER_HEIGHT = 300;
 import { isTransparent } from "./drawing";
 
 /**
- * A colour swatch that opens the project's SketchPicker.
+ * A color swatch that opens the project's SketchPicker.
  *
  * The same arrangement the site settings panel uses — swatch, a full-screen
  * button behind the popover to catch the dismissing click, picker above it —
- * because two colour pickers behaving differently in one product is worse than
+ * because two color pickers behaving differently in one product is worse than
  * either behaviour on its own.
  *
  * Alpha is enabled here, unlike in site settings. There it is disabled because
@@ -34,7 +34,7 @@ interface ColorWellProps {
 /**
  * `#rrggbb`, or `#rrggbbaa` when it is not fully opaque.
  *
- * The alpha pair is dropped at full opacity so ordinary colours stay in the
+ * The alpha pair is dropped at full opacity so ordinary colors stay in the
  * familiar six-digit form, and carried whenever it would otherwise be lost.
  */
 const toHex = (color: ColorResult): string => {
@@ -56,7 +56,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
    * Hands the pointer back to the operating system while the picker is open.
    *
    * The board draws its own cursor and hides the real one, which is fine for
-   * dragging things about and useless for choosing a colour off a gradient —
+   * dragging things about and useless for choosing a color off a gradient —
    * the drawn arrow and its name label cover the pixel being aimed at. While a
    * picker is open there is nothing else to interact with, so the swap is safe
    * for exactly as long as it is needed.
@@ -92,7 +92,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
   };
 
   /**
-   * Samples a colour from anywhere on screen.
+   * Samples a color from anywhere on screen.
    *
    * The picker stays open behind it: sampling is usually the first move and
    * nudging the result on the gradient is the second, so closing here would
@@ -115,14 +115,14 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
     <div className="relative">
       <button
         aria-label={label}
-        className="size-6 overflow-hidden rounded border border-white/20"
+        className="size-6 overflow-hidden rounded border border-board-ink/20"
         onClick={open}
         onPointerDown={(e) => e.stopPropagation()}
         title={label}
         type="button"
       >
         {/* A chequerboard under the swatch, so a transparent or translucent
-            colour reads as see-through rather than as black. */}
+            color reads as see-through rather than as black. */}
         <span
           className="block size-full"
           style={{
@@ -156,14 +156,14 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                   color={value}
                   onChange={(color: ColorResult) => onChange(toHex(color))}
                 />
-                {/* Sampling beats matching by eye when the colour wanted is
+                {/* Sampling beats matching by eye when the color wanted is
                     already on the board — a reference photograph, a logo, an
                     image just generated. Absent rather than disabled where the
                     browser has no sampler: a control that cannot work is worse
                     than one that is not offered. */}
                 {canSample ? (
                   <button
-                    className="flex w-full items-center justify-center gap-1 rounded-b bg-white py-1.5 text-[10px] text-neutral-700 uppercase tracking-[0.14em] hover:text-black"
+                    className="flex w-full items-center justify-center gap-1 rounded-b bg-board-ink py-1.5 text-[10px] text-board-surface/70 uppercase tracking-[0.14em] hover:text-board-surface"
                     onClick={() => void sample()}
                     type="button"
                   >

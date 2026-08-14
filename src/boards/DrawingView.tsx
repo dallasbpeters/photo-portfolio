@@ -29,7 +29,7 @@ interface DrawingViewProps {
 export function DrawingView({ config, height, width }: DrawingViewProps) {
   const { fill, stroke, strokeWidth, tool } = config;
   // A fully transparent fill is the default and means "no fill"; passing it to
-  // SVG as a colour would work but "none" is what it actually is.
+  // SVG as a color would work but "none" is what it actually is.
   const paint = isTransparent(fill) ? "none" : (fill ?? "none");
 
   if (isFreehand(tool)) {

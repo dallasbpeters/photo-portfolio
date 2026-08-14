@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Layers01Icon } from "@hugeicons-pro/core-stroke-standard";
 import type { MutableRefObject, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -28,12 +30,13 @@ import {
   outputListOf,
   outputTextOf,
 } from "./itemOutput";
+import { LayersPanel } from "./LayersPanel";
 import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { StrokePreview } from "./StrokePreview";
 import { isImageDrop } from "./svgToRaster";
-import { useCanvasViewport } from "./useCanvasViewport";
+import { type CanvasViewport, useCanvasViewport } from "./useCanvasViewport";
 import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
@@ -138,10 +141,14 @@ interface BoardCanvasProps {
   onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
   onMaskStroke?: (itemId: string, stroke: MaskStroke) => void;
+  /** Sends a node's SVG to Affinity and syncs its edits back. */
+  onOpenInAffinity?: (itemId: string) => void;
   /** Deletes one stored version of a node's output. */
   onRemoveVersion?: (itemId: string, index: number) => void;
   /** Runs one node. `force` ignores a stored result that is still current. */
   onRun?: (itemId: string, force: boolean) => void;
+  /** Stores the selected items as a reusable element. */
+  onSaveElement?: (items: BoardItem[]) => void;
   /**
    * The item currently selected, or null.
    *
@@ -152,6 +159,8 @@ interface BoardCanvasProps {
   onSelectionChange?: (item: BoardItem | null) => void;
   /** Pins every stored version of a node onto the board. */
   onSendVersions?: (itemId: string) => void;
+  /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
+  onVectorize?: (itemId: string) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
   /**
    * Viewing rather than editing. Pan and zoom remain, since a published board
@@ -266,6 +275,7 @@ export function BoardCanvas({
   onExportItem,
   onGroupIntoFrame,
   onMaskStroke,
+  onOpenInAffinity,
   drawTool = null,
   drawStyle,
   onDraw,
@@ -274,8 +284,10 @@ export function BoardCanvas({
   onDropImage,
   onRemoveVersion,
   onRun,
+  onSaveElement,
   onSelectionChange,
   onSendVersions,
+  onVectorize,
   onWiresChange,
   viewCentreRef = NO_VIEW_CENTRE,
   keyOf,
@@ -339,6 +351,17 @@ export function BoardCanvas({
     // the item, the id decides when.
     onSelectionChange?.(selectedId === null ? null : selectedRef.current);
   }, [selectedId, onSelectionChange]);
+
+  /** Picks one item, as a layer-row click would — a lone, deliberate choice. */
+  const selectItem = useCallback(
+    (item: BoardItem) => {
+      const index = items.findIndex((candidate) => candidate.id === item.id);
+      if (index >= 0) {
+        setSelection([index]);
+      }
+    },
+    [items]
+  );
 
   /**
    * The mark being drawn right now, in canvas units.
@@ -994,7 +1017,7 @@ export function BoardCanvas({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-neutral-950">
+    <div className="relative h-full w-full overflow-hidden bg-board-ground">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -1147,7 +1170,7 @@ export function BoardCanvas({
         ref={containerRef}
       >
         <div
-          className="relative origin-top-left outline outline-white/5"
+          className="relative origin-top-left outline outline-board-ink/5"
           style={{
             height: CANVAS_HEIGHT,
             transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,
@@ -1310,6 +1333,18 @@ export function BoardCanvas({
           onGroupIntoFrame?.(chosen);
           setMenu(null);
         }}
+        onOpenInAffinity={(itemId) => {
+          onOpenInAffinity?.(itemId);
+          setMenu(null);
+        }}
+        onSaveElement={(chosen) => {
+          onSaveElement?.(chosen);
+          setMenu(null);
+        }}
+        onVectorize={(itemId) => {
+          onVectorize?.(itemId);
+          setMenu(null);
+        }}
         wires={wires}
       />
       {portMenu ? (
@@ -1323,29 +1358,88 @@ export function BoardCanvas({
           portType={portMenu.portType}
         />
       ) : null}
+      <CanvasChrome
+        items={items}
+        onChange={onChange}
+        onSelect={selectItem}
+        readOnly={readOnly}
+        selectedId={selectedId}
+        view={view}
+      />
+    </div>
+  );
+}
+
+/**
+ * The bottom-right chrome: zoom controls, and the layers panel's toggle.
+ *
+ * Kept out of BoardCanvas because the canvas's own function was already at the
+ * complexity ceiling, and this is self-contained chrome — the panel's open
+ * state, the button that toggles it, and the zoom box that hosts the button.
+ */
+function CanvasChrome({
+  items,
+  onChange,
+  onSelect,
+  readOnly,
+  selectedId,
+  view,
+}: {
+  items: BoardItem[];
+  onChange: (items: BoardItem[]) => void;
+  onSelect: (item: BoardItem) => void;
+  readOnly?: boolean;
+  selectedId: string | null;
+  view: CanvasViewport;
+}) {
+  const [showLayers, setShowLayers] = useState(false);
+  return (
+    <>
+      {!readOnly && showLayers ? (
+        <LayersPanel
+          items={items}
+          onChange={onChange}
+          onClose={() => setShowLayers(false)}
+          onSelect={onSelect}
+          selectedId={selectedId}
+        />
+      ) : null}
       <div className="pointer-events-none absolute right-4 bottom-4 flex items-center gap-2">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
+          {readOnly ? null : (
+            <button
+              aria-label="Layers"
+              aria-pressed={showLayers}
+              className={`grid min-h-9 min-w-9 place-items-center text-xs uppercase tracking-widest transition-colors hover:text-board-ink ${
+                showLayers ? "text-board-ink" : "text-board-ink/70"
+              }`}
+              onClick={() => setShowLayers((open) => !open)}
+              type="button"
+            >
+              <HugeiconsIcon aria-hidden icon={Layers01Icon} size={16} />
+            </button>
+          )}
           <button
             aria-label="Zoom out"
-            className="min-h-9 min-w-9 text-white/70 text-xs uppercase tracking-widest hover:text-white"
+            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
             onClick={() => view.zoomBy(1 / 1.25)}
             type="button"
           >
             −
           </button>
-          <span className="w-12 text-center text-[10px] text-white/50 tabular-nums">
+          <span className="w-12 text-center text-[10px] text-board-ink/50 tabular-nums">
             {Math.round(view.viewport.scale * 100)}%
           </span>
           <button
             aria-label="Zoom in"
-            className="min-h-9 min-w-9 text-white/70 text-xs uppercase tracking-widest hover:text-white"
+            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
             onClick={() => view.zoomBy(1.25)}
             type="button"
           >
             +
           </button>
           <button
-            className="min-h-9 px-2 text-[10px] text-white/70 uppercase tracking-widest hover:text-white"
+            className="min-h-9 px-2 text-[10px] text-board-ink/70 uppercase tracking-widest hover:text-board-ink"
             onClick={view.fit}
             type="button"
           >
@@ -1353,6 +1447,6 @@ export function BoardCanvas({
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

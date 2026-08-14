@@ -7,19 +7,19 @@ import {
 import type { CurvePoint, ToneCurve } from "./engine/curves";
 
 /**
- * The look library, organised into colour-coded families.
+ * The look library, organised into color-coded families.
  *
- * Each family shares a tonal character and carries a signature colour so the
+ * Each family shares a tonal character and carries a signature color so the
  * strip reads at a glance. Within a family, 1 through 8 run from the lightest
  * treatment to the strongest.
  *
  * These are original recipes. They take their cues from how real film stock
- * behaves — S-shaped response, shadow crossover, band-specific colour — rather
+ * behaves — S-shaped response, shadow crossover, band-specific color — rather
  * than from any commercial preset pack.
  */
 
 export interface LookFamily {
-  /** Signature colour for the family, used as the strip swatch. */
+  /** Signature color for the family, used as the strip swatch. */
   color: string;
   contrastColor?: string;
   description: string;

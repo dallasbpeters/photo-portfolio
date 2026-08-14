@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import sharp from "sharp";
 import {
   containedBy,
   type GraphItem,
@@ -9,6 +10,7 @@ import {
 import { ICON_STYLES, isIconStyle } from "../../../config/iconStyles.js";
 import {
   DEFAULT_PLACEHOLDER,
+  type FalModelDef,
   type FalModelInput,
   falModelFor,
   falModelInput,
@@ -33,7 +35,9 @@ import {
 import { inputFingerprint } from "../../_lib/fingerprint.js";
 import { parsePublicHttpUrl } from "../../_lib/httpUrl.js";
 import { generateIcon, isMagnificConfigured } from "../../_lib/magnific.js";
+import { loadModelDefs } from "../../_lib/models.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
+import { persistBytes } from "../../_lib/persistGenerated.js";
 import { getSite } from "../../_lib/site.js";
 
 type Sql = ReturnType<typeof getSql>;
@@ -48,6 +52,48 @@ const MAX_JOIN_DEPTH = 8;
 
 /** Matches an SVG by extension, ignoring any query string. */
 const SVG_URL = /\.svg(\?|$)/i;
+
+/** Rasterized copies, keyed by the SVG URL they were made from. */
+const RASTER_CACHE = new Map<string, string>();
+
+/**
+ * The PNG an SVG becomes, so an image model can read it.
+ *
+ * fal's image models read pixels, not vectors — and this app makes plenty of
+ * vectors: Recraft's vector models, the icon generator, and every Affinity edit
+ * synced back onto a board. Those used to be refused or dropped the moment one
+ * reached an image model, which stranded any frame that contained a single
+ * vector. Instead the SVG is rasterized here, at the moment it is consumed,
+ * into a PNG stored like any generated file. The cache just spares a warm
+ * function re-rendering the same SVG for every job of a batch.
+ */
+const rasterizeSvgUrl = async (url: string): Promise<string> => {
+  const cached = RASTER_CACHE.get(url);
+  if (cached) {
+    return cached;
+  }
+  const fetched = await fetch(url);
+  if (!fetched.ok) {
+    throw new Error(
+      `Could not download the SVG to rasterize (${fetched.status})`
+    );
+  }
+  const svg = Buffer.from(await fetched.arrayBuffer());
+  const png = await sharp(svg, { density: 96 })
+    // Bounded for fal's sake, never enlarged: a poster-sized vector should not
+    // arrive as a four-thousand-pixel raster.
+    .resize({
+      fit: "inside",
+      height: 2048,
+      width: 2048,
+      withoutEnlargement: true,
+    })
+    .png()
+    .toBuffer();
+  const stored = await persistBytes(png, "boards/ai", "image/png");
+  RASTER_CACHE.set(url, stored);
+  return stored;
+};
 
 /**
  * Runs exactly one node on a board.
@@ -94,6 +140,79 @@ const loadWires = async (sql: Sql, boardId: string) =>
     WHERE board_id = ${boardId}
   `) as BoardWireRow[];
 
+/** Anything else in `elementId` would make `::uuid[]` throw for the whole board. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface ElementFields {
+  cover_url: string | null;
+  description: string | null;
+  id: string;
+}
+
+/**
+ * The library rows every element node points at, folded into the board's rows.
+ *
+ * An element node stores only an id. The picture it hands over and the words it
+ * carries belong to the library, so that a style can be corrected in one place
+ * and every board using it follows — which is the difference between a library
+ * and a stamp.
+ *
+ * Resolved here, once, before anything walks the graph: `singleOutputOf` then
+ * finds a plain image on the row and the prompt finds plain words, so nothing
+ * downstream has to know an element was involved.
+ *
+ * The copy stored on the node is the fallback. An element deleted from the
+ * library leaves the boards built with it still showing, and still able to run,
+ * the picture they were built with — a tidy-up in a side panel must not quietly
+ * break work.
+ */
+const withElements = async (
+  sql: Sql,
+  rows: BoardItemRow[]
+): Promise<BoardItemRow[]> => {
+  const wanted = new Set<string>();
+  for (const row of rows) {
+    const id = asObject(row.config).elementId;
+    if (
+      row.node_type === "element" &&
+      typeof id === "string" &&
+      UUID.test(id)
+    ) {
+      wanted.add(id);
+    }
+  }
+  if (wanted.size === 0) {
+    return rows;
+  }
+
+  const found = (await sql`
+    SELECT id, cover_url, description
+    FROM elements
+    WHERE id = ANY(${[...wanted]}::uuid[])
+  `) as ElementFields[];
+  const byId = new Map(found.map((element) => [element.id, element]));
+
+  return rows.map((row) => {
+    if (row.node_type !== "element") {
+      return row;
+    }
+    const config = asObject(row.config);
+    const element =
+      typeof config.elementId === "string"
+        ? byId.get(config.elementId)
+        : undefined;
+    const storedImage =
+      typeof config.imageUrl === "string" ? config.imageUrl : null;
+    const storedWords =
+      typeof config.description === "string" ? config.description : null;
+    return {
+      ...row,
+      body: element?.description ?? storedWords,
+      image_url: element?.cover_url ?? storedImage,
+    };
+  });
+};
+
 /**
  * Every prompt an Iterate node describes.
  *
@@ -116,8 +235,8 @@ const iteratedOutputsOf = (
    *
    * `single` is for the ports that hold one value — the template, and the line
    * appended to each prompt. A wire can carry several (a Palette node set to
-   * send one colour at a time carries one per swatch), and running them all
-   * together into a single field produced a suffix five colours long stuck on
+   * send one color at a time carries one per swatch), and running them all
+   * together into a single field produced a suffix five colors long stuck on
    * the end of every prompt.
    */
   const readPerWire = (port: string, single = false): string[] =>
@@ -163,7 +282,7 @@ const iteratedOutputsOf = (
       : columnsOf(typedList[0] ?? "", slots, config.split);
 
   // Appended per prompt rather than once for all of them. A Palette node
-  // sending one colour at a time carries a list, and the point of that list is
+  // sending one color at a time carries a list, and the point of that list is
   // that each prompt gets a different one — a single suffix repeated would be
   // the "together" mode with extra steps. A shorter list cycles, as everywhere
   // else here.
@@ -185,11 +304,11 @@ const iteratedOutputsOf = (
  *
  * Each wire fills its own placeholder: the first list goes into the first slot,
  * the second into the second, and so on. That is what makes "a {} card with the
- * word {}" work with a list of colours and a list of words — replacing every
+ * word {}" work with a list of colors and a list of words — replacing every
  * slot with the same value, which is what a naive replace does, produced "a
  * Brainstorm card with the word Brainstorm".
  *
- * Lists are read across rather than combined: four colours and five words give
+ * Lists are read across rather than combined: four colors and five words give
  * five prompts, not twenty. A cross product is occasionally what someone wants
  * and is never what they expect, and it multiplies what a run costs.
  *
@@ -262,14 +381,14 @@ const splitValues = (raw: string, mode: unknown): string[] => {
  *
  * Written as a sentence containing the hex codes, which is the one shape that
  * serves both mechanisms: a model that can only be asked reads it as English,
- * and Ideogram v3 has the codes lifted back out into a real colour palette.
+ * and Ideogram v3 has the codes lifted back out into a real color palette.
  */
 /**
- * What a palette sends: one constraint, or one colour at a time.
+ * What a palette sends: one constraint, or one color at a time.
  *
  * Sending them separately is what lets an Iterate node work through a palette —
- * a slot filled with each colour in turn, one image per colour — rather than
- * every colour being pressed into a single image.
+ * a slot filled with each color in turn, one image per color — rather than
+ * every color being pressed into a single image.
  */
 const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
   if (config.output !== "one at a time") {
@@ -278,24 +397,24 @@ const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
   }
   const raw = typeof config.colors === "string" ? config.colors : "";
   const strict = config.strictness === "mostly" ? "predominantly" : "only";
-  // Each colour as an instruction rather than as a bare code. "#5ccde9" on the
+  // Each color as an instruction rather than as a bare code. "#5ccde9" on the
   // end of a prompt is a string a model has to guess the meaning of; "using
-  // only this colour: #5ccde9" says what to do with it, and reads the same way
+  // only this color: #5ccde9" says what to do with it, and reads the same way
   // as the together form so switching between them changes the number of
   // prompts rather than their grammar.
   return (raw.match(HEX_COLOUR) ?? []).map(
-    (hex) => `using ${strict} this colour: ${hex}`
+    (hex) => `using ${strict} this color: ${hex}`
   );
 };
 
 const paletteTextOf = (config: Record<string, unknown>): string | null => {
   const raw = typeof config.colors === "string" ? config.colors : "";
-  const colours = raw.match(HEX_COLOUR);
-  if (!colours || colours.length === 0) {
+  const colors = raw.match(HEX_COLOUR);
+  if (!colors || colors.length === 0) {
     return null;
   }
   const strict = config.strictness === "mostly" ? "predominantly" : "only";
-  return `using ${strict} these colours: ${colours.join(", ")}`;
+  return `using ${strict} these colors: ${colors.join(", ")}`;
 };
 
 /**
@@ -405,6 +524,12 @@ const singleOutputOf = (
   }
   if (row.kind === "note" || row.kind === "text") {
     return row.body;
+  }
+  // An element hands over its key image — one wire, one job. Resolved onto the
+  // row by withElements. Its words travel too, but not through here: see
+  // elementTextOf, which reads them off the same wire.
+  if (row.node_type === "element") {
+    return row.image_url;
   }
   // A source node produces its value without ever running, so it is read from
   // its settings rather than from a result it will never have.
@@ -596,6 +721,44 @@ const promptFor = (
 };
 
 /**
+ * The words every element wired into this node carries, in wire order.
+ *
+ * An element's only output port is an image, so its description never arrives
+ * through `resolveInputs` — a second, text port would mean two wires for one
+ * thing. It is read off the wires instead, from the body `withElements` folded
+ * onto the row, so the words the library holds travel with the picture it hands
+ * over rather than being left behind on the canvas.
+ */
+const elementTextOf = (
+  itemId: string,
+  rows: BoardItemRow[],
+  wires: BoardWireRow[]
+): string[] => {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return (
+    wires
+      .filter((wire) => wire.target_item_id === itemId)
+      .map((wire) => byId.get(wire.source_item_id))
+      .filter((source) => source?.node_type === "element")
+      .map((source) => source?.body?.trim())
+      .filter((words): words is string => Boolean(words))
+      // The same element wired in twice says the same thing twice, which reads to
+      // a model as emphasis nobody asked for.
+      .filter((words, index, all) => all.indexOf(words) === index)
+  );
+};
+
+/**
+ * A prompt with the wired elements' words after it.
+ *
+ * Appended rather than substituted: an element says how a picture should look,
+ * while what to draw stays whatever was typed. Joined with the separator a Join
+ * node defaults to, because a prompt is a list of phrases.
+ */
+const withElementWords = (prompt: string, words: string[]): string =>
+  [prompt.trim(), ...words].filter((part) => part.length > 0).join(", ");
+
+/**
  * How many runs this node's settings and wiring describe.
  *
  * One per wired image, times the variation count — so three references at two
@@ -640,7 +803,7 @@ const jobsFor = (
   // One wire carrying several prompts is an Iterate node: each is its own run.
   // Several wires are several *parts* of each run — a subject and a palette,
   // say — so they are joined. Both at once: five subjects and one palette line
-  // give five runs, each ending with the same colours.
+  // give five runs, each ending with the same colors.
   const promptWires =
     (values.prompt ?? []).length > 0 ? (lists.prompt ?? []) : [];
   const rows = promptWires.length
@@ -769,12 +932,15 @@ type Produced =
  * The only place a node type turns into a third-party call. Adding a node type
  * is therefore an entry in config/nodeTypes.ts plus one branch here — no schema
  * change, no change to the wire model, and nothing at all in the canvas.
+ * `models` is the same list the picker was built from, so the vector claim and
+ * the fal call agree with what the board was showing.
  *
  * Both generators already copy their output into blob storage before returning,
  * so a result is durable by the time it reaches this function.
  */
 const produce = async (
   capability: NodeCapability,
+  models: readonly FalModelDef[],
   args: {
     item: RunnableItem;
     /** "auto" (or absent) keeps fal.ts's own image-present switch. */
@@ -849,9 +1015,17 @@ const produce = async (
     };
   }
 
+  // An image model reads pixels, and a wired SVG is not pixels — rasterize it
+  // first. Raster sources pass through untouched, and Analyse above never gets
+  // here (its vision model reads SVG fine, so it needs no conversion).
+  const sourceImageUrl =
+    args.sourceImageUrl && SVG_URL.test(args.sourceImageUrl)
+      ? await rasterizeSvgUrl(args.sourceImageUrl)
+      : args.sourceImageUrl;
+
   const image = await generateImage(
     args.prompt,
-    args.sourceImageUrl,
+    sourceImageUrl,
     args.model,
     args.sourceMaskUrl
   );
@@ -861,7 +1035,7 @@ const produce = async (
     // Taken from the model's own entry rather than guessed from the file: the
     // node shows a "came back as a raster" warning, and an SVG mislabelled as
     // raster would raise it for no reason.
-    isVector: isVectorModel(args.model) ? true : null,
+    isVector: isVectorModel(models, args.model) ? true : null,
     kind: "image",
     url: image.url,
     width: image.width,
@@ -921,73 +1095,22 @@ const saveFailure = (sql: Sql, itemId: string, message: string) =>
   `;
 
 /**
+ * A refused run: why, in the words the node will show, plus whatever else the
+ * canvas can act on — `missingPort` lights up the input that is wanting.
+ *
+ * `error` is required rather than merely likely, because it is the sentence
+ * written to `run_error`. A refusal with no reason to record would be exactly
+ * the silence this type exists to end.
+ */
+type Refusal = { error: string } & Record<string, unknown>;
+
+/**
  * Why this model cannot run on this wiring, or null when it can.
  *
  * Checked here rather than left to fal, which only reports a mismatched body
  * after the call has been billed. Each model declares what it consumes, so an
  * unwired vectoriser or a promptless generation is refused for free.
  */
-/**
- * Whether a wired image is vector art, which no fal image model can read.
- *
- * The trap is entirely of the app's own making: Recraft's two vector models and
- * the icon generator all *emit* SVG, so feeding one of those results into a
- * Generate node — the obvious next move — is a request that can only fail. It
- * fails differently for each model, too, from "Failed to load the image" to
- * "Could not generate images with the given prompts and images", neither of
- * which points at the actual problem.
- *
- * Refused here rather than at fal, because fal bills first.
- */
-const vectorInputRefusal = (
-  images: string[]
-): Record<string, unknown> | null =>
-  images.length > 0 && images.every((url) => SVG_URL.test(url))
-    ? {
-        error:
-          "That is an SVG, and image models read pixels. Wire in a photo or a raster generation instead — or use Recraft · Vectorize if you meant to make vector art.",
-        missingPort: "image",
-      }
-    : null;
-
-/**
- * The wired images a raster model can actually read.
- *
- * Vectors are dropped from a batch rather than failing it. One wire out of a
- * frame carries everything on that frame, and a frame with twenty stickers and
- * one vectorised logo is a completely ordinary board — refusing the whole run
- * because one member cannot be read meant a frame could not be generated from
- * at all once anything had been vectorised into it.
- *
- * Never silent: the count comes back on the response as `skippedVectors` so the
- * canvas can say what did not run. A batch that quietly does nineteen of twenty
- * jobs is worse than one that fails.
- */
-const rasterOnly = (images: string[]): string[] =>
-  images.filter((url) => !SVG_URL.test(url));
-
-/**
- * Removes the unreadable images from the resolved inputs, and says how many.
- *
- * Mutates `values` on purpose: every later step — the refusals, the job list,
- * the batch size — has to agree on what is actually runnable, and threading a
- * second copy through all of them would be a second thing to keep in step.
- *
- * Analyse is exempt. It reads pictures with a vision model rather than handing
- * them to an image model, and that reads an SVG perfectly well.
- */
-const dropVectors = (
-  values: Record<string, string[] | undefined>,
-  capability: NodeCapability
-): number => {
-  const wired = values.image ?? [];
-  if (capability === "fal.describe") {
-    return 0;
-  }
-  const usable = rasterOnly(wired);
-  values.image = usable;
-  return wired.length - usable.length;
-};
 
 /**
  * A mask wired into a model that cannot honour one.
@@ -999,12 +1122,13 @@ const dropVectors = (
  */
 const maskRefusal = (
   model: string | null,
-  masked: boolean
-): Record<string, unknown> | null => {
-  if (!masked || falModelMasks(model ?? "auto")) {
+  masked: boolean,
+  models: readonly FalModelDef[]
+): Refusal | null => {
+  if (!masked || falModelMasks(models, model ?? "auto")) {
     return null;
   }
-  const label = falModelFor(model)?.label ?? "This model";
+  const label = falModelFor(models, model)?.label ?? "This model";
   return {
     error: `${label} cannot paint into part of an image. Choose Auto or a Flux style, or clear the mask.`,
     missingPort: "image",
@@ -1018,9 +1142,8 @@ const unmetRequirement = (
   values: Record<string, string[] | undefined>,
   masked: boolean,
   capability: NodeCapability,
-  /** Wired images already discarded for being unreadable. */
-  skipped: number
-): Record<string, unknown> | null => {
+  models: readonly FalModelDef[]
+): Refusal | null => {
   // A composite has no model and no prompt — its inputs are pictures, and the
   // required image port has already been checked by resolveInputs. Running it
   // through the model rules below would refuse it for lacking a prompt that it
@@ -1028,31 +1151,14 @@ const unmetRequirement = (
   if (capability === "board.composite") {
     return null;
   }
-  // Every shape that consumes an image gets the same check, before any of the
-  // per-shape rules below.
-  const wired = values.image ?? [];
-  // Everything wired was thrown away for being unreadable, so the honest
-  // reason is what they were — not "nothing is wired", which is what the
-  // emptied list would otherwise be reported as.
-  if (wired.length === 0 && skipped > 0 && shape !== "prompt") {
-    return {
-      error:
-        "Those are SVGs, and image models read pixels. Wire in a photo or a raster generation instead — or use Recraft · Vectorize if you meant to make vector art.",
-      missingPort: "image",
-    };
-  }
-  const vector = vectorInputRefusal(wired);
-  if (vector && shape !== "prompt") {
-    return vector;
-  }
-  const mask = maskRefusal(model, masked);
+  const mask = maskRefusal(model, masked, models);
   if (mask) {
     return mask;
   }
   if (shape === "prompt-and-image") {
     // Both, so both are checked before anything is spent.
     if ((values.image?.length ?? 0) === 0) {
-      const label = falModelFor(model)?.label ?? "This model";
+      const label = falModelFor(models, model)?.label ?? "This model";
       return {
         error: `${label} reworks an existing image; wire one into it.`,
         missingPort: "image",
@@ -1069,7 +1175,7 @@ const unmetRequirement = (
   if (shape === "image") {
     const images = values.image ?? [];
     if (images.length === 0) {
-      const label = falModelFor(model)?.label ?? "This model";
+      const label = falModelFor(models, model)?.label ?? "This model";
       return {
         error: `${label} traces an existing image; wire one into it.`,
         missingPort: "image",
@@ -1121,7 +1227,13 @@ const validatedJobs = (raw: Job[]): { dropped: number; jobs: Job[] } => {
 
 /** Either a response to send as-is, or everything the run needs. */
 type Prepared =
-  | { body: Record<string, unknown>; ready: null; status: number }
+  | {
+      body: Record<string, unknown>;
+      ready: null;
+      /** The reason to write to `run_error`, or null to leave the node alone. */
+      record: string | null;
+      status: number;
+    }
   | {
       body: null;
       ready: {
@@ -1132,19 +1244,101 @@ type Prepared =
         jobs: Job[];
         model: string | null;
         prompt: string;
-        /** Wired images a raster model could not read, and so did not run. */
+        /** Wired images that could not be read (unfetchable addresses), so did not run. */
         skippedVectors: number;
         /** Every wired image, for the capability that reads them together. */
         sourceImageUrls: string[];
       };
+      record: null;
       status: null;
     };
 
-const refuse = (status: number, body: Record<string, unknown>): Prepared => ({
+/**
+ * A refusal the node keeps: the reason is written to `run_error` before the
+ * response is sent.
+ *
+ * Pre-flight refusals used to return 422 and touch nothing, so a node that
+ * could never run looked — to anything reading `board_items` — exactly like one
+ * that had simply never been asked to. Diagnosis went: query for errors, find
+ * none, conclude the board is healthy, be wrong. The reason now outlives the
+ * toast, survives a reload, and answers the one query worth asking.
+ */
+const refuse = (status: number, body: Refusal): Prepared => ({
   body,
   ready: null,
+  record: body.error,
   status,
 });
+
+/**
+ * A response the node does not keep: sent as-is, with nothing written to
+ * `run_error`.
+ *
+ * A run that is skipped because its stored result is still current has
+ * succeeded, and recording a reason against a node that is perfectly well would
+ * be the opposite of what `record` is for.
+ */
+const reply = (status: number, body: Record<string, unknown>): Prepared => ({
+  body,
+  ready: null,
+  record: null,
+  status,
+});
+
+/**
+ * What this node's settings and inputs come to, as the single value the stored
+ * fingerprint is compared against.
+ */
+const fingerprintFor = (
+  item: RunnableItem,
+  values: Record<string, string[] | undefined>,
+  elementWords: string[]
+): Promise<string> =>
+  inputFingerprint({
+    // The wired elements' words count as settings for this purpose: they decide
+    // what is sent, so a style corrected in the library has to make the nodes
+    // using it stale or the correction would never reach a picture. Folded in
+    // only when there is one, so no existing node's fingerprint moves and a
+    // board full of finished work is not quietly offered up for re-running.
+    config:
+      elementWords.length > 0
+        ? { ...item.config, element: elementWords }
+        : item.config,
+    // Joined per port: the fingerprint only has to change when the inputs do,
+    // and a stable string does that as well as an array while keeping the
+    // canonical form simple.
+    inputs: Object.fromEntries(
+      Object.entries(values).map(([key, list]) => [
+        key,
+        (list ?? []).join("\u0000"),
+      ])
+    ),
+    nodeType: item.nodeType,
+  });
+
+/**
+ * The refusal for a capability whose provider has no key, or null when there is
+ * nothing in the way.
+ *
+ * A composite is assembled in the browser and merely stored here, so neither
+ * provider needs to be configured for one to run — which is why this asks per
+ * capability rather than checking both up front.
+ */
+const unconfiguredProvider = (capability: NodeCapability): Prepared | null => {
+  if (capability === "fal.image" && !isFalConfigured()) {
+    return refuse(503, {
+      error:
+        "Image generation is not configured. Set FAL_API_KEY on the project.",
+    });
+  }
+  if (capability === "magnific.icon" && !isMagnificConfigured()) {
+    return refuse(503, {
+      error:
+        "Icon generation is not configured. Set MAGNIFIC_API_KEY on the project.",
+    });
+  }
+  return null;
+};
 
 /**
  * Everything that can refuse a run, in the order that costs least.
@@ -1157,11 +1351,15 @@ const prepare = async (
   rows: BoardItemRow[],
   wireRows: BoardWireRow[],
   itemId: string,
-  force: boolean
+  force: boolean,
+  models: readonly FalModelDef[]
 ): Promise<Prepared> => {
   const row = rows.find((candidate) => candidate.id === itemId);
   if (row?.kind !== "op" || !row.node_type) {
-    return refuse(404, { error: "Node not found on this board" });
+    // Not recorded: there is either no such row, or one that is not a node of
+    // ours, and writing a run failure onto a photograph would be a worse lie
+    // than the silence.
+    return reply(404, { error: "Node not found on this board" });
   }
 
   const type = nodeTypeFor(row.node_type);
@@ -1199,55 +1397,57 @@ const prepare = async (
     });
   }
 
-  // An explicit model is checked against the allowlist rather than forwarded:
-  // the value reaches fal, and an unknown id is a request that fails after it
-  // has been paid for. An unrecognised choice falls back to "auto".
-  const model = isFalModel(item.config.model)
+  // An explicit model is checked against the loaded list rather than
+  // forwarded: the value reaches fal, and an unknown id is a request that fails
+  // after it has been paid for. An unrecognised choice falls back to "auto".
+  const model = isFalModel(models, item.config.model)
     ? (item.config.model as string)
     : null;
-  const shape = falModelInput(model ?? "auto");
+  const shape = falModelInput(models, model ?? "auto");
 
   const prompt = promptFor(item, values);
-
-  // Vectors are dropped here, once, so everything downstream — the refusals,
-  // the job list, the batch size — agrees on what is actually runnable.
-  const skippedVectors = dropVectors(values, type.capability);
+  const elementWords = elementTextOf(item.id, rows, wireRows);
 
   const masks = maskByUrl(rows);
   const unmet = unmetRequirement(
     shape,
     model,
-    prompt,
+    // The composed prompt, so a node whose only words come from a wired element
+    // is not refused for having none.
+    withElementWords(prompt, elementWords),
     values,
     (values.image ?? []).some((url) => masks.has(url)),
     type.capability,
-    skippedVectors
+    models
   );
   if (unmet) {
     return refuse(422, unmet);
   }
 
-  // A composite is assembled in the browser and merely stored here, so neither
-  // provider needs to be configured for one to run.
-  const needsFal = type.capability === "fal.image";
-  const needsMagnific = type.capability === "magnific.icon";
-  if (needsFal && !isFalConfigured()) {
-    return refuse(503, {
-      error:
-        "Image generation is not configured. Set FAL_API_KEY on the project.",
-    });
-  }
-  if (needsMagnific && !isMagnificConfigured()) {
-    return refuse(503, {
-      error:
-        "Icon generation is not configured. Set MAGNIFIC_API_KEY on the project.",
-    });
+  const unconfigured = unconfiguredProvider(type.capability);
+  if (unconfigured) {
+    return unconfigured;
   }
 
   // Every wired image becomes a job, each validated before being forwarded:
   // these URLs are handed to a third party to go and fetch.
+  // Analyse is the exception. Its job is to look at a picture and write down
+  // what it sees, so handing it words describing a style would be handing it
+  // the answer to the question it was asked.
+  const wordsForJobs = type.capability === "fal.describe" ? [] : elementWords;
   const { dropped, jobs } = validatedJobs(
-    jobsFor(item, values, lists, shape, type.capability, prompt, masks)
+    // Every job carries the wired elements' words, whether its prompt was typed
+    // on the node or arrived down a wire. Applied here rather than inside
+    // jobsFor because it is true of every prompt that function can produce, and
+    // a Prompt node wired in alongside an element is the ordinary arrangement —
+    // appending only to the typed fallback would drop the style in exactly the
+    // case elements exist for.
+    jobsFor(item, values, lists, shape, type.capability, prompt, masks).map(
+      (job) => ({
+        ...job,
+        prompt: withElementWords(job.prompt, wordsForJobs),
+      })
+    )
   );
   // Refused only when nothing survived. A batch reduced to nothing has no work
   // left to do, whereas one that lost a single unusable address still has
@@ -1262,19 +1462,7 @@ const prepare = async (
   // cost money to arrive at the same images. A batch is only skipped once every
   // variation is present — a run cancelled halfway resumes rather than being
   // treated as finished.
-  const fingerprint = await inputFingerprint({
-    config: item.config,
-    // Joined per port: the fingerprint only has to change when the inputs do,
-    // and a stable string does that as well as an array while keeping the
-    // canonical form simple.
-    inputs: Object.fromEntries(
-      Object.entries(values).map(([key, list]) => [
-        key,
-        (list ?? []).join("\u0000"),
-      ])
-    ),
-    nodeType: item.nodeType,
-  });
+  const fingerprint = await fingerprintFor(item, values, elementWords);
   const stored = asObject(item.result);
   const done = Array.isArray(stored.variations)
     ? (stored.variations as unknown[]).filter(Boolean).length
@@ -1285,13 +1473,13 @@ const prepare = async (
     stored.fingerprint === fingerprint &&
     done >= jobs.length
   ) {
-    return refuse(200, {
+    return reply(200, {
       itemId,
       result: item.result,
       runError: null,
       runState: "succeeded",
       skipped: true,
-      skippedVectors: skippedVectors + dropped,
+      skippedVectors: dropped,
       variationCount: jobs.length,
     });
   }
@@ -1305,9 +1493,10 @@ const prepare = async (
       jobs,
       model,
       prompt,
-      skippedVectors: skippedVectors + dropped,
+      skippedVectors: dropped,
       sourceImageUrls: values.image ?? [],
     },
+    record: null,
     status: null,
   };
 };
@@ -1366,13 +1555,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = getSql();
 
   try {
-    const [rows, wireRows] = await Promise.all([
-      loadItems(sql, boardId),
+    const [rows, wireRows, models] = await Promise.all([
+      loadItems(sql, boardId).then((items) => withElements(sql, items)),
       loadWires(sql, boardId),
+      loadModelDefs(sql),
     ]);
 
-    const prepared = await prepare(rows, wireRows, itemId, force);
+    const prepared = await prepare(rows, wireRows, itemId, force, models);
     if (prepared.ready === null) {
+      // Written before the response, so the node explains itself on reload and
+      // a mis-wired board can be found by querying rather than by clicking.
+      if (prepared.record) {
+        await saveFailure(sql, itemId, prepared.record);
+      }
       return res.status(prepared.status).json(prepared.body);
     }
     const {
@@ -1387,15 +1582,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } = prepared.ready;
 
     if (variation >= jobs.length) {
-      return res
-        .status(422)
-        .json({ error: "That variation is past the end of this batch." });
+      const error = "That variation is past the end of this batch.";
+      await saveFailure(sql, itemId, error);
+      return res.status(422).json({ error });
     }
 
     await setRunning(sql, itemId);
 
     try {
-      const produced = await produce(capability, {
+      const produced = await produce(capability, models, {
         item,
         model,
         // Per variation, because an Iterate node upstream gives each run its
@@ -1471,7 +1666,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Recorded, so the failure survives a reload and the node explains itself
       // rather than merely looking un-run.
       await saveFailure(sql, itemId, message);
-      return res.status(502).json({ error: message });
+      // The batch size travels with the error: a client whose *first* job just
+      // failed still has to know how many jobs the run describes, or it cannot
+      // continue with the rest of them.
+      return res
+        .status(502)
+        .json({ error: message, variationCount: jobs.length });
     }
   } catch (e) {
     console.error(e);

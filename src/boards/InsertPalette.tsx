@@ -127,7 +127,7 @@ const BASE_ENTRIES: Entry[] = [
   },
   {
     action: { kind: "node", nodeType: "palette" },
-    hint: "palette colour color swatch brand hex restrict",
+    hint: "palette color color swatch brand hex restrict",
     icon: PaintBoardIcon,
     label: "Palette",
     section: "Nodes",
@@ -213,15 +213,15 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]">
       <button
         aria-label="Dismiss"
-        className="absolute inset-0 cursor-default bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-board-surface/50 backdrop-blur-sm"
         onClick={onDismiss}
         tabIndex={-1}
         type="button"
       />
 
-      <div className="relative w-[32rem] max-w-[90vw] overflow-hidden rounded-xl border border-white/15 bg-neutral-900/95 shadow-2xl">
+      <div className="relative w-[32rem] max-w-[90vw] overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel/95 shadow-2xl">
         <input
-          className="w-full border-white/10 border-b bg-transparent px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/30"
+          className="w-full border-board-ink/10 border-b bg-transparent px-4 py-3 text-[14px] text-board-ink outline-none placeholder:text-board-ink/30"
           onChange={(e) => {
             setQuery(e.target.value);
             setActive(0);
@@ -234,7 +234,7 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
 
         <div className="max-h-[50vh] overflow-y-auto py-1">
           {entries.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[12px] text-white/35">
+            <p className="px-4 py-6 text-center text-[12px] text-board-ink/35">
               Nothing matches “{query}”.
             </p>
           ) : null}
@@ -245,15 +245,15 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
             return (
               <div key={`${entry.section}-${entry.label}`}>
                 {showSection ? (
-                  <p className="px-4 pt-2 pb-1 text-[9px] text-white/30 uppercase tracking-[0.18em]">
+                  <p className="px-4 pt-2 pb-1 text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
                     {entry.section}
                   </p>
                 ) : null}
                 <button
                   className={`flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] transition-colors ${
                     index === active
-                      ? "bg-white/10 text-white"
-                      : "text-white/70 hover:bg-white/5"
+                      ? "bg-board-ink/10 text-board-ink"
+                      : "text-board-ink/70 hover:bg-board-ink/5"
                   }`}
                   onClick={() => choose(index)}
                   onPointerEnter={() => setActive(index)}
@@ -267,7 +267,7 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
           })}
         </div>
 
-        <p className="border-white/10 border-t px-4 py-2 text-[10px] text-white/25">
+        <p className="border-board-ink/10 border-t px-4 py-2 text-[10px] text-board-ink/25">
           ↑↓ to move · ↵ to insert · esc to close
         </p>
       </div>

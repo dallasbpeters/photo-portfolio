@@ -75,7 +75,7 @@ export const iteratedTextOf = (
    *
    * `single` is for the ports that hold one value — the template, and the line
    * appended to each prompt. A wire can carry several, and running them all
-   * together into a single field produced a suffix five colours long stuck onto
+   * together into a single field produced a suffix five colors long stuck onto
    * every prompt.
    */
   const readPerWire = (port: string, single = false): string[] =>
@@ -114,7 +114,7 @@ export const iteratedTextOf = (
       : columnsOf(typedList[0] ?? "", slots, config.split);
 
   // Appended per prompt rather than once for all of them. A Palette node
-  // sending one colour at a time carries a list, and the point of that list is
+  // sending one color at a time carries a list, and the point of that list is
   // that each prompt gets a different one — a single suffix repeated would be
   // the "together" mode with extra steps. A shorter list cycles, as everywhere
   // else here.
@@ -135,7 +135,7 @@ export const iteratedTextOf = (
  * Everything an item sends, which is not always one thing.
  *
  * Mirrors outputsOf on the server. Two nodes are plural by design — an Iterate
- * node writes a prompt per value, and a Palette node set to send one colour at
+ * node writes a prompt per value, and a Palette node set to send one color at
  * a time sends one per swatch — and every reader has to account for that or it
  * silently keeps only the first.
  */
@@ -224,7 +224,7 @@ const splitValues = (raw: string, mode: unknown): string[] => {
  * back out into a real palette parameter.
  */
 /**
- * What a palette sends: one constraint, or one colour at a time.
+ * What a palette sends: one constraint, or one color at a time.
  *
  * Mirrors paletteOutputsOf on the server.
  */
@@ -235,13 +235,13 @@ export const paletteOutputsOf = (config: Record<string, unknown>): string[] => {
   }
   const raw = typeof config.colors === "string" ? config.colors : "";
   const strict = config.strictness === "mostly" ? "predominantly" : "only";
-  // Each colour as an instruction rather than as a bare code. "#5ccde9" on the
+  // Each color as an instruction rather than as a bare code. "#5ccde9" on the
   // end of a prompt is a string a model has to guess the meaning of; "using
-  // only this colour: #5ccde9" says what to do with it, and reads the same way
+  // only this color: #5ccde9" says what to do with it, and reads the same way
   // as the together form so switching between them changes the number of
   // prompts rather than their grammar.
   return (raw.match(HEX_COLOUR) ?? []).map(
-    (hex) => `using ${strict} this colour: ${hex}`
+    (hex) => `using ${strict} this color: ${hex}`
   );
 };
 
@@ -249,12 +249,12 @@ export const paletteTextOf = (
   config: Record<string, unknown>
 ): string | null => {
   const raw = typeof config.colors === "string" ? config.colors : "";
-  const colours = raw.match(HEX_COLOUR);
-  if (!colours || colours.length === 0) {
+  const colors = raw.match(HEX_COLOUR);
+  if (!colors || colors.length === 0) {
     return null;
   }
   const strict = config.strictness === "mostly" ? "predominantly" : "only";
-  return `using ${strict} these colours: ${colours.join(", ")}`;
+  return `using ${strict} these colors: ${colors.join(", ")}`;
 };
 
 export const outputTextOf = (
@@ -397,6 +397,14 @@ export const outputImageOf = (
   }
   if (item.kind !== "op") {
     return null;
+  }
+  // An element hands over its key image, which is stored on the node so the
+  // canvas can draw it and resolve it without asking the library. The run
+  // endpoint re-reads it from the elements table, which stays the authority on
+  // what is actually sent — see withElements in api/boards/[id]/run.ts.
+  if (item.nodeType === "element") {
+    const stored = item.config?.imageUrl;
+    return typeof stored === "string" && stored ? stored : null;
   }
   const images = pickImages(item.result).filter((image) => Boolean(image?.url));
   if (images.length === 0) {

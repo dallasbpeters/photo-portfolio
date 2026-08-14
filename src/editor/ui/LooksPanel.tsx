@@ -3,7 +3,7 @@ import { LOOK_FAMILIES, type Look, looksInFamily } from "../presets";
 import { EditorSlider } from "./EditorSlider";
 
 /**
- * The look strip: a family rail carrying each family's signature colour, the
+ * The look strip: a family rail carrying each family's signature color, the
  * eight looks inside the open family, then a strength slider.
  */
 export function LooksPanel({
@@ -31,7 +31,7 @@ export function LooksPanel({
 
   return (
     <div className="space-y-5 py-1">
-      {/* Family rail — the signature colour is the whole affordance. */}
+      {/* Family rail — the signature color is the whole affordance. */}
       <div className="flex gap-px bg-white/6">
         {LOOK_FAMILIES.map((f) => {
           const isOpen = f.id === family.id;

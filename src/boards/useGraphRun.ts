@@ -6,7 +6,12 @@ import {
   type GraphWire,
   topologicalOrder,
 } from "../../config/graph.js";
-import { boardsApi } from "../services/portfolioService";
+import { isRunnableNodeType } from "../../config/nodeTypes.js";
+import {
+  boardsApi,
+  type RunNodeFailure,
+  type RunNodeResponse,
+} from "../services/portfolioService";
 import type { BoardItem, BoardWire } from "../types";
 
 interface UseGraphRunArgs {
@@ -30,11 +35,125 @@ const toGraphWires = (wires: BoardWire[]): GraphWire[] => wires;
 const isAbort = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "AbortError";
 
+/** Where a batch run's failures and discovered size accumulate. */
+interface RunContext {
+  failed: string[];
+  total: number;
+}
+
+/**
+ * One variation of a batch, or null when it failed.
+ *
+ * A failure is remembered rather than thrown: each job is an independent paid
+ * generation, so a model stumbling on one should not sink the rest. The batch
+ * size travels with a failed first job — the only case the size is not already
+ * known — so the caller can keep going.
+ */
+const runOneVariation = async (
+  boardId: string,
+  itemId: string,
+  force: boolean,
+  variation: number,
+  context: RunContext,
+  signal?: AbortSignal
+): Promise<RunNodeResponse | null> => {
+  try {
+    return await boardsApi.runNode(boardId, itemId, {
+      force,
+      variation,
+      ...(signal ? { signal } : {}),
+    });
+  } catch (e) {
+    if (isAbort(e)) {
+      throw e;
+    }
+    context.failed.push(
+      e instanceof Error ? e.message : "This image failed to generate"
+    );
+    const count = (e as RunNodeFailure).variationCount;
+    if (typeof count === "number") {
+      context.total = count;
+    }
+    return null;
+  }
+};
+
+/**
+ * Runs a node's batch, variation by variation, until each job has settled.
+ *
+ * The newest completed image is shown while the next job runs, so a batch of
+ * eight visibly fills instead of looking hung for ten minutes. Failed jobs are
+ * remembered rather than stopping the run — each is an independent paid
+ * generation, and a flaky upstream model on one picture must not cost the rest.
+ */
+const runBatch = async (
+  boardId: string,
+  itemId: string,
+  force: boolean,
+  onPatch: (itemId: string, patch: Partial<BoardItem>) => void,
+  signal?: AbortSignal
+): Promise<{ failed: string[]; outcome: RunNodeResponse | null }> => {
+  const context: RunContext = { failed: [], total: 1 };
+  let outcome = await runOneVariation(
+    boardId,
+    itemId,
+    force,
+    0,
+    context,
+    signal
+  );
+  if (outcome) {
+    context.total = outcome.variationCount ?? 1;
+    reportSkipped(outcome.skippedVectors ?? 0);
+  }
+  if (outcome?.skipped !== true) {
+    for (let variation = 1; variation < context.total; variation += 1) {
+      if (signal?.aborted) {
+        break;
+      }
+      if (outcome) {
+        onPatch(itemId, { result: outcome.result });
+      }
+      // biome-ignore lint/performance/noAwaitInLoops: one generation per request is the whole point — see the note above
+      const next = await runOneVariation(
+        boardId,
+        itemId,
+        force,
+        variation,
+        context,
+        signal
+      );
+      if (next) {
+        outcome = next;
+      }
+    }
+  }
+  return { failed: context.failed, outcome };
+};
+
+/**
+ * Says out loud that a batch lost some jobs but kept the rest.
+ *
+ * The same rule as the skipped-vector count: a run that quietly lost a job
+ * looks like it worked, when a node with two of its four pictures is not a
+ * success.
+ */
+const reportBatchFailures = (failed: string[]): void => {
+  if (failed.length === 0) {
+    return;
+  }
+  toast.warning(
+    failed.length === 1
+      ? "One image in the batch failed — the rest came back."
+      : `${failed.length} images in the batch failed — the rest came back.`
+  );
+};
+
 interface StepArgs {
   doomed: Set<string>;
   graphWires: GraphWire[];
   id: string;
-  isOp: boolean;
+  isRunnable: boolean;
   onPatch: (itemId: string, patch: Partial<BoardItem>) => void;
   runOne: (itemId: string) => Promise<unknown>;
 }
@@ -50,11 +169,11 @@ const runStep = async ({
   doomed,
   graphWires,
   id,
-  isOp,
+  isRunnable,
   onPatch,
   runOne,
 }: StepArgs): Promise<boolean> => {
-  if (!isOp) {
+  if (!isRunnable) {
     return true;
   }
   if (doomed.has(id)) {
@@ -135,39 +254,30 @@ export function useGraphRun({
    * function's time budget. The first response reports how many there are, so
    * the count comes from the server rather than being recomputed here from
    * settings the server may have clamped.
+   *
+   * A failed variation does not stop the rest. These are independent paid
+   * generations, and an upstream model that stumbles on one job should not cost
+   * the other fifteen — a run of a frame full of images is exactly the case
+   * where one stubborn picture used to sink the whole batch. The failures are
+   * counted and reported when the run settles; the node is only marked failed
+   * when every job failed.
    */
   const runOne = useCallback(
     async (itemId: string, force: boolean, signal?: AbortSignal) => {
       onPatch(itemId, { runError: null, runState: "running" });
 
-      let variation = 0;
-      let total = 1;
-      let outcome = await boardsApi.runNode(boardId, itemId, {
+      const { failed, outcome } = await runBatch(
+        boardId,
+        itemId,
         force,
-        variation,
-        ...(signal ? { signal } : {}),
-      });
-      total = outcome.variationCount ?? 1;
+        onPatch,
+        signal
+      );
+      reportBatchFailures(failed);
 
-      reportSkipped(outcome.skippedVectors ?? 0);
-
-      // Nothing more to do when the whole node was skipped as unchanged —
-      // re-asking for each variation would spend money proving the same thing.
-      if (!outcome.skipped) {
-        for (variation = 1; variation < total; variation += 1) {
-          if (signal?.aborted) {
-            break;
-          }
-          // Shown as it fills rather than at the end, so a batch of eight is
-          // visibly progressing instead of looking hung for ten minutes.
-          onPatch(itemId, { result: outcome.result });
-          // biome-ignore lint/performance/noAwaitInLoops: one generation per request is the whole point — see the note above
-          outcome = await boardsApi.runNode(boardId, itemId, {
-            force,
-            variation,
-            ...(signal ? { signal } : {}),
-          });
-        }
+      // Nothing survived: the node is genuinely broken this run.
+      if (!outcome) {
+        throw new Error(failed[0] ?? "This node could not run");
       }
 
       onPatch(itemId, {
@@ -253,7 +363,16 @@ export function useGraphRun({
           doomed,
           graphWires,
           id,
-          isOp: byId.get(id)?.kind === "op",
+          // A source node — Prompt, Join, Iterate, Palette — holds a value
+          // rather than producing one, and the run endpoint rightly refuses to
+          // run one. Asking anyway was worse than pointless: the refusal came
+          // back as a failure, which marked a perfectly good Prompt node red
+          // *and* doomed everything it fed, so the one Generate node the board
+          // existed for was skipped without a request ever being sent. The
+          // board says which items can run, so ask it rather than paying a
+          // round trip to be told no. Frames and photographs have no node type
+          // at all, which is the same answer.
+          isRunnable: isRunnableNodeType(byId.get(id)?.nodeType),
           onPatch,
           runOne: (nodeId) => runOne(nodeId, false, controller.signal),
         });

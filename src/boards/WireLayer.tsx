@@ -70,7 +70,7 @@ export function WireLayer({
       // overflow-visible because an SVG clips at its own viewport: a wire's
       // control points reach half the horizontal distance beyond each end, so a
       // curve between items near the canvas edge was cut off at the boundary.
-      className="pointer-events-none absolute inset-0 overflow-visible"
+      className="pointer-events-none absolute inset-0 z-1000 overflow-visible"
       fill="none"
       height={CANVAS_HEIGHT}
       role={wires.length === 0 ? undefined : "list"}
@@ -108,6 +108,7 @@ export function WireLayer({
                   : "oklch(67.2% 0.22 241.99)"
               }
               strokeWidth={isHovered ? stroke * 1.5 : stroke}
+              style={{ zIndex: 1000 }}
             />
             {/* A 2px curve is nearly impossible to hit with a pointer and
                 hopeless with a thumb, so a wide invisible band carries the
@@ -123,7 +124,7 @@ export function WireLayer({
                 // never a Tailwind utility — it emits only -none and -auto — so
                 // this path silently inherited `none` from the SVG and no wire
                 // has ever received a pointer event.
-                style={{ pointerEvents: "stroke" }}
+                style={{ pointerEvents: "stroke", zIndex: 1000 }}
               />
             )}
             {isHovered && !readOnly ? (
@@ -140,7 +141,7 @@ export function WireLayer({
                 onPointerLeave={() => setHovered(null)}
                 role="button"
                 // Same reason as the hit path: the SVG above it is inert.
-                style={{ pointerEvents: "all" }}
+                style={{ pointerEvents: "all", zIndex: 1000 }}
               >
                 <title>Remove this connection</title>
                 <circle

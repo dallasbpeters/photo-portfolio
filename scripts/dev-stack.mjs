@@ -17,9 +17,12 @@ import { fileURLToPath } from "node:url";
 /** API port. Overridable so this can run alongside other local apps. */
 const PORT = Number(process.env.PORT) || 3006;
 
+/** The Affinity bridge, which the editor calls to open SVGs in the desktop app. */
+const BRIDGE_PORT = Number(process.env.AFFINITY_PORT) || 4123;
+
 // Only ports this stack owns — killing an arbitrary PORT the user set is the
 // point, but the Vite range is fixed by vercel dev's devCommand.
-const PORTS = [PORT, 5173, 5174, 5175];
+const PORTS = [PORT, BRIDGE_PORT, 5173, 5174, 5175];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const isWin = process.platform === "win32";
 const WHITESPACE = /\s+/;
@@ -75,9 +78,28 @@ const child = spawn(pnpm, ["exec", "vercel", "dev", "--listen", String(PORT)], {
   stdio: "inherit",
 });
 
+// The editor's "Open in Affinity" button reaches a local HTTP server, so it has
+// to come up with the rest of the stack. It is optional in spirit — the canvas
+// works without it — but harmless to always run, and a half-started stack is
+// worse than a process sitting on a port.
+const bridge = spawn(process.execPath, ["scripts/affinity-bridge.mjs"], {
+  cwd: root,
+  env: { ...process.env },
+  stdio: "inherit",
+});
+// A bridge crash must not take the app down with it; the editor just shows the
+// error the next time someone tries to open something.
+bridge.on("exit", (code, signal) => {
+  if (signal) {
+    return;
+  }
+  console.log(`\n[affinity-bridge] exited (code ${code})\n`);
+});
+
 child.on("exit", (code, signal) => {
   if (signal) {
     process.kill(process.pid, signal);
   }
+  bridge.kill("SIGTERM");
   process.exit(code ?? 1);
 });

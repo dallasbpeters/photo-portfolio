@@ -22,7 +22,7 @@ import { ICON_STYLES } from "./iconStyles.js";
  * What can travel down a wire.
  *
  * Two is enough for the nodes that exist. Adding a third is an entry here plus
- * a colour on the handle — the wire model itself does not change.
+ * a color on the handle — the wire model itself does not change.
  */
 export type PortType = "image" | "text";
 
@@ -70,6 +70,12 @@ export type SettingDef =
       options: readonly string[];
     }
   | {
+      default: string;
+      key: string;
+      kind: "model";
+      label: string;
+    }
+  | {
       default: number;
       key: string;
       kind: "number";
@@ -94,6 +100,7 @@ export type NodeTypeId =
   | "batch"
   | "composite"
   | "describe"
+  | "element"
   | "generate"
   | "icon"
   | "iterate"
@@ -209,209 +216,15 @@ export interface FalModelDef {
  *
  * "auto" is the default and reproduces the behaviour api/_lib/fal.ts has always
  * had: an image wired in means the edit model, no image means text-to-image.
- * That stays the sensible choice, so it stays first.
  *
- * This is an allowlist, not a free-text field, for the same reason
- * config/iconStyles.ts is one: the value is handed to a third party, and a
- * typo'd model id fails *after* the call has been made and billed.
- *
- * ADDING A MODEL: add one entry here with its exact fal id. Nothing else
- * changes — the node offers it, the API accepts it, an unknown value falls back
- * to "auto" rather than reaching fal, and `vector: true` makes the result
- * describe itself correctly.
+ * These used to be a constant here, an allowlist rather than a free-text field,
+ * for the same reason config/iconStyles.ts is one: the value is handed to a
+ * third party, and a typo'd model id fails *after* the call has been made and
+ * billed. The list now lives in the `models` table so it can be edited from the
+ * admin without a code change; api/_lib/models.ts loads it per request. The
+ * shape helpers below take the loaded list, so the run path checks the exact
+ * ids that are actually offered.
  */
-export const FAL_MODELS = [
-  {
-    id: "auto",
-    input: "prompt-or-image",
-    label: "Auto",
-    vector: false,
-  },
-  {
-    id: "fal-ai/nano-banana-pro",
-    input: "prompt",
-    label: "Nano Banana Pro",
-    vector: false,
-  },
-  {
-    id: "fal-ai/nano-banana/edit",
-    // An edit model, so an image is required rather than optional. Declared
-    // "prompt-or-image" it accepted a run with nothing wired, sent a body with
-    // no image at all, and fal answered "Field required" — after billing. The
-    // node now refuses before spending anything.
-    imageParam: "image_urls",
-    input: "prompt-and-image",
-    label: "Nano Banana Edit",
-    vector: false,
-  },
-  {
-    id: "fal-ai/recraft/v4.1/text-to-vector",
-    input: "prompt",
-    label: "Recraft v4.1 · Vector",
-    vector: true,
-  },
-  {
-    // The one model that takes a colour palette as a parameter rather than as
-    // a request buried in the prompt — see PALETTE.
-    id: "fal-ai/ideogram/v3",
-    input: "prompt-or-image",
-    label: "Ideogram v3 · Palette",
-    vector: false,
-  },
-  {
-    id: "ideogram/v4/instant",
-    input: "prompt",
-    label: "Ideogram v4 Instant",
-    vector: false,
-  },
-  {
-    // Verified against fal's schema: prompt and image_url are both required,
-    // and it takes image_url rather than the image_urls array the nano-banana
-    // edit endpoint wants.
-    id: "ideogram/v4/image-to-image",
-    input: "prompt-and-image",
-    label: "Ideogram v4 Image-to-Image",
-    vector: false,
-  },
-  {
-    id: "fal-ai/recraft/v4/pro/text-to-vector",
-    input: "prompt",
-    label: "Recraft v4 Pro · Vector",
-    vector: true,
-  },
-  {
-    /*
-     * Puts an existing picture into a scene: a sticker on a laptop lid, a mark
-     * on a shop front, a card in someone's hand. It edits by instruction and
-     * keeps the artwork faithful, which is what separates a mockup from
-     * generating a fresh image that merely resembles yours.
-     *
-     * Both required — nothing to place without a picture, nowhere to put it
-     * without a description.
-     */
-    id: "fal-ai/flux-pro/kontext",
-    input: "prompt-and-image",
-    label: "Mockup · place in a scene",
-    vector: false,
-  },
-  {
-    // The same, with more care taken over the result. Slower and dearer, for
-    // when the mockup is the deliverable rather than a look at an idea.
-    id: "fal-ai/flux-pro/kontext/max",
-    input: "prompt-and-image",
-    label: "Mockup · place in a scene (max)",
-    vector: false,
-  },
-  {
-    // Traces an existing image into vector art rather than inventing one, so it
-    // is the only model here that needs an image and has no use for a prompt.
-    id: "fal-ai/recraft/vectorize",
-    input: "image",
-    label: "Recraft · Vectorize",
-    vector: true,
-  },
-  {
-    // Cuts the subject out and returns it on transparency. Like the vectoriser
-    // it takes an image and has no use for a prompt — the "image" shape is what
-    // stops the node asking for one and what refuses the run before it is
-    // billed when nothing is wired in.
-    //
-    // The result is a PNG with a real alpha channel, which survives storage
-    // because persistGenerated sniffs the bytes rather than trusting the
-    // header — an RGBA PNG filed as .jpg would be flattened onto black.
-    id: "fal-ai/birefnet/v2",
-    input: "image",
-    label: "Remove background",
-    vector: false,
-  },
-  {
-    // The cheap, fast one. Noticeably rougher on hair and thin edges, which is
-    // exactly the case the model above is worth paying for — but for a sticker
-    // with a hard outline the difference does not show.
-    id: "fal-ai/imageutils/rembg",
-    input: "image",
-    label: "Remove background · fast",
-    vector: false,
-  },
-  {
-    id: "lora/rolemodel-style",
-    input: "prompt-or-image",
-    label: "RoleModel style",
-    lora: {
-      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmstyle-v1.safetensors",
-      scale: 1,
-      trigger: "rmstyle",
-    },
-    vector: false,
-  },
-  {
-    id: "lora/rolemodel-design",
-    input: "prompt-or-image",
-    label: "RoleModel design",
-    lora: {
-      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/boards/loras/rmdesign-v1.safetensors",
-      scale: 1,
-      trigger: "rmdesign",
-    },
-    vector: false,
-  },
-  {
-    id: "lora/text-poster",
-    input: "prompt-or-image",
-    label: "Typography poster",
-    lora: {
-      path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Text-Poster/resolve/main/FLUX-dev-lora-Text-Poster.safetensors",
-      // The card recommends 0.8-1.0; the lower end leaves room for the prompt.
-      scale: 0.9,
-      trigger: "text poster",
-    },
-    vector: false,
-  },
-  {
-    id: "lora/logo-design",
-    input: "prompt-or-image",
-    label: "Logo / mark",
-    lora: {
-      path: "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-Logo-Design/resolve/main/FLUX-dev-lora-Logo-Design.safetensors",
-      scale: 0.8,
-      trigger: "wablogo, logo, Minimalist",
-    },
-    vector: false,
-  },
-  {
-    id: "lora/telegram-sticker",
-    input: "prompt-or-image",
-    label: "Sticker (Telegram)",
-    lora: {
-      // Ours, so it lives in blob storage rather than on Hugging Face. Trained
-      // on 627 images at flux-1-dev/lora — see scripts/upload-lora.ts for how
-      // the URL is minted, and re-run it to replace the weights after a
-      // retrain without editing this line.
-      path: "https://ftxhendy6jwk0sx5.public.blob.vercel-storage.com/loras/telegram-sticker-flux.safetensors",
-      scale: 0.9,
-      // Every one of the 627 training images carried this tag, along with
-      // "sticker art" and a white outline. The bare token is the style.
-      trigger: "telesticker, sticker art, white outline",
-    },
-    vector: false,
-  },
-  {
-    id: "lora/bubblegum-sticker",
-    input: "prompt-or-image",
-    label: "Bubblegum sticker",
-    lora: {
-      // Trained on Krea 2, so it runs there. Also about twenty times faster
-      // than the Flux pair, which is the whole point of the turbo endpoint.
-      endpoint: "fal-ai/krea-2/turbo",
-      imageEndpoint: "fal-ai/krea-2/turbo/image-to-image",
-      path: "https://huggingface.co/ilkerzgi/krea-2-bubblegum-pop-sticker-lora/resolve/main/bubblegum-pop-sticker.safetensors",
-      scale: 0.9,
-      trigger: "bubblegum pop sticker style",
-    },
-    vector: false,
-  },
-] as const satisfies readonly FalModelDef[];
-
 /** The fal endpoint a LoRA style runs on unless it names its own. */
 export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
 
@@ -424,8 +237,10 @@ export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
  */
 export const FLUX_LORA_IMAGE_ENDPOINT = "fal-ai/flux-lora/image-to-image";
 
-export const falModelLora = (value: unknown): FalLora | null =>
-  falModelFor(value)?.lora ?? null;
+export const falModelLora = (
+  models: readonly FalModelDef[],
+  value: unknown
+): FalLora | null => falModelFor(models, value)?.lora ?? null;
 
 /** Where a style's weights actually load, with or without a source image. */
 export const falLoraEndpoint = (lora: FalLora, hasImage: boolean): string => {
@@ -453,8 +268,11 @@ export const FLUX_LORA_INPAINT_ENDPOINT = "fal-ai/flux-lora/inpainting";
  * endpoint would be ignored silently and billed in full, so the run is refused
  * instead — see maskRefusal in the run endpoint.
  */
-export const falModelMasks = (value: unknown): boolean => {
-  const model = falModelFor(value);
+export const falModelMasks = (
+  models: readonly FalModelDef[],
+  value: unknown
+): boolean => {
+  const model = falModelFor(models, value);
   if (!model) {
     return false;
   }
@@ -465,32 +283,35 @@ export const falModelMasks = (value: unknown): boolean => {
   return model.id === "auto" || model.id.startsWith("fal-ai/flux");
 };
 
-export const FAL_MODEL_IDS: readonly string[] = FAL_MODELS.map(
-  (model) => model.id
-);
+/** Whether a chosen model is on the list at all. Unknown ids are not. */
+export const isFalModel = (
+  models: readonly FalModelDef[],
+  value: unknown
+): value is string => falModelFor(models, value) !== null;
 
-export const isFalModel = (value: unknown): value is string =>
-  typeof value === "string" && FAL_MODEL_IDS.includes(value);
-
-export const falModelFor = (value: unknown): FalModelDef | null =>
-  FAL_MODELS.find((model) => model.id === value) ?? null;
+export const falModelFor = (
+  models: readonly FalModelDef[],
+  value: unknown
+): FalModelDef | null => models.find((model) => model.id === value) ?? null;
 
 /** Whether a chosen model returns vector art. Unknown ids are not vector. */
-export const isVectorModel = (value: unknown): boolean =>
-  falModelFor(value)?.vector ?? false;
+export const isVectorModel = (
+  models: readonly FalModelDef[],
+  value: unknown
+): boolean => falModelFor(models, value)?.vector ?? false;
 
 /** What a chosen model consumes; unknown ids behave like "auto". */
-export const falModelInput = (value: unknown): FalModelInput =>
-  falModelFor(value)?.input ?? "prompt-or-image";
+export const falModelInput = (
+  models: readonly FalModelDef[],
+  value: unknown
+): FalModelInput => falModelFor(models, value)?.input ?? "prompt-or-image";
 
 /** What to call the source image for this model. See FalModelDef.imageParam. */
-export const falImageParam = (value: unknown): "image_url" | "image_urls" =>
-  falModelFor(value)?.imageParam ?? "image_url";
-
-/** Labels for the node's model picker, keyed by id. */
-export const FAL_MODEL_LABELS: Record<string, string> = Object.fromEntries(
-  FAL_MODELS.map((model) => [model.id, model.label])
-);
+export const falImageParam = (
+  models: readonly FalModelDef[],
+  value: unknown
+): "image_url" | "image_urls" =>
+  falModelFor(models, value)?.imageParam ?? "image_url";
 
 export const MAX_BATCH_COUNT = 8;
 
@@ -512,7 +333,7 @@ const GENERATE: NodeType = {
     {
       // Many, and joined rather than fanned out. Each wire contributes a part
       // of every prompt — an Iterate node supplying the subject and a Palette
-      // node supplying the colours are both wanted at once, and with a single
+      // node supplying the colors are both wanted at once, and with a single
       // wire allowed the second silently replaced the first.
       //
       // A wire carrying several values still makes several runs; the parts are
@@ -537,11 +358,13 @@ const GENERATE: NodeType = {
       placeholder: "Describe the image…",
     },
     {
-      default: FAL_MODELS[0].id,
+      // The choices come from the `models` table, not from this registry: they
+      // are data, edited in the admin. The registry declares the control, and
+      // the control asks the ModelsProvider for what to offer.
+      default: "auto",
       key: "model",
-      kind: "select",
+      kind: "model",
       label: "Model",
-      options: FAL_MODEL_IDS,
     },
     {
       // Variations per input. With three images wired in and a count of two,
@@ -621,6 +444,32 @@ const PROMPT: NodeType = {
 };
 
 /**
+ * A style from the library, on the board.
+ *
+ * An element is a handful of references that share a look, the words for what
+ * they share, and a name — kept outside any board so it outlives the one it was
+ * found on. This node is how you spend it: it hands over its key image, so it
+ * wires into a Generate node exactly as a picture does, and the words ride the
+ * same wire into the prompt. See elementTextOf in api/boards/[id]/run.ts.
+ *
+ * One wire, one job, one charge. The other pictures in the element are what it
+ * is made of and what you recognise it by in the panel; they are deliberately
+ * not on the canvas, which is the entire reason an element exists rather than
+ * six pinned references.
+ *
+ * No capability, so it never runs and never costs anything. No settings either:
+ * a name and a picture that could be typed over here would be a second copy of
+ * the library, free to disagree with it.
+ */
+const ELEMENT: NodeType = {
+  id: "element",
+  inputs: [],
+  label: "Element",
+  outputs: [{ key: OUTPUT_PORT_KEY, label: "Image", type: "image" }],
+  settings: [],
+};
+
+/**
  * Looks at a picture and writes down how it looks.
  *
  * The output is a *prompt*, not a caption: comma-separated phrases about
@@ -651,7 +500,7 @@ const DESCRIBE: NodeType = {
     },
     {
       // Optional, and the reason this is a node rather than a button: wire a
-      // Prompt node in to say what you want noticed — "the colour palette",
+      // Prompt node in to say what you want noticed — "the color palette",
       // "how the type is set" — instead of accepting one fixed reading.
       arity: "one",
       key: "prompt",
@@ -675,7 +524,7 @@ const DESCRIBE: NodeType = {
       kind: "text",
       label: "What to look for",
       maxLength: GENERATE_PROMPT_MAX,
-      placeholder: "the colour palette and how the type is set…",
+      placeholder: "the color palette and how the type is set…",
     },
   ],
 };
@@ -904,19 +753,19 @@ const ITERATE: NodeType = {
   ],
 };
 
-/** Hex colours, however they were separated when written down. */
+/** Hex colors, however they were separated when written down. */
 export const HEX_COLOUR = /#[0-9a-f]{6}\b/gi;
 
 /**
- * The colours a generation is allowed to use.
+ * The colors a generation is allowed to use.
  *
  * Emits a line of text naming them, which is what makes one node serve two very
  * different mechanisms. Most models can only be *asked* for a palette, and a
  * sentence naming the hex codes is the best that can be done. Ideogram v3 takes
- * a real colour palette as a parameter, so for that model the same line is read
+ * a real color palette as a parameter, so for that model the same line is read
  * back into an actual constraint — see paletteFrom in api/_lib/fal.ts.
  *
- * Writing the colours into the prompt rather than inventing a second kind of
+ * Writing the colors into the prompt rather than inventing a second kind of
  * wire is what keeps that possible: one text output, understood loosely by
  * everything and precisely by what can.
  */
@@ -929,7 +778,7 @@ const PALETTE: NodeType = {
     {
       key: "colors",
       kind: "text",
-      label: "Colours",
+      label: "Colors",
       maxLength: 400,
       placeholder: "#0a2540, #f5f0e8, #c8102e",
     },
@@ -946,9 +795,9 @@ const PALETTE: NodeType = {
       /*
        * Whether the palette is one constraint or a list to work through.
        *
-       * "together" names every colour in a single line, which is a restriction
-       * on one image. "one at a time" emits each colour separately, so an
-       * Iterate node can fill a slot with them and make one image per colour.
+       * "together" names every color in a single line, which is a restriction
+       * on one image. "one at a time" emits each color separately, so an
+       * Iterate node can fill a slot with them and make one image per color.
        * The same swatches, meaning two quite different things.
        */
       default: "together",
@@ -964,6 +813,7 @@ export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   batch: BATCH,
   composite: COMPOSITE,
   describe: DESCRIBE,
+  element: ELEMENT,
   generate: GENERATE,
   icon: ICON,
   iterate: ITERATE,
@@ -976,6 +826,7 @@ export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
   value === "batch" ||
   value === "composite" ||
   value === "describe" ||
+  value === "element" ||
   value === "generate" ||
   value === "icon" ||
   value === "iterate" ||

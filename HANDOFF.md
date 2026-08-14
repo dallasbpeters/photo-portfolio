@@ -1,8 +1,7 @@
 # Handoff — board/node work
 
-Written at commit `79106e1`. Working tree clean, `main` in sync with origin.
-Everything below is on `main`; PR #4 was merged earlier and the 18 commits since
-went straight to `main`.
+Originally written at commit `79106e1`. The working tree currently carries the
+models catalog and the Open-in-Affinity bridge below, uncommitted on `main`.
 
 ---
 
@@ -33,11 +32,13 @@ Chrome MCP: navigate to `http://localhost:3006`, then `javascript_tool` to hit
 directly. Fetch a module from the dev server (`/src/boards/Foo.tsx`) to confirm
 what the browser will actually run.
 
-**3. `refuse()` does not write `run_error`.** In `api/boards/[id]/run.ts` every
-pre-flight refusal returns 422 without touching the database, so refusals are
-invisible in `board_items.run_error`. Querying for errors and finding none does
-**not** mean the board is healthy. **Fixing this is the highest-value next
-change** — it is why diagnosing anything took three rounds.
+**3. `refuse()` now writes `run_error`.** *(Fixed.)* In `api/boards/[id]/run.ts`
+a refusal is built by `refuse()`, which carries the reason to the handler and
+writes it to `board_items.run_error` before replying; `reply()` is the same
+thing for the two cases with nothing to record — a 404 for an id that is not a
+node of ours, and the 200 that says a stored result is still current. So
+querying `run_error` now *does* tell you which nodes cannot run. It used to
+tell you nothing, which is why diagnosing anything took three rounds.
 
 Also: string-replacement edits silently no-op when the anchor does not match
 (comments between `{` and `id:` bit me twice). Assert, then verify by asking the
@@ -81,38 +82,61 @@ returned base-style images.
 **Local tooling** — `/Applications/Vectorize.app` and `~/vectorize.sh` batch
 Recraft-vectorise a folder (5 images / 17s). Key in `~/.fal_key`.
 
+**Board light/dark theme** — the editor now has a palette of its own
+(`--board-ink/surface/panel/ground` in `src/index.css`, one set in `:root` and
+one in `.dark`), a ThemeToggle in the board header, and an inline pre-paint
+script in `index.html` so the right theme is up before React. A *published*
+board is pinned dark via `.board-fixed` — it is front end, part of the branded
+site, not a surface being worked on. The elements UI is painted with these
+tokens. (In the same uncommitted change set as Elements.)
+
 ---
 
-## Next task: Elements
+## Elements — built and verified
 
 Dallas's spec, verbatim in substance: *"the analysis of images and the images
 themselves. Build up a library of styles for reuse. Needs a cover or
 representative, and a side panel for selecting just like site images."*
 
-**Done:** `db/patches/016_elements.sql`, migrated. Columns: `name`,
-`description` (the analysis text — this is the substance, it travels into
-prompts), `cover_url` (separate from the list on purpose, so reordering images
-does not restyle the library), `image_urls` JSONB array, `created_by`.
+An element is a named handful of pictures that share a look, the words for what
+they share (an Analyse node's reading), and a cover — kept outside any board so
+it outlives the board that produced it.
 
-**Not done — all of it is visible-half work:**
+- **API.** `api/elements/index.ts` (GET list, POST create) and
+  `api/elements/[id].ts` (PATCH, DELETE). Admin-only, mirroring the board list.
+  A create copies every picture into our own blob storage first (`adoptImages`
+  in `api/_lib/elements.ts`), because an element outlives its board and cannot
+  keep pointing at a Pinterest pin. One picture failing does not fail the
+  element — the response carries a `dropped` count. Limits live in
+  `config/elements.ts` (24 images, 120 name, 2000 description) so the panel and
+  the endpoint can never disagree.
+- **Panel.** `ElementsTab` in `BoardInsertPanel.tsx` (the first tab): a grid of
+  covers, click to place, two-press delete. Loads only when opened.
+- **Save as Element.** Right-click a selection → "Save N as an element".
+  `ElementModal.tsx` names it, picks the key image (the cover), and takes the
+  words from a Describe node in the selection if there is one. The endpoint
+  keeps the first 24 starting with the key image, so a frame-sized selection is
+  told what will be left out *before* saving.
+- **Applying.** An `element` node (no capability, never runs). It holds the
+  library id plus a copy of the cover, name and description so the canvas can
+  draw it without a request; `withElements` in `api/boards/[id]/run.ts` resolves
+  the id against the library at run time, so correcting a style in one place
+  re-styles every board using it. Its key image feeds a Generate node's image
+  input (one wire, one job); its words ride the same wire into the prompt
+  (`elementTextOf` + `withElementWords`). Analyse refuses element words, since
+  handing it the answer defeats the question. A node placed for an element
+  deleted from the library still shows and still runs from its stored copies.
 
-1. `api/elements/index.ts` (GET list, POST create) and `api/elements/[id].ts`
-   (PATCH, DELETE). Mirror `api/boards/index.ts` for auth and shape.
-2. `boardsApi`-style client methods in `src/services/portfolioService.ts`.
-3. A tab in `src/components/admin/BoardInsertPanel.tsx` — the `TABS` array
-   around line 70 is the pattern. Grid of covers, click to apply.
-4. **Save as Element** from a selection. The canvas right-click menu is
-   `src/boards/CanvasMenu.tsx`; it already carries the selection.
-5. Applying one: its `image_urls` into a Generate node's image input and its
-   `description` into the prompt. Decide whether that is a wire or a node
-   setting — a node setting avoids putting the pictures on the canvas, which is
-   the whole point of an element.
+Verified: `scripts/_probe.ts` exercises the element → generate wiring through the
+real run endpoint (cover flows to the image input, words to the prompt, refusals
+recorded to `run_error`); a full CRUD round-trip through `api/elements` adopted
+pictures into blob storage, listed, patched and deleted them. All three gates
+pass. One element ("Keycap stickers") exists in the library.
 
 ---
 
 ## Known debt
 
-- **`refuse()` does not write `run_error`** — see above. Do this first.
 - Rotate the Google API key that appeared in a terminal transcript, and add an
   HTTP-referrer restriction.
 - `GOOGLE_API_KEY` and `BLOB_READ_WRITE_TOKEN` are not linked to Vercel's
@@ -135,6 +159,11 @@ does not restyle the library), `image_urls` JSONB array, `created_by`.
   three or a debounced autosave will erase a paid generation.
 - **fal bills before it validates**, hence the declared input shape per model
   and the pre-flight refusals.
+- **A board run must not ask a source node to run.** Prompt, Join, Iterate and
+  Palette are `op` items with no capability. `useGraphRun` used to POST for them
+  anyway; the 422 came back as a failure, which marked the node red *and*
+  doomed every node it fed, so the Generate node the board existed for was
+  skipped without a request being sent. `isRunnableNodeType` now gates the step.
 - **Batches are all-or-nothing traps.** Vectors and unfetchable URLs are now
   dropped from a batch and reported via `skippedVectors`; they used to fail the
   whole run. Watch for a third instance of this pattern.

@@ -52,7 +52,11 @@ export function BoardViewPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    // `board-fixed` pins the canvas to the dark board palette. A published board
+    // is front end: it belongs to the branded site, so a visitor sees it the way
+    // it was shared whatever their machine prefers. The light/dark switch is for
+    // the editor, which is a surface you work on rather than a page you are sent.
+    <div className="board-fixed flex h-screen flex-col overflow-hidden bg-background">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-white/10 border-b px-4 py-3">
         <div className="min-w-0">
           <h1 className="truncate font-light text-sm text-white/90 uppercase tracking-[0.2em]">

@@ -2,7 +2,7 @@
  * Marks made by hand on the board: freehand strokes and simple shapes.
  *
  * All one item kind. A pen stroke, a rectangle and an ellipse differ in how
- * they are drawn and what they store, but each is a coloured mark occupying a
+ * they are drawn and what they store, but each is a colored mark occupying a
  * box — so geometry lives in the item's own x/y/width/height and a drawing is
  * dragged, resized, snapped, framed and z-ordered by the code that already does
  * that for a photograph. Nothing about drawing had to be taught to the canvas.
@@ -57,10 +57,10 @@ export const NO_FILL = "#00000000";
 export const DEFAULT_STROKE_WIDTH = 4;
 
 /**
- * True when a colour is fully transparent, and so means "no paint".
+ * True when a color is fully transparent, and so means "no paint".
  *
  * Tested on the alpha pair specifically. The obvious shortcut — does the string
- * end in "00" — is wrong for every colour with a zero blue channel, so pure red
+ * end in "00" — is wrong for every color with a zero blue channel, so pure red
  * counted as transparent and a red-filled shape came out hollow.
  */
 export const isTransparent = (color: string | null | undefined): boolean =>

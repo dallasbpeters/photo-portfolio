@@ -9,11 +9,7 @@ import {
   StopIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import {
-  FAL_MODEL_LABELS,
-  nodeTypeFor,
-  type SettingDef,
-} from "../../config/nodeTypes.js";
+import { nodeTypeFor, type SettingDef } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
 import { downloadImage } from "./downloadImage";
 import {
@@ -22,6 +18,7 @@ import {
   pickImages,
   selectedIndex,
 } from "./itemOutput";
+import { useModels } from "./ModelsContext";
 import { PaletteSwatches } from "./PaletteSwatches";
 
 interface OpNodeViewProps {
@@ -53,9 +50,9 @@ const STATE_LABEL: Record<string, string> = {
 
 const STATE_CLASS: Record<string, string> = {
   failed: "text-red-300",
-  idle: "text-white/40",
+  idle: "text-board-ink/40",
   running: "text-sky-300",
-  skipped: "text-white/40",
+  skipped: "text-board-ink/40",
   succeeded: "text-emerald-300",
 };
 
@@ -81,10 +78,10 @@ function SettingField({
 }: SettingFieldProps) {
   if (setting.kind === "number") {
     return (
-      <label className="flex items-center justify-between gap-2 text-[10px] text-white/50 uppercase tracking-[0.14em]">
+      <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
         {setting.label}
         <input
-          className="w-16 rounded border border-white/10 bg-black/40 px-2 py-1 text-right text-[12px] text-white tabular-nums outline-none focus:border-white/40 disabled:opacity-60"
+          className="w-16 rounded border border-board-ink/10 bg-board-surface/40 px-2 py-1 text-right text-[12px] text-board-ink tabular-nums outline-none focus:border-board-ink/40 disabled:opacity-60"
           disabled={readOnly}
           max={setting.max}
           min={setting.min}
@@ -97,10 +94,14 @@ function SettingField({
     );
   }
 
+  if (setting.kind === "model") {
+    return <ModelSetting {...{ onChange, readOnly, setting, value }} />;
+  }
+
   if (setting.kind === "select") {
     return (
       <div className="space-y-1">
-        <p className="text-[10px] text-white/40 uppercase tracking-[0.14em]">
+        <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
           {setting.label}
         </p>
         <div className="flex flex-wrap gap-1">
@@ -108,8 +109,8 @@ function SettingField({
             <button
               className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
                 (value || setting.default) === option
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white/80"
+                  ? "bg-board-ink/10 text-board-ink"
+                  : "text-board-ink/40 hover:text-board-ink/80"
               }`}
               disabled={readOnly}
               key={option}
@@ -117,9 +118,7 @@ function SettingField({
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
             >
-              {/* Model ids are namespaced and long; the vendor prefix is the
-                  same on all of them and only costs width on the node. */}
-              {FAL_MODEL_LABELS[option] ?? option}
+              {option}
             </button>
           ))}
         </div>
@@ -133,11 +132,11 @@ function SettingField({
     // unlabelled boxes are a guessing game — which is exactly how a list ended
     // up in the template field.
     <label className="block space-y-1">
-      <span className="text-[10px] text-white/40 uppercase tracking-[0.14em]">
+      <span className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
         {setting.label}
       </span>
       <textarea
-        className="max-h-96 min-h-16 w-full resize-y rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white leading-relaxed outline-none focus:border-white/40 disabled:opacity-60"
+        className="max-h-96 min-h-16 w-full resize-y rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/40 disabled:opacity-60"
         disabled={readOnly}
         maxLength={setting.maxLength}
         onChange={(e) => onChange(e.target.value)}
@@ -149,6 +148,56 @@ function SettingField({
         value={value}
       />
     </label>
+  );
+}
+
+/**
+ * The model setting: a select whose choices are the `models` table rather than
+ * a static option list.
+ *
+ * The registry still owns the control (the node type says "model" and here it
+ * is); only the options are data, which is the whole point of moving the list
+ * out of code.
+ */
+function ModelSetting({
+  onChange,
+  readOnly,
+  setting,
+  value,
+}: SettingFieldProps & { setting: Extract<SettingDef, { kind: "model" }> }) {
+  const { models } = useModels();
+  // While the list is loading — or on a visitor's read-only board, where the
+  // fetch is refused — the node still has to say what it is set to, even if
+  // that means the raw id for a label.
+  const options =
+    models.length > 0
+      ? models
+      : [{ id: value || setting.default, label: value || setting.default }];
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
+        {setting.label}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {options.map((model) => (
+          <button
+            className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
+              (value || setting.default) === model.id
+                ? "bg-board-ink/10 text-board-ink"
+                : "text-board-ink/40 hover:text-board-ink/80"
+            }`}
+            disabled={readOnly}
+            key={model.id}
+            onClick={() => onChange(model.id)}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={model.id}
+            type="button"
+          >
+            {model.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -208,7 +257,7 @@ function ResultImages({
           {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: dragstart is the browser's own drag affordance on an image, not a bespoke click handler — the picture is also reachable via the download button beside it */}
           <img
             alt={hero.description ?? "Result"}
-            className="h-auto w-full cursor-grab rounded border border-white/10 object-contain"
+            className="h-auto w-full cursor-grab rounded border border-board-ink/10 object-contain"
             decoding="async"
             draggable
             height={hero.height ?? undefined}
@@ -223,7 +272,7 @@ function ResultImages({
               version being looked at. */}
           <button
             aria-label="Download this version"
-            className="absolute top-1 right-1 rounded bg-black/70 p-1.5 text-white/70 opacity-0 backdrop-blur transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+            className="absolute top-1 right-1 rounded bg-board-surface/70 p-1.5 text-board-ink/70 opacity-0 backdrop-blur transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100"
             onClick={() => {
               void downloadImage(hero.url, hero.description ?? "generated");
             }}
@@ -242,7 +291,7 @@ function ResultImages({
       {images.length > 0 ? (
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[9px] text-white/30 uppercase tracking-[0.18em]">
+            <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
               {images.length === 1 ? "1 version" : `${images.length} versions`}
             </p>
             {/* Getting the whole set onto the board at once: a node's gallery
@@ -250,7 +299,7 @@ function ResultImages({
                 want them out where they can be arranged. */}
             {onSendAll ? (
               <button
-                className="text-[9px] text-white/40 uppercase tracking-[0.14em] hover:text-white"
+                className="text-[9px] text-board-ink/40 uppercase tracking-[0.14em] hover:text-board-ink"
                 onClick={onSendAll}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -268,7 +317,7 @@ function ResultImages({
                   className={`block overflow-hidden rounded border transition-colors ${
                     index === selected
                       ? "border-sky-300"
-                      : "border-white/10 hover:border-white/40"
+                      : "border-board-ink/10 hover:border-board-ink/40"
                   }`}
                   onClick={() => onSelect(index)}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -289,7 +338,7 @@ function ResultImages({
                 {onRemove ? (
                   <button
                     aria-label={`Remove version ${index + 1}`}
-                    className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-black/90 text-white/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/v:opacity-100"
+                    className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-board-surface/90 text-board-ink/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/v:opacity-100"
                     onClick={() => onRemove(index)}
                     onPointerDown={(e) => e.stopPropagation()}
                     type="button"
@@ -350,7 +399,7 @@ function PublishedResult({
 }) {
   if (text) {
     return (
-      <p className="whitespace-pre-wrap text-[12px] text-white/80 leading-relaxed">
+      <p className="whitespace-pre-wrap text-[12px] text-board-ink/80 leading-relaxed">
         {text}
       </p>
     );
@@ -399,9 +448,9 @@ export function BatchList({
   const restore = () => onConfigChange?.({ ...config, excluded: [] });
 
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 bg-neutral-900 p-2.5">
-      <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-white/70">
-        <span className="font-medium text-white tabular-nums">
+    <div className="flex h-full w-full flex-col gap-1.5 bg-board-panel p-2.5">
+      <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-board-ink/70">
+        <span className="font-medium text-board-ink tabular-nums">
           {images.length}
         </span>
         <span>{images.length === 1 ? "image" : "images"}</span>
@@ -421,7 +470,7 @@ export function BatchList({
       </p>
 
       {images.length === 0 ? (
-        <p className="text-[11px] text-white/35 leading-relaxed">
+        <p className="text-[11px] text-board-ink/35 leading-relaxed">
           Wire a frame in, or images directly. Everything here is sent onward
           one at a time.
         </p>
@@ -429,7 +478,7 @@ export function BatchList({
         <div className="grid grow auto-rows-min grid-cols-4 gap-1 overflow-y-auto">
           {images.map((url, index) => (
             <div
-              className="group/b relative aspect-square overflow-hidden rounded border border-white/10 bg-black/40"
+              className="group/b relative aspect-square overflow-hidden rounded border border-board-ink/10 bg-board-surface/40"
               // Position is the identity: the same picture may legitimately
               // appear twice in a batch.
               // biome-ignore lint/suspicious/noArrayIndexKey: a batch entry has no identity but its place
@@ -444,13 +493,13 @@ export function BatchList({
                 src={url}
                 width={64}
               />
-              <span className="absolute bottom-0 left-0 bg-black/70 px-1 text-[8px] text-white/70 tabular-nums">
+              <span className="absolute bottom-0 left-0 bg-board-surface/70 px-1 text-[8px] text-board-ink/70 tabular-nums">
                 {index + 1}
               </span>
               {readOnly ? null : (
                 <button
                   aria-label={`Remove image ${index + 1} from the batch`}
-                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-black/80 text-white/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/b:opacity-100"
+                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-board-surface/80 text-board-ink/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/b:opacity-100"
                   onClick={() => strike(url)}
                   onPointerDown={(e) => e.stopPropagation()}
                   type="button"
@@ -508,7 +557,7 @@ export function OpNodeView({
 
   if (!type) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-neutral-900 p-3 text-[11px] text-red-300">
+      <div className="flex h-full w-full items-center justify-center bg-board-panel p-3 text-[11px] text-red-300">
         Unknown node type
       </div>
     );
@@ -522,9 +571,9 @@ export function OpNodeView({
     <>
       {isRunning ? <RunningGlow /> : null}
 
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-neutral-900/95">
-        <header className="flex shrink-0 items-center justify-between gap-2 border-white/10 border-b px-2 py-1">
-          <span className="flex items-center gap-1 text-[10px] text-white/70 uppercase tracking-[0.18em]">
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-board-panel/95">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-2 py-1">
+          <span className="flex items-center gap-1 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
             <HugeiconsIcon
               aria-hidden
               icon={isSource ? TextIcon : SparklesIcon}
@@ -563,12 +612,12 @@ export function OpNodeView({
           // dividing by the zoom made it 45% of the node's width at 220% and
           // wider than the node below 100% — the button never fit its box.
           // Scaling with the node, like the prompt field above it, is correct.
-          <footer className="flex shrink-0 items-center gap-1 border-white/10 border-t p-1">
+          <footer className="flex shrink-0 items-center gap-1 border-board-ink/10 border-t p-1">
             {/* The same button stops what it started. A separate Stop would sit
                 disabled and useless most of the time, and a running generation
                 is exactly when the Run button has nothing else to offer. */}
             <button
-              className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded border border-white/20 text-[10px] text-white/80 uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+              className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded border border-board-ink/20 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
               onClick={() => (isRunning ? onCancel?.() : onRun(false))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
@@ -583,7 +632,7 @@ export function OpNodeView({
             {item.result ? (
               <button
                 aria-label="Run again, ignoring the stored result"
-                className="flex min-h-8 items-center justify-center rounded border border-white/20 px-2 text-white/60 hover:text-white disabled:opacity-40"
+                className="flex min-h-8 items-center justify-center rounded border border-board-ink/20 px-2 text-board-ink/60 hover:text-board-ink disabled:opacity-40"
                 disabled={isRunning}
                 onClick={() => onRun(true)}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -666,7 +715,7 @@ function NodeBody({
       {/* What an Analyse node produced. Selectable, because the usual next
               move is to take part of it into a prompt by hand. */}
       {analysed ? (
-        <p className="select-text whitespace-pre-wrap rounded border border-white/10 bg-black/40 p-2 text-[12px] text-white/80 leading-relaxed">
+        <p className="select-text whitespace-pre-wrap rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink/80 leading-relaxed">
           {analysed}
         </p>
       ) : null}

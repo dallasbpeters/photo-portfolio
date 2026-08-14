@@ -124,15 +124,15 @@ export function PortMenu({
         type="button"
       />
       <div
-        className="absolute z-50 min-w-40 overflow-hidden rounded-lg border border-white/15 bg-neutral-900/95 shadow-xl backdrop-blur"
+        className="absolute z-50 min-w-40 overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
-        <p className="px-3 pt-2 pb-1 text-[9px] text-white/35 uppercase tracking-[0.18em]">
+        <p className="px-3 pt-2 pb-1 text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
           Send {portType} to
         </p>
         {targets.map((target) => (
           <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-board-ink/80 transition-colors hover:bg-board-ink/10 hover:text-board-ink"
             key={`${target.kind}-${target.nodeType ?? "frame"}`}
             onClick={() => onChoose(target)}
             type="button"

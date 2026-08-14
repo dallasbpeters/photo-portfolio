@@ -24,7 +24,7 @@ export interface Tool {
 export const TOOLS: Tool[] = [
   { Icon: ColorsIcon, id: "looks", label: "Looks" },
   { Icon: Sun01Icon, id: "tone", label: "Light" },
-  { Icon: PaintBoardIcon, id: "color", label: "Colour" },
+  { Icon: PaintBoardIcon, id: "color", label: "Color" },
   { Icon: CropIcon, id: "presence", label: "Detail" },
   { Icon: Image01Icon, id: "film", label: "Film" },
   { Icon: EyeIcon, id: "finishing", label: "Finish" },

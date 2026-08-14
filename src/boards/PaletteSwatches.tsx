@@ -6,7 +6,7 @@ import { ColorWell } from "./ColorWell";
 /**
  * A palette as swatches rather than as typed hex codes.
  *
- * The colours are still *stored* as a line of hex, because that string is the
+ * The colors are still *stored* as a line of hex, because that string is the
  * node's output and the thing Ideogram's palette parameter is read back out of.
  * This edits that string; it does not replace it. Typing "#0a2540" and picking
  * it off a gradient have to mean the same thing, and they do because both end
@@ -26,36 +26,36 @@ interface PaletteSwatchesProps {
 }
 
 export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
-  const colours = value.match(HEX_COLOUR) ?? [];
+  const colors = value.match(HEX_COLOUR) ?? [];
 
   const write = (next: string[]) => onChange(next.join(", "));
 
   return (
     <div className="space-y-1">
-      <span className="text-[10px] text-white/40 uppercase tracking-[0.14em]">
-        Colours
+      <span className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
+        Colors
       </span>
 
       <div className="flex flex-wrap items-center gap-1">
-        {colours.map((colour, index) => (
+        {colors.map((color, index) => (
           <div
             className="group/sw relative"
             // Position is the identity here: two swatches may hold the same
-            // colour, and keying on the value would collapse them into one.
+            // color, and keying on the value would collapse them into one.
             // biome-ignore lint/suspicious/noArrayIndexKey: a swatch has no identity but its place in the palette
             key={index}
           >
             <ColorWell
-              label={`Colour ${index + 1}`}
+              label={`Color ${index + 1}`}
               onChange={(next) =>
-                write(colours.map((c, i) => (i === index ? next : c)))
+                write(colors.map((c, i) => (i === index ? next : c)))
               }
-              value={colour}
+              value={color}
             />
             <button
-              aria-label={`Remove colour ${index + 1}`}
-              className="absolute -top-1 -right-1 grid size-3.5 place-items-center rounded-full border border-white/20 bg-black text-white/60 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/sw:opacity-100"
-              onClick={() => write(colours.filter((_, i) => i !== index))}
+              aria-label={`Remove color ${index + 1}`}
+              className="absolute -top-1 -right-1 grid size-3.5 place-items-center rounded-full border border-board-ink/20 bg-board-surface text-board-ink/60 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/sw:opacity-100"
+              onClick={() => write(colors.filter((_, i) => i !== index))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
             >
@@ -64,11 +64,11 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
           </div>
         ))}
 
-        {colours.length < MAX_COLOURS ? (
+        {colors.length < MAX_COLOURS ? (
           <button
-            aria-label="Add a colour"
-            className="grid size-6 place-items-center rounded border border-white/20 border-dashed text-white/40 hover:border-white/50 hover:text-white"
-            onClick={() => write([...colours, NEW_COLOUR])}
+            aria-label="Add a color"
+            className="grid size-6 place-items-center rounded border border-board-ink/20 border-dashed text-board-ink/40 hover:border-board-ink/50 hover:text-board-ink"
+            onClick={() => write([...colors, NEW_COLOUR])}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
           >
@@ -78,11 +78,11 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
       </div>
 
       {/* The hex stays visible and editable: pasting a brand palette is faster
-          than picking six colours off a gradient, and it is what the node
+          than picking six colors off a gradient, and it is what the node
           actually sends. */}
       <input
-        aria-label="Colours as hex"
-        className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 font-mono text-[11px] text-white/70 outline-none focus:border-white/40"
+        aria-label="Colors as hex"
+        className="w-full rounded border border-board-ink/10 bg-board-surface/40 px-2 py-1 font-mono text-[11px] text-board-ink/70 outline-none focus:border-board-ink/40"
         onChange={(e) => onChange(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         placeholder="#0a2540, #f5f0e8, #c8102e"

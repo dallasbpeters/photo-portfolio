@@ -13,11 +13,13 @@ import {
   MIN_FONT_SIZE,
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
+import { MAX_MODEL_ID } from "../../config/models.js";
 import {
   isNodeTypeId,
   isRunState,
   nodeTypeFor,
   type RunState,
+  type SettingDef,
 } from "../../config/nodeTypes.js";
 
 export type BoardItemKind =
@@ -319,6 +321,77 @@ const text = (value: unknown, max: number): string | null => {
 };
 
 /**
+ * What one setting's stored value is, for the value the canvas sent.
+ *
+ * Kept out of the loop so each kind's rules stay readable and the loop stays a
+ * loop. `keep` is false only for a text that is not a string at all — a prompt
+ * may legitimately be cleared back to empty, but a number where a prompt goes
+ * is not a prompt.
+ */
+const settingStored = (
+  setting: SettingDef,
+  value: unknown
+): { keep: boolean; value: unknown } => {
+  if (setting.kind === "text") {
+    // Not `text()`: a prompt may legitimately be cleared back to empty, and
+    // treating that as absent would silently keep the previous one.
+    const ok = typeof value === "string";
+    return ok
+      ? { keep: true, value: value.slice(0, setting.maxLength) }
+      : { keep: false, value: undefined };
+  }
+  if (setting.kind === "number") {
+    // Clamped rather than rejected, like every other number the canvas sends.
+    // This one bounds *spending* — it is how many paid generations a single
+    // run will make — so an absurd value must not survive the trip.
+    const n = Number(value);
+    return {
+      keep: true,
+      value: Number.isFinite(n)
+        ? clamp(Math.trunc(n), setting.min, setting.max)
+        : setting.default,
+    };
+  }
+  if (setting.kind === "model") {
+    // Not checked against the models table here: the run endpoint falls back
+    // to "auto" for an id it does not know, and refusing a save would strand
+    // boards whose model was deleted from the admin. Bounded like any other
+    // stored string, defaulted when empty.
+    const ok = typeof value === "string" && Boolean(value.trim());
+    return {
+      keep: true,
+      value: ok ? value.slice(0, MAX_MODEL_ID) : setting.default,
+    };
+  }
+  const ok = typeof value === "string" && setting.options.includes(value);
+  return { keep: true, value: ok ? value : setting.default };
+};
+
+/** App-owned text config keys: not node settings, so they are not in the
+ * allowlist, but written by the app rather than handed to a model — a rendered
+ * composite or mask, the element library's id, and the copies kept on the node.
+ * They survive a save for the same reason `selectedVersion` does. */
+const OWNED_TEXT_KEYS = [
+  { key: "compositeUrl", max: 2000 },
+  { key: "description", max: 2000 },
+  { key: "elementId", max: 100 },
+  { key: "imageUrl", max: 2000 },
+  { key: "maskUrl", max: 2000 },
+  { key: "name", max: 200 },
+] as const;
+
+/** A bounded copy of a batch's strike-off list, or undefined when absent. */
+const ownedList = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  return value
+    .filter((entry): entry is string => typeof entry === "string")
+    .slice(0, 200)
+    .map((entry) => entry.slice(0, 2000));
+};
+
+/**
  * A node's settings, filtered to what its type actually declares.
  *
  * Unknown keys are dropped rather than stored: `config` reaches a third-party
@@ -354,30 +427,29 @@ const parseNodeConfig = (
     config.selectedVersion = Math.trunc(selected);
   }
 
+  // The app writes a few keys that no node declares as settings, and they have
+  // to survive the same way `selectedVersion` does: the composite's rendered
+  // file, a mask's rendered bitmap, a batch's strike-offs, and the element
+  // library's id and the copies kept on the node. None of them is handed to a
+  // model, so keeping them out of the settings allowlist but preserving them
+  // here lets the canvas and the run agree without opening the door to an
+  // arbitrary payload.
+  for (const { key, max } of OWNED_TEXT_KEYS) {
+    const value = source[key];
+    if (typeof value === "string") {
+      config[key] = value.slice(0, max);
+    }
+  }
+  const excluded = ownedList(source.excluded);
+  if (excluded) {
+    config.excluded = excluded;
+  }
+
   for (const setting of type.settings) {
-    const value = source[setting.key];
-    if (setting.kind === "text") {
-      // Not `text()`: a prompt may legitimately be cleared back to empty, and
-      // treating that as absent would silently keep the previous one.
-      if (typeof value === "string") {
-        config[setting.key] = value.slice(0, setting.maxLength);
-      }
-      continue;
+    const stored = settingStored(setting, source[setting.key]);
+    if (stored.keep) {
+      config[setting.key] = stored.value;
     }
-    if (setting.kind === "number") {
-      // Clamped rather than rejected, like every other number the canvas sends.
-      // This one bounds *spending* — it is how many paid generations a single
-      // run will make — so an absurd value must not survive the trip.
-      const n = Number(value);
-      config[setting.key] = Number.isFinite(n)
-        ? clamp(Math.trunc(n), setting.min, setting.max)
-        : setting.default;
-      continue;
-    }
-    config[setting.key] =
-      typeof value === "string" && setting.options.includes(value)
-        ? value
-        : setting.default;
   }
   return config;
 };
@@ -473,10 +545,10 @@ const MAX_DRAW_POINTS = 4000;
 /**
  * A drawn mark: shape only, never appearance.
  *
- * Colours are passed through as given rather than parsed. They are written into
+ * Colors are passed through as given rather than parsed. They are written into
  * an SVG attribute, not into markup, so a malformed one paints nothing — and
  * the length cap is what stops the column being used as storage for something
- * that is not a colour.
+ * that is not a color.
  *
  * The point cap matters more: a freehand path is the one field here whose size
  * is chosen by whoever is drawing, and an unbounded array of coordinates is an
