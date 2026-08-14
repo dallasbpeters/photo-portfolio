@@ -441,7 +441,7 @@
      than swapped for --board-ground, because this colour is what the canvas has
      always looked like and it is not a neutral grey. */
   --dot-bg: oklch(8.8% 0.08 142.17);
-  --dot-color: oklch(100% 0 0 / 0.22);
+  --dot-color: rgb(52 48 48);
 }
 
 .dark {
