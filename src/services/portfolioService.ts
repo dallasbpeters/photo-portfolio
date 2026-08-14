@@ -448,6 +448,24 @@ export const portfolioService = {
     }
   },
 
+  /** Rotates a photo 90° clockwise on the server and returns the updated one. */
+  rotatePhoto: async (id: string): Promise<Photo> => {
+    const res = await fetch(
+      `${photosPath()}/${encodeURIComponent(id)}/rotate`,
+      {
+        headers: jsonHeaders(),
+        method: "POST",
+      }
+    );
+    const json = (await res.json().catch(() => ({}))) as Photo & {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(json.error || "Could not rotate photo");
+    }
+    return json as Photo;
+  },
+
   saveDailyChallengeJournal: async (
     body: string
   ): Promise<DailyChallengeJournal> => {

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createNeutralEdit, type EditState } from "./adjustments";
 import {
+  type CanvasTransform,
   DEFAULT_EXPORT,
   type ExportSettings,
   encodeCanvas,
   fileExtension,
   formatBytes,
   MAX_UPLOAD_BYTES,
+  NO_TRANSFORM,
 } from "./engine/export";
 
 /** Debounce before re-encoding for the size estimate. */
@@ -36,7 +38,8 @@ export const useEditorExport = (
   isReady: boolean,
   isEstimating: boolean,
   render: (edit: EditState) => void,
-  onSave: (blob: Blob, extension: string) => Promise<void>
+  onSave: (blob: Blob, extension: string) => Promise<void>,
+  transform: CanvasTransform = NO_TRANSFORM
 ): EditorExport => {
   const [settings, setSettings] = useState<ExportSettings>(DEFAULT_EXPORT);
   const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
@@ -52,12 +55,12 @@ export const useEditorExport = (
         if (!canvas) {
           return;
         }
-        const blob = await encodeCanvas(canvas, settings);
+        const blob = await encodeCanvas(canvas, settings, transform);
         setEstimatedSize(blob?.size ?? null);
       })();
     }, ESTIMATE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [canvasRef, isEstimating, isReady, settings]);
+  }, [canvasRef, isEstimating, isReady, settings, transform]);
 
   const save = useCallback(async () => {
     setIsSaving(true);
@@ -71,7 +74,7 @@ export const useEditorExport = (
         throw new Error("Canvas is unavailable");
       }
 
-      const blob = await encodeCanvas(canvas, settings);
+      const blob = await encodeCanvas(canvas, settings, transform);
       if (!blob) {
         throw new Error("Could not encode the image");
       }
@@ -89,7 +92,7 @@ export const useEditorExport = (
       // Restore whatever the viewer was looking at.
       render(showOriginal ? createNeutralEdit() : edit);
     }
-  }, [canvasRef, edit, onSave, render, settings, showOriginal]);
+  }, [canvasRef, edit, onSave, render, settings, showOriginal, transform]);
 
   return { estimatedSize, isSaving, save, setSettings, settings };
 };

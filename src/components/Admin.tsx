@@ -9,6 +9,7 @@ import {
   Layers01Icon,
   Login02Icon,
   PencilEdit01Icon,
+  RotateRight01Icon,
   Shield01Icon,
   TagsIcon,
   Upload02Icon,
@@ -471,6 +472,7 @@ interface PhotoCardProps {
   onDragStart: () => void;
   onEditDetails: (photo: Photo) => void;
   onEditImage: (photo: Photo) => void;
+  onRotate: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   photo: Photo;
   selection: PhotoSelectionResult;
@@ -484,6 +486,7 @@ const PhotoCard = ({
   onDragStart,
   onEditDetails,
   onEditImage,
+  onRotate,
   onTogglePublished,
   photo,
   selection,
@@ -573,6 +576,16 @@ const PhotoCard = ({
             <HugeiconsIcon icon={PencilEdit01Icon} size={18} />
           </Button>
           <Button
+            aria-label={`Rotate ${photo.title} 90 degrees`}
+            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
+            onClick={() => onRotate(photo)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon icon={RotateRight01Icon} size={18} />
+          </Button>
+          <Button
             aria-label={
               photo.isPublished
                 ? `Hide ${photo.title} from the site`
@@ -630,6 +643,7 @@ interface PhotoGridProps {
   onEditImage: (photo: Photo) => void;
   /** The ids in their new order, once a drag settles. */
   onReorder: (photoIds: string[]) => void;
+  onRotate: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   photos: Photo[];
   selection: PhotoSelectionResult;
@@ -639,6 +653,7 @@ const PhotoGrid = ({
   newlyAddedPhotoId,
   onEditDetails,
   onEditImage,
+  onRotate,
   onReorder,
   onTogglePublished,
   photos,
@@ -709,6 +724,7 @@ const PhotoGrid = ({
             }}
             onEditDetails={onEditDetails}
             onEditImage={onEditImage}
+            onRotate={onRotate}
             onTogglePublished={onTogglePublished}
             photo={photo}
             selection={selection}
@@ -729,6 +745,7 @@ interface ItemsCardProps {
   onEditImage: (photo: Photo) => void;
   onManageCategories: () => void;
   onReorder: (photoIds: string[]) => void;
+  onRotate: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   selection: PhotoSelectionResult;
   view: AdminViewResult;
@@ -742,6 +759,7 @@ const ItemsCard = ({
   onEditImage,
   onManageCategories,
   onReorder,
+  onRotate,
   onTogglePublished,
   selection,
   view,
@@ -815,6 +833,7 @@ const ItemsCard = ({
               onEditDetails={onEditDetails}
               onEditImage={onEditImage}
               onReorder={onReorder}
+              onRotate={onRotate}
               onTogglePublished={onTogglePublished}
               photos={data.photos}
               selection={selection}
@@ -1092,6 +1111,18 @@ export const Admin = () => {
     }
   };
 
+  const rotatePhoto = async (photo: Photo) => {
+    try {
+      const rotated = await portfolioService.rotatePhoto(photo.id);
+      data.applyPhotoUpdate(rotated);
+      toast.success("Rotated 90°");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not rotate the photo"
+      );
+    }
+  };
+
   const reorderPhotos = async (photoIds: string[]) => {
     // Kept so the list can be put back if the save fails.
     const previous = data.photos;
@@ -1147,6 +1178,7 @@ export const Admin = () => {
         onEditImage={setEditingPhoto}
         onManageCategories={() => setCategoriesModalOpen(true)}
         onReorder={(photoIds) => void reorderPhotos(photoIds)}
+        onRotate={(photo) => void rotatePhoto(photo)}
         onTogglePublished={(photo) => void togglePublished(photo)}
         selection={selection}
         view={view}

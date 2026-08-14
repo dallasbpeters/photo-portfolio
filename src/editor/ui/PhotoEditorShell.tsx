@@ -2,11 +2,18 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { RefreshIcon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useState } from "react";
 import { isNeutral } from "../adjustments";
-import { fitWithin } from "../engine/export";
+import {
+  type CanvasTransform,
+  fitWithin,
+  isNeutralTransform,
+  NO_TRANSFORM,
+  rotatedSize,
+} from "../engine/export";
 import { useEditorExport } from "../useEditorExport";
 import { useEditState } from "../useEditState";
 import { usePhotoPipeline } from "../usePhotoPipeline";
 import { AdjustmentPanel } from "./AdjustmentPanel";
+import { CropPanel } from "./CropPanel";
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorRail } from "./EditorRail";
 import { ExportPanel } from "./ExportPanel";
@@ -36,6 +43,7 @@ export function PhotoEditorShell({
 }: PhotoEditorShellProps) {
   const [tool, setTool] = useState<ToolId>("looks");
   const [showOriginal, setShowOriginal] = useState(false);
+  const [transform, setTransform] = useState<CanvasTransform>(NO_TRANSFORM);
 
   const {
     edit,
@@ -58,10 +66,16 @@ export function PhotoEditorShell({
       isReady,
       tool === "export",
       render,
-      onSave
+      onSave,
+      transform
     );
 
-  const dirty = !isNeutral(edit);
+  const dirty = !(isNeutral(edit) && isNeutralTransform(transform));
+
+  const handleReset = () => {
+    reset();
+    setTransform(NO_TRANSFORM);
+  };
 
   // Hold \ to compare, the way every darkroom tool does it.
   useEffect(() => {
@@ -86,15 +100,28 @@ export function PhotoEditorShell({
     };
   }, [isSaving, onClose]);
 
-  const exportedSize = useMemo(
-    () => fitWithin(dimensions.width, dimensions.height, settings.maxDimension),
-    [dimensions, settings.maxDimension]
-  );
+  const exportedSize = useMemo(() => {
+    const { height: rotHeight, width: rotWidth } = rotatedSize(
+      dimensions.width,
+      dimensions.height,
+      transform.rotation
+    );
+    if (transform.crop) {
+      return fitWithin(
+        Math.max(1, Math.round(rotWidth * transform.crop.width)),
+        Math.max(1, Math.round(rotHeight * transform.crop.height)),
+        settings.maxDimension
+      );
+    }
+    return fitWithin(rotWidth, rotHeight, settings.maxDimension);
+  }, [dimensions, settings.maxDimension, transform]);
 
   // Controls freeze while comparing, so a stray drag is never attributed to the
   // "original" the user is looking at.
   const isDisabled = showOriginal;
-  const isAdjustmentTool = tool !== "looks" && tool !== "export";
+  const isAdjustmentTool =
+    tool !== "looks" && tool !== "export" && tool !== "crop";
+  const isCropActive = tool === "crop";
 
   return (
     <div className="fixed inset-0 z-100 flex h-full bg-black text-white">
@@ -127,6 +154,14 @@ export function PhotoEditorShell({
             />
           ) : null}
 
+          {tool === "crop" ? (
+            <CropPanel
+              isDisabled={isDisabled}
+              onChange={setTransform}
+              transform={transform}
+            />
+          ) : null}
+
           {isAdjustmentTool ? (
             <AdjustmentPanel
               edit={edit}
@@ -141,7 +176,7 @@ export function PhotoEditorShell({
           <button
             className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:pointer-events-none disabled:opacity-60"
             disabled={!dirty}
-            onClick={reset}
+            onClick={handleReset}
             type="button"
           >
             <HugeiconsIcon icon={RefreshIcon} size={13} />
@@ -163,11 +198,14 @@ export function PhotoEditorShell({
         canCompare={dirty}
         canvasRef={canvasRef}
         dimensions={dimensions}
+        isCropActive={isCropActive}
         isReady={isReady}
         loadError={loadError}
         onCompareChange={setShowOriginal}
+        onTransformChange={setTransform}
         showOriginal={showOriginal}
         title={title}
+        transform={transform}
       />
     </div>
   );
