@@ -19,7 +19,7 @@ export const CANVA_CLIENT_SECRET = clientSecret?.trim() ?? "";
 /** Publicly reachable callback, registered in the Canva developer portal. */
 export const CANVA_REDIRECT_URI =
   process.env.CANVA_REDIRECT_URI?.trim() ??
-  "https://dallas-peters.com/api/canva/callback";
+  "https://dallaspeters.com/api/canva/callback";
 
 /** Hosts for the OAuth handshake and the REST APIs. */
 export const CANVA_AUTHORIZE_URL = "https://www.canva.com/api/oauth/authorize";
