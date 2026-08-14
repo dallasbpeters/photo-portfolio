@@ -36,5 +36,4 @@ export const CANVA_SCOPES = [
   "brandtemplate:content:read",
 ].join(" ");
 
-export const isCanvaConfigured = (): boolean =>
-  Boolean(CANVA_CLIENT_ID && CANVA_CLIENT_SECRET);
+export const isCanvaConfigured = (): boolean => Boolean(CANVA_CLIENT_ID);

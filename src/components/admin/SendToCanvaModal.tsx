@@ -205,8 +205,8 @@ export function SendToCanvaModal({
 
           {stage.kind === "unconfigured" ? (
             <p className="mt-4 text-[12px] text-red-300/90 leading-relaxed">
-              Canva is not connected. Set CANVA_CLIENT_ID and
-              CANVA_CLIENT_SECRET to enable it, then reload.
+              Canva is not connected. Set CANVA_CLIENT_ID to enable it, then
+              reload.
             </p>
           ) : null}
 

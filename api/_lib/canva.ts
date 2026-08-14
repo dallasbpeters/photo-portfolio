@@ -81,12 +81,21 @@ export const refreshAccessToken = (
 };
 
 const tokenRequest = async (body: URLSearchParams): Promise<CanvaTokens> => {
+  const params = new URLSearchParams(body);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+  // With a secret the exchange uses basic auth; without one the integration is
+  // a public client and proves itself with PKCE alone — the code_verifier sent
+  // in the body — so the client id rides along instead.
+  if (CANVA_CLIENT_SECRET) {
+    headers.Authorization = basicAuth();
+  } else {
+    params.set("client_id", CANVA_CLIENT_ID);
+  }
   const res = await fetch(CANVA_TOKEN_URL, {
-    body,
-    headers: {
-      Authorization: basicAuth(),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    body: params,
+    headers,
     method: "POST",
   });
   const json = (await res.json().catch(() => ({}))) as {

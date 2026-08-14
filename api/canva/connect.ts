@@ -25,8 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   if (!isCanvaConfigured()) {
     return res.status(503).json({
-      error:
-        "Canva is not configured — set CANVA_CLIENT_ID and CANVA_CLIENT_SECRET.",
+      error: "Canva is not configured — set CANVA_CLIENT_ID.",
     });
   }
 

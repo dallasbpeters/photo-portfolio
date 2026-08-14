@@ -338,6 +338,12 @@ export function BoardEditor({
     };
   }, [boardId]);
 
+  // Serialises board saves. A save replaces the whole arrangement (the server
+  // deletes and re-inserts every item), so two in flight can land out of order
+  // and the older snapshot would win — resetting positions to an earlier state,
+  // or deleting an item added in the meantime. Each save waits for the last.
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
+
   const save = useCallback(
     /**
      * `override` is for a caller that has just computed the items and cannot
@@ -355,35 +361,39 @@ export function BoardEditor({
       }
       const saving = override?.items ?? items;
       const savingWires = override?.wires ?? wires;
-      setIsSaving(true);
-      try {
-        await boardsApi.update(boardId, {
-          // The first image on the board becomes its cover, so the list has
-          // something to show without asking anyone to choose.
-          coverUrl:
-            saving.find(
-              (i) =>
-                (i.kind === "photo" || i.kind === "reference") && i.imageUrl
-            )?.imageUrl ?? undefined,
-          items: saving,
-          sources,
-          wires: savingWires,
-        });
-        // Deliberately does not adopt saved.items. The canvas is the source of
-        // truth while it is open, and replacing state here discarded anything
-        // typed or dragged while the request was in flight.
-        //
-        // Run results are safe from this in the other direction too: the server
-        // never writes them from a save, so a generation landing mid-request
-        // cannot be overwritten by the copy this call carried.
-        setIsDirty(false);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Could not save board"
-        );
-      } finally {
-        setIsSaving(false);
-      }
+      // The first image on the board becomes its cover, so the list has
+      // something to show without asking anyone to choose.
+      const coverUrl =
+        saving.find(
+          (i) => (i.kind === "photo" || i.kind === "reference") && i.imageUrl
+        )?.imageUrl ?? undefined;
+      const run = saveChain.current.then(async () => {
+        setIsSaving(true);
+        try {
+          await boardsApi.update(boardId, {
+            coverUrl,
+            items: saving,
+            sources,
+            wires: savingWires,
+          });
+          // Deliberately does not adopt saved.items. The canvas is the source of
+          // truth while it is open, and replacing state here discarded anything
+          // typed or dragged while the request was in flight.
+          //
+          // Run results are safe from this in the other direction too: the server
+          // never writes them from a save, so a generation landing mid-request
+          // cannot be overwritten by the copy this call carried.
+          setIsDirty(false);
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Could not save board"
+          );
+        } finally {
+          setIsSaving(false);
+        }
+      });
+      saveChain.current = run;
+      await run;
     },
     [boardId, isLoaded, items, sources, wires]
   );
