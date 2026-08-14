@@ -448,6 +448,21 @@ export const portfolioService = {
     }
   },
 
+  /** Restores the pre-edit image, if the photo has been edited at least once. */
+  resetPhoto: async (id: string): Promise<Photo> => {
+    const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}/reset`, {
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    const json = (await res.json().catch(() => ({}))) as Photo & {
+      error?: string;
+    };
+    if (!res.ok) {
+      throw new Error(json.error || "Could not restore the photo");
+    }
+    return json as Photo;
+  },
+
   /** Rotates a photo 90° clockwise on the server and returns the updated one. */
   rotatePhoto: async (id: string): Promise<Photo> => {
     const res = await fetch(

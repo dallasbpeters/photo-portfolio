@@ -160,6 +160,7 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
           <button
             aria-label={`Drag a connection from ${port.label}`}
             className="absolute grid place-items-center rounded-full"
+            data-port={port.key}
             key={`out-${port.key}`}
             onPointerDown={(e) => {
               // The surface would read this as "pick the item up and drag it".
@@ -197,6 +198,7 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
           <button
             aria-label={`Connect to ${port.label}`}
             className="absolute grid place-items-center rounded-full"
+            data-port={port.key}
             key={`in-${port.key}`}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerEnter={() => handlers.onPortEnter(item.id, port.key)}
@@ -743,6 +745,50 @@ export function BoardItemView({
 
   const fieldRef = useEditingCaret(isEditing);
 
+  // While a wire is being dragged, the whole item body is a drop target for its
+  // nearest input port, so landing a connection does not demand a 14-pixel aim
+  // at the port circle — the friction that made rewiring a node that already
+  // had a connection a matter of luck. The exact port buttons still win when
+  // the pointer is over one; this only claims the spaces between them.
+  const hoveredInput = useRef<string | null>(null);
+  const handleDragHover = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    // A port button is an exact target; the body only claims the spaces
+    // between them, so an overlapping row of inputs cannot argue with itself.
+    if ((e.target as Element).closest("[data-port]")) {
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = item.x + (e.clientX - rect.left) / scale;
+    const py = item.y + (e.clientY - rect.top) / scale;
+    let nearest: string | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const [key, point] of inputPoints(item)) {
+      const dx = point.x - px;
+      const dy = point.y - py;
+      const distance = dx * dx + dy * dy;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = key;
+      }
+    }
+    if (nearest && nearest !== hoveredInput.current) {
+      hoveredInput.current = nearest;
+      ports.onPortEnter(item.id, nearest);
+    }
+  };
+  const handleDragLeave = () => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    if (hoveredInput.current !== null) {
+      ports.onPortLeave(item.id, hoveredInput.current);
+      hoveredInput.current = null;
+    }
+  };
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the board is a canvas of individually addressable items; the click only matters in comment mode
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — the click aims a comment at the item, and the drag already uses pointer events the same way
@@ -788,6 +834,8 @@ export function BoardItemView({
           onBeginEdit();
         }
       }}
+      onPointerLeave={handleDragLeave}
+      onPointerMove={handleDragHover}
       style={{
         height: item.height,
         left: item.x,

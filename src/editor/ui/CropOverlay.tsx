@@ -119,7 +119,9 @@ export function CropOverlay({
   const centerY = box.y + box.height / 2;
   const topY = box.y;
   const handleX = centerX;
-  const handleY = topY - 22;
+  // Kept inside the svg: when the image fills the stage edge to edge the
+  // handle would otherwise sit above the stage and could never be grabbed.
+  const handleY = Math.max(topY - 22, 14);
 
   const toLocal = (clientX: number, clientY: number, current: SVGElement) => {
     const rect = current.getBoundingClientRect();

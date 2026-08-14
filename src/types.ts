@@ -38,6 +38,8 @@ export interface Photo {
   /** Tiny inline preview shown blurred until the full image decodes. */
   lqip: string | null;
   order: number;
+  /** The pre-edit image, kept so an edit can be undone. Null on untouched photos. */
+  originalUrl: string | null;
   title: string;
   url: string;
   /** Intrinsic size, used to reserve layout space before the image loads. */

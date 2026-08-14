@@ -10,6 +10,9 @@ export interface PhotoRow {
   /** Null on databases where the publishing patch has not been applied yet. */
   is_published: boolean | null;
   lqip: string | null;
+  original_height: number | null;
+  original_url: string | null;
+  original_width: number | null;
   sort_order: number;
   title: string;
   url: string;
@@ -30,6 +33,8 @@ export interface PhotoDto {
   isPublished: boolean;
   lqip: string | null;
   order: number;
+  /** The pre-edit image, kept so an edit can be undone. Null on untouched photos. */
+  originalUrl: string | null;
   title: string;
   url: string;
   width: number | null;
@@ -57,6 +62,7 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   isPublished: row.is_published ?? true,
   lqip: row.lqip ?? null,
   order: Number(row.sort_order),
+  originalUrl: row.original_url ?? null,
   title: row.title,
   url: row.url,
   width: row.width ?? null,
@@ -136,4 +142,5 @@ export const parseIncomingExif = (value: unknown): IncomingExif | null => {
 /** Columns every photo query needs, kept in one place so they cannot drift. */
 export const PHOTO_COLUMNS = `p.id, p.url, p.title, p.sort_order, p.created_at,
   p.alt, p.width, p.height, p.lqip, p.exif, p.is_published,
+  p.original_url, p.original_width, p.original_height,
   c.id AS category_id, c.slug AS category_slug, c.label AS category_label`;
