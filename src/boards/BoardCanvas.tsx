@@ -1033,11 +1033,8 @@ export function BoardCanvas({
    * the pattern without resizing it.
    */
   const dotGridStyle = {
-    backgroundColor: "var(--dot-color)",
-    backgroundImage:
-      "linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%), linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%)",
-    backgroundPosition: `${view.viewport.tx}px ${view.viewport.ty}px`,
-    backgroundSize: "var(--dot-space) var(--dot-space)",
+    background:
+      "linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center / var(--dot-space) var(--dot-space), var(--dot-color)",
   };
 
   return (
