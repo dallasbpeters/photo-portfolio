@@ -116,7 +116,7 @@ export function SendToCanvaModal({
 
   const connect = async () => {
     try {
-      const url = await canvaApi.connect();
+      const url = await canvaApi.connect(window.location.pathname);
       window.open(url, "_blank", "noopener");
       // The handshake ends back on this board; poll until it has.
       const timer = window.setInterval(() => {

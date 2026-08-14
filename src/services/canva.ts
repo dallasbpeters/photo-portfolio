@@ -30,8 +30,11 @@ const readError = async (res: Response, fallback: string): Promise<string> => {
 
 export const canvaApi = {
   /** The URL that starts the OAuth handshake, to be opened in a new tab. */
-  connect: async (): Promise<string> => {
-    const res = await fetch(canvaPath("/connect"), { headers: jsonHeaders() });
+  connect: async (returnTo?: string): Promise<string> => {
+    const query = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
+    const res = await fetch(`${canvaPath("/connect")}${query}`, {
+      headers: jsonHeaders(),
+    });
     if (!res.ok) {
       throw new Error(await readError(res, "Could not connect to Canva"));
     }

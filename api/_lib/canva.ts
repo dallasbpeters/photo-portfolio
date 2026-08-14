@@ -3,6 +3,7 @@ import {
   CANVA_API,
   CANVA_CLIENT_ID,
   CANVA_CLIENT_SECRET,
+  CANVA_REDIRECT_URI,
   CANVA_SCOPES,
   CANVA_TOKEN_URL,
 } from "../../config/canva.js";
@@ -47,6 +48,9 @@ export const authorizeUrl = (state: string, challenge: string): string => {
     client_id: CANVA_CLIENT_ID,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    // Sent explicitly so the handshake always lands on the right domain, even
+    // if the portal has several redirect URIs registered.
+    redirect_uri: CANVA_REDIRECT_URI,
     response_type: "code",
     scope: CANVA_SCOPES,
     state,
