@@ -4,12 +4,19 @@ import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { Admin, AdminGate } from "../components/Admin";
 import { BoardsPanel } from "../components/admin/BoardsPanel";
+import { ChangePasswordForm } from "../components/admin/ChangePasswordForm";
 import { ConfirmProvider } from "../components/admin/ConfirmProvider";
 import { ModelsPanel } from "../components/admin/ModelsPanel";
 import { PagesPanel } from "../components/admin/PagesPanel";
 import { SiteSettingsPanel } from "../components/admin/SiteSettingsPanel";
 import { SitesPanel } from "../components/admin/SitesPanel";
 import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import posthog from "../lib/posthog";
 import { authApi, authStorage } from "../services/portfolioService";
 import { useSiteSettings } from "../theme/SiteSettingsProvider";
@@ -154,9 +161,23 @@ export function AdminPage() {
               <Route element={<PagesPanel />} path="pages/:slug" />
               <Route
                 element={
-                  <div className="mx-auto w-full space-y-8 md:space-y-12">
-                    <SiteSettingsPanel />
-                    <SitesPanel />
+                  <div className="mx-auto w-full">
+                    <div className="grid items-start gap-8 lg:grid-cols-2">
+                      <SiteSettingsPanel />
+                      <div className="space-y-8">
+                        <Card className="border-white/10 bg-white/2">
+                          <CardHeader>
+                            <CardTitle className="font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+                              Password
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ChangePasswordForm />
+                          </CardContent>
+                        </Card>
+                        <SitesPanel />
+                      </div>
+                    </div>
                   </div>
                 }
                 path="settings"

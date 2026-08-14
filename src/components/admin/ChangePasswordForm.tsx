@@ -8,6 +8,11 @@ import { Label } from "../ui/label";
 /** Mirrors MIN_PASSWORD_LENGTH in api/_lib/resetToken.ts. */
 const MIN_PASSWORD_LENGTH = 8;
 
+/** Matches the settings panel's inputs — soft border on translucent black,
+ * rather than the bright default border-input the shared component uses. */
+const inputClass =
+  "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
+
 /**
  * Changing the password of the account you are signed in as.
  *
@@ -51,6 +56,7 @@ export function ChangePasswordForm() {
         </span>
         <Input
           autoComplete="current-password"
+          className={inputClass}
           onChange={(e) => setCurrent(e.target.value)}
           required
           type="password"
@@ -63,6 +69,7 @@ export function ChangePasswordForm() {
         </span>
         <Input
           autoComplete="new-password"
+          className={inputClass}
           minLength={MIN_PASSWORD_LENGTH}
           onChange={(e) => setNext(e.target.value)}
           placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}

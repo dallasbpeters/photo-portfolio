@@ -20,7 +20,6 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { ChangePasswordForm } from "./ChangePasswordForm";
 
 const labelClass = "text-[10px] uppercase tracking-widest text-white/90";
 const inputClass =
@@ -145,219 +144,203 @@ export function SiteSettingsPanel() {
   };
 
   return (
-    <>
-      <Card className="border-white/10 bg-white/2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-            <Palette aria-hidden size={16} />
-            Site settings
-          </CardTitle>
-        </CardHeader>
+    <Card className="border-white/10 bg-white/2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+          <Palette aria-hidden size={16} />
+          Site settings
+        </CardTitle>
+      </CardHeader>
 
-        <CardContent>
-          <form className="space-y-8" onSubmit={(e) => void handleSubmit(e)}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {TEXT_FIELDS.map((field) => (
-                <div className="space-y-2" key={field.key}>
-                  <Label
-                    className={labelClass}
-                    htmlFor={`setting-${field.key}`}
-                  >
-                    {field.label}
+      <CardContent>
+        <form className="space-y-8" onSubmit={(e) => void handleSubmit(e)}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {TEXT_FIELDS.map((field) => (
+              <div className="space-y-2" key={field.key}>
+                <Label className={labelClass} htmlFor={`setting-${field.key}`}>
+                  {field.label}
+                </Label>
+                <Input
+                  className={inputClass}
+                  id={`setting-${field.key}`}
+                  maxLength={200}
+                  onChange={(e) => setField(field.key, e.target.value)}
+                  type={field.type ?? "text"}
+                  value={draft[field.key]}
+                />
+                {field.hint ? (
+                  <p className="text-[10px] text-white/80">{field.hint}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4">
+            <h3 className={labelClass}>Colors</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {COLOR_FIELDS.map(({ key, label }) => (
+                <div className="space-y-2" key={key}>
+                  <Label className={labelClass} htmlFor={`color-${key}`}>
+                    {label}
                   </Label>
-                  <Input
-                    className={inputClass}
-                    id={`setting-${field.key}`}
-                    maxLength={200}
-                    onChange={(e) => setField(field.key, e.target.value)}
-                    type={field.type ?? "text"}
-                    value={draft[field.key]}
-                  />
-                  {field.hint ? (
-                    <p className="text-[10px] text-white/80">{field.hint}</p>
-                  ) : null}
+                  <div className="relative flex items-center gap-2">
+                    <button
+                      aria-expanded={openColor === key}
+                      aria-label={`Choose ${label.toLowerCase()} color`}
+                      className="size-11 shrink-0 rounded border border-white/10"
+                      id={`color-${key}`}
+                      onClick={() =>
+                        setOpenColor((current) =>
+                          current === key ? null : key
+                        )
+                      }
+                      style={{ backgroundColor: draft.theme[key] }}
+                      type="button"
+                    />
+
+                    {/* Kept alongside the picker: pasting a brand hex is faster
+                        than hunting for it on a gradient. */}
+                    <Input
+                      aria-label={`${label} hex value`}
+                      className={`${inputClass} font-mono`}
+                      onChange={(e) => setTheme(key, e.target.value)}
+                      spellCheck={false}
+                      value={draft.theme[key]}
+                    />
+
+                    {openColor === key ? (
+                      <>
+                        {/* Catches the click that dismisses the picker. Sits
+                            under it, over everything else. */}
+                        <button
+                          aria-label="Close color picker"
+                          className="fixed inset-0 z-40 cursor-default"
+                          onClick={() => setOpenColor(null)}
+                          type="button"
+                        />
+                        <div className="absolute top-12 left-0 z-50">
+                          <SketchPicker
+                            color={draft.theme[key]}
+                            // Alpha is disabled deliberately: contrastRatio
+                            // returns 0 for anything that is not a plain hex,
+                            // so an rgba value would silently disable the
+                            // WCAG warning below rather than fail loudly.
+                            disableAlpha
+                            onChange={(color: ColorResult) =>
+                              setTheme(key, color.hex)
+                            }
+                          />
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="space-y-4">
-              <h3 className={labelClass}>Colors</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {COLOR_FIELDS.map(({ key, label }) => (
-                  <div className="space-y-2" key={key}>
-                    <Label className={labelClass} htmlFor={`color-${key}`}>
-                      {label}
-                    </Label>
-                    <div className="relative flex items-center gap-2">
-                      <button
-                        aria-expanded={openColor === key}
-                        aria-label={`Choose ${label.toLowerCase()} color`}
-                        className="size-11 shrink-0 rounded border border-white/10"
-                        id={`color-${key}`}
-                        onClick={() =>
-                          setOpenColor((current) =>
-                            current === key ? null : key
-                          )
-                        }
-                        style={{ backgroundColor: draft.theme[key] }}
-                        type="button"
-                      />
-
-                      {/* Kept alongside the picker: pasting a brand hex is faster
-                        than hunting for it on a gradient. */}
-                      <Input
-                        aria-label={`${label} hex value`}
-                        className={`${inputClass} font-mono`}
-                        onChange={(e) => setTheme(key, e.target.value)}
-                        spellCheck={false}
-                        value={draft.theme[key]}
-                      />
-
-                      {openColor === key ? (
-                        <>
-                          {/* Catches the click that dismisses the picker. Sits
-                            under it, over everything else. */}
-                          <button
-                            aria-label="Close color picker"
-                            className="fixed inset-0 z-40 cursor-default"
-                            onClick={() => setOpenColor(null)}
-                            type="button"
-                          />
-                          <div className="absolute top-12 left-0 z-50">
-                            <SketchPicker
-                              color={draft.theme[key]}
-                              // Alpha is disabled deliberately: contrastRatio
-                              // returns 0 for anything that is not a plain hex,
-                              // so an rgba value would silently disable the
-                              // WCAG warning below rather than fail loudly.
-                              disableAlpha
-                              onChange={(color: ColorResult) =>
-                                setTheme(key, color.hex)
-                              }
-                            />
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Nothing here can leave the site unstyled, but it can leave it
+            {/* Nothing here can leave the site unstyled, but it can leave it
                 unreadable — so say so before it ships. */}
-              {bodyContrast < AA_NORMAL || accentContrast < 3 ? (
-                <p className="flex items-start gap-2 text-[11px] text-amber-300/80 leading-relaxed">
-                  <TriangleAlert
-                    aria-hidden
-                    className="mt-px shrink-0"
-                    size={14}
-                  />
-                  <span>
-                    {bodyContrast < AA_NORMAL ? (
-                      <>
-                        Text on background is {bodyContrast.toFixed(1)}:1 —
-                        below the {AA_NORMAL}:1 WCAG AA minimum.{" "}
-                      </>
-                    ) : null}
-                    {accentContrast < 3 ? (
-                      <>
-                        Accent on background is {accentContrast.toFixed(1)}:1
-                        and may be hard to read.
-                      </>
-                    ) : null}
-                  </span>
-                </p>
-              ) : null}
-            </div>
+            {bodyContrast < AA_NORMAL || accentContrast < 3 ? (
+              <p className="flex items-start gap-2 text-[11px] text-amber-300/80 leading-relaxed">
+                <TriangleAlert
+                  aria-hidden
+                  className="mt-px shrink-0"
+                  size={14}
+                />
+                <span>
+                  {bodyContrast < AA_NORMAL ? (
+                    <>
+                      Text on background is {bodyContrast.toFixed(1)}:1 — below
+                      the {AA_NORMAL}:1 WCAG AA minimum.{" "}
+                    </>
+                  ) : null}
+                  {accentContrast < 3 ? (
+                    <>
+                      Accent on background is {accentContrast.toFixed(1)}:1 and
+                      may be hard to read.
+                    </>
+                  ) : null}
+                </span>
+              </p>
+            ) : null}
+          </div>
 
-            <div className="space-y-4">
-              <h3 className={labelClass}>Fonts</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {(
-                  [
-                    { key: "sansFont", label: "Sans", options: SANS_FONTS },
-                    { key: "serifFont", label: "Serif", options: SERIF_FONTS },
-                  ] as const
-                ).map(({ key, label, options }) => (
-                  <div className="space-y-2" key={key}>
-                    <Label className={labelClass} htmlFor={`font-${key}`}>
-                      {label}
-                    </Label>
-                    <select
-                      className="min-h-11 w-full rounded-md border border-white/10 bg-black/40 px-3 text-base text-white transition-colors focus:border-white/40"
-                      id={`font-${key}`}
-                      onChange={(e) => setTheme(key, e.target.value as FontId)}
-                      value={draft.theme[key]}
-                    >
-                      {options.map((font) => (
-                        <option
-                          className="bg-black"
-                          key={font.id}
-                          value={font.id}
-                        >
-                          {font.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
+          <div className="space-y-4">
+            <h3 className={labelClass}>Fonts</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  { key: "sansFont", label: "Sans", options: SANS_FONTS },
+                  { key: "serifFont", label: "Serif", options: SERIF_FONTS },
+                ] as const
+              ).map(({ key, label, options }) => (
+                <div className="space-y-2" key={key}>
+                  <Label className={labelClass} htmlFor={`font-${key}`}>
+                    {label}
+                  </Label>
+                  <select
+                    className="min-h-11 w-full rounded-md border border-white/10 bg-black/40 px-3 text-base text-white transition-colors focus:border-white/40"
+                    id={`font-${key}`}
+                    onChange={(e) => setTheme(key, e.target.value as FontId)}
+                    value={draft.theme[key]}
+                  >
+                    {options.map((font) => (
+                      <option
+                        className="bg-black"
+                        key={font.id}
+                        value={font.id}
+                      >
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div
-              className="space-y-2 rounded border border-white/10 p-6"
-              style={{
-                background: draft.theme.background,
-                color: draft.theme.foreground,
-              }}
+          <div
+            className="space-y-2 rounded border border-white/10 p-6"
+            style={{
+              background: draft.theme.background,
+              color: draft.theme.foreground,
+            }}
+          >
+            <p className="text-[10px] uppercase tracking-[0.3em] opacity-40">
+              Preview
+            </p>
+            <p
+              className="font-bold text-2xl uppercase tracking-widest"
+              style={{ color: draft.theme.accent }}
             >
-              <p className="text-[10px] uppercase tracking-[0.3em] opacity-40">
-                Preview
-              </p>
-              <p
-                className="font-bold text-2xl uppercase tracking-widest"
-                style={{ color: draft.theme.accent }}
-              >
-                {draft.heroTitle || "Hero wordmark"}
-              </p>
-              <p className="text-sm opacity-70">{draft.tagline || "Tagline"}</p>
-            </div>
+              {draft.heroTitle || "Hero wordmark"}
+            </p>
+            <p className="text-sm opacity-70">{draft.tagline || "Tagline"}</p>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                className="flex min-h-12 items-center gap-2 border-white/20 px-8 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
-                disabled={isSaving}
-                type="submit"
-                variant="outline"
-              >
-                <Save aria-hidden size={16} />
-                {isSaving ? "Saving…" : "Save settings"}
-              </Button>
-              <Button
-                className="flex min-h-12 items-center gap-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
-                onClick={handleReset}
-                type="button"
-                variant="ghost"
-              >
-                <RotateCcw aria-hidden size={16} />
-                Reset to defaults
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="border-white/10 bg-white/2">
-        <CardHeader>
-          <CardTitle className="font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-            Password
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChangePasswordForm />
-        </CardContent>
-      </Card>
-    </>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              className="flex min-h-12 items-center gap-2 border-white/20 px-8 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
+              disabled={isSaving}
+              type="submit"
+              variant="outline"
+            >
+              <Save aria-hidden size={16} />
+              {isSaving ? "Saving…" : "Save settings"}
+            </Button>
+            <Button
+              className="flex min-h-12 items-center gap-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
+              onClick={handleReset}
+              type="button"
+              variant="ghost"
+            >
+              <RotateCcw aria-hidden size={16} />
+              Reset to defaults
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
