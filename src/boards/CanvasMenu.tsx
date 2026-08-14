@@ -1,10 +1,13 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Album02Icon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
   CopyIcon,
   Download01Icon,
   FrameIcon,
   GridIcon,
+  Image01Icon,
   MagicWand01Icon,
   PenTool01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
@@ -44,6 +47,8 @@ interface CanvasMenuProps {
   menu: CanvasMenuTarget | null;
   /** Lays the frame's contents out in a grid, keeping their order. */
   onArrange: (itemId: string) => void;
+  /** Brings one item to the very front of the stack. */
+  onBringToFront: (itemId: string) => void;
   onCopyFrame: (frame: BoardItem, title: string) => void;
   onDismiss: () => void;
   /** Downloads everything the frame holds, as one archive. */
@@ -53,6 +58,10 @@ interface CanvasMenuProps {
   onOpenInAffinity?: (itemId: string) => void;
   /** Keeps the selection's pictures in the element library. */
   onSaveElement: (items: BoardItem[]) => void;
+  /** Sends one item to the very back of the stack, above the frames. */
+  onSendToBack: (itemId: string) => void;
+  /** Sends one item's picture into a Canva design. */
+  onSendToCanva?: (item: BoardItem) => void;
   /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
   onVectorize?: (itemId: string) => void;
   wires: BoardWire[];
@@ -182,6 +191,111 @@ function VectorizeRow({ onVectorize }: { onVectorize: () => void }) {
   );
 }
 
+/** The two ends of the stack, for an item buried (or lost) in the middle. */
+function StackRows({
+  onBringToFront,
+  onSendToBack,
+}: {
+  onBringToFront: () => void;
+  onSendToBack: () => void;
+}) {
+  return (
+    <>
+      <button className={rowClass} onClick={onBringToFront} type="button">
+        <HugeiconsIcon aria-hidden icon={ArrowUp01Icon} size={14} />
+        <span>Bring to front</span>
+      </button>
+      <button className={rowClass} onClick={onSendToBack} type="button">
+        <HugeiconsIcon aria-hidden icon={ArrowDown01Icon} size={14} />
+        <span>Send to back</span>
+      </button>
+    </>
+  );
+}
+
+/** Sends the picture into a Canva design the admin can carry on editing. */
+function CanvaRow({ onSend }: { onSend: () => void }) {
+  return (
+    <button className={rowClass} onClick={onSend} type="button">
+      <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
+      <span>Send to Canva</span>
+    </button>
+  );
+}
+
+/**
+ * The actions that only make sense for one picked item: hand over its results,
+ * edit it in Affinity, vectorize it, or move it through the stack.
+ *
+ * Split out of MenuRows because each is its own boolean of conditions, and the
+ * menu was heading past the complexity ceiling one row at a time.
+ */
+function SingleItemRows({
+  items,
+  onBringToFront,
+  onExport,
+  onOpenInAffinity,
+  onSendToCanva,
+  onSendToBack,
+  onVectorize,
+  onlyPicked,
+}: {
+  items: BoardItem[];
+  onBringToFront: (itemId: string) => void;
+  onExport: (itemId: string) => void;
+  onOpenInAffinity?: (itemId: string) => void;
+  onSendToCanva?: (item: BoardItem) => void;
+  onSendToBack: (itemId: string) => void;
+  onVectorize?: (itemId: string) => void;
+  onlyPicked: BoardItem | null;
+}) {
+  // A single selected node that has produced something can hand over the whole
+  // batch. More than one selected is a grouping gesture, not an export one.
+  const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
+  // A node's SVG is what Affinity edits, and only an actual vector is worth
+  // offering that move for — a raster cannot be handed over as an SVG at all.
+  const pickedSvg = onlyPicked
+    ? isSvgUrl(outputImageOf(onlyPicked, items))
+    : false;
+
+  // A placed picture — photo or reference — is a raster waiting to be traced.
+  // The Recraft vectorizer needs a source, so a node with no image would have
+  // nothing to offer it. An SVG is already vector art, so offering to trace it
+  // is offering to fail.
+  const placedImage =
+    onlyPicked &&
+    (onlyPicked.kind === "photo" || onlyPicked.kind === "reference") &&
+    Boolean(onlyPicked.imageUrl) &&
+    !isSvgUrl(onlyPicked.imageUrl);
+
+  return (
+    <>
+      {onlyPicked && madeCount > 0 ? (
+        <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
+      ) : null}
+
+      {onlyPicked && pickedSvg && onOpenInAffinity ? (
+        <AffinityRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
+      ) : null}
+
+      {onlyPicked && placedImage && onVectorize ? (
+        <VectorizeRow onVectorize={() => onVectorize(onlyPicked.id)} />
+      ) : null}
+
+      {onlyPicked && onSendToCanva && outputImageOf(onlyPicked, items) ? (
+        <CanvaRow onSend={() => onSendToCanva(onlyPicked)} />
+      ) : null}
+
+      {onlyPicked && onlyPicked.kind !== "frame" ? (
+        <StackRows
+          onBringToFront={() => onBringToFront(onlyPicked.id)}
+          onSendToBack={() => onSendToBack(onlyPicked.id)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 /** What a selection can be turned into. */
 function GroupRows({ count, onGroup }: { count: number; onGroup: () => void }) {
   return (
@@ -256,22 +370,28 @@ function MenuRows({
   items,
   menu,
   onArrange,
+  onBringToFront,
   onCopy,
   onExport,
   onGroup,
   onSaveElement,
   onOpenInAffinity,
+  onSendToCanva,
+  onSendToBack,
   onVectorize,
   wires,
 }: {
   items: BoardItem[];
   menu: CanvasMenuTarget;
   onArrange: (itemId: string) => void;
+  onBringToFront: (itemId: string) => void;
   onCopy: (frame: BoardItem) => void;
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
   onSaveElement: (items: BoardItem[]) => void;
   onOpenInAffinity?: (itemId: string) => void;
+  onSendToCanva?: (item: BoardItem) => void;
+  onSendToBack: (itemId: string) => void;
   onVectorize?: (itemId: string) => void;
   wires: BoardWire[];
 }) {
@@ -282,23 +402,6 @@ function MenuRows({
   // A single selected node that has produced something can hand over the whole
   // batch. More than one selected is a grouping gesture, not an export one.
   const onlyPicked = selection.length === 1 ? selection[0] : null;
-  const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
-  // A node's SVG is what Affinity edits, and only an actual vector is worth
-  // offering that move for — a raster cannot be handed over as an SVG at all.
-  const pickedSvg = onlyPicked
-    ? isSvgUrl(outputImageOf(onlyPicked, items))
-    : false;
-
-  // A placed picture — photo or reference — is a raster waiting to be traced.
-  // The Recraft vectorizer needs a source, so a node with no image would have
-  // nothing to offer it; a frame offers its contents instead, but then the
-  // action belongs on the pictures inside it, not the frame itself. An SVG is
-  // already vector art, so offering to trace it is offering to fail.
-  const placedImage =
-    onlyPicked &&
-    (onlyPicked.kind === "photo" || onlyPicked.kind === "reference") &&
-    Boolean(onlyPicked.imageUrl) &&
-    !isSvgUrl(onlyPicked.imageUrl);
 
   // Every picture the selection can hand over, resolved the way a wire would
   // resolve it — so selecting a frame offers the pictures sitting on it, and
@@ -309,17 +412,16 @@ function MenuRows({
 
   return (
     <>
-      {onlyPicked && madeCount > 0 ? (
-        <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
-      ) : null}
-
-      {onlyPicked && pickedSvg && onOpenInAffinity ? (
-        <AffinityRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
-      ) : null}
-
-      {onlyPicked && placedImage && onVectorize ? (
-        <VectorizeRow onVectorize={() => onVectorize(onlyPicked.id)} />
-      ) : null}
+      <SingleItemRows
+        items={items}
+        onBringToFront={onBringToFront}
+        onExport={onExport}
+        onlyPicked={onlyPicked}
+        onOpenInAffinity={onOpenInAffinity}
+        onSendToBack={onSendToBack}
+        onSendToCanva={onSendToCanva}
+        onVectorize={onVectorize}
+      />
 
       {canGroup ? (
         <GroupRows
@@ -362,12 +464,15 @@ export function CanvasMenu({
   items,
   menu,
   onArrange,
+  onBringToFront,
   onCopyFrame,
   onDismiss,
   onExport,
   onGroup,
   onOpenInAffinity,
   onSaveElement,
+  onSendToCanva,
+  onSendToBack,
   onVectorize,
   wires,
 }: CanvasMenuProps) {
@@ -425,6 +530,7 @@ export function CanvasMenu({
             items={items}
             menu={menu}
             onArrange={onArrange}
+            onBringToFront={onBringToFront}
             onCopy={(picked) =>
               setNaming({
                 for: menu,
@@ -436,6 +542,8 @@ export function CanvasMenu({
             onGroup={onGroup}
             onOpenInAffinity={onOpenInAffinity}
             onSaveElement={onSaveElement}
+            onSendToBack={onSendToBack}
+            onSendToCanva={onSendToCanva}
             onVectorize={onVectorize}
             wires={wires}
           />

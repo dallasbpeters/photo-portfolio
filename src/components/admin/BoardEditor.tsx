@@ -36,7 +36,7 @@ import {
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
-import { OUTPUT_PORT_KEY } from "../../../config/nodeTypes.js";
+import { nodeTypeFor, OUTPUT_PORT_KEY } from "../../../config/nodeTypes.js";
 import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
@@ -95,6 +95,7 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCursor";
+import { SendToCanvaModal } from "./SendToCanvaModal";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
@@ -1562,6 +1563,52 @@ export function BoardEditor({
   };
 
   /**
+   * Moves one item to the very top of the stack.
+   *
+   * The canvas already raises whatever you grab; this is the explicit, reliable
+   * version — the layers panel's drag is the same thing made reorderable, and a
+   * right-click gives it a target that cannot miss.
+   */
+  const bringToFront = (itemId: string) => {
+    const highest = items.reduce((max, item) => Math.max(max, item.z), 0);
+    change(
+      items.map((item) =>
+        item.id === itemId ? { ...item, z: highest + 1 } : item
+      )
+    );
+  };
+
+  /** Moves one item to the very bottom of the stack, above the frames. */
+  const sendToBack = (itemId: string) => {
+    const lowest = items.reduce((min, item) => Math.min(min, item.z), 0);
+    change(
+      items.map((item) =>
+        item.id === itemId ? { ...item, z: lowest - 1 } : item
+      )
+    );
+  };
+
+  /** The image being sent to Canva, or null while the modal is closed. */
+  const [canvaTarget, setCanvaTarget] = useState<{
+    imageUrl: string;
+    name: string;
+  } | null>(null);
+
+  const openSendToCanva = (item: BoardItem) => {
+    const url = outputImageOf(item, items);
+    if (!url) {
+      toast.error("That item has no picture to send");
+      return;
+    }
+    const label =
+      item.kind === "op" ? (nodeTypeFor(item.nodeType)?.label ?? null) : null;
+    setCanvaTarget({
+      imageUrl: url,
+      name: label ?? "Board image",
+    });
+  };
+
+  /**
    * Puts every version a node has made onto the board as its own image.
    *
    * A node's gallery is for comparing; once you have compared, the usual next
@@ -1804,6 +1851,7 @@ export function BoardEditor({
             items={items}
             keyOf={keyOf}
             onArrangeFrame={autoArrange}
+            onBringToFront={bringToFront}
             onCancel={graphRun.cancel}
             onChange={change}
             onConfigChange={changeConfig}
@@ -1822,12 +1870,22 @@ export function BoardEditor({
             onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
             onSaveElement={beginElement}
             onSelectionChange={setSelectedItem}
+            onSendToBack={sendToBack}
+            onSendToCanva={openSendToCanva}
             onSendVersions={sendVersions}
             onVectorize={(itemId) => void vectorizeItem(itemId)}
             onWiresChange={changeWires}
             viewCentreRef={viewCentreRef}
             wires={wires}
           />
+
+          {canvaTarget ? (
+            <SendToCanvaModal
+              imageUrl={canvaTarget.imageUrl}
+              name={canvaTarget.name}
+              onClose={() => setCanvaTarget(null)}
+            />
+          ) : null}
 
           {isInserting ? (
             <InsertPalette

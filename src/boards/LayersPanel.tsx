@@ -111,13 +111,21 @@ export function LayersPanel({
     .map((item, index) => ({ index, item }));
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // Where the dragged row would land, as an insertion position (0..length).
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const lastOver = useRef<number | null>(null);
+
+  // The first frame's position: frames are pinned at the bottom, so dropping
+  // anywhere on them means "the very bottom of the stack", not "between frames".
+  const firstFrameIndex = ordered.findIndex(({ item }) => isFrame(item));
 
   const move = (from: number, to: number) => {
     const next = [...ordered];
     const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
+    // Positions past the removed row shift by one; inserting at `to` after the
+    // splice would otherwise land one place lower than the drop pointed at.
+    const at = to > from ? to - 1 : to;
+    next.splice(at, 0, moved);
     // Topmost first, so the first row is the highest z. Sequential after any
     // reorder keeps the stack legible instead of accumulating ever-bigger gaps.
     onChange(next.map(({ item }, i) => ({ ...item, z: next.length - 1 - i })));
@@ -129,8 +137,21 @@ export function LayersPanel({
     lastOver.current = null;
   };
 
+  /** Where dropping on a row inserts, from the pointer's half of that row. */
+  const positionFor = (
+    e: React.DragEvent<HTMLButtonElement>,
+    index: number,
+    frame: boolean
+  ): number => {
+    if (frame) {
+      return firstFrameIndex === -1 ? ordered.length : firstFrameIndex;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    return e.clientY < rect.top + rect.height / 2 ? index : index + 1;
+  };
+
   return (
-    <div className="pointer-events-auto absolute right-4 bottom-16 flex w-60 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
+    <div className="pointer-events-auto absolute right-4 bottom-16 flex h-200 w-60 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
       <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
           <HugeiconsIcon aria-hidden icon={Layers01Icon} size={13} />
@@ -146,12 +167,13 @@ export function LayersPanel({
         </button>
       </header>
 
-      <ul className="max-h-80 overflow-y-auto p-1.5">
+      <ul className="max-h-80 min-h-full overflow-y-auto p-1.5 pb-20">
         {ordered.map(({ item, index }) => {
           const frame = isFrame(item);
           const thumb = thumbnailOf(item, items);
           const active = dragIndex === index;
-          const over = overIndex === index;
+          // Inserted before this row, or just after it — both show here.
+          const over = overIndex === index || overIndex === index + 1;
           return (
             <li key={item.id}>
               <button
@@ -159,21 +181,19 @@ export function LayersPanel({
                   item.id === selectedId
                     ? "bg-board-ink/10 text-board-ink"
                     : "text-board-ink/80 hover:bg-board-ink/5 hover:text-board-ink"
-                } ${over && !frame ? "ring-1 ring-sky-300" : ""} ${
+                } ${over ? "ring-1 ring-sky-300" : ""} ${
                   active ? "opacity-50" : ""
                 }`}
                 draggable={!frame}
                 onClick={() => onSelect(item)}
                 onDragEnd={resetDrag}
                 onDragOver={(e) => {
-                  if (frame) {
-                    return;
-                  }
                   e.preventDefault();
                   e.dataTransfer.dropEffect = "move";
-                  if (lastOver.current !== index) {
-                    lastOver.current = index;
-                    setOverIndex(index);
+                  const position = positionFor(e, index, frame);
+                  if (lastOver.current !== position) {
+                    lastOver.current = position;
+                    setOverIndex(position);
                   }
                 }}
                 onDragStart={(e) => {
@@ -185,11 +205,11 @@ export function LayersPanel({
                   setDragIndex(index);
                 }}
                 onDrop={(e) => {
-                  if (frame || dragIndex === null) {
+                  if (dragIndex === null) {
                     return;
                   }
                   e.preventDefault();
-                  move(dragIndex, index);
+                  move(dragIndex, positionFor(e, index, frame));
                   resetDrag();
                 }}
                 type="button"

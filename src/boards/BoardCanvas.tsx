@@ -88,6 +88,8 @@ interface BoardCanvasProps {
    */
   /** Lays a frame's contents out in a grid, keeping their order. */
   onArrangeFrame?: (itemId: string) => void;
+  /** Brings one item to the very front of the stack. */
+  onBringToFront?: (itemId: string) => void;
   /** Stops whatever run is in flight. */
   onCancel?: () => void;
   onChange: (items: BoardItem[]) => void;
@@ -157,6 +159,10 @@ interface BoardCanvasProps {
    * toolbar knows what is selected.
    */
   onSelectionChange?: (item: BoardItem | null) => void;
+  /** Sends one item to the very back of the stack, above the frames. */
+  onSendToBack?: (itemId: string) => void;
+  /** Sends one item's picture into a Canva design. */
+  onSendToCanva?: (item: BoardItem) => void;
   /** Pins every stored version of a node onto the board. */
   onSendVersions?: (itemId: string) => void;
   /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
@@ -189,6 +195,9 @@ interface BoardCanvasProps {
  * magnified.
  */
 const SNAP_PX = 6;
+
+/** Pointer movement (screen px) that counts as a drag rather than a click. */
+const DRAG_RAISE_PX = 4;
 
 /** True when a canvas point falls inside an item's box. */
 const covers = (item: BoardItem, point: Point): boolean =>
@@ -243,6 +252,8 @@ type Gesture =
       carried: { index: number; originX: number; originY: number }[];
       index: number;
       kind: "move";
+      /** True once the drag has raised the item to the top of the stack. */
+      raised: boolean;
       startX: number;
       startY: number;
       originX: number;
@@ -276,6 +287,8 @@ export function BoardCanvas({
   onGroupIntoFrame,
   onMaskStroke,
   onOpenInAffinity,
+  onBringToFront,
+  onSendToBack,
   drawTool = null,
   drawStyle,
   onDraw,
@@ -285,6 +298,7 @@ export function BoardCanvas({
   onRemoveVersion,
   onRun,
   onSaveElement,
+  onSendToCanva,
   onSelectionChange,
   onSendVersions,
   onVectorize,
@@ -852,22 +866,18 @@ export function BoardCanvas({
         kind: "move",
         originX: item.x,
         originY: item.y,
+        // Raised to the top only once the item is actually dragged — see
+        // onPointerMove. A plain click selects without reordering the stack,
+        // which is what the layers panel and the stack menu are for.
+        raised: false,
         startX: p.x,
         startY: p.y,
       };
       if (!inSelection) {
         setSelection([index]);
       }
-      // Raise on grab: the thing you are touching should be the thing on top.
-      // Except a frame, which is a backdrop — raising it would bury everything
-      // it contains the moment it was nudged.
-      if (!isFrame) {
-        onChange(
-          items.map((it, i) => (i === index ? { ...it, z: topZ + 1 } : it))
-        );
-      }
     },
-    [containedIndices, items, onChange, selection, topZ, view]
+    [containedIndices, items, selection, view]
   );
 
   const beginResize = useCallback(
@@ -916,6 +926,20 @@ export function BoardCanvas({
         if (!item) {
           return;
         }
+        // Raised to the top once it is really being dragged, not on the press
+        // that merely selected it — a click must not reorder the stack, which
+        // is what the layers panel and the stack menu are for. Frames stay
+        // backdrops whatever happens.
+        const raised = !g.raised && item.kind !== "frame";
+        const distance =
+          Math.abs(dx) > DRAG_RAISE_PX / view.viewport.scale ||
+          Math.abs(dy) > DRAG_RAISE_PX / view.viewport.scale;
+        if (raised && distance) {
+          onChange(
+            items.map((it, i) => (i === g.index ? { ...it, z: topZ + 1 } : it))
+          );
+          gesture.current = { ...g, raised: true };
+        }
         // Snapping compares against every other item, so the dragged one is
         // excluded — it would otherwise align to itself and never move.
         const snapped = snapToGuides(
@@ -963,7 +987,7 @@ export function BoardCanvas({
         )
       );
     },
-    [items, onChange, view, wiring]
+    [items, onChange, topZ, view, wiring]
   );
 
   const endGesture = useCallback(
@@ -1320,6 +1344,10 @@ export function BoardCanvas({
           onArrangeFrame?.(itemId);
           setMenu(null);
         }}
+        onBringToFront={(itemId) => {
+          onBringToFront?.(itemId);
+          setMenu(null);
+        }}
         onCopyFrame={(frame, title) => {
           onCopyFrame?.(frame, title);
           setMenu(null);
@@ -1339,6 +1367,14 @@ export function BoardCanvas({
         }}
         onSaveElement={(chosen) => {
           onSaveElement?.(chosen);
+          setMenu(null);
+        }}
+        onSendToBack={(itemId) => {
+          onSendToBack?.(itemId);
+          setMenu(null);
+        }}
+        onSendToCanva={(item) => {
+          onSendToCanva?.(item);
           setMenu(null);
         }}
         onVectorize={(itemId) => {

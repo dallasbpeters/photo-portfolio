@@ -58,7 +58,7 @@ const HTML_TAG = /<html[\s>]/i;
 const UNAUTHORIZED = /unauthor/i;
 const EMAIL_LOCAL_SEPARATORS = /[._-]+/;
 
-const apiBase = (): string => {
+export const apiBase = (): string => {
   // Dev: always same-origin. Vite proxies /api → vercel dev :3000.
   // Port 3000 (vercel) hits its own handlers directly. Either port works.
   if (import.meta.env.DEV) {
@@ -195,7 +195,7 @@ const getStoredUser = (): AuthenticatedUser | null => {
   }
 };
 
-const jsonHeaders = (): HeadersInit => {
+export const jsonHeaders = (): HeadersInit => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

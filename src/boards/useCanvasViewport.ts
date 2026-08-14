@@ -105,6 +105,43 @@ const WHEEL_SENSITIVITY = 0.0015;
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
+/** Session storage key for a board's view, scoped so boards never share one. */
+const VIEW_STORAGE_KEY = (path: string): string => `cyan-board-view:${path}`;
+
+/** The saved view for this board, or null when there is none to restore. */
+const readSavedView = (): Viewport | null => {
+  try {
+    const raw = sessionStorage.getItem(VIEW_STORAGE_KEY(location.pathname));
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<Viewport>;
+    if (
+      typeof parsed.scale === "number" &&
+      Number.isFinite(parsed.scale) &&
+      typeof parsed.tx === "number" &&
+      typeof parsed.ty === "number"
+    ) {
+      return { scale: parsed.scale, tx: parsed.tx, ty: parsed.ty };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/** Remembers the view for this board, for the next load of the same page. */
+const saveView = (viewport: Viewport): void => {
+  try {
+    sessionStorage.setItem(
+      VIEW_STORAGE_KEY(location.pathname),
+      JSON.stringify(viewport)
+    );
+  } catch {
+    // Storage denied — the view simply does not survive a reload.
+  }
+};
+
 /**
  * Pan and zoom over the fixed board canvas.
  *
@@ -123,11 +160,18 @@ export const useCanvasViewport = (
    */
   getContentBounds?: () => Bounds | null
 ): CanvasViewport => {
-  const [viewport, setViewport] = useState<Viewport>({
-    scale: 1,
-    tx: 0,
-    ty: 0,
-  });
+  // The view is remembered per board, in session storage, so a reload does not
+  // throw the board back to "fit everything" — which reads as the items having
+  // moved when all that moved was the camera. Restored as the initial state,
+  // and the flags below tell the framing to keep its hands off.
+  const initial = useRef<Viewport | null>(null);
+  if (initial.current === null) {
+    initial.current = readSavedView();
+  }
+
+  const [viewport, setViewport] = useState<Viewport>(
+    () => initial.current ?? { scale: 1, tx: 0, ty: 0 }
+  );
   const [isPanning, setIsPanning] = useState(false);
 
   // Live pointer positions, keyed by pointerId. Two of them means a pinch.
@@ -141,14 +185,20 @@ export const useCanvasViewport = (
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
 
   // Once the view is the user's doing, automatic framing stops: a resize must
-  // not undo where they put the board.
-  const hasUserMoved: RefObject<boolean> = useRef(false);
+  // not undo where they put the board. A restored view counts as the user's.
+  const hasUserMoved: RefObject<boolean> = useRef(initial.current !== null);
   // Content is framed once; later resizes must not re-frame from scratch.
-  const hasFramedContent: RefObject<boolean> = useRef(false);
+  const hasFramedContent: RefObject<boolean> = useRef(initial.current !== null);
 
   const markUserMoved = useCallback(() => {
     hasUserMoved.current = true;
   }, []);
+
+  // The view follows the user wherever they put it; remembered so a reload
+  // comes back to the same place instead of re-fitting the whole board.
+  useEffect(() => {
+    saveView(viewport);
+  }, [viewport]);
 
   // Held in a ref so an inline arrow from the caller does not re-create the
   // framing callback on every render.
