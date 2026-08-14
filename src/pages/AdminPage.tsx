@@ -11,7 +11,7 @@ import { SiteSettingsPanel } from "../components/admin/SiteSettingsPanel";
 import { SitesPanel } from "../components/admin/SitesPanel";
 import { Button } from "../components/ui/button";
 import posthog from "../lib/posthog";
-import { authStorage } from "../services/portfolioService";
+import { authApi, authStorage } from "../services/portfolioService";
 import { useSiteSettings } from "../theme/SiteSettingsProvider";
 
 /**
@@ -39,29 +39,60 @@ const sectionClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AdminPage() {
   const { settings } = useSiteSettings();
-  const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    Boolean(authStorage.getToken())
+  // A token in storage is only a guess until the server confirms it. Until that
+  // check lands, an unchecked token means "checking" rather than "signed in" —
+  // otherwise a stale or forged value skips the login screen and leaves a page
+  // that 401s on every call.
+  const [authState, setAuthState] = useState<"checking" | "signedIn" | "out">(
+    () => (authStorage.getToken() ? "checking" : "out")
   );
+  const isAuthenticated = authState === "signedIn";
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (authState !== "checking") {
       return;
     }
+    let cancelled = false;
+    void authApi
+      .me()
+      .then(({ user }) => {
+        if (cancelled) {
+          return;
+        }
+        posthog.identify(user.id, { email: user.email });
+        setAuthState("signedIn");
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        // The stored token is no good — throw it away and ask for a real one.
+        authStorage.setToken(null);
+        setAuthState("out");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authState]);
 
-    const user = authStorage.getUser();
-    if (user) {
-      posthog.identify(user.id, { email: user.email });
-    }
-  }, [isAuthenticated]);
-
-  const handleLogin = () => setIsAuthenticated(true);
+  const handleLogin = () => setAuthState("signedIn");
 
   const handleLogout = () => {
     posthog.reset();
     authStorage.setToken(null);
-    setIsAuthenticated(false);
+    setAuthState("out");
     toast.message("Signed out");
   };
+
+  if (authState === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="animate-pulse text-[10px] text-white/40 uppercase tracking-[0.25em]">
+          Checking…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">

@@ -742,6 +742,16 @@ export const authApi = {
     }
     return { token: data.token };
   },
+  /** Confirms the stored token is real; 401 when it is stale or forged. */
+  me: async (): Promise<{ user: { id: string; email: string } }> => {
+    const res = await fetch(`${apiBase()}/api/auth/me`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error("Unauthorized");
+    }
+    return (await res.json()) as { user: { id: string; email: string } };
+  },
 
   /**
    * Requests a reset link. Resolves with the server's neutral message whether or
