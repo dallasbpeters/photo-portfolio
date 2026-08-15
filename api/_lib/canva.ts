@@ -191,11 +191,18 @@ const canvaFetch = async (
   const json = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };
     message?: string;
+    upsell_url?: string;
   };
   if (!res.ok) {
-    throw new Error(
-      json.error?.message ?? json.message ?? `Canva answered ${res.status}`
-    );
+    const message =
+      json.error?.message ?? json.message ?? `Canva answered ${res.status}`;
+    const error = new Error(message) as Error & { upsellUrl?: string };
+    // The quota error carries the upgrade URL at the top level — kept on the
+    // error so the API can pass it through to the upgrade prompt.
+    if (json.upsell_url) {
+      error.upsellUrl = json.upsell_url;
+    }
+    throw error;
   }
   return json;
 };
@@ -224,7 +231,15 @@ const pollJob = async (
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     // biome-ignore lint/performance/noAwaitInLoops: the whole point of polling is one probe per tick — the loop is the poll
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const job = (await canvaFetch(token, getPath(jobId))) as CanvaJob;
+    // The job endpoints wrap the job in a `job` object — status, error and
+    // result all live one level down.
+    const json = (await canvaFetch(token, getPath(jobId))) as {
+      job?: CanvaJob;
+    };
+    const { job } = json;
+    if (!job) {
+      throw new Error("Canva did not return a job");
+    }
     if (job.status === "success") {
       return job;
     }
@@ -244,12 +259,12 @@ export const uploadAsset = async (
   const created = (await canvaFetch(token, "/url-asset-uploads", {
     body: JSON.stringify({ name, url: imageUrl }),
     method: "POST",
-  })) as CanvaJob;
-  const job = await pollJob(
-    token,
-    (id) => `/url-asset-uploads/${id}`,
-    created.id
-  );
+  })) as { job?: CanvaJob };
+  const jobId = created.job?.id;
+  if (!jobId) {
+    throw new Error("Canva did not return an upload job id");
+  }
+  const job = await pollJob(token, (id) => `/url-asset-uploads/${id}`, jobId);
   return job.asset?.id ?? "";
 };
 
@@ -272,8 +287,12 @@ export const autofillDesign = async (
       ...(title ? { title } : {}),
     }),
     method: "POST",
-  })) as CanvaJob;
-  const job = await pollJob(token, (id) => `/autofills/${id}`, created.id);
+  })) as { job?: CanvaJob };
+  const jobId = created.job?.id;
+  if (!jobId) {
+    throw new Error("Canva did not return an autofill job id");
+  }
+  const job = await pollJob(token, (id) => `/autofills/${id}`, jobId);
   return job.result?.design?.url ?? "";
 };
 
@@ -284,33 +303,54 @@ export interface CanvaTemplate {
   viewUrl: string;
 }
 
-/** The admin's autofillable brand templates. */
+/** The admin's brand templates, fetched across every page. */
 export const listBrandTemplates = async (
   token: string
 ): Promise<CanvaTemplate[]> => {
-  const json = (await canvaFetch(
-    token,
-    "/brand-templates?dataset=non_empty"
-  )) as {
-    items?: {
-      id: string;
-      thumbnail?: { height?: number; url?: string; width?: number };
-      title?: string;
-      view_url?: string;
-    }[];
-  };
-  return (json.items ?? []).map((item) => ({
-    id: item.id,
-    thumbnail: item.thumbnail?.url
-      ? {
-          height: item.thumbnail.height ?? 0,
-          url: item.thumbnail.url,
-          width: item.thumbnail.width ?? 0,
-        }
-      : null,
-    title: item.title ?? "Untitled template",
-    viewUrl: item.view_url ?? "",
-  }));
+  const templates: CanvaTemplate[] = [];
+  let continuation: string | null = null;
+  do {
+    const params = new URLSearchParams({
+      // Every brand template, not only the autofillable ones: the picker shows
+      // all of them and calls out the ones missing autofill fields, so a
+      // template that cannot be filled yet is visible rather than silently
+      // absent.
+      dataset: "any",
+      limit: "100",
+    });
+    if (continuation) {
+      params.set("continuation", continuation);
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: the loop is the pagination — one page per tick, which is the whole point
+    const json = (await canvaFetch(
+      token,
+      `/brand-templates?${params.toString()}`
+    )) as {
+      continuation?: string | null;
+      items?: {
+        id: string;
+        thumbnail?: { height?: number; url?: string; width?: number };
+        title?: string;
+        view_url?: string;
+      }[];
+    };
+    for (const item of json.items ?? []) {
+      templates.push({
+        id: item.id,
+        thumbnail: item.thumbnail?.url
+          ? {
+              height: item.thumbnail.height ?? 0,
+              url: item.thumbnail.url,
+              width: item.thumbnail.width ?? 0,
+            }
+          : null,
+        title: item.title ?? "Untitled template",
+        viewUrl: item.view_url ?? "",
+      });
+    }
+    continuation = json.continuation ?? null;
+  } while (continuation);
+  return templates;
 };
 
 /** The autofillable image field names of a brand template. */

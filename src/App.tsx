@@ -32,6 +32,9 @@ const BoardViewPage = lazy(() =>
 const ContentPage = lazy(() =>
   import("./pages/ContentPage").then((m) => ({ default: m.ContentPage }))
 );
+const LegalPage = lazy(() =>
+  import("./pages/LegalPage").then((m) => ({ default: m.LegalPage }))
+);
 
 /** Deliberately blank: a spinner that flashes for 80ms reads worse than nothing. */
 const RouteFallback = () => (
@@ -56,6 +59,10 @@ export default function App() {
             <Route element={<ResetPasswordPage />} path="/reset-password" />
             <Route element={<PhotoPage />} path="/photo/:id" />
             <Route element={<BoardViewPage />} path="/board/:slug" />
+            {/* Reserved before the CMS splat: a legal page must never be
+                shadowed by a page with the same slug. */}
+            <Route element={<LegalPage kind="privacy" />} path="/privacy" />
+            <Route element={<LegalPage kind="terms" />} path="/terms" />
             {/* Last: a CMS slug must never shadow a built-in route. The API also
                 refuses reserved slugs, so both ends enforce it. */}
             <Route element={<ContentPage />} path="/:slug" />

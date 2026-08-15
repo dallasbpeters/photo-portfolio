@@ -64,8 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
     return res.status(200).json({ designUrl });
   } catch (err) {
-    return res
-      .status(502)
-      .json({ error: err instanceof Error ? err.message : "Canva failed" });
+    const { upsellUrl } = err as Error & { upsellUrl?: string };
+    return res.status(502).json({
+      error: err instanceof Error ? err.message : "Canva failed",
+      ...(upsellUrl ? { upsellUrl } : {}),
+    });
   }
 }

@@ -1,51 +1,38 @@
 /**
- * Choosing images from Google Drive, through Google's own picker.
+ * Browsing images in Google Drive, for the admin uploaders.
  *
- * The picker rather than a browser of our own, for one reason that matters: it
- * lets the app ask for `drive.file`, a scope that grants access only to files
- * the person explicitly picked. Browsing Drive inside our own UI would need
- * `drive.readonly` — read everything in the account — which is a sensitive
- * scope requiring Google's verification review, in exchange for a worse
- * version of a dialog Google already provides.
+ * A custom viewer rather than Google's picker, because the picker cannot show
+ * thumbnails under the minimal scope: a list of rows is all it will render,
+ * and a grid of empty tiles is worse than a list. The viewer asks for
+ * `drive.readonly` instead — enough to list files and load their thumbnails —
+ * and downloads the picked bytes into the same upload path a dragged file
+ * uses, so a photo coming in from Drive is indistinguishable from one dropped
+ * on the page.
  *
- * The server's only part is handing over the picker's credentials, and only to
- * a signed-in admin — they are deliberately not compiled into the bundle. The
- * token is then obtained in the browser, the bytes are fetched in the browser,
- * and they go into our blob storage through the same upload path a dragged file
- * uses. So there is still no client secret and no refresh token to store.
+ * The server's only part is handing over the picker credentials to a signed-in
+ * admin; the token is obtained in the browser, files are listed and fetched in
+ * the browser, and bytes go to our blob storage from there.
  *
  * The bytes are copied deliberately rather than linked: a Drive URL needs the
- * viewer's own permission to load, so a board pointing at one would show
+ * viewer's own permission to load, so a photo pointing at one would show
  * broken images to anyone else — and to you, once the file moved.
  */
 
 import { googleApi } from "../services/portfolioService";
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
-const GAPI_SRC = "https://apis.google.com/js/api.js";
 
 /**
- * Access only to files chosen through the picker.
+ * Read access to the whole Drive, not just picked files.
  *
- * Deliberately not drive.readonly: this app has no business being able to read
- * a Drive it was not pointed at.
+ * The price of a viewer that can list and preview: the picker only needed
+ * drive.file because Google was doing the browsing. Browsing is ours now, so
+ * the scope has to cover it. The consent screen tells the user as much; the
+ * integration's scopes in Google Cloud must include it or the token request
+ * will be refused.
  */
-const SCOPE = "https://www.googleapis.com/auth/drive.file";
-
-/**
- * What the picker will offer, matching what the uploader accepts.
- *
- * Kept in step with the allowlist in portfolioService.uploadImageFile. If the
- * two drift, the symptom is a picture you are allowed to choose and then told
- * you cannot use, which reads as a bug rather than a limit.
- */
-const PICKABLE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "image/avif",
-].join(",");
+export const DRIVE_READ_SCOPE =
+  "https://www.googleapis.com/auth/drive.readonly";
 
 /** Loads a script once per page, however many times this is called. */
 const loaders = new Map<string, Promise<void>>();
@@ -81,22 +68,26 @@ const loadScript = (src: string): Promise<void> => {
   return loading;
 };
 
-const loadPicker = async (): Promise<void> => {
-  await loadScript(GAPI_SRC);
-  await new Promise<void>((resolve) => {
-    window.gapi?.load("picker", () => resolve());
-  });
+export interface DriveConfig {
+  apiKey: string;
+  clientId: string;
+}
+
+/** The picker credentials, handed to a signed-in admin only. */
+export const driveConfig = async (): Promise<DriveConfig> => {
+  await loadScript(GIS_SRC);
+  return googleApi.pickerConfig();
 };
 
 /**
- * Asks Google for a token covering picked files.
+ * Asks Google for a token covering Drive reads.
  *
  * Its own consent, separate from signing in: the sign-in button verifies who
  * you are and receives no access token at all, so there is nothing there to
  * reuse. Consent for reading files is a different question and Google asks it
  * separately, which is the honest arrangement.
  */
-const requestToken = (clientId: string): Promise<string> =>
+export const requestDriveToken = (clientId: string): Promise<string> =>
   new Promise((resolve, reject) => {
     const oauth2 = window.google?.accounts?.oauth2;
     if (!oauth2) {
@@ -112,104 +103,96 @@ const requestToken = (clientId: string): Promise<string> =>
         }
       },
       client_id: clientId,
-      scope: SCOPE,
+      scope: DRIVE_READ_SCOPE,
     });
     client.requestAccessToken();
   });
 
-export type DriveFile = GooglePickerDocument;
+/** One image in the Drive, enough to show it and fetch its bytes. */
+export interface DriveFileEntry {
+  id: string;
+  mimeType: string;
+  name: string;
+  size: number | null;
+  /** A working thumbnail URL, if the file has one. */
+  thumbnail: string | null;
+}
+
+const withToken = (url: string, token: string): string =>
+  `${url}${url.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(token)}`;
+
+/** Escapes a search term for the Drive `name contains` query. */
+const escapeQuery = (term: string): string =>
+  term.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 /**
- * The Cloud project number, which the picker calls the "app id".
+ * One page of image files, matching the uploader's allowlist.
  *
- * Taken from the client id rather than configured separately: an OAuth client
- * id is always `<project number>-<random>.apps.googleusercontent.com`, so the
- * two can never disagree, and there is no second value to keep in step.
+ * A search term narrows the results; `pageToken` walks further pages. Shared
+ * drives are included so a picture living on a team drive still shows up.
  */
-const appIdFrom = (clientId: string): string => clientId.split("-")[0] ?? "";
-
-/** Opens Google's picker and resolves with what was chosen, or an empty list. */
-const openPicker = (
+export const listDriveImages = async (
   token: string,
-  apiKey: string,
-  clientId: string
-): Promise<DriveFile[]> =>
-  new Promise((resolve, reject) => {
-    const picker = window.google?.picker;
-    if (!picker) {
-      reject(new Error("The Google picker did not load"));
-      return;
-    }
-    /**
-     * Your own images, flat and searchable. The first tab, and the default.
-     *
-     * No folders: showing them turns finding a picture into navigating a tree,
-     * which is the least useful way to look for an image because it needs you
-     * to already know where you put it. Flat lets the search box do the work.
-     *
-     * No `setEnableDrives` either. That flag does not merely *add* shared
-     * drives — it makes the view root the list of shared drives, so the
-     * ordinary Drive disappears behind them. It belongs on its own tab.
-     */
-    // LIST, not GRID. Google's own guidance: under any scope narrower than
-    // drive.readonly the user has not granted access to thumbnails, so a grid
-    // renders rows of blank tiles. A list at least shows names, owners and
-    // dates — see the note in DriveTab about what it would cost to get the
-    // thumbnails back.
-    const images = new picker.DocsView(picker.ViewId.DOCS_IMAGES)
-      .setMode(picker.DocsViewMode.LIST)
-      // Only what this app can actually take. DOCS_IMAGES includes formats the
-      // uploader rejects — a phone's HEIC among them — and letting one be
-      // picked only to fail afterwards is worse than not offering it.
-      .setMimeTypes(PICKABLE_TYPES);
-
-    /** Browsing by folder, for when you know exactly where the work is. */
-    const folders = new picker.DocsView(picker.ViewId.DOCS)
-      .setMode(picker.DocsViewMode.LIST)
-      .setIncludeFolders(true)
-      .setMimeTypes(PICKABLE_TYPES);
-
-    /**
-     * Shared drives, browsable, on their own tab rather than in place of
-     * everything.
-     *
-     * `DOCS` with folders rather than `DOCS_IMAGES`: the images view is flat by
-     * design, so on a shared drive it listed the drives themselves and gave you
-     * no way into them. A shared drive is a tree and has to be walked.
-     */
-    const shared = new picker.DocsView(picker.ViewId.DOCS)
-      .setMode(picker.DocsViewMode.LIST)
-      .setEnableDrives(true)
-      .setIncludeFolders(true)
-      .setMimeTypes(PICKABLE_TYPES);
-
-    new picker.PickerBuilder()
-      .addView(images)
-      .addView(folders)
-      .addView(shared)
-      // Several at once. Without this the picker takes one file per trip, which
-      // for filling a moodboard is the wrong unit of work entirely.
-      .enableFeature(picker.Feature.MULTISELECT_ENABLED)
-      // Required when the scope is drive.file: it is how Google ties the files
-      // you pick to this app so it may read them afterwards. Omitting it is
-      // silent — the picker opens and looks fine.
-      .setAppId(appIdFrom(clientId))
-      .setDeveloperKey(apiKey)
-      .setOAuthToken(token)
-      .setTitle("Choose images for this board")
-      .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) {
-          resolve(data.docs ?? []);
-        } else if (data.action === picker.Action.CANCEL) {
-          resolve([]);
-        }
-      })
-      .build()
-      .setVisible(true);
+  query: string,
+  pageToken: string | null
+): Promise<{
+  files: DriveFileEntry[];
+  nextPageToken: string | null;
+}> => {
+  const q = [
+    "mimeType contains 'image/'",
+    "trashed = false",
+    ...(query.trim() ? [`name contains '${escapeQuery(query.trim())}'`] : []),
+  ].join(" and ");
+  const params = new URLSearchParams({
+    fields: "files(id,name,mimeType,thumbnailLink,size),nextPageToken",
+    orderBy: "folder desc,modifiedTime desc",
+    pageSize: "100",
+    q,
+    supportsAllDrives: "true",
   });
+  if (pageToken) {
+    params.set("pageToken", pageToken);
+  }
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: { message?: string };
+    files?: {
+      id: string;
+      mimeType: string;
+      name: string;
+      size?: number;
+      thumbnailLink?: string;
+    }[];
+    nextPageToken?: string;
+  };
+  if (!res.ok) {
+    throw new Error(
+      json.error?.message ?? `Google Drive answered ${res.status}`
+    );
+  }
+  return {
+    files: (json.files ?? []).map((file) => ({
+      id: file.id,
+      mimeType: file.mimeType,
+      name: file.name,
+      size: file.size ?? null,
+      thumbnail: file.thumbnailLink
+        ? withToken(file.thumbnailLink, token)
+        : null,
+    })),
+    nextPageToken: json.nextPageToken ?? null,
+  };
+};
 
-/** Downloads one picked file's bytes as something the uploader accepts. */
-const downloadFile = async (file: DriveFile, token: string): Promise<File> => {
+/** Downloads one file's bytes as something the uploader accepts. */
+export const downloadDriveFile = async (
+  file: DriveFileEntry,
+  token: string
+): Promise<File> => {
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -218,34 +201,7 @@ const downloadFile = async (file: DriveFile, token: string): Promise<File> => {
     throw new Error(`Could not download ${file.name} (${res.status})`);
   }
   const blob = await res.blob();
-  // The picker reports the type; a blob from fetch may not carry one.
   return new File([blob], file.name, {
     type: file.mimeType || blob.type || "image/jpeg",
   });
-};
-
-/**
- * The whole flow: consent, pick, download.
- *
- * Returns Files so the caller can hand them to exactly the same code that
- * handles a dragged or pasted image — one upload path, one place where a board
- * image comes into existence.
- */
-export const pickDriveImages = async (): Promise<File[]> => {
-  // Credentials and scripts together: the fetch is a round trip to our own
-  // server and the scripts come from Google, so there is no reason to wait for
-  // one before starting the other.
-  const [config] = await Promise.all([
-    googleApi.pickerConfig(),
-    loadScript(GIS_SRC),
-    loadPicker(),
-  ]);
-  const token = await requestToken(config.clientId);
-  const picked = await openPicker(token, config.apiKey, config.clientId);
-  if (picked.length === 0) {
-    return [];
-  }
-  // Together: these are independent downloads and waiting for each in turn
-  // would add their latencies up for no reason.
-  return await Promise.all(picked.map((file) => downloadFile(file, token)));
 };

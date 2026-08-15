@@ -53,7 +53,17 @@ export const canvaApi = {
       method: "POST",
     });
     if (!res.ok) {
-      throw new Error(await readError(res, "Could not send to Canva"));
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        upsellUrl?: string;
+      };
+      const error = new Error(
+        data.error || `Could not send to Canva (${res.status})`
+      ) as Error & { upsellUrl?: string };
+      if (data.upsellUrl) {
+        error.upsellUrl = data.upsellUrl;
+      }
+      throw error;
     }
     return ((await res.json()) as { designUrl: string }).designUrl;
   },

@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { CANVA_REDIRECT_URI, isCanvaConfigured } from "../../config/canva.js";
+import {
+  CANVA_CLIENT_SECRET,
+  CANVA_REDIRECT_URI,
+  isCanvaConfigured,
+} from "../../config/canva.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { authorizeUrl, pkcePair } from "../_lib/canva.js";
 import { handleCors } from "../_lib/cors.js";
@@ -24,8 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   if (!isCanvaConfigured()) {
+    const missing = CANVA_CLIENT_SECRET
+      ? "CANVA_CLIENT_ID"
+      : "CANVA_CLIENT_SECRET";
     return res.status(503).json({
-      error: "Canva is not configured — set CANVA_CLIENT_ID.",
+      error: `Canva is not configured — set ${missing} (the token exchange requires the client secret).`,
     });
   }
 

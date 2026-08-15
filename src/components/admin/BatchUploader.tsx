@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert02Icon,
   Cancel01Icon,
+  DriveIcon,
   Tick02Icon,
   Upload01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
@@ -16,6 +17,7 @@ import { portfolioService } from "../../services/portfolioService";
 import type { Category } from "../../types";
 import { Button } from "../ui/button";
 import { CardHeader } from "../ui/card";
+import { DriveBrowser } from "./DriveBrowser";
 
 const FILE_EXTENSION = /\.[^.]+$/;
 const SEPARATORS = /[_-]+/g;
@@ -156,6 +158,7 @@ export function BatchUploader({
   const [items, setItems] = useState<Item[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [driveOpen, setDriveOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Drag events fire for every child element; count them so leaving a child
   // does not clear the highlight.
@@ -260,6 +263,15 @@ export function BatchUploader({
   return (
     <>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <Button
+          className="min-h-9 border-white/15 text-[10px] uppercase tracking-[0.18em] hover:bg-white/10"
+          onClick={() => setDriveOpen(true)}
+          type="button"
+          variant="outline"
+        >
+          <HugeiconsIcon icon={DriveIcon} size={13} />
+          Upload from Google
+        </Button>
         {items.length > 0 ? (
           <button
             className="text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:opacity-30"
@@ -424,6 +436,10 @@ export function BatchUploader({
           </>
         ) : null}
       </div>
+
+      {driveOpen ? (
+        <DriveBrowser onAdd={addFiles} onClose={() => setDriveOpen(false)} />
+      ) : null}
     </>
   );
 }

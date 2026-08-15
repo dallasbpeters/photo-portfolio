@@ -51,7 +51,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tokens = await exchangeCode(code, verifier, CANVA_REDIRECT_URI);
     await saveTokens(sql, userId, tokens);
     return res.redirect(`${returnTo}?canva=connected`);
-  } catch {
+  } catch (error) {
+    // The exchange is the one step that can fail for a reason invisible to the
+    // browser (bad client secret, unregistered redirect, expired code), so the
+    // reason is logged here rather than lost behind the error redirect.
+    console.error(
+      "Canva token exchange failed:",
+      error instanceof Error ? error.message : error
+    );
     return res.redirect(back);
   }
 }

@@ -14,7 +14,116 @@ type Stage =
   | { kind: "unconfigured" }
   | { kind: "connecting" }
   | { kind: "templates" }
-  | { kind: "sending" };
+  | { kind: "sending" }
+  | { kind: "done" };
+
+interface TemplatePickerProps {
+  chosen: string | null;
+  field: string;
+  fields: string[];
+  fieldsStatus: "empty" | "idle" | "loading" | "ok";
+  onChoose: (id: string) => void;
+  onField: (name: string) => void;
+  templates: CanvaTemplate[];
+  upsellUrl: string;
+}
+
+/**
+ * The template grid and the chosen template's image-field picker.
+ *
+ * Split out of the modal to keep the stage handling readable — the grid alone
+ * carries more branching than the rest of the dialog.
+ */
+function TemplatePicker({
+  chosen,
+  field,
+  fields,
+  fieldsStatus,
+  onChoose,
+  onField,
+  templates,
+  upsellUrl,
+}: TemplatePickerProps) {
+  return (
+    <>
+      <p className="mt-4 mb-2 text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
+        Design
+      </p>
+      <div className="grid max-h-52 grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2 overflow-y-auto">
+        {templates.map((template) => (
+          <button
+            className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
+              chosen === template.id
+                ? "border-board-ink/70"
+                : "border-board-ink/10 hover:border-board-ink/40"
+            }`}
+            key={template.id}
+            onClick={() => onChoose(template.id)}
+            type="button"
+          >
+            {template.thumbnail ? (
+              <img
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+                height={112}
+                loading="lazy"
+                src={template.thumbnail.url}
+                width={112}
+              />
+            ) : null}
+            <span className="absolute inset-x-0 bottom-0 bg-board-surface/70 px-1 py-0.5 text-[9px] text-board-ink/90 backdrop-blur-sm">
+              {template.title}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {fields.length > 1 ? (
+        <label className="mt-4 block">
+          <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
+            Image field
+          </span>
+          <select
+            className="w-full rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
+            onChange={(e) => onField(e.target.value)}
+            value={field}
+          >
+            {fields.map((fieldName) => (
+              <option key={fieldName} value={fieldName}>
+                {fieldName}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {chosen && fieldsStatus === "empty" ? (
+        <p className="mt-4 text-[12px] text-amber-200/90 leading-relaxed">
+          This template has no autofill image fields, so a photo can't be placed
+          into it. In Canva, open the template and enable its autofill fields,
+          then reload.
+        </p>
+      ) : null}
+
+      {upsellUrl ? (
+        <p className="mt-4 rounded border border-amber-300/30 bg-amber-400/10 p-3 text-[12px] text-amber-200/90 leading-relaxed">
+          You've used up Canva's free autofill trial, so the image can't be
+          placed into a design.{" "}
+          <a
+            className="underline"
+            href={upsellUrl}
+            rel="noopener"
+            target="_blank"
+          >
+            Upgrade to Canva Enterprise
+          </a>{" "}
+          to keep sending.
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * Sending one image into a Canva design.
@@ -36,6 +145,11 @@ export function SendToCanvaModal({
   const [chosen, setChosen] = useState<string | null>(null);
   const [fields, setFields] = useState<string[]>([]);
   const [field, setField] = useState<string>("");
+  const [designUrl, setDesignUrl] = useState("");
+  const [upsellUrl, setUpsellUrl] = useState("");
+  const [fieldsStatus, setFieldsStatus] = useState<
+    "empty" | "idle" | "loading" | "ok"
+  >("idle");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -50,9 +164,13 @@ export function SendToCanvaModal({
   // The chosen template's image fields, fetched when one is picked.
   useEffect(() => {
     if (!chosen) {
+      setFieldsStatus("idle");
+      setFields([]);
+      setField("");
       return;
     }
     let cancelled = false;
+    setFieldsStatus("loading");
     void canvaApi
       .templateFields(chosen)
       .then((names) => {
@@ -61,12 +179,17 @@ export function SendToCanvaModal({
         }
         setFields(names);
         setField(names[0] ?? "");
+        setFieldsStatus(names.length > 0 ? "ok" : "empty");
       })
-      .catch((err: unknown) =>
+      .catch((err: unknown) => {
+        if (cancelled) {
+          return;
+        }
         toast.error(
           err instanceof Error ? err.message : "Could not load fields"
-        )
-      );
+        );
+        setFieldsStatus("empty");
+      });
     return () => {
       cancelled = true;
     };
@@ -141,16 +264,23 @@ export function SendToCanvaModal({
     }
     setStage({ kind: "sending" });
     try {
-      const designUrl = await canvaApi.send({
+      const url = await canvaApi.send({
         fieldKey: field,
         imageUrl,
         templateId: chosen,
         title: name,
       });
-      window.open(designUrl, "_blank", "noopener");
-      toast.success("Sent to Canva — the design is open in a new tab");
-      onClose();
+      // The upload and autofill take tens of seconds, so the browser no longer
+      // treats this as a user gesture by the time the URL arrives — a
+      // window.open here is silently blocked. Show a link instead, which opens
+      // in the tab's own gesture.
+      setDesignUrl(url);
+      setStage({ kind: "done" });
     } catch (err) {
+      const upsell = (err as Error & { upsellUrl?: string }).upsellUrl;
+      if (upsell) {
+        setUpsellUrl(upsell);
+      }
       toast.error(
         err instanceof Error ? err.message : "Could not send to Canva"
       );
@@ -159,7 +289,7 @@ export function SendToCanvaModal({
   };
 
   const readyToSend =
-    stage.kind === "templates" && chosen && fields.length > 0 && field;
+    stage.kind === "templates" && chosen && fieldsStatus === "ok" && field;
   const isSending = stage.kind === "sending";
 
   return (
@@ -210,6 +340,20 @@ export function SendToCanvaModal({
             </p>
           ) : null}
 
+          {stage.kind === "done" ? (
+            <p className="mt-4 text-[12px] text-emerald-200/90 leading-relaxed">
+              Your design is ready. Open it in Canva to edit, then save it to
+              your brand.
+            </p>
+          ) : null}
+
+          {stage.kind === "sending" ? (
+            <p className="mt-4 text-[12px] text-board-ink/50 leading-relaxed">
+              Uploading your image and building the design… this can take a
+              minute.
+            </p>
+          ) : null}
+
           {stage.kind === "connecting" && templates.length === 0 ? (
             <button
               className="mt-4 rounded bg-board-ink/15 px-3 py-1.5 text-[12px] text-board-ink hover:bg-board-ink/25"
@@ -222,65 +366,22 @@ export function SendToCanvaModal({
 
           {stage.kind === "templates" && templates.length === 0 ? (
             <p className="mt-4 text-[12px] text-board-ink/50 leading-relaxed">
-              No autofillable brand templates. Publish one from Canva first,
-              then reload.
+              No brand templates found. Publish one from Canva first, then
+              reload.
             </p>
           ) : null}
 
           {stage.kind === "templates" && templates.length > 0 ? (
-            <>
-              <p className="mt-4 mb-2 text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-                Design
-              </p>
-              <div className="grid max-h-52 grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2 overflow-y-auto">
-                {templates.map((template) => (
-                  <button
-                    className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
-                      chosen === template.id
-                        ? "border-board-ink/70"
-                        : "border-board-ink/10 hover:border-board-ink/40"
-                    }`}
-                    key={template.id}
-                    onClick={() => setChosen(template.id)}
-                    type="button"
-                  >
-                    {template.thumbnail ? (
-                      <img
-                        alt=""
-                        className="h-full w-full object-cover"
-                        draggable={false}
-                        height={112}
-                        loading="lazy"
-                        src={template.thumbnail.url}
-                        width={112}
-                      />
-                    ) : null}
-                    <span className="absolute inset-x-0 bottom-0 bg-board-surface/70 px-1 py-0.5 text-[9px] text-board-ink/90 backdrop-blur-sm">
-                      {template.title}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {fields.length > 1 ? (
-                <label className="mt-4 block">
-                  <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-                    Image field
-                  </span>
-                  <select
-                    className="w-full rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
-                    onChange={(e) => setField(e.target.value)}
-                    value={field}
-                  >
-                    {fields.map((fieldName) => (
-                      <option key={fieldName} value={fieldName}>
-                        {fieldName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-            </>
+            <TemplatePicker
+              chosen={chosen}
+              field={field}
+              fields={fields}
+              fieldsStatus={fieldsStatus}
+              onChoose={setChosen}
+              onField={setField}
+              templates={templates}
+              upsellUrl={upsellUrl}
+            />
           ) : null}
         </div>
 
@@ -290,16 +391,27 @@ export function SendToCanvaModal({
             onClick={onClose}
             type="button"
           >
-            Cancel
+            {stage.kind === "done" ? "Close" : "Cancel"}
           </button>
-          <button
-            className="rounded bg-board-ink/15 px-3 py-1.5 text-[12px] text-board-ink hover:bg-board-ink/25 disabled:opacity-40"
-            disabled={!readyToSend || isSending}
-            onClick={() => void send()}
-            type="button"
-          >
-            {isSending ? "Sending…" : "Send to Canva"}
-          </button>
+          {stage.kind === "done" ? (
+            <a
+              className="rounded bg-board-ink/15 px-3 py-1.5 text-[12px] text-board-ink hover:bg-board-ink/25"
+              href={designUrl}
+              rel="noopener"
+              target="_blank"
+            >
+              Open in Canva
+            </a>
+          ) : (
+            <button
+              className="rounded bg-board-ink/15 px-3 py-1.5 text-[12px] text-board-ink hover:bg-board-ink/25 disabled:opacity-40"
+              disabled={!readyToSend || isSending}
+              onClick={() => void send()}
+              type="button"
+            >
+              {isSending ? "Sending…" : "Send to Canva"}
+            </button>
+          )}
         </footer>
       </div>
     </div>

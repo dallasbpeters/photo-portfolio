@@ -71,6 +71,7 @@ export const rowToSummary = (row: PageRow): PageSummaryDto => ({
 export const RESERVED_SLUGS = new Set([
   "admin",
   "api",
+  "privacy",
   "reset-password",
   "sites",
   "assets",
@@ -78,6 +79,7 @@ export const RESERVED_SLUGS = new Set([
   "favicon",
   "robots",
   "sitemap",
+  "terms",
 ]);
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

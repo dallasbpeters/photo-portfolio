@@ -11,6 +11,13 @@
  * trial quota while the integration is under development.
  */
 
+import { bootstrapEnv } from "../api/_lib/bootstrapEnv.js";
+
+// The token exchange reads these at module load, and a serverless function can
+// evaluate this module before db.ts runs its own bootstrap — so the env files
+// are loaded here first, or the client id and secret arrive empty.
+bootstrapEnv();
+
 const { CANVA_CLIENT_ID: clientId, CANVA_CLIENT_SECRET: clientSecret } =
   process.env;
 
@@ -36,4 +43,5 @@ export const CANVA_SCOPES = [
   "brandtemplate:content:read",
 ].join(" ");
 
-export const isCanvaConfigured = (): boolean => Boolean(CANVA_CLIENT_ID);
+export const isCanvaConfigured = (): boolean =>
+  Boolean(CANVA_CLIENT_ID && CANVA_CLIENT_SECRET);
