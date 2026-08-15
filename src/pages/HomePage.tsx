@@ -101,7 +101,9 @@ export const HomePage = () => {
   const filteredPhotos = photos.filter(
     (p) => viewMode === "all" || p.category === viewMode
   );
-  const heroPhotos = photos.slice(0, 8);
+  const heroPhotos = photos
+    .filter((p) => p.isPublished && p.isFeatured)
+    .slice(0, 8);
 
   const handleNextHero = useCallback(() => {
     if (heroPhotos.length === 0) {

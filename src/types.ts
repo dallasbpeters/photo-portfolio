@@ -33,6 +33,8 @@ export interface Photo {
   exif: PhotoExifData | null;
   height: number | null;
   id: string;
+  /** True includes this photo in the homepage hero slideshow. */
+  isFeatured: boolean;
   /** False keeps it in the admin library but off the public gallery. */
   isPublished: boolean;
   /** Tiny inline preview shown blurred until the full image decodes. */

@@ -539,6 +539,8 @@ export const portfolioService = {
       exif?: PhotoExifData | null;
       /** Omit to leave the photograph's visibility as it is. */
       isPublished?: boolean;
+      /** Omit to leave the photograph's featured status as it is. */
+      isFeatured?: boolean;
     }
   ): Promise<Photo> => {
     const res = await fetch(`${photosPath()}/${encodeURIComponent(id)}`, {
@@ -551,6 +553,9 @@ export const portfolioService = {
         ...(data.isPublished === undefined
           ? {}
           : { isPublished: data.isPublished }),
+        ...(data.isFeatured === undefined
+          ? {}
+          : { isFeatured: data.isFeatured }),
       }),
       headers: jsonHeaders(),
       method: "PATCH",

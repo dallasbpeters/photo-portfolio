@@ -91,13 +91,36 @@ const loadPicker = async (): Promise<void> => {
 };
 
 /**
- * Asks Google for a token covering picked files.
+ * Asks Google for a token covering picked files, unless a still-valid one from
+ * an earlier consent is in local storage.
  *
  * Its own consent, separate from signing in: the sign-in button verifies who
  * you are and receives no access token at all, so there is nothing there to
  * reuse. Consent for reading files is a different question and Google asks it
  * separately, which is the honest arrangement.
+ *
+ * The granted token is cached so the picker does not re-prompt on every open.
+ * It lives for about an hour (Google's access tokens are short), and after
+ * that the prompt returns — client-side auth has no refresh token to renew
+ * silently, and keeping one would mean a server round trip the picker flow
+ * avoids on purpose.
  */
+const TOKEN_KEY = "drive-picker-token";
+const TOKEN_EXPIRY_KEY = "drive-picker-token-expiry";
+
+const cachedToken = (): string | null => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const expiry = Number(localStorage.getItem(TOKEN_EXPIRY_KEY) ?? 0);
+  if (!token || expiry <= Date.now()) {
+    return null;
+  }
+  const oauth2 = window.google?.accounts?.oauth2;
+  if (oauth2 && !oauth2.hasGrantedAllScopes(token, SCOPE)) {
+    return null;
+  }
+  return token;
+};
+
 const requestToken = (clientId: string): Promise<string> =>
   new Promise((resolve, reject) => {
     const oauth2 = window.google?.accounts?.oauth2;
@@ -105,11 +128,23 @@ const requestToken = (clientId: string): Promise<string> =>
       reject(new Error("Google sign-in did not load"));
       return;
     }
+    const existing = cachedToken();
+    if (existing) {
+      resolve(existing);
+      return;
+    }
     const client = oauth2.initTokenClient({
       callback: (response) => {
         if (response.access_token) {
+          localStorage.setItem(TOKEN_KEY, response.access_token);
+          localStorage.setItem(
+            TOKEN_EXPIRY_KEY,
+            String(Date.now() + (response.expires_in ?? 3600) * 1000)
+          );
           resolve(response.access_token);
         } else {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(TOKEN_EXPIRY_KEY);
           reject(new Error(response.error ?? "Google did not grant access"));
         }
       },

@@ -47,7 +47,7 @@ function Button({
   variant = "default",
   size = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: Omit<ButtonPrimitive.Props, "size"> & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       className={cn(buttonVariants({ className, size, variant }))}

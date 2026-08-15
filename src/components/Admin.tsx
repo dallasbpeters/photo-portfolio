@@ -12,6 +12,8 @@ import {
   RotateLeft01Icon,
   RotateRight01Icon,
   Shield01Icon,
+  StarIcon,
+  StarOffIcon,
   TagsIcon,
   Upload02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
@@ -475,6 +477,7 @@ interface PhotoCardProps {
   onEditImage: (photo: Photo) => void;
   onReset: (photo: Photo) => void;
   onRotate: (photo: Photo) => void;
+  onToggleFeatured: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   photo: Photo;
   selection: PhotoSelectionResult;
@@ -490,6 +493,7 @@ const PhotoCard = ({
   onEditImage,
   onReset,
   onRotate,
+  onToggleFeatured,
   onTogglePublished,
   photo,
   selection,
@@ -588,6 +592,26 @@ const PhotoCard = ({
           >
             <HugeiconsIcon icon={RotateRight01Icon} size={18} />
           </Button>
+          <Button
+            aria-label={
+              photo.isFeatured
+                ? `Remove ${photo.title} from homepage slideshow`
+                : `Add ${photo.title} to homepage slideshow`
+            }
+            aria-pressed={photo.isFeatured}
+            className={`size-10 min-h-11 min-w-11 ${photo.isFeatured ? "text-amber-400" : "text-white/90"} hover:bg-white/15 hover:text-white`}
+            onClick={() => onToggleFeatured(photo)}
+            onDragStart={(e) => e.stopPropagation()}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            {photo.isFeatured ? (
+              <HugeiconsIcon icon={StarIcon} size={18} />
+            ) : (
+              <HugeiconsIcon icon={StarOffIcon} size={18} />
+            )}
+          </Button>
           {photo.originalUrl ? (
             <Button
               aria-label={`Restore ${photo.title} to its original`}
@@ -647,6 +671,19 @@ const PhotoCard = ({
               Hidden
             </p>
           )}
+          {photo.isFeatured ? (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-200 uppercase tracking-wider">
+              <svg
+                aria-hidden="true"
+                className="size-3 text-amber-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              Featured
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
@@ -661,6 +698,7 @@ interface PhotoGridProps {
   onReorder: (photoIds: string[]) => void;
   onReset: (photo: Photo) => void;
   onRotate: (photo: Photo) => void;
+  onToggleFeatured: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   photos: Photo[];
   selection: PhotoSelectionResult;
@@ -673,6 +711,7 @@ const PhotoGrid = ({
   onReset,
   onRotate,
   onReorder,
+  onToggleFeatured,
   onTogglePublished,
   photos,
   selection,
@@ -744,6 +783,7 @@ const PhotoGrid = ({
             onEditImage={onEditImage}
             onReset={onReset}
             onRotate={onRotate}
+            onToggleFeatured={onToggleFeatured}
             onTogglePublished={onTogglePublished}
             photo={photo}
             selection={selection}
@@ -766,6 +806,7 @@ interface ItemsCardProps {
   onReorder: (photoIds: string[]) => void;
   onReset: (photo: Photo) => void;
   onRotate: (photo: Photo) => void;
+  onToggleFeatured: (photo: Photo) => void;
   onTogglePublished: (photo: Photo) => void;
   selection: PhotoSelectionResult;
   view: AdminViewResult;
@@ -781,6 +822,7 @@ const ItemsCard = ({
   onReorder,
   onReset,
   onRotate,
+  onToggleFeatured,
   onTogglePublished,
   selection,
   view,
@@ -856,6 +898,7 @@ const ItemsCard = ({
               onReorder={onReorder}
               onReset={onReset}
               onRotate={onRotate}
+              onToggleFeatured={onToggleFeatured}
               onTogglePublished={onTogglePublished}
               photos={data.photos}
               selection={selection}
@@ -1133,6 +1176,33 @@ export const Admin = () => {
     }
   };
 
+  /**
+   * Toggles whether a photograph appears in the homepage hero slideshow.
+   */
+  const toggleFeatured = async (photo: Photo) => {
+    try {
+      const saved = await portfolioService.updatePhoto(photo.id, {
+        categoryId: photo.categoryId,
+        isFeatured: !photo.isFeatured,
+        isPublished: photo.isPublished,
+        order: photo.order,
+        title: photo.title,
+      });
+      data.applyPhotoUpdate(saved);
+      toast.success(
+        photo.isFeatured
+          ? "Removed from homepage slideshow"
+          : "Added to homepage slideshow"
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not change featured status"
+      );
+    }
+  };
+
   const rotatePhoto = async (photo: Photo) => {
     try {
       const rotated = await portfolioService.rotatePhoto(photo.id);
@@ -1214,6 +1284,7 @@ export const Admin = () => {
         onReorder={(photoIds) => void reorderPhotos(photoIds)}
         onReset={(photo) => void resetPhoto(photo)}
         onRotate={(photo) => void rotatePhoto(photo)}
+        onToggleFeatured={(photo) => void toggleFeatured(photo)}
         onTogglePublished={(photo) => void togglePublished(photo)}
         selection={selection}
         view={view}

@@ -7,6 +7,8 @@ export interface PhotoRow {
   exif: unknown;
   height: number | null;
   id: string;
+  /** Null on databases where the featured patch has not been applied yet. */
+  is_featured: boolean | null;
   /** Null on databases where the publishing patch has not been applied yet. */
   is_published: boolean | null;
   lqip: string | null;
@@ -29,6 +31,8 @@ export interface PhotoDto {
   exif: unknown;
   height: number | null;
   id: string;
+  /** True includes this photo in the homepage hero slideshow. */
+  isFeatured: boolean;
   /** False hides it from the site while leaving it in the library. */
   isPublished: boolean;
   lqip: string | null;
@@ -57,6 +61,8 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   exif: row.exif ?? null,
   height: row.height ?? null,
   id: row.id,
+  // Photographs predating the featured column default to false.
+  isFeatured: row.is_featured ?? false,
   // Photographs predating the column have no value; they were visible then and
   // must stay visible now.
   isPublished: row.is_published ?? true,
@@ -141,6 +147,6 @@ export const parseIncomingExif = (value: unknown): IncomingExif | null => {
 
 /** Columns every photo query needs, kept in one place so they cannot drift. */
 export const PHOTO_COLUMNS = `p.id, p.url, p.title, p.sort_order, p.created_at,
-  p.alt, p.width, p.height, p.lqip, p.exif, p.is_published,
+  p.alt, p.width, p.height, p.lqip, p.exif, p.is_published, p.is_featured,
   p.original_url, p.original_width, p.original_height,
   c.id AS category_id, c.slug AS category_slug, c.label AS category_label`;

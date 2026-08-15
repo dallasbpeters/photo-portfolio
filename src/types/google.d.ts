@@ -41,8 +41,13 @@ interface GoogleTokenClient {
 }
 
 interface GoogleOAuth2Api {
+  hasGrantedAllScopes: (token: string, scope: string) => boolean;
   initTokenClient: (config: {
-    callback: (response: { access_token?: string; error?: string }) => void;
+    callback: (response: {
+      access_token?: string;
+      error?: string;
+      expires_in?: number;
+    }) => void;
     client_id: string;
     scope: string;
   }) => GoogleTokenClient;

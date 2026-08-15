@@ -5,7 +5,7 @@ import {
   Tick02Icon,
   Upload01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { pickDriveImages } from "../../boards/googleDrive";
 import {
@@ -31,7 +31,6 @@ const ACCEPTED = [
   "image/avif",
 ];
 
-/** How many files transfer at once — enough to saturate a connection, not enough to stall the UI. */
 const CONCURRENCY = 3;
 
 interface Item {
@@ -39,12 +38,12 @@ interface Item {
   file: File;
   id: string;
   meta?: PhotoMetadata;
+  previewUrl: string;
   progress: number;
   status: "queued" | "uploading" | "done" | "error";
   title: string;
 }
 
-/** Filename without extension, tidied into a human title. */
 const titleFromFile = (name: string): string =>
   name
     .replace(FILE_EXTENSION, "")
@@ -58,10 +57,6 @@ interface Uploaded {
   url: string;
 }
 
-/**
- * Phase 1 — transfer bytes concurrently. Simple worker pool: each worker pulls
- * the next file until the queue drains.
- */
 const transferAll = async (
   pending: Item[],
   transfer: (item: Item) => Promise<Uploaded | null>
@@ -75,7 +70,7 @@ const transferAll = async (
       if (!item) {
         break;
       }
-      // biome-ignore lint/performance/noAwaitInLoops: this loop is the worker; concurrency comes from running CONCURRENCY of them at once
+      // biome-ignore lint/performance/noAwaitInLoops: each worker processes items sequentially; concurrency comes from multiple workers
       const result = await transfer(item);
       if (result) {
         uploaded.set(item.id, result);
@@ -88,11 +83,6 @@ const transferAll = async (
   return uploaded;
 };
 
-/**
- * Phase 2 — create rows sequentially, in reverse. Each POST inserts at position
- * 0 and shifts the rest up, so reversing here leaves the gallery reading in the
- * order the files were dropped. Returns how many rows were created.
- */
 const createRows = async (
   pending: Item[],
   uploaded: Map<string, Uploaded>,
@@ -107,7 +97,7 @@ const createRows = async (
       continue;
     }
     try {
-      // biome-ignore lint/performance/noAwaitInLoops: rows are created one at a time on purpose — each insert shifts sort_order, so parallel writes would scramble the gallery order
+      // biome-ignore lint/performance/noAwaitInLoops: rows are created sequentially to preserve gallery order
       await portfolioService.addPhoto({
         categoryId,
         exif: result.meta.exif,
@@ -131,25 +121,10 @@ const createRows = async (
 
 interface BatchUploaderProps {
   categories: Category[];
-  /**
-   * Category for the batch, supplied by the host form.
-   *
-   * This component no longer renders its own picker — it sits inside the Add
-   * New Item card, which already has one. Falling back to the first category
-   * instead would silently file a whole shoot under the wrong heading.
-   */
   categoryId: string;
   reload: () => Promise<void>;
 }
 
-/**
- * Drag-and-drop batch upload.
- *
- * Files stream straight to Blob storage, so a whole shoot can be dropped at
- * once without the payload ceiling the old base64 path imposed. Each file
- * succeeds or fails independently — one bad file never abandons the rest of the
- * batch, and failures stay listed so they can be retried.
- */
 export function BatchUploader({
   categories,
   reload,
@@ -160,11 +135,18 @@ export function BatchUploader({
   const [isRunning, setIsRunning] = useState(false);
   const [isPickingDrive, setIsPickingDrive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Drag events fire for every child element; count them so leaving a child
-  // does not clear the highlight.
   const dragDepth = useRef(0);
 
   const effectiveCategory = categoryId || categories[0]?.id || "";
+
+  useEffect(
+    () => () => {
+      for (const item of items) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    },
+    [items]
+  );
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const accepted: Item[] = [];
@@ -178,6 +160,7 @@ export function BatchUploader({
       accepted.push({
         file,
         id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        previewUrl: URL.createObjectURL(file),
         progress: 0,
         status: "queued",
         title: titleFromFile(file.name),
@@ -213,13 +196,21 @@ export function BatchUploader({
   const update = (id: string, patch: Partial<Item>) =>
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
 
+  const removeItem = (id: string) => {
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id);
+      if (item) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter((i) => i.id !== id);
+    });
+  };
+
   const transfer = async (
     item: Item
   ): Promise<{ url: string; meta: PhotoMetadata } | null> => {
     update(item.id, { progress: 0, status: "uploading" });
     try {
-      // Read dimensions, EXIF and the blur placeholder from the local file —
-      // the bytes are already here, so doing it server-side would ship them twice.
       const meta = await extractPhotoMetadata(item.file);
       const { url } = await portfolioService.uploadImageFile(
         item.file,
@@ -293,7 +284,12 @@ export function BatchUploader({
           <button
             className="text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white disabled:opacity-30"
             disabled={isRunning}
-            onClick={() => setItems([])}
+            onClick={() => {
+              for (const item of items) {
+                URL.revokeObjectURL(item.previewUrl);
+              }
+              setItems([]);
+            }}
             type="button"
           >
             Clear
@@ -362,81 +358,88 @@ export function BatchUploader({
 
         {items.length > 0 ? (
           <>
-            <ul className="max-h-72 divide-y divide-white/6 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {items.map((item) => (
-                <li className="flex items-center gap-3 py-2.5" key={item.id}>
-                  <span className="w-5 shrink-0">
-                    {item.status === "done" ? (
-                      <HugeiconsIcon
-                        className="text-emerald-400/80"
-                        icon={Tick02Icon}
-                        size={14}
-                      />
-                    ) : null}
-                    {item.status === "error" ? (
-                      <HugeiconsIcon
-                        className="text-red-400/80"
-                        icon={Alert02Icon}
-                        size={14}
-                      />
-                    ) : null}
-                  </span>
+                <div
+                  className="group relative aspect-square overflow-hidden rounded-lg bg-white/5"
+                  key={item.id}
+                >
+                  <img
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    height={200}
+                    src={item.previewUrl}
+                    width={200}
+                  />
 
-                  <div className="min-w-0 flex-1">
-                    <input
-                      aria-label={`Title for ${item.file.name}`}
-                      className="w-full bg-transparent text-sm text-white/85 focus:outline-none disabled:text-white/90"
-                      disabled={isRunning || item.status === "done"}
-                      onChange={(e) =>
-                        update(item.id, { title: e.target.value })
-                      }
-                      onKeyDown={(e) => {
-                        // This input lives inside the Add New Item form; Enter
-                        // would otherwise submit that form mid-batch.
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                        }
-                      }}
-                      value={item.title}
-                    />
-                    {item.status === "uploading" ? (
-                      <div className="mt-1.5 h-px w-full bg-white/10">
+                  {item.status === "uploading" && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50">
+                      <div className="h-px w-3/4 bg-white/10">
                         <div
                           className="h-px bg-white/70 transition-all duration-200"
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
-                    ) : null}
-                    {item.error ? (
-                      <p className="mt-1 text-[10px] text-red-400/70">
-                        {item.error}
-                      </p>
-                    ) : null}
+                    </div>
+                  )}
+
+                  <div className="absolute right-0 bottom-0 left-0 z-10 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2">
+                    <input
+                      aria-label={`Title for ${item.file.name}`}
+                      className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none disabled:text-white/90"
+                      disabled={isRunning}
+                      onChange={(e) =>
+                        update(item.id, { title: e.target.value })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                        }
+                      }}
+                      placeholder="Title"
+                      value={item.title}
+                    />
                   </div>
 
-                  <span className="shrink-0 font-mono text-[10px] text-white/80 tabular-nums">
-                    {(item.file.size / 1024 / 1024).toFixed(1)}MB
-                  </span>
+                  <button
+                    aria-label={`Remove ${item.file.name}`}
+                    className="absolute top-1 right-1 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white/80 opacity-0 transition-opacity hover:bg-black/80 hover:text-white group-hover:opacity-100"
+                    disabled={isRunning || item.status === "done"}
+                    onClick={() => removeItem(item.id)}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} size={14} />
+                  </button>
 
-                  {!isRunning && item.status !== "done" ? (
-                    <button
-                      aria-label={`Remove ${item.file.name}`}
-                      className="shrink-0 text-white/80 transition-colors hover:text-white"
-                      onClick={() =>
-                        setItems((prev) => prev.filter((i) => i.id !== item.id))
-                      }
-                      type="button"
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} size={13} />
-                    </button>
+                  <div className="absolute top-1 left-1 z-20 flex items-center gap-1">
+                    {item.status === "done" && (
+                      <HugeiconsIcon
+                        className="text-emerald-400/90 drop-shadow"
+                        icon={Tick02Icon}
+                        size={14}
+                      />
+                    )}
+                    {item.status === "error" && (
+                      <HugeiconsIcon
+                        className="text-red-400/90 drop-shadow"
+                        icon={Alert02Icon}
+                        size={14}
+                      />
+                    )}
+                  </div>
+
+                  {item.error ? (
+                    <div className="absolute right-2 bottom-6 left-2 z-10 truncate whitespace-nowrap rounded bg-black/80 px-1.5 py-0.5 text-[9px] text-red-300/90">
+                      {item.error}
+                    </div>
                   ) : null}
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button
-                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
+                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em]"
                 disabled={isRunning || pendingCount === 0 || !effectiveCategory}
                 onClick={() => void start()}
                 type="button"

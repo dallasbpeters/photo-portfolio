@@ -67,6 +67,9 @@ async function handlePatch(
   const isPublished =
     typeof body.isPublished === "boolean" ? body.isPublished : null;
 
+  const isFeatured =
+    typeof body.isFeatured === "boolean" ? body.isFeatured : null;
+
   const hasExif = Object.hasOwn(body, "exif");
   // Null rather than the string "null": the latter casts to a JSON null that
   // sits in the column looking like data, where a cleared field should leave
@@ -111,6 +114,7 @@ async function handlePatch(
             url = COALESCE(${url}, url),
             alt = COALESCE(${alt}, alt),
             is_published = COALESCE(${isPublished}, is_published),
+            is_featured = COALESCE(${isFeatured}, is_featured),
             original_url = COALESCE(original_url, ${originalUrl}),
             original_width = COALESCE(original_width, ${originalWidth}),
             original_height = COALESCE(original_height, ${originalHeight}),
@@ -120,11 +124,11 @@ async function handlePatch(
             exif = CASE WHEN ${hasExif} THEN ${exifJson}::jsonb ELSE exif END
           WHERE id = ${id}
           RETURNING id, url, title, sort_order, created_at, category_id,
-            alt, width, height, lqip, exif, is_published,
+            alt, width, height, lqip, exif, is_published, is_featured,
             original_url, original_width, original_height
         )
         SELECT u.id, u.url, u.title, u.sort_order, u.created_at,
-          u.alt, u.width, u.height, u.lqip, u.exif, u.is_published,
+          u.alt, u.width, u.height, u.lqip, u.exif, u.is_published, u.is_featured,
           u.original_url, u.original_width, u.original_height,
           c.id AS category_id, c.slug AS category_slug, c.label AS category_label
         FROM u
