@@ -2,12 +2,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert02Icon,
   Cancel01Icon,
-  DriveIcon,
   Tick02Icon,
   Upload01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { pickDriveImages } from "../../boards/googleDrive";
 import {
   extractPhotoMetadata,
   type PhotoMetadata,
@@ -17,7 +17,7 @@ import { portfolioService } from "../../services/portfolioService";
 import type { Category } from "../../types";
 import { Button } from "../ui/button";
 import { CardHeader } from "../ui/card";
-import { DriveBrowser } from "./DriveBrowser";
+import { GoogleDrive } from "./GoogleDriveLogo";
 
 const FILE_EXTENSION = /\.[^.]+$/;
 const SEPARATORS = /[_-]+/g;
@@ -158,7 +158,7 @@ export function BatchUploader({
   const [items, setItems] = useState<Item[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [driveOpen, setDriveOpen] = useState(false);
+  const [isPickingDrive, setIsPickingDrive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Drag events fire for every child element; count them so leaving a child
   // does not clear the highlight.
@@ -193,6 +193,22 @@ export function BatchUploader({
       setItems((prev) => [...prev, ...accepted]);
     }
   }, []);
+
+  const pickFromDrive = async () => {
+    setIsPickingDrive(true);
+    try {
+      const files = await pickDriveImages();
+      if (files.length > 0) {
+        addFiles(files);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not open Google Drive"
+      );
+    } finally {
+      setIsPickingDrive(false);
+    }
+  };
 
   const update = (id: string, patch: Partial<Item>) =>
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
@@ -264,13 +280,14 @@ export function BatchUploader({
     <>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <Button
-          className="min-h-9 border-white/15 text-[10px] uppercase tracking-[0.18em] hover:bg-white/10"
-          onClick={() => setDriveOpen(true)}
+          className="min-h-11"
+          disabled={isPickingDrive}
+          onClick={() => void pickFromDrive()}
           type="button"
           variant="outline"
         >
-          <HugeiconsIcon icon={DriveIcon} size={13} />
-          Upload from Google
+          <GoogleDrive {...{ height: 16, width: 16 }} />
+          {isPickingDrive ? "Waiting for Google…" : "Upload from Google"}
         </Button>
         {items.length > 0 ? (
           <button
@@ -436,10 +453,6 @@ export function BatchUploader({
           </>
         ) : null}
       </div>
-
-      {driveOpen ? (
-        <DriveBrowser onAdd={addFiles} onClose={() => setDriveOpen(false)} />
-      ) : null}
     </>
   );
 }

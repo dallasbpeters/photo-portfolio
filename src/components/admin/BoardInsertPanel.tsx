@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
+import { pickDriveImages } from "../../boards/googleDrive";
 import { newItemId } from "../../boards/newItemId";
 import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
@@ -29,7 +30,6 @@ import {
 import type { BoardSource, Element, Photo } from "../../types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { DriveBrowser } from "./DriveBrowser";
 
 /** What the board needs to pin an image that is not one of their own. */
 export interface ExternalImage {
@@ -519,30 +519,43 @@ function UnsplashTab({
 /**
  * Picking images out of Google Drive.
  *
- * A custom browser with working thumbnails, rather than Google's picker which
- * cannot show previews under a minimal scope. The files are copied here, so a
- * board keeps working if the original moves.
+ * The button is the whole interface: Google's own picker is the browser, which
+ * is what lets this ask only for the files you choose rather than for your
+ * whole Drive. The files are copied here, so a board keeps working if the
+ * original moves.
  */
 function DriveTab({ onAdd }: { onAdd: (files: File[]) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isPicking, setIsPicking] = useState(false);
+
+  const pick = async () => {
+    setIsPicking(true);
+    try {
+      const files = await pickDriveImages();
+      if (files.length > 0) {
+        onAdd(files);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open Drive");
+    } finally {
+      setIsPicking(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
       <Button
         className="w-full"
-        onClick={() => setIsOpen(true)}
+        disabled={isPicking}
+        onClick={() => void pick()}
         type="button"
         variant="ghost"
       >
-        Choose from Drive
+        {isPicking ? "Waiting for Google…" : "Choose from Drive"}
       </Button>
       <p className="text-[10px] text-board-ink/35 leading-relaxed">
-        Browse your Drive and pick images. They are copied here, so a board
-        keeps working if the original moves.
+        Only the files you pick are shared with this site. They are copied here,
+        so a board keeps working if the original moves.
       </p>
-      {isOpen ? (
-        <DriveBrowser onAdd={onAdd} onClose={() => setIsOpen(false)} />
-      ) : null}
     </div>
   );
 }
