@@ -130,6 +130,33 @@ export type DriveFile = GooglePickerDocument;
  */
 const appIdFrom = (clientId: string): string => clientId.split("-")[0] ?? "";
 
+/** Class Google's picker gives its backdrop, in this document. */
+const PICKER_BACKDROP = "picker-dialog-bg";
+
+/** A style tag id kept so the injected rule can be removed again. */
+const OVERLAY_STYLE_ID = "drive-picker-overlay";
+
+/**
+ * Locks the page while Google's picker is open: the wheel no longer scrolls
+ * the portfolio behind it, and the picker's white backdrop is darkened to
+ * match the dark admin UI.
+ *
+ * The picker renders its backdrop in this document (the iframe content itself
+ * stays cross-origin and untouched), so both effects are plain CSS and DOM.
+ */
+const lockPage = (): void => {
+  document.body.style.overflow = "hidden";
+  const style = document.createElement("style");
+  style.id = OVERLAY_STYLE_ID;
+  style.textContent = `.${PICKER_BACKDROP} { background: rgba(0, 0, 0, 0.75) !important; }`;
+  document.head.append(style);
+};
+
+const unlockPage = (): void => {
+  document.body.style.overflow = "";
+  document.getElementById(OVERLAY_STYLE_ID)?.remove();
+};
+
 /** Opens Google's picker and resolves with what was chosen, or an empty list. */
 const openPicker = (
   token: string,
@@ -145,12 +172,15 @@ const openPicker = (
     /**
      * Your own images, flat and searchable. The first tab, and the default.
      *
-     * LIST, not GRID: under drive.file the picker has no access to thumbnails,
-     * so a grid renders rows of blank tiles. A list at least shows names,
-     * owners and dates.
+     * GRID so the photos are browsable as a wall rather than a list. Under
+     * drive.file Google's guidance is that thumbnails may not render (the
+     * scope does not cover them), in which case tiles come up blank — the
+     * reason LIST was used originally. In practice the picker often loads the
+     * thumbnails through the signed-in browser session, so a grid is worth
+     * trying; fall back to LIST if the tiles are blank.
      */
     const images = new picker.DocsView(picker.ViewId.DOCS_IMAGES)
-      .setMode(picker.DocsViewMode.LIST)
+      .setMode(picker.DocsViewMode.GRID)
       .setMimeTypes(PICKABLE_TYPES);
 
     /** Browsing by folder, for when you know exactly where the work is. */
@@ -184,13 +214,16 @@ const openPicker = (
       .setTitle("Choose images for this board")
       .setCallback((data) => {
         if (data.action === picker.Action.PICKED) {
+          unlockPage();
           resolve(data.docs ?? []);
         } else if (data.action === picker.Action.CANCEL) {
+          unlockPage();
           resolve([]);
         }
       })
       .build()
       .setVisible(true);
+    lockPage();
   });
 
 /** Downloads one picked file's bytes as something the uploader accepts. */
