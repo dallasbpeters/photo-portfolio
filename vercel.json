@@ -27,6 +27,16 @@
   ],
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.dallaspeters.com"
+        }
+      ],
+      "destination": "/home.html"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/api/robots"
     },

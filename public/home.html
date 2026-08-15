@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>
+      Photo Portfolio — a photography portfolio and image management tool
+    </title>
+    <meta
+      content="Photo Portfolio is an online gallery and photo management tool. Publish photographs to your portfolio, organize them into categories, and manage your work from a private admin area."
+      name="description"
+    >
+    <meta content="index,follow" name="robots">
+    <link href="https://app.dallaspeters.com/" rel="canonical">
+    <style>
+    :root {
+      --bg: #0b0b0d;
+      --fg: #f2f1ee;
+      --muted: #9c9a93;
+      --accent: #d8c9a3;
+      --rule: rgba(242, 241, 238, 0.12);
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html,
+    body {
+      padding: 0;
+      margin: 0;
+    }
+    body {
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 46rem;
+      padding: 4rem 1.5rem 3rem;
+      margin: 0 auto;
+    }
+    header {
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .eyebrow {
+      margin: 0 0 0.75rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+    }
+    h1 {
+      margin: 0 0 1rem;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+    .tagline {
+      max-width: 36rem;
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--fg);
+    }
+    main {
+      padding-top: 2.5rem;
+    }
+    h2 {
+      margin: 2.5rem 0 0.75rem;
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+    p {
+      margin: 0 0 1rem;
+      color: var(--fg);
+    }
+    ul {
+      padding-left: 1.1rem;
+      margin: 0 0 1rem;
+      color: var(--fg);
+    }
+    li {
+      margin-bottom: 0.4rem;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .muted {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      padding-top: 1.5rem;
+      margin-top: 3.5rem;
+      font-size: 0.82rem;
+      border-top: 1px solid var(--rule);
+    }
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+    footer a:hover {
+      color: var(--fg);
+    }
+    .links a {
+      padding: 0.55rem 1.1rem;
+      font-size: 0.8rem;
+      color: var(--fg);
+      letter-spacing: 0.06em;
+      text-decoration: none;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      transition: border-color 0.15s ease;
+    }
+    .links a:hover {
+      border-color: var(--accent);
+    }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <p class="eyebrow">A photography portfolio platform</p>
+        <h1>Photo Portfolio</h1>
+        <p class="tagline">
+          An online gallery and photo management tool. Publish your photography
+          to the web, organize it into categories, and manage your work from a
+          private admin area.
+        </p>
+      </header>
+
+      <main>
+        <h2>What the app does</h2>
+        <p>
+          Photo Portfolio turns a folder of photographs into a polished,
+          public-facing gallery. Visitors can browse your work by category and
+          view each image in detail. The owner signs in to a private admin area
+          to add, organize and publish photos — without editing a line of code.
+        </p>
+
+        <h2>Features</h2>
+        <ul>
+          <li>
+            Publish a personal photography gallery with your own branding.
+          </li>
+          <li>Upload, organize and manage a library of photographs.</li>
+          <li>Group photos into categories and control what is public.</li>
+          <li>
+            Edit images with a built-in grading tool (tone, color, crop and
+            rotate).
+          </li>
+          <li>A private admin area to keep your work in order.</li>
+        </ul>
+
+        <h2>Who it's for</h2>
+        <p>
+          Photographers and creators who want their work online with minimal
+          fuss. The admin area is accessed securely — you can sign in with
+          Google rather than managing a separate password. Your published
+          gallery is at
+          <a href="https://dallaspeters.com/" style="color: var(--accent)"
+            >dallaspeters.com</a
+          >.
+        </p>
+
+        <div class="links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="https://dallaspeters.com/">View the gallery</a>
+        </div>
+      </main>
+
+      <footer>
+        <span class="muted">Photo Portfolio</span>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </footer>
+    </div>
+  </body>
+</html>
