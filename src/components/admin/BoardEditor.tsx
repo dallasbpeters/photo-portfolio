@@ -15,7 +15,7 @@ import {
   TextIcon,
   Tick02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -95,7 +95,6 @@ import type {
   Photo,
 } from "../../types";
 import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCursor";
 import { SendToCanvaModal } from "./SendToCanvaModal";
@@ -1881,7 +1880,12 @@ export function BoardEditor({
             </div>
           </div>
 
-          <Card className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-board-surface text-board-ink">
+          <motion.div
+            animate={{ opacity: 1, x: 0 }}
+            className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-board-surface text-board-ink"
+            initial={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.5 }}
+          >
             <Button
               onClick={() => addWritable("note")}
               type="button"
@@ -1966,7 +1970,7 @@ export function BoardEditor({
               <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
               Frame
             </Button>
-          </Card>
+          </motion.div>
 
           <BoardCanvas
             autoEditId={autoEditId}

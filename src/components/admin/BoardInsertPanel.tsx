@@ -168,7 +168,7 @@ export function BoardInsertPanel({
       initial={{ x: "100%" }}
       // Tween, not spring: the panel is flush to the right edge, and a spring's
       // overshoot would pull it past the viewport and show a seam.
-      transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+      transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
     >
       {/* A select rather than a row of tabs. Nine sources do not fit across the
           panel at any sensible size — the row wrapped mid-label, putting "fal"
