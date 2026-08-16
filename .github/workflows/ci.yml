@@ -69,11 +69,11 @@ jobs:
     needs: check
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    # Sequential rather than parallel: three databases that must end up at the
-    # same schema, and a failure on the first should stop the rest rather than
-    # leave the estate half-migrated.
-    max-parallel: 1
     strategy:
+      # Sequential rather than parallel: three databases that must end up at
+      # the same schema, and a failure on the first should stop the rest rather
+      # than leave the estate half-migrated.
+      max-parallel: 1
       fail-fast: true
       matrix:
         include:
