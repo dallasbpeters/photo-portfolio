@@ -9,13 +9,34 @@
  * A body is filled in from the schema when the document describes one, giving
  * an example that already has the right keys instead of an empty brace.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "bruno");
 
 type Json = Record<string, unknown>;
+
+const existingEntries = (dir: string): string[] =>
+  existsSync(dir) ? readdirSync(dir) : [];
+
+const readJson = (filePath: string): Json => {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8")) as Json;
+  } catch {
+    return {};
+  }
+};
 
 const doc = JSON.parse(
   await import("node:fs/promises").then((fs) =>
@@ -26,24 +47,27 @@ const doc = JSON.parse(
   paths: Record<string, Record<string, Json>>;
 };
 
-const deref = (schema: Json | undefined, depth = 0): Json | undefined => {
-  if (!schema || depth > 6) {
+// A `$ref` that names no schema resolves to the reference itself, which
+// samples as an empty string rather than throwing on a malformed document.
+const deref = (schema: Json, depth = 0): Json => {
+  if (depth > 6) {
     return schema;
   }
   const ref = schema.$ref as string | undefined;
   if (ref) {
     const name = ref.split("/").pop() ?? "";
-    return deref(doc.components.schemas[name], depth + 1);
+    const target = doc.components.schemas[name] as Json | undefined;
+    return target ? deref(target, depth + 1) : schema;
   }
   return schema;
 };
 
 /** A placeholder value for one property, good enough to edit rather than invent. */
 const sample = (schema: Json | undefined, depth = 0): unknown => {
-  const s = deref(schema, depth);
-  if (!s || depth > 5) {
+  if (!schema || depth > 5) {
     return null;
   }
+  const s = deref(schema, depth);
   if (Array.isArray(s.enum)) {
     return s.enum[0];
   }
@@ -76,7 +100,7 @@ const brunoUrl = (p: string): string =>
 /** A `docs` block is line-oriented, so text has to collapse onto one line. */
 const oneLine = (text: string): string => text.replace(/\r?\n/g, " ").trim();
 
-const file = (
+const requestFile = (
   name: string,
   seq: number,
   method: string,
@@ -91,7 +115,10 @@ const file = (
 
   const parts = [
     `meta {\n  name: ${name}\n  type: http\n  seq: ${seq}\n}`,
-    `${method} {\n  url: ${brunoUrl(p)}\n  body: ${hasBody ? "json" : "none"}\n  auth: ${secured ? "bearer" : "none"}\n}`,
+    // Lower case: Bruno's grammar names these blocks `get`, `post`, `patch`.
+    // An upper-case `POST {` fails to parse, which made every request in the
+    // collection invalid.
+    `${method.toLowerCase()} {\n  url: ${brunoUrl(p)}\n  body: ${hasBody ? "json" : "none"}\n  auth: ${secured ? "bearer" : "none"}\n}`,
   ];
 
   if (secured) {
@@ -114,13 +141,27 @@ const file = (
   return `${parts.join("\n\n")}\n`;
 };
 
-rmSync(OUT, { force: true, recursive: true });
+// Only the generated request folders are cleared. bruno.json and
+// environments/ are left alone: Bruno writes its own settings into the former,
+// and wiping the directory wholesale threw those away on every run.
+for (const entry of existingEntries(OUT)) {
+  if (entry !== "bruno.json" && entry !== "environments") {
+    rmSync(path.join(OUT, entry), { force: true, recursive: true });
+  }
+}
 mkdirSync(OUT, { recursive: true });
 
+const brunoJsonPath = path.join(OUT, "bruno.json");
+const existing = readJson(brunoJsonPath);
 writeFileSync(
-  path.join(OUT, "bruno.json"),
+  brunoJsonPath,
   `${JSON.stringify(
-    { name: "Photo portfolio API", type: "collection", version: "1" },
+    {
+      ...existing,
+      name: "Photo portfolio API",
+      type: "collection",
+      version: "1",
+    },
     null,
     2
   )}\n`
@@ -133,10 +174,15 @@ for (const [name, url] of [
   ["Local", "http://localhost:3006"],
   ["Production", "https://app.dallaspeters.com"],
 ] as const) {
-  writeFileSync(
-    path.join(OUT, "environments", `${name}.bru`),
-    `vars {\n  baseUrl: ${url}\n}\n\nvars:secret [\n  token\n]\n`
-  );
+  const envFile = path.join(OUT, "environments", `${name}.bru`);
+  // Written once. An environment is where a token gets pasted, and
+  // regenerating over it would delete that on every `pnpm api:docs`.
+  if (!existsSync(envFile)) {
+    writeFileSync(
+      envFile,
+      `vars {\n  baseUrl: ${url}\n}\n\nvars:secret [\n  token\n]\n`
+    );
+  }
 }
 
 const seqByFolder = new Map<string, number>();
@@ -158,7 +204,7 @@ for (const [p, methods] of Object.entries(doc.paths)) {
     const safe = name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
     writeFileSync(
       path.join(dir, `${safe}.bru`),
-      file(name, seq, method.toUpperCase(), p, op)
+      requestFile(name, seq, method.toUpperCase(), p, op)
     );
     count += 1;
   }
