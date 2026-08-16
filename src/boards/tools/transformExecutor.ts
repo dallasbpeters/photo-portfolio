@@ -135,7 +135,6 @@ const cancelled = (invocation: ToolInvocation): boolean =>
 
 const CANCELLED_MESSAGE = "Cancelled before it finished.";
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the phases are sequential and each guards the next; splitting them would hide the ordering this whole contract is about
 const run = async (
   invocation: ToolInvocation,
   deps: TransformDeps
