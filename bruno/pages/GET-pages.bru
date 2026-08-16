@@ -1,0 +1,17 @@
+meta {
+  name: GET pages
+  type: http
+  seq: 4
+}
+
+GET {
+  url: {{baseUrl}}/api/pages
+  body: none
+  auth: none
+}
+
+docs {
+  Page summaries for the navigation.
+
+  Published pages only for a visitor; every page when a token is sent.
+}

@@ -18,6 +18,13 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "type": "npm",
+      "script": "ultracite",
+      "problemMatcher": [],
+      "label": "npm: ultracite",
+      "detail": "npx ultracite fix"
     }
   ]
 }

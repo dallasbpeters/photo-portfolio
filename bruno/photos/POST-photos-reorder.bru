@@ -1,0 +1,29 @@
+meta {
+  name: POST photos/reorder
+  type: http
+  seq: 9
+}
+
+POST {
+  url: {{baseUrl}}/api/photos/reorder
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "photoIds": [
+      "00000000-0000-0000-0000-000000000000"
+    ]
+  }
+}
+
+docs {
+  Reorder the library.
+
+  The ids in their new order.
+}

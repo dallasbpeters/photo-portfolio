@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "api:docs": "pnpm openapi && pnpm bruno",
+    "bruno": "tsx scripts/generate-bruno.ts",
     "build": "vite build",
     "build:addison": "cross-env VITE_SITE=addison vite build",
     "build:cyan": "cross-env VITE_SITE=cyan vite build",
@@ -21,6 +23,7 @@
     "fix": "npx ultracite fix --claude",
     "lint": "tsc --noEmit && tsx scripts/check-file-size.ts",
     "lora:upload": "tsx scripts/upload-lora.ts",
+    "openapi": "tsx scripts/generate-openapi.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

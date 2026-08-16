@@ -1,0 +1,17 @@
+meta {
+  name: GET photos
+  type: http
+  seq: 7
+}
+
+GET {
+  url: {{baseUrl}}/api/photos
+  body: none
+  auth: none
+}
+
+docs {
+  The photograph library.
+
+  Published photographs only for a visitor. With a bearer token the unpublished ones are included, which is what the admin library reads.
+}

@@ -1,0 +1,28 @@
+meta {
+  name: POST pages
+  type: http
+  seq: 5
+}
+
+POST {
+  url: {{baseUrl}}/api/pages
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "icon": "",
+    "slug": "",
+    "status": "draft",
+    "title": ""
+  }
+}
+
+docs {
+  Create a page.
+}

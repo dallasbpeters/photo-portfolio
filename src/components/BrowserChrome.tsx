@@ -23,12 +23,12 @@ interface BrowserChromeProps {
  */
 export function BrowserChrome({ children, url }: BrowserChromeProps) {
   return (
-    <div className="flex max-h-[78vh] w-full flex-col overflow-hidden rounded-xl bg-[#2a2a2d] shadow-2xl ring-1 ring-white/10">
-      <div className="flex shrink-0 items-center gap-3 border-white/8 border-b bg-[#3a3a3e] px-4 py-3">
+    <div className="flex max-h-[78vh] w-full flex-col overflow-hidden rounded-xl bg-[#141416] shadow-2xl ring-1 ring-white/10">
+      <div className="flex shrink-0 items-center gap-3 border-white/8 border-b bg-[#18181b] px-4 py-3">
         <div aria-hidden className="flex shrink-0 gap-2">
-          <span className="size-3 rounded-full bg-[#ff5f57]" />
-          <span className="size-3 rounded-full bg-[#febc2e]" />
-          <span className="size-3 rounded-full bg-[#28c840]" />
+          <span className="size-3 rounded-full bg-[#fc2f24]" />
+          <span className="size-3 rounded-full bg-[#fbad04]" />
+          <span className="size-3 rounded-full bg-[#01a019]" />
         </div>
 
         {url ? (

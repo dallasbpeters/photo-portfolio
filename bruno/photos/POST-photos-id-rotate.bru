@@ -1,0 +1,19 @@
+meta {
+  name: POST photos/{id}/rotate
+  type: http
+  seq: 4
+}
+
+POST {
+  url: {{baseUrl}}/api/photos/{{id}}/rotate
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Rotate a photograph 90 degrees.
+}

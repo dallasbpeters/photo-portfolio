@@ -1,0 +1,17 @@
+meta {
+  name: DELETE models/{id}
+  type: http
+  seq: 2
+}
+
+DELETE {
+  url: {{baseUrl}}/api/models/{{id}}
+  body: none
+  auth: none
+}
+
+docs {
+  DELETE /api/models/{id}
+
+  Not yet described in schemas/routes.ts — path and method were read from the handler.
+}

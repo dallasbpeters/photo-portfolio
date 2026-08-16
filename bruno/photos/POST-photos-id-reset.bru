@@ -1,0 +1,19 @@
+meta {
+  name: POST photos/{id}/reset
+  type: http
+  seq: 3
+}
+
+POST {
+  url: {{baseUrl}}/api/photos/{{id}}/reset
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Restore the pre-edit original.
+}

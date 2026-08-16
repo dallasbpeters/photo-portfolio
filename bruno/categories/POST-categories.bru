@@ -1,0 +1,26 @@
+meta {
+  name: POST categories
+  type: http
+  seq: 3
+}
+
+POST {
+  url: {{baseUrl}}/api/categories
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "label": "",
+    "sortOrder": 0
+  }
+}
+
+docs {
+  Create a category.
+}

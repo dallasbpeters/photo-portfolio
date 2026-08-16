@@ -1,0 +1,19 @@
+meta {
+  name: GET auth/me
+  type: http
+  seq: 5
+}
+
+GET {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  The signed-in user.
+}

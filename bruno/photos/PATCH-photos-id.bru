@@ -1,0 +1,35 @@
+meta {
+  name: PATCH photos/{id}
+  type: http
+  seq: 1
+}
+
+PATCH {
+  url: {{baseUrl}}/api/photos/{{id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "categoryId": "00000000-0000-0000-0000-000000000000",
+    "chromeUrl": "",
+    "exif": "",
+    "isFeatured": false,
+    "isPublished": false,
+    "order": 0,
+    "showChrome": false,
+    "title": "",
+    "url": ""
+  }
+}
+
+docs {
+  Update a photograph.
+
+  Absent keys are left alone. `exif` and `chromeUrl` are the exception: sending them empty clears the stored value, which is the only way to remove one.
+}

@@ -1,0 +1,28 @@
+meta {
+  name: PATCH pages/{slug}
+  type: http
+  seq: 2
+}
+
+PATCH {
+  url: {{baseUrl}}/api/pages/{{slug}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "icon": "",
+    "slug": "",
+    "status": "draft",
+    "title": ""
+  }
+}
+
+docs {
+  Update a page.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: POST auth/login
+  type: http
+  seq: 4
+}
+
+POST {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "",
+    "password": ""
+  }
+}
+
+docs {
+  Exchange credentials for a bearer token.
+}

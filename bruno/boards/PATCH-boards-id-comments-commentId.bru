@@ -1,0 +1,17 @@
+meta {
+  name: PATCH boards/{id}/comments/{commentId}
+  type: http
+  seq: 6
+}
+
+PATCH {
+  url: {{baseUrl}}/api/boards/{{id}}/comments/{{commentId}}
+  body: none
+  auth: none
+}
+
+docs {
+  PATCH /api/boards/{id}/comments/{commentId}
+
+  Not yet described in schemas/routes.ts — path and method were read from the handler.
+}

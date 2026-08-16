@@ -1,0 +1,32 @@
+meta {
+  name: POST photos
+  type: http
+  seq: 8
+}
+
+POST {
+  url: {{baseUrl}}/api/photos
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "alt": "",
+    "categoryId": "00000000-0000-0000-0000-000000000000",
+    "exif": "",
+    "height": 0,
+    "lqip": "",
+    "title": "",
+    "url": "",
+    "width": 0
+  }
+}
+
+docs {
+  Add a photograph. Inserted at the top; every other order shifts.
+}

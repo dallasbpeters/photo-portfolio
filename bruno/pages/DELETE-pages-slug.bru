@@ -1,0 +1,19 @@
+meta {
+  name: DELETE pages/{slug}
+  type: http
+  seq: 3
+}
+
+DELETE {
+  url: {{baseUrl}}/api/pages/{{slug}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Delete a page.
+}

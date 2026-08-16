@@ -1,0 +1,39 @@
+meta {
+  name: PATCH site-settings
+  type: http
+  seq: 2
+}
+
+PATCH {
+  url: {{baseUrl}}/api/site-settings
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "heroTitle": "",
+    "instagramHandle": "",
+    "instagramUrl": "",
+    "name": "",
+    "ownerName": "",
+    "shortName": "",
+    "showShader": false,
+    "tagline": "",
+    "theme": {
+      "accent": "",
+      "background": "",
+      "foreground": "",
+      "sansFont": "",
+      "serifFont": ""
+    }
+  }
+}
+
+docs {
+  Save branding and theme.
+}
