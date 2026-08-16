@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Layers01Icon } from "@hugeicons-pro/core-stroke-standard";
-import type { MutableRefObject, MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CANVAS_HEIGHT,
@@ -50,9 +50,9 @@ const NO_WIRES: BoardWire[] = [];
  * the canvas publish the getter unconditionally instead of guarding every
  * render on whether anyone asked for it.
  */
-const NO_VIEW_CENTRE: MutableRefObject<
-  (() => { x: number; y: number }) | null
-> = { current: null };
+const NO_VIEW_CENTRE: RefObject<(() => { x: number; y: number }) | null> = {
+  current: null,
+};
 
 /** Where a mark ended up, in canvas units. */
 export interface Box {
@@ -190,7 +190,7 @@ interface BoardCanvasProps {
    * viewport into the editor, the canvas hands down the one question the
    * editor needs answered.
    */
-  viewCentreRef?: MutableRefObject<(() => { x: number; y: number }) | null>;
+  viewCentreRef?: RefObject<(() => { x: number; y: number }) | null>;
   wires?: BoardWire[];
 }
 
