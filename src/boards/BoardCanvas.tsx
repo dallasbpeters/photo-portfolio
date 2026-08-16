@@ -36,6 +36,16 @@ import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
 import { StrokePreview } from "./StrokePreview";
+import {
+  applyMarquee,
+  EMPTY_SELECTION,
+  press,
+  reconcile,
+  type Selection,
+  select,
+  selectedItems,
+  soleSelected,
+} from "./selectionModel";
 import { isImageDrop } from "./svgToRaster";
 import { type CanvasViewport, useCanvasViewport } from "./useCanvasViewport";
 import { useWireGesture } from "./useWireGesture";
@@ -355,7 +365,7 @@ export function BoardCanvas({
    * shift, and dragging any of them moves the whole set. One selection is just
    * a list of length one, which keeps every read the same shape.
    */
-  const [selection, setSelection] = useState<number[]>([]);
+  const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   /** The marquee being dragged out on the background, in canvas units. */
   const [marquee, setMarquee] = useState<{ from: Point; to: Point } | null>(
     null
@@ -381,13 +391,20 @@ export function BoardCanvas({
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
 
+  // Ids outlive indices but not deletion: an item removed by an undo, a delete
+  // or a concurrent edit must fall out of the selection rather than linger as
+  // an id nothing answers to. reconcile returns the same set when nothing was
+  // dropped, so this does not invalidate memos on every item change.
+  useEffect(() => {
+    setSelection((current) => reconcile(current, items));
+  }, [items]);
+
   // Reported from an effect rather than at each call site: selection is cleared
   // in half a dozen places — a background press, a delete, a drawing gesture —
   // and every one of them would otherwise have to remember to announce it.
   // The toolbar edits one thing, so it is told about a lone selection only —
   // with several picked there is no single item its controls could mean.
-  const selectedItem =
-    selection.length === 1 ? (items[selection[0] ?? -1] ?? null) : null;
+  const selectedItem = soleSelected(selection, items);
 
   // Open comments per item, for the badges the canvas draws on top of them.
   const openCommentCounts = useMemo(() => {
@@ -418,15 +435,9 @@ export function BoardCanvas({
   }, [selectedId, onSelectionChange]);
 
   /** Picks one item, as a layer-row click would — a lone, deliberate choice. */
-  const selectItem = useCallback(
-    (item: BoardItem) => {
-      const index = items.findIndex((candidate) => candidate.id === item.id);
-      if (index >= 0) {
-        setSelection([index]);
-      }
-    },
-    [items]
-  );
+  const selectItem = useCallback((item: BoardItem) => {
+    setSelection(select(item.id));
+  }, []);
 
   /**
    * The mark being drawn right now, in canvas units.
@@ -778,6 +789,7 @@ export function BoardCanvas({
   }, [items, frameContent]);
 
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
+  /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
     (frame: BoardItem): number[] => {
       const inside = new Set(withinFrame(frame, items).map((item) => item.id));
@@ -819,9 +831,7 @@ export function BoardCanvas({
       // Both targets are gathered and the menu offers whichever apply. Asking
       // "is there a frame here?" first made grouping unreachable on any board
       // with a frame spread under the work — which is most of them.
-      const chosen = selection
-        .map((index) => items[index])
-        .filter((item): item is BoardItem => Boolean(item));
+      const chosen = selectedItems(selection, items);
       const frame = onCopyFrame
         ? frameAt(view.toCanvas(e.clientX, e.clientY))
         : null;
@@ -841,34 +851,17 @@ export function BoardCanvas({
   );
 
   /** Everything the swept rectangle touches, by index. */
+  /**
+   * Everything the swept rectangle touches.
+   *
+   * The rules — overlap rather than enclosure, and a sweep under a few units
+   * counting as a click that clears — live in selectionModel with tests, since
+   * they are the kind of thing that gets quietly changed and quietly regresses.
+   */
   const finishMarquee = useCallback(
     (box: { from: Point; to: Point }, add: boolean) => {
       setMarquee(null);
-      const left = Math.min(box.from.x, box.to.x);
-      const right = Math.max(box.from.x, box.to.x);
-      const top = Math.min(box.from.y, box.to.y);
-      const bottom = Math.max(box.from.y, box.to.y);
-      // A click rather than a sweep: too small to have meant a selection, so it
-      // clears rather than picking whatever happened to be under the pointer.
-      if (right - left < 4 && bottom - top < 4) {
-        return;
-      }
-      // Touched, not enclosed. Requiring an item to be wholly inside means
-      // sweeping around a large photograph rather than across it, which on a
-      // zoomed-in board can be impossible without scrolling.
-      const hit = items
-        .map((item, index) => ({ index, item }))
-        .filter(
-          ({ item }) =>
-            item.x < right &&
-            item.x + item.width > left &&
-            item.y < bottom &&
-            item.y + item.height > top
-        )
-        .map(({ index }) => index);
-      setSelection((current) =>
-        add ? [...new Set([...current, ...hit])] : hit
-      );
+      setSelection((current) => applyMarquee(current, items, box, add));
     },
     [items]
   );
@@ -887,19 +880,25 @@ export function BoardCanvas({
       // Shift or cmd adds to the selection instead of replacing it, and does
       // not begin a drag — picking several one by one should not nudge them.
       if (additive) {
-        setSelection((current) =>
-          current.includes(index)
-            ? current.filter((i) => i !== index)
-            : [...current, index]
-        );
+        setSelection((current) => press(current, item.id, true));
         gesture.current = { kind: "none" };
         return;
       }
       // Pressing something already selected drags the whole selection; pressing
       // something outside it selects that one instead, which is what every
       // canvas does and what stops a stray click scattering a careful set.
-      const inSelection = selection.includes(index);
-      const moving = inSelection ? selection : [index];
+      const inSelection = selection.has(item.id);
+      // The gesture still carries indices: it is in flight for one drag and the
+      // array does not reorder underneath it except by raise-to-top, which it
+      // performs itself. Converting the gesture to ids is a separate change.
+      const moving = inSelection
+        ? items.reduce<number[]>((acc, candidate, i) => {
+            if (selection.has(candidate.id)) {
+              acc.push(i);
+            }
+            return acc;
+          }, [])
+        : [index];
       const alsoCarried = isFrame ? containedIndices(item) : [];
       const carriedIndices = [...new Set([...moving, ...alsoCarried])].filter(
         (i) => i !== index
@@ -925,7 +924,7 @@ export function BoardCanvas({
         startY: p.y,
       };
       if (!inSelection) {
-        setSelection([index]);
+        setSelection(select(item.id));
       }
     },
     [containedIndices, items, selection, view]
@@ -947,7 +946,7 @@ export function BoardCanvas({
         startX: p.x,
         startY: p.y,
       };
-      setSelection([index]);
+      setSelection(select(item.id));
     },
     [items, view]
   );
@@ -1169,7 +1168,7 @@ export function BoardCanvas({
           // finishes here instead of being abandoned mid-line.
           if (isDrawing) {
             e.currentTarget.setPointerCapture(e.pointerId);
-            setSelection([]);
+            setSelection(EMPTY_SELECTION);
             setEditingId(null);
             setStroke([view.toCanvas(e.clientX, e.clientY)]);
             return;
@@ -1181,7 +1180,7 @@ export function BoardCanvas({
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
             setEditingId(null);
             if (!(e.shiftKey || e.altKey)) {
-              setSelection([]);
+              setSelection(EMPTY_SELECTION);
               view.onPointerDown(e);
               return;
             }
@@ -1189,7 +1188,7 @@ export function BoardCanvas({
             // Alt sweeps a fresh selection; shift keeps what is already picked,
             // matching what shift does on a single item.
             if (!e.shiftKey) {
-              setSelection([]);
+              setSelection(EMPTY_SELECTION);
             }
             const start = view.toCanvas(e.clientX, e.clientY);
             setMarquee({ from: start, to: start });
@@ -1323,7 +1322,7 @@ export function BoardCanvas({
               imageUrl={wiredImageFor(item.id)}
               index={index}
               isEditing={!readOnly && editingId === item.id}
-              isSelected={!readOnly && selection.includes(index)}
+              isSelected={!readOnly && selection.has(item.id)}
               item={item}
               key={keyOf(item)}
               onBeginEdit={() => {
