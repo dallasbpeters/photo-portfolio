@@ -9,6 +9,7 @@ export interface EditableSiteFields {
   name: string;
   ownerName: string;
   shortName: string;
+  showShader: boolean;
   tagline: string;
 }
 
@@ -26,6 +27,7 @@ export interface SiteSettingsRow {
   name: string | null;
   owner_name: string | null;
   short_name: string | null;
+  show_shader: boolean | null;
   site_key: string;
   tagline: string | null;
   theme: unknown;
@@ -56,6 +58,7 @@ export const resolveSiteSettings = (
     name: text(row?.name, site.name),
     ownerName: text(row?.owner_name, site.ownerName),
     shortName: text(row?.short_name, site.shortName),
+    showShader: row?.show_shader ?? site.showShader,
     siteKey: site.key,
     tagline: text(row?.tagline, site.tagline),
     theme: normalizeTheme(row?.theme, fallbackTheme),

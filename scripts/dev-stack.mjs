@@ -71,10 +71,19 @@ console.log(
   `\n[${process.env.VITE_SITE || "addison"}] Starting dev server → http://localhost:${PORT}\n`
 );
 
+// The browser bundle reads VITE_SITE, but the serverless functions read SITE —
+// on Vercel both are set on the project. Locally only VITE_SITE is passed in, so
+// mirror it: otherwise /api/* resolves to the default site and serves the wrong
+// site's settings back to a correctly-branded frontend.
+const env = { ...process.env };
+if (env.VITE_SITE && !env.SITE) {
+  env.SITE = env.VITE_SITE;
+}
+
 const pnpm = isWin ? "pnpm.cmd" : "pnpm";
 const child = spawn(pnpm, ["exec", "vercel", "dev", "--listen", String(PORT)], {
   cwd: root,
-  env: { ...process.env },
+  env,
   stdio: "inherit",
 });
 

@@ -352,19 +352,14 @@ function AiTab({
           Generating here pins a flat image and throws the prompt away
           when this panel closes; a node keeps the prompt on the board,
           re-runnable, and able to feed the next node along. */}
-      <Button
-        className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
-        onClick={onAddNode}
-        type="button"
-        variant="outline"
-      >
+      <Button fullWidth onClick={onAddNode} type="button" variant="outline">
         <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
         Add as a node
       </Button>
 
       <Button
-        className="min-h-11 w-full border-board-ink/10 text-[10px] text-board-ink/60 uppercase tracking-[0.18em] hover:bg-board-ink/10"
         disabled={isGenerating}
+        fullWidth
         onClick={onGenerate}
         type="button"
         variant="outline"
@@ -382,7 +377,7 @@ function AiTab({
             width={generated.width ?? undefined}
           />
           <Button
-            className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
+            fullWidth
             onClick={() =>
               onAddImage({
                 altText: prompt.slice(0, 200),
@@ -463,12 +458,7 @@ function UnsplashTab({
           placeholder="Search references…"
           value={query}
         />
-        <Button
-          aria-label="Search"
-          className="min-h-10 border-board-ink/20"
-          type="submit"
-          variant="outline"
-        >
+        <Button aria-label="Search" size="icon" type="submit" variant="outline">
           <HugeiconsIcon icon={Search01Icon} size={14} />
         </Button>
       </form>
@@ -544,8 +534,8 @@ function DriveTab({ onAdd }: { onAdd: (files: File[]) => void }) {
   return (
     <div className="space-y-2">
       <Button
-        className="w-full"
         disabled={isPicking}
+        fullWidth
         onClick={() => void pick()}
         type="button"
         variant="ghost"
@@ -799,7 +789,7 @@ function FalLibraryTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
 
       {hasMore && !isLoading ? (
         <Button
-          className="w-full"
+          fullWidth
           onClick={() => void load(page + 1)}
           type="button"
           variant="ghost"
@@ -967,8 +957,8 @@ function PinterestTab({
         />
         <Button
           aria-label="Load from Pinterest"
-          className="min-h-10 border-board-ink/20"
           disabled={isResolving}
+          size="icon"
           type="submit"
           variant="outline"
         >
@@ -1127,12 +1117,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
           ))}
         </div>
 
-        <Button
-          className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
-          disabled={isDrawing}
-          type="submit"
-          variant="outline"
-        >
+        <Button disabled={isDrawing} fullWidth type="submit" variant="outline">
           <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
           {isDrawing ? "Drawing…" : "Draw icon"}
         </Button>
@@ -1152,7 +1137,7 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
             />
           </div>
           <Button
-            className="min-h-11 w-full border-board-ink/20 text-[10px] uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
+            fullWidth
             onClick={() =>
               onAdd({
                 altText: prompt.slice(0, 200),

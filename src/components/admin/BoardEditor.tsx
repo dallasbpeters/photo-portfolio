@@ -178,7 +178,6 @@ function BoardHeaderActions({
         </button>
       ) : null}
       <Button
-        className="min-h-11 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:text-board-ink"
         disabled={isPublishing}
         onClick={onPublish}
         type="button"
@@ -189,7 +188,6 @@ function BoardHeaderActions({
       <ThemeToggle />
       <Button
         aria-label="Close board"
-        className="min-h-11 text-board-ink/80 hover:text-board-ink"
         onClick={onClose}
         type="button"
         variant="ghost"
@@ -1818,7 +1816,13 @@ export function BoardEditor({
           <html> — so anything without an explicit color came out white on a
           white board. The site's palette is right for the site and has no say
           here. */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-board-surface text-board-ink">
+      {/* data-surface re-points the --btn-* variables at the board's ink, so
+          every Button inside this tree paints itself for paper without the
+          call site having to say so. See index.css. */}
+      <div
+        className="fixed inset-0 z-50 flex flex-col bg-board-surface text-board-ink"
+        data-surface="board"
+      >
         <CustomCursor cursorColor="#9100FF" userName={displayName} />
         {/* Wraps rather than overflowing: the palette has grown past what fits on
           one line at laptop width, and a row of shrink-0 buttons pushed Publish

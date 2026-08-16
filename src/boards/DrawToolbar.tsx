@@ -95,7 +95,7 @@ export function DrawToolbar({
         title="Select — esc"
         type="button"
       >
-        <HugeiconsIcon icon={CursorMagicSelection02Icon} size={15} />
+        <HugeiconsIcon icon={CursorMagicSelection02Icon} size={22} />
       </button>
 
       {/* Said out loud while a tool is on, because that is exactly when a
@@ -135,7 +135,7 @@ export function DrawToolbar({
           <HugeiconsIcon
             className={entry.tool === "rounded" ? "rounded-[3px]" : undefined}
             icon={entry.icon}
-            size={entry.tool === "rounded" ? 13 : 15}
+            size={entry.tool === "rounded" ? 18 : 20}
           />
         </button>
       ))}

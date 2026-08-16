@@ -58,7 +58,6 @@ export default function ThemeToggle() {
   return (
     <Button
       aria-label={`Theme: ${LABEL[choice]}. Switch to ${LABEL[next]}.`}
-      className="min-h-11 gap-1.5 text-[10px] uppercase tracking-[0.18em]"
       onClick={() => setChoice(next)}
       type="button"
       variant="ghost"

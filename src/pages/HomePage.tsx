@@ -1,9 +1,31 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InstagramIcon } from "@hugeicons-pro/core-stroke-standard";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import { Toaster, toast } from "sonner";
+
+/**
+ * Loaded on demand, never with the page.
+ *
+ * This pulls in a WebGPU shader runtime that minifies to ~3.3MB (654kB gzipped)
+ * — larger than the rest of the app combined. A static import put all of it in
+ * the entry chunk, so every visitor paid for it before the first photo, and the
+ * sites with `showShader: false` paid for code that can never run.
+ *
+ * Behind the flag it is fetched only where it is actually rendered, and even
+ * there it is a decorative backdrop, so arriving late costs nothing.
+ */
+const FadedDither = lazy(() => import("@/shaders/faded-dither"));
+
 import { SiteNav } from "../cms/SiteNav";
 import { Lightbox } from "../components/Lightbox";
 import { OptimizedImage } from "../components/OptimizedImage";
@@ -141,7 +163,7 @@ export const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-white selection:text-black">
+    <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-white selection:text-black">
       <Toaster position="top-center" theme="dark" />
 
       {isLoadingPhotos ? (
@@ -172,7 +194,7 @@ export const HomePage = () => {
         </h1>
         <SiteNav pages={pages} />
       </header>
-      <section className="relative flex h-screen w-full items-center overflow-hidden">
+      <section className="relative z-40 flex h-screen w-full items-center overflow-hidden">
         <div className="absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:w-[70%] md:px-24">
           <div className="space-y-1 md:space-y-2">
             {heroPhotos.map((photo, i) => (
@@ -197,7 +219,7 @@ export const HomePage = () => {
           </div>
         </div>
 
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-4">
           {heroPhotos.length > 0 ? (
             <AnimatePresence mode="wait">
               <motion.div
@@ -234,7 +256,7 @@ export const HomePage = () => {
 
       <section
         aria-label="Portfolio grid"
-        className="mx-auto scroll-mt-6 px-4 py-24 md:px-8"
+        className="relative z-50 mx-auto scroll-mt-6 px-4 py-24 md:px-8"
         id="portfolio-grid"
         ref={gridSectionRef}
       >
@@ -244,7 +266,7 @@ export const HomePage = () => {
               className="group aspect-video overflow-hidden bg-white/5 md:aspect-square"
               initial={{ opacity: 0 }}
               key={photo.id}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.3 }}
               viewport={{ once: true }}
               whileInView={{ opacity: 1 }}
             >
@@ -273,7 +295,7 @@ export const HomePage = () => {
               >
                 <OptimizedImage
                   alt={photo.alt || photo.title}
-                  className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
                   height={photo.height ?? undefined}
                   lqip={photo.lqip}
                   referrerPolicy="no-referrer"
@@ -287,7 +309,7 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <footer className="border-white/5 border-t bg-background px-4 py-24 md:px-8">
+      <footer className="relative z-50 px-4 py-24 md:px-8">
         <div className="mx-auto flex max-w-10xl flex-col items-end justify-between gap-12 md:flex-row">
           <div className="space-y-6">
             <h2 className="font-bold text-3xl uppercase tracking-widest">
@@ -307,7 +329,7 @@ export const HomePage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 text-[10px] text-white/90 uppercase tracking-[0.3em]">
+          <div className="flex flex-col gap-4 rounded bg-background/80 p-4 text-[12px] text-white/90 uppercase tracking-[0.3em]">
             <p>
               © {new Date().getFullYear()} {settings.ownerName}. All rights
               reserved.
@@ -319,7 +341,7 @@ export const HomePage = () => {
                 Admin shortcut. */}
             {isInstalledApp ? (
               <Link
-                className="text-white/40 transition-colors hover:text-white"
+                className="text-white transition-colors hover:text-white"
                 to="/admin"
               >
                 Admin
@@ -372,6 +394,18 @@ export const HomePage = () => {
           />
         ) : null}
       </AnimatePresence>
+      {/* Its own boundary, with no fallback: the shader is decoration, so it
+          should fade in whenever it is ready and never hold up the gallery.
+          Leaning on the route-level Suspense instead would blank the whole
+          page while several megabytes of WebGPU downloaded. */}
+      {settings.showShader ? (
+        <Suspense fallback={null}>
+          <FadedDither
+            className="absolute right-0 bottom-0 left-0 z-1 opacity-70"
+            colorB={settings.theme.accent}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 };

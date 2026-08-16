@@ -200,8 +200,8 @@ export const CategoryPicker = ({
           {showAddNew ? (
             <div className="border-white/10 border-t p-2">
               <Button
-                className="w-full border-white/20 text-[10px] text-white uppercase tracking-widest hover:bg-white/10"
                 disabled={isCreating}
+                fullWidth
                 onClick={() => void handleCreate()}
                 onMouseDown={(e) => e.preventDefault()}
                 size="sm"

@@ -90,7 +90,7 @@ export function OptimizedImage({
   src,
   alt,
   sizes = "100vw",
-  quality = 75,
+  quality = 85,
   loading = "lazy",
   decoding = "async",
   lqip,

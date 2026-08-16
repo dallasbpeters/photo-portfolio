@@ -247,10 +247,10 @@ const JournalForm = ({
           {entry.journal ? (
             <Button
               aria-label="Delete journal entry"
-              className="gap-1.5 text-[10px] text-red-400/70 uppercase tracking-widest hover:bg-red-400/10 hover:text-red-400"
               disabled={journal.deleting}
               onClick={() => void journal.handleDelete()}
               size="sm"
+              tone="danger"
               type="button"
               variant="ghost"
             >
@@ -259,7 +259,6 @@ const JournalForm = ({
             </Button>
           ) : null}
           <Button
-            className="border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
             disabled={journal.saving}
             size="sm"
             type="submit"
@@ -396,7 +395,6 @@ const TodayActions = ({
   <>
     <Button
       aria-label="Load a different inspiration photo"
-      className="shrink-0 gap-2 border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
       disabled={today.loading || today.refreshing || !today.challenge}
       onClick={() => void today.refresh()}
       size="sm"
@@ -414,7 +412,6 @@ const TodayActions = ({
     {canUseNotifications() ? (
       <Button
         aria-pressed={notifs.enabled}
-        className="shrink-0 gap-2 border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
         onClick={() => void notifs.toggle(today.challenge)}
         size="sm"
         type="button"
@@ -446,7 +443,6 @@ const PanelActions = ({
     {view === "today" ? <TodayActions notifs={notifs} today={today} /> : null}
 
     <Button
-      className="shrink-0 gap-2 border-white/20 text-[10px] text-white/80 uppercase tracking-widest hover:bg-white/10"
       onClick={() => onSwitchView(view === "today" ? "history" : "today")}
       size="sm"
       type="button"
@@ -551,8 +547,9 @@ const TodayJournalForm = ({
       </p>
     </div>
     <Button
-      className="min-h-11 w-full border-white/25 text-[10px] text-white uppercase tracking-widest hover:bg-white/10 sm:w-auto"
+      className="sm:w-auto"
       disabled={today.saving}
+      fullWidth
       type="submit"
       variant="outline"
     >

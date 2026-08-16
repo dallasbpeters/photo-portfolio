@@ -179,7 +179,6 @@ export function PagesPanel() {
           Pages
         </div>
         <Button
-          className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
           onClick={() => setIsCreating((v) => !v)}
           type="button"
           variant="ghost"
@@ -213,7 +212,6 @@ export function PagesPanel() {
             </CardContent>
             <CardFooter className="flex items-center justify-end gap-3">
               <Button
-                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
                 disabled={isBusy || !newTitle.trim()}
                 type="submit"
                 variant="outline"
@@ -323,12 +321,7 @@ function PageEditorPanel({
           <HugeiconsIcon aria-hidden icon={FileEmpty02Icon} size={16} />
           {draft.title}
         </CardTitle>
-        <Button
-          className="text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
-          onClick={onClose}
-          type="button"
-          variant="ghost"
-        >
+        <Button onClick={onClose} type="button" variant="ghost">
           <X className="mr-1.5" size={14} />
           Close
         </Button>
@@ -377,7 +370,6 @@ function PageEditorPanel({
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
-            className="flex min-h-11 items-center gap-2 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
             disabled={isSaving}
             onClick={() => void save()}
             type="button"
@@ -388,7 +380,6 @@ function PageEditorPanel({
           </Button>
 
           <Button
-            className="flex min-h-11 items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
             disabled={isSaving}
             onClick={() =>
               void save({

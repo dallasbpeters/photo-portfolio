@@ -247,7 +247,6 @@ export function SitesPanel() {
           Sites
         </CardTitle>
         <Button
-          className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
           onClick={() => setIsOpen((v) => !v)}
           type="button"
           variant="outline"
@@ -344,8 +343,8 @@ export function SitesPanel() {
                       Leave blank to inherit this site's values.
                     </p>
                     <Button
-                      className="min-h-11 w-full border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
                       disabled={isSettingUp}
+                      fullWidth
                       onClick={() => void runSetup(project.id)}
                       type="button"
                       variant="outline"
@@ -382,12 +381,7 @@ export function SitesPanel() {
               ))}
             </div>
 
-            <Button
-              className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-              disabled={isCreating}
-              type="submit"
-              variant="outline"
-            >
+            <Button disabled={isCreating} type="submit" variant="outline">
               {isCreating ? "Creating…" : "Create project"}
             </Button>
           </form>

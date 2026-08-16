@@ -120,8 +120,9 @@ const LoginScreen = ({
         />
       </div>
       <Button
-        className="flex min-h-12 w-full items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
         disabled={login.isSubmitting}
+        fullWidth
+        size="lg"
         type="submit"
         variant="outline"
       >
@@ -243,7 +244,6 @@ const AddItemForm = ({
         />
 
         <Button
-          className="min-h-11"
           disabled={
             categoryOptionsDisabled ||
             newPhoto.isUploading ||
@@ -271,13 +271,10 @@ interface ViewToggleButtonProps {
 const ViewToggleButton = ({ onToggle, stackedView }: ViewToggleButtonProps) => (
   <Button
     aria-label={stackedView ? "Switch to grid view" : "Switch to stacked view"}
-    className={`flex items-center gap-1.5 border-white/15 text-[10px] uppercase tracking-widest transition-colors hover:bg-white/10 hover:text-white ${
-      stackedView ? "border-white/30 bg-white/10 text-white" : "text-white/90"
-    }`}
     onClick={onToggle}
     size="sm"
     type="button"
-    variant="outline"
+    variant={stackedView ? "selected" : "outline"}
   >
     {stackedView ? (
       <HugeiconsIcon icon={GridTableIcon} size={13} />
@@ -323,7 +320,6 @@ const BatchActions = ({
     </div>
     <div className="flex flex-wrap items-center gap-2">
       <Button
-        className="min-h-11 bg-white text-[10px] text-black uppercase tracking-widest hover:bg-white/90"
         disabled={
           selection.isBatchUpdating ||
           selection.isBatchDeleting ||
@@ -332,14 +328,15 @@ const BatchActions = ({
         onClick={() => void selection.batchSetCategory()}
         size="sm"
         type="button"
+        variant="default"
       >
         {selection.isBatchUpdating ? "Applying…" : "Set category"}
       </Button>
       <Button
-        className="min-h-11 border-red-500/40 text-[10px] text-red-400 uppercase tracking-widest hover:border-red-500/60 hover:bg-red-500/10"
         disabled={selection.isBatchDeleting || selection.isBatchUpdating}
         onClick={() => void selection.batchDelete()}
         size="sm"
+        tone="danger"
         type="button"
         variant="outline"
       >
@@ -347,7 +344,6 @@ const BatchActions = ({
         {selection.isBatchDeleting ? "Deleting…" : "Delete"}
       </Button>
       <Button
-        className="min-h-11 text-[10px] text-white/90 uppercase tracking-widest"
         disabled={selection.isBatchDeleting || selection.isBatchUpdating}
         onClick={selection.clear}
         size="sm"
@@ -533,7 +529,7 @@ const PhotoCard = ({
       />
       <div
         className={`relative h-full overflow-hidden rounded-md border bg-black/40 transition-colors ${
-          selected ? "border-white/40 ring-1 ring-white/30" : "border-white/10"
+          selected ? "border-white/40" : "border-white/10"
         }`}
       >
         <OptimizedImage
@@ -564,7 +560,6 @@ const PhotoCard = ({
         <div className="absolute top-1 right-0.5 z-10 flex flex-col gap-0.5">
           <Button
             aria-label={`Edit title and category for ${photo.title}`}
-            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
             onClick={() => onEditDetails(photo)}
             size="icon"
             type="button"
@@ -574,7 +569,6 @@ const PhotoCard = ({
           </Button>
           <Button
             aria-label={`Open image editor for ${photo.title}`}
-            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
             onClick={() => onEditImage(photo)}
             size="icon"
             type="button"
@@ -584,7 +578,6 @@ const PhotoCard = ({
           </Button>
           <Button
             aria-label={`Rotate ${photo.title} 90 degrees`}
-            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
             onClick={() => onRotate(photo)}
             size="icon"
             type="button"
@@ -599,10 +592,10 @@ const PhotoCard = ({
                 : `Add ${photo.title} to homepage slideshow`
             }
             aria-pressed={photo.isFeatured}
-            className={`size-10 min-h-11 min-w-11 ${photo.isFeatured ? "text-amber-400" : "text-white/90"} hover:bg-white/15 hover:text-white`}
             onClick={() => onToggleFeatured(photo)}
             onDragStart={(e) => e.stopPropagation()}
             size="icon"
+            tone="accent"
             type="button"
             variant="ghost"
           >
@@ -615,7 +608,6 @@ const PhotoCard = ({
           {photo.originalUrl ? (
             <Button
               aria-label={`Restore ${photo.title} to its original`}
-              className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
               onClick={() => onReset(photo)}
               size="icon"
               title="Restore the original image"
@@ -632,7 +624,6 @@ const PhotoCard = ({
                 : `Show ${photo.title} on the site`
             }
             aria-pressed={!photo.isPublished}
-            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-white/15 hover:text-white"
             onClick={() => onTogglePublished(photo)}
             size="icon"
             type="button"
@@ -645,9 +636,9 @@ const PhotoCard = ({
           </Button>
           <Button
             aria-label={`Delete ${photo.title}`}
-            className="size-10 min-h-11 min-w-11 text-white/90 hover:bg-red-500/20 hover:text-red-300"
             onClick={() => void selection.deletePhoto(photo.id)}
             size="icon"
+            tone="danger"
             type="button"
             variant="ghost"
           >
@@ -827,14 +818,13 @@ const ItemsCard = ({
   selection,
   view,
 }: ItemsCardProps) => (
-  <Card className="overflow-hidden border-white/10 bg-white/5">
+  <Card className="overflow-hidden border-white/0 bg-white/5">
     <CardHeader className="flex flex-col gap-3 border-white/5 border-b md:flex-row md:items-center md:gap-4">
       <div className="flex shrink-0 items-center gap-3">
         <CardTitle className="whitespace-nowrap font-light text-sm text-white/90 uppercase tracking-[0.3em]">
           Current Items
         </CardTitle>
         <Button
-          className="flex items-center gap-1.5 border-white/15 text-[10px] text-white/90 uppercase tracking-widest hover:bg-white/10 hover:text-white"
           onClick={onManageCategories}
           size="sm"
           type="button"
@@ -1067,19 +1057,10 @@ const DetailsDialog = ({
         </fieldset>
 
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <Button
-            className="text-white/90 hover:text-white"
-            onClick={details.close}
-            type="button"
-            variant="ghost"
-          >
+          <Button onClick={details.close} type="button" variant="ghost">
             Cancel
           </Button>
-          <Button
-            className="bg-white text-black hover:bg-white/90"
-            disabled={details.isSaving}
-            type="submit"
-          >
+          <Button disabled={details.isSaving} type="submit" variant="default">
             {details.isSaving ? "Saving…" : "Save"}
           </Button>
         </div>

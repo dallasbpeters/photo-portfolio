@@ -18,6 +18,7 @@ import { siteConfig } from "../../site";
 import { useSiteSettings } from "../../theme/SiteSettingsProvider";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
@@ -248,16 +249,25 @@ export function SiteSettingsPanel() {
                   size={14}
                 />
                 <span>
+                  {/* tabular-nums: these recompute on every pointer move while
+                      a colour picker is being dragged, and proportional digits
+                      make the sentence jitter as the ratio changes. */}
                   {bodyContrast < AA_NORMAL ? (
                     <>
-                      Text on background is {bodyContrast.toFixed(1)}:1 — below
-                      the {AA_NORMAL}:1 WCAG AA minimum.{" "}
+                      Text on background is{" "}
+                      <span className="tabular-nums">
+                        {bodyContrast.toFixed(1)}
+                      </span>
+                      :1 — below the {AA_NORMAL}:1 WCAG AA minimum.{" "}
                     </>
                   ) : null}
                   {accentContrast < 3 ? (
                     <>
-                      Accent on background is {accentContrast.toFixed(1)}:1 and
-                      may be hard to read.
+                      Accent on background is{" "}
+                      <span className="tabular-nums">
+                        {accentContrast.toFixed(1)}
+                      </span>
+                      :1 and may be hard to read.
                     </>
                   ) : null}
                 </span>
@@ -299,6 +309,29 @@ export function SiteSettingsPanel() {
             </div>
           </div>
 
+          <div className="space-y-4">
+            <h3 className={labelClass}>Background</h3>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                checked={draft.showShader}
+                className="mt-0.5"
+                id="setting-showShader"
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, showShader: e.target.checked }))
+                }
+              />
+              <div className="space-y-1">
+                <Label className={labelClass} htmlFor="setting-showShader">
+                  Animated shader
+                </Label>
+                <p className="text-[10px] text-white/80">
+                  Dithered gradient behind the gallery, tinted with the accent
+                  color
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div
             className="space-y-2 rounded border border-white/10 p-6"
             style={{
@@ -320,8 +353,8 @@ export function SiteSettingsPanel() {
 
           <div className="flex flex-wrap gap-3">
             <Button
-              className="flex min-h-12 items-center gap-2 border-white/20 px-8 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
               disabled={isSaving}
+              size="lg"
               type="submit"
               variant="outline"
             >
@@ -329,8 +362,8 @@ export function SiteSettingsPanel() {
               {isSaving ? "Saving…" : "Save settings"}
             </Button>
             <Button
-              className="flex min-h-12 items-center gap-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
               onClick={handleReset}
+              size="lg"
               type="button"
               variant="ghost"
             >

@@ -252,6 +252,26 @@ export function BatchUploader({
     setIsRunning(false);
     await reload();
 
+    // Drop what actually landed. A finished upload is a row in the library now,
+    // so leaving it queued here only makes the next batch harder to read — and
+    // re-running would silently re-upload it. Failures stay put, which is what
+    // the toast below promises.
+    //
+    // Revoking on the way out matters: every accepted file holds an object URL
+    // for its preview, and this panel survives many batches without remounting,
+    // so without this the blobs accumulate for the life of the admin session.
+    setItems((prev) => {
+      const remaining: Item[] = [];
+      for (const item of prev) {
+        if (item.status === "done") {
+          URL.revokeObjectURL(item.previewUrl);
+        } else {
+          remaining.push(item);
+        }
+      }
+      return remaining;
+    });
+
     if (succeeded > 0) {
       posthog.capture("photos_batch_uploaded", { count: succeeded });
       toast.success(`${succeeded} photo${succeeded === 1 ? "" : "s"} added`);
@@ -271,7 +291,6 @@ export function BatchUploader({
     <>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <Button
-          className="min-h-11"
           disabled={isPickingDrive}
           onClick={() => void pickFromDrive()}
           type="button"
@@ -383,7 +402,7 @@ export function BatchUploader({
                     </div>
                   )}
 
-                  <div className="absolute right-0 bottom-0 left-0 z-10 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2">
+                  <div className="absolute right-0 bottom-0 left-0 z-10 bg-linear-to-t from-black/95 via-black/60 to-transparent p-2">
                     <input
                       aria-label={`Title for ${item.file.name}`}
                       className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none disabled:text-white/90"
@@ -439,7 +458,6 @@ export function BatchUploader({
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button
-                className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em]"
                 disabled={isRunning || pendingCount === 0 || !effectiveCategory}
                 onClick={() => void start()}
                 type="button"

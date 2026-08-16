@@ -32,6 +32,17 @@ const str = (body: Record<string, unknown>, key: string): string | null => {
   return clean === "" ? null : clean;
 };
 
+/**
+ * A submitted boolean, or null to clear the column back to the compiled default.
+ *
+ * Anything that is not a real boolean stores NULL rather than `false`, so a
+ * malformed or partial body cannot silently pin a site to "off".
+ */
+const bool = (body: Record<string, unknown>, key: string): boolean | null => {
+  const raw = body[key];
+  return typeof raw === "boolean" ? raw : null;
+};
+
 /** The first thing wrong with a submitted theme, or null when it is usable. */
 const themeError = (themeInput: Record<string, unknown>): string | null => {
   for (const key of COLOR_KEYS) {
@@ -92,10 +103,11 @@ const save = async (
     await sql`
       INSERT INTO site_settings (
         site_key, name, short_name, hero_title, owner_name, tagline,
-        instagram_url, instagram_handle, theme, updated_at, updated_by
+        instagram_url, instagram_handle, show_shader, theme, updated_at, updated_by
       ) VALUES (
         ${site.key}, ${str(body, "name")}, ${str(body, "shortName")}, ${str(body, "heroTitle")},
         ${str(body, "ownerName")}, ${str(body, "tagline")}, ${values.instagramUrl}, ${str(body, "instagramHandle")},
+        ${bool(body, "showShader")},
         ${JSON.stringify(values.theme)}::jsonb, now(), ${values.userId}
       )
       ON CONFLICT (site_key) DO UPDATE SET
@@ -106,6 +118,7 @@ const save = async (
         tagline = EXCLUDED.tagline,
         instagram_url = EXCLUDED.instagram_url,
         instagram_handle = EXCLUDED.instagram_handle,
+        show_shader = EXCLUDED.show_shader,
         theme = EXCLUDED.theme,
         updated_at = now(),
         updated_by = EXCLUDED.updated_by

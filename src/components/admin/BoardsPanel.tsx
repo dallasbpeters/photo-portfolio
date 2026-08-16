@@ -87,12 +87,7 @@ export function BoardsPanel() {
           <HugeiconsIcon aria-hidden icon={FrameIcon} size={16} />
           Moodboards
         </CardTitle>
-        <Button
-          className="min-h-11 border-white/20 text-[10px] text-white uppercase tracking-[0.18em] hover:bg-white hover:text-black"
-          onClick={() => void create()}
-          type="button"
-          variant="outline"
-        >
+        <Button onClick={() => void create()} type="button" variant="outline">
           <HugeiconsIcon aria-hidden icon={Add01Icon} size={14} />
           New board
         </Button>

@@ -421,6 +421,69 @@
 }
 
 /*
+ * What a button is painted with, per surface.
+ *
+ * Every button in the app reads these; none of them name a colour. That is the
+ * whole point — buttons sit on two surfaces (the dark admin chrome and the
+ * board's inverting paper), and before this the only way to say "I am on the
+ * board" was for the call site to hand-write `border-board-ink/20`. Sixty call
+ * sites did their own version of that and quietly disagreed about the details.
+ *
+ * A surface sets these once and everything inside it follows. To retune every
+ * button in the admin, change them here — not at a call site.
+ */
+:root {
+  /* The admin chrome is dark whatever the machine prefers, so these are literal
+     whites rather than --foreground, which follows the light/dark switch. */
+  --btn-fg: rgb(255 255 255 / 0.9);
+  --btn-fg-strong: rgb(255 255 255);
+  --btn-border: rgb(255 255 255 / 0.2);
+  --btn-hover-bg: rgb(255 255 255);
+  --btn-hover-fg: rgb(0 0 0);
+  --btn-ghost-hover-bg: rgb(255 255 255 / 0.1);
+
+  --btn-solid-bg: rgb(255 255 255);
+  --btn-solid-fg: rgb(0 0 0);
+  --btn-solid-hover-bg: rgb(255 255 255 / 0.9);
+
+  --btn-selected-border: rgb(255 255 255 / 0.3);
+  --btn-selected-bg: rgb(255 255 255 / 0.1);
+
+  /* The "on" colour for an accent toggle — amber, as the star has always been. */
+  --btn-accent-fg: oklch(0.828 0.189 84.429);
+
+  --btn-danger-fg: oklch(0.704 0.191 22.216);
+  --btn-danger-border: rgb(239 68 68 / 0.4);
+  --btn-danger-hover-border: rgb(239 68 68 / 0.6);
+  --btn-danger-hover-bg: rgb(239 68 68 / 0.1);
+  --btn-danger-hover-fg: oklch(0.704 0.191 22.216);
+  --btn-danger-solid-bg: oklch(0.637 0.237 25.331);
+  --btn-danger-solid-fg: rgb(255 255 255);
+  --btn-danger-solid-hover-bg: oklch(0.577 0.245 27.325);
+}
+
+/*
+ * The board editor's paper. `--board-ink` already inverts with light/dark, so
+ * pointing the button variables at it is all that is needed: a board button is
+ * the same `<Button variant="outline">` as an admin one.
+ */
+[data-surface="board"] {
+  --btn-fg: color-mix(in oklch, var(--board-ink) 80%, transparent);
+  --btn-fg-strong: var(--board-ink);
+  --btn-border: color-mix(in oklch, var(--board-ink) 20%, transparent);
+  --btn-hover-bg: var(--board-ink);
+  --btn-hover-fg: var(--board-surface);
+  --btn-ghost-hover-bg: color-mix(in oklch, var(--board-ink) 10%, transparent);
+
+  --btn-solid-bg: var(--board-ink);
+  --btn-solid-fg: var(--board-surface);
+  --btn-solid-hover-bg: color-mix(in oklch, var(--board-ink) 90%, transparent);
+
+  --btn-selected-border: color-mix(in oklch, var(--board-ink) 30%, transparent);
+  --btn-selected-bg: color-mix(in oklch, var(--board-ink) 10%, transparent);
+}
+
+/*
  * The board as it has always looked: white on black, nodes a shade above the
  * ground. Pure white and pure black on purpose — these replace literal
  * `text-white` and `bg-black/40`, so anything softer would change the canvas.

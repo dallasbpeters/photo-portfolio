@@ -94,10 +94,10 @@ export const CategoriesManageDialog = ({
             </div>
             <Button
               aria-label={`Remove category ${cat.label}`}
-              className="shrink-0 text-white/90 hover:text-red-400 disabled:opacity-60"
               disabled={cat.photoCount > 0}
               onClick={() => void onDelete(cat)}
               size="icon"
+              tone="danger"
               type="button"
               variant="ghost"
             >
@@ -155,8 +155,8 @@ export const CategoriesManageDialog = ({
 
           {showAddNew ? (
             <Button
-              className="w-full border-white/20 text-[10px] text-white uppercase tracking-widest hover:bg-white/10"
               disabled={isCreating || loading}
+              fullWidth
               onClick={() => void handleAdd()}
               type="button"
               variant="outline"

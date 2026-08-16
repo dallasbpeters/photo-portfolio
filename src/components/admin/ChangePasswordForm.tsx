@@ -91,11 +91,12 @@ export function ChangePasswordForm() {
         />
       </Label>
       <Button
-        className="min-h-11 w-full text-[10px] uppercase tracking-widest"
         disabled={
           isSubmitting || !current || !next || next.length < MIN_PASSWORD_LENGTH
         }
+        fullWidth
         type="submit"
+        variant="default"
       >
         {isSubmitting ? "Changing…" : "Change password"}
       </Button>

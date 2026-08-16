@@ -117,12 +117,7 @@ export function AdminPage() {
               Back to site
             </Link>
             {isAuthenticated ? (
-              <Button
-                className="flex min-h-11 items-center gap-2 px-2 text-[10px] text-white/90 uppercase tracking-widest hover:text-white"
-                onClick={handleLogout}
-                type="button"
-                variant="ghost"
-              >
+              <Button onClick={handleLogout} type="button" variant="ghost">
                 <LogOut aria-hidden size={16} />
                 Sign out
               </Button>

@@ -128,22 +128,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           </DialogHeader>
 
           <DialogFooter className="gap-2">
-            <Button
-              className="min-h-11 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
-              onClick={() => settle(false)}
-              type="button"
-              variant="ghost"
-            >
+            <Button onClick={() => settle(false)} type="button" variant="ghost">
               {options?.cancelLabel ?? "Cancel"}
             </Button>
             <Button
               autoFocus
-              className={`min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] ${
-                options?.destructive
-                  ? "hover:bg-red-500 hover:text-white"
-                  : "hover:bg-white hover:text-black"
-              }`}
               onClick={() => settle(true)}
+              tone={options?.destructive ? "danger" : "default"}
               type="button"
               variant="outline"
             >
@@ -188,7 +179,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
           <DialogFooter className="gap-2">
             <Button
-              className="min-h-11 text-[10px] text-white/90 uppercase tracking-[0.18em] hover:text-white"
               onClick={() => settlePrompt(null)}
               type="button"
               variant="ghost"
@@ -196,7 +186,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               Cancel
             </Button>
             <Button
-              className="min-h-11 border-white/20 text-[10px] uppercase tracking-[0.18em] hover:bg-white hover:text-black"
               onClick={() => settlePrompt(promptValue)}
               type="button"
               variant="outline"

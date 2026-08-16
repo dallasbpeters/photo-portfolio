@@ -123,8 +123,9 @@ export function ResetPasswordPage() {
                 />
               </div>
               <Button
-                className="flex min-h-12 w-full items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
                 disabled={isSubmitting}
+                fullWidth
+                size="lg"
                 type="submit"
                 variant="outline"
               >

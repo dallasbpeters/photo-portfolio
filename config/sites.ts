@@ -14,7 +14,7 @@
  * can be imported from all four of those places.
  */
 
-export type SiteKey = "addison" | "cyan";
+export type SiteKey = "addison" | "cyan" | "dallas-images";
 
 export interface SiteConfig {
   /**
@@ -52,6 +52,8 @@ export interface SiteConfig {
   ownerName: string;
   /** PWA short name — keep under ~12 chars so launchers don't truncate it. */
   shortName: string;
+  /** Default for the animated dither backdrop; an admin can override it. */
+  showShader: boolean;
   /** Line under the footer wordmark. */
   tagline: string;
   /** PWA + browser chrome color. */
@@ -72,6 +74,7 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     origins: ["https://addisonsphotos.com", "https://www.addisonsphotos.com"],
     ownerName: "Addison",
     shortName: "Addison",
+    showShader: false,
     tagline: "Visual Storyteller & Photographer",
     themeColor: "#000000",
   },
@@ -88,7 +91,28 @@ export const SITES: Record<SiteKey, SiteConfig> = {
     origins: ["https://cyansphotos.com", "https://www.cyansphotos.com"],
     ownerName: "Cyan",
     shortName: "Cyan",
+    showShader: false,
     tagline: "Visual Storyteller & Photographer",
+    themeColor: "#000000",
+  },
+  // Key must match the VITE_SITE / SITE value this site is deployed with —
+  // `resolveSite` matches on it exactly, and a near-miss silently serves this
+  // deployment as a copy of the default site.
+  "dallas-images": {
+    analyticsHost: "https://t.addisonsphotos.com",
+    defaultAdminEmail: "dallaspeters@gmail.com",
+    domain: "dallaspeters.com",
+    emailFrom: "Addison's Photos <noreply@addisonsphotos.com>",
+    heroTitle: "Addison's POV",
+    instagramHandle: "@dallas_saves",
+    instagramUrl: "https://www.instagram.com/dallas_saves",
+    key: "dallas-images",
+    name: "Dallas Peters",
+    origins: ["https://dallaspeters.com", "https://www.dallaspeters.com"],
+    ownerName: "Dallas",
+    shortName: "Dallas  ",
+    showShader: true,
+    tagline: "Product Designer",
     themeColor: "#000000",
   },
 };
@@ -143,6 +167,24 @@ export const applySiteOverrides = (
     return value ? value : undefined;
   };
 
+  /**
+   * Env var carrying a boolean.
+   *
+   * Only an explicit "true"/"false" overrides. Anything else — unset, a typo,
+   * "1" — keeps the compiled default rather than silently reading as off, so a
+   * fat-fingered variable cannot switch a feature off across a deployment.
+   */
+  const flag = (name: string, fallback: boolean): boolean => {
+    const value = text(name)?.toLowerCase();
+    if (value === "true") {
+      return true;
+    }
+    if (value === "false") {
+      return false;
+    }
+    return fallback;
+  };
+
   const origins = text("SITE_ORIGINS");
 
   return {
@@ -159,6 +201,7 @@ export const applySiteOverrides = (
     origins: origins ? splitList(origins) : base.origins,
     ownerName: text("SITE_OWNER_NAME") ?? base.ownerName,
     shortName: text("SITE_SHORT_NAME") ?? base.shortName,
+    showShader: flag("SITE_SHOW_SHADER", base.showShader),
     tagline: text("SITE_TAGLINE") ?? base.tagline,
     themeColor: text("SITE_THEME_COLOR") ?? base.themeColor,
   };

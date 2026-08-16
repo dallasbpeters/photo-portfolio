@@ -52,12 +52,7 @@ export function ForgotPasswordForm({
           If {sentTo} has an account, a reset link is on its way. It expires in
           one hour.
         </p>
-        <Button
-          className="flex min-h-12 items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
-          onClick={onBack}
-          type="button"
-          variant="outline"
-        >
+        <Button onClick={onBack} size="lg" type="button" variant="outline">
           <ArrowLeft aria-hidden size={16} />
           Back to sign in
         </Button>
@@ -100,8 +95,9 @@ export function ForgotPasswordForm({
           />
         </div>
         <Button
-          className="flex min-h-12 w-full items-center justify-center gap-2 border-white/20 px-8 py-3 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
           disabled={isSubmitting}
+          fullWidth
+          size="lg"
           type="submit"
           variant="outline"
         >
