@@ -4,6 +4,7 @@ import { useConfirm } from "../components/admin/ConfirmProvider";
 import posthog from "../lib/posthog";
 import { authStorage, portfolioService } from "../services/portfolioService";
 import type { Category, Photo } from "../types";
+import { usePhotos } from "./usePhotos";
 
 const sortCategories = (list: Category[]): Category[] =>
   [...list].sort(
@@ -42,26 +43,18 @@ export interface AdminDataResult {
 
 export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
   const { confirm } = useConfirm();
-  const [photos, setPhotos] = useState<Photo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
 
-  const loadPhotos = useCallback(async () => {
-    if (!authStorage.getToken()) {
-      return;
-    }
-    setIsLoadingPhotos(true);
-    try {
-      setPhotos(await portfolioService.getPhotos());
-    } catch {
-      toast.error("Could not load photos");
-      setPhotos([]);
-    } finally {
-      setIsLoadingPhotos(false);
-    }
-  }, []);
+  // Held until sign-in: the endpoint answers differently for an admin, so
+  // fetching first would populate the cache with the visitor's list.
+  const {
+    isLoading: isLoadingPhotos,
+    patch: patchPhotos,
+    photos,
+    refresh: loadPhotos,
+  } = usePhotos(isAuthenticated);
 
   const loadCategories = useCallback(async () => {
     if (!authStorage.getToken()) {
@@ -80,60 +73,72 @@ export const useAdminData = (isAuthenticated: boolean): AdminDataResult => {
 
   const reload = useCallback(async () => {
     await Promise.all([loadPhotos(), loadCategories()]);
-    portfolioService.notifyPhotosChanged();
+    // Photographs need no announcement: every view reads the same SWR entry,
+    // so refreshing it here has already updated all of them. Categories still
+    // have their own per-hook state and do.
     portfolioService.notifyCategoriesChanged();
   }, [loadPhotos, loadCategories]);
 
   /**
    * Local edits to the list, used instead of a full reload.
    *
-   * Deliberately silent: `notifyPhotosChanged` is a same-document CustomEvent
-   * that this hook itself listens for, so announcing a change here would call
-   * loadPhotos and refetch the whole library — precisely the reload these
-   * exist to avoid. It cannot reach another tab either, and the public gallery
-   * is not mounted inside the admin, so there is nobody else to tell.
+   * These write to the SWR cache without revalidating, so the saved row the
+   * server already returned is simply put back rather than the whole library
+   * being re-read to learn what we were just told. Every consumer reads the
+   * same entry, so one write updates all of them.
    */
-  const applyPhotoUpdate = useCallback((photo: Photo) => {
-    setPhotos((current) => current.map((p) => (p.id === photo.id ? photo : p)));
-  }, []);
+  const applyPhotoUpdate = useCallback(
+    (photo: Photo) => {
+      void patchPhotos((current) =>
+        current.map((p) => (p.id === photo.id ? photo : p))
+      );
+    },
+    [patchPhotos]
+  );
 
-  const insertPhoto = useCallback((photo: Photo) => {
-    // Newest first, and every other position moved up one, because that is
-    // exactly what the API did: it runs `sort_order = sort_order + 1` over the
-    // whole table before inserting at 0 (api/photos/index.ts). Without the
-    // shift the new photograph appears in the right place while every card
-    // below it shows a position one lower than the server holds.
-    setPhotos((current) => [
-      photo,
-      ...current.map((p) => ({ ...p, order: p.order + 1 })),
-    ]);
-  }, []);
+  const insertPhoto = useCallback(
+    (photo: Photo) => {
+      // Newest first, and every other position moved up one, because that is
+      // exactly what the API did: it runs `sort_order = sort_order + 1` over the
+      // whole table before inserting at 0 (api/photos/index.ts). Without the
+      // shift the new photograph appears in the right place while every card
+      // below it shows a position one lower than the server holds.
+      void patchPhotos((current) => [
+        photo,
+        ...current.map((p) => ({ ...p, order: p.order + 1 })),
+      ]);
+    },
+    [patchPhotos]
+  );
 
-  const removePhotos = useCallback((ids: string[]) => {
-    const gone = new Set(ids);
-    setPhotos((current) => current.filter((p) => !gone.has(p.id)));
-  }, []);
+  const removePhotos = useCallback(
+    (ids: string[]) => {
+      const gone = new Set(ids);
+      void patchPhotos((current) => current.filter((p) => !gone.has(p.id)));
+    },
+    [patchPhotos]
+  );
 
-  const replacePhotos = useCallback((next: Photo[]) => {
-    setPhotos(next);
-  }, []);
+  const replacePhotos = useCallback(
+    (next: Photo[]) => {
+      void patchPhotos(next);
+    },
+    [patchPhotos]
+  );
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
+    if (isAuthenticated) {
+      void loadCategories();
     }
-    void loadPhotos();
-    void loadCategories();
-  }, [isAuthenticated, loadPhotos, loadCategories]);
+  }, [isAuthenticated, loadCategories]);
 
+  // Photographs are no longer on this bus: usePhotos fetches them and every
+  // consumer reads the same entry, so there is nobody left to notify.
   useEffect(() => {
-    window.addEventListener("cyan-photos-changed", loadPhotos);
     window.addEventListener("cyan-categories-changed", loadCategories);
-    return () => {
-      window.removeEventListener("cyan-photos-changed", loadPhotos);
+    return () =>
       window.removeEventListener("cyan-categories-changed", loadCategories);
-    };
-  }, [loadPhotos, loadCategories]);
+  }, [loadCategories]);
 
   const createCategoryFromLabel = useCallback(
     async (label: string): Promise<string | null> => {

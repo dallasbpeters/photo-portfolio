@@ -1,0 +1,10 @@
+# CodeGraph keeps a live daemon socket at .codegraph/daemon.sock while its
+# watcher is running. `vercel dev` walks the project to watch it, and a unix
+# socket cannot be watched — chokidar throws rather than skipping it, which
+# takes the dev server down at startup:
+#
+#   Error: Watcher error: UNKNOWN: unknown error, watch '.../.codegraph/daemon.sock'
+#
+# Nothing in there is source or deployable — it is a local index that rebuilds
+# from `codegraph init` — so it should never reach a build either.
+.codegraph

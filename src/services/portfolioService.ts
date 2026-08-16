@@ -412,10 +412,6 @@ export const portfolioService = {
     window.dispatchEvent(new CustomEvent("cyan-categories-changed"));
   },
 
-  notifyPhotosChanged: () => {
-    window.dispatchEvent(new CustomEvent("cyan-photos-changed"));
-  },
-
   refreshDailyChallenge: async (): Promise<DailyChallengeResponse> => {
     const res = await fetch(dailyChallengePath(), {
       headers: jsonHeaders(),

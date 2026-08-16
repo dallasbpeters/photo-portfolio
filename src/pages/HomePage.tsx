@@ -30,15 +30,12 @@ import { SiteNav } from "../cms/SiteNav";
 import { Lightbox } from "../components/Lightbox";
 import { OptimizedImage } from "../components/OptimizedImage";
 import { useIsInstalledApp } from "../hooks/useIsInstalledApp";
+import { usePhotos } from "../hooks/usePhotos";
 import posthog from "../lib/posthog";
 import { startViewTransition } from "../lib/viewTransition";
-import {
-  type PageSummary,
-  pagesApi,
-  portfolioService,
-} from "../services/portfolioService";
+import { type PageSummary, pagesApi } from "../services/portfolioService";
 import { useSiteSettings } from "../theme/SiteSettingsProvider";
-import type { Photo, ViewMode } from "../types";
+import type { ViewMode } from "../types";
 
 const CATEGORY_SEPARATORS = /[-_]/;
 
@@ -51,9 +48,25 @@ const formatCategoryLabel = (category: string): string =>
 export const HomePage = () => {
   const { settings } = useSiteSettings();
   const isInstalledApp = useIsInstalledApp();
-  const [photos, setPhotos] = useState<Photo[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
+
+  // The gallery no longer owns this request. SWR holds one entry per key, so
+  // the admin mounted alongside it reads the same list rather than fetching
+  // its own copy and reconciling the two through a CustomEvent.
+  const { error: loadError, isLoading: isLoadingPhotos, photos } = usePhotos();
+
+  // Surfaced once per distinct failure rather than on every render: SWR keeps
+  // returning the same error object while the request stays failed, and a
+  // toast in the render path would stack one per paint.
+  const reportedError = useRef<string | null>(null);
+  useEffect(() => {
+    const message = loadError?.message ?? null;
+    if (message && message !== reportedError.current) {
+      toast.error(message);
+    }
+    reportedError.current = message;
+  }, [loadError]);
 
   const categoriesInUse = useMemo(() => {
     const keys = [...new Set(photos.map((p) => p.category))];
@@ -69,8 +82,6 @@ export const HomePage = () => {
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [heroIndex, setHeroIndex] = useState(0);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
   const gridSectionRef = useRef<HTMLElement>(null);
 
   const handleFilterClick = useCallback((mode: ViewMode) => {
@@ -86,26 +97,6 @@ export const HomePage = () => {
     });
   }, []);
 
-  const refreshPhotos = useCallback(async () => {
-    setIsLoadingPhotos(true);
-    setLoadError(null);
-    try {
-      const list = await portfolioService.getPhotos();
-      setPhotos(list);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not load photos";
-      setLoadError(message);
-      setPhotos([]);
-      toast.error(message);
-    } finally {
-      setIsLoadingPhotos(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshPhotos();
-  }, [refreshPhotos]);
-
   useEffect(() => {
     // Decorative: if this fails the gallery still renders, just without links.
     void pagesApi
@@ -113,12 +104,6 @@ export const HomePage = () => {
       .then(setPages)
       .catch(() => undefined);
   }, []);
-
-  useEffect(() => {
-    const onChanged = () => void refreshPhotos();
-    window.addEventListener("cyan-photos-changed", onChanged);
-    return () => window.removeEventListener("cyan-photos-changed", onChanged);
-  }, [refreshPhotos]);
 
   const filteredPhotos = photos.filter(
     (p) => viewMode === "all" || p.category === viewMode
@@ -184,7 +169,7 @@ export const HomePage = () => {
           className="fixed top-24 left-1/2 z-90 max-w-md -translate-x-1/2 rounded border border-white/20 bg-black/90 px-6 py-4 text-center text-sm text-white/80"
           role="alert"
         >
-          {loadError}
+          {loadError.message}
         </div>
       ) : null}
 

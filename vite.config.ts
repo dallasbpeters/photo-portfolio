@@ -131,6 +131,14 @@ export default defineConfig(({ mode }) => {
             `http://127.0.0.1:${process.env.PORT || 3006}`,
         },
       },
+      // CodeGraph keeps a daemon socket at .codegraph/daemon.sock. Chokidar
+      // cannot watch a unix socket and throws rather than skipping it, which
+      // takes the whole dev server down at startup:
+      //   Watcher error: UNKNOWN: unknown error, watch '.../daemon.sock'
+      // Nothing in that directory is source, so none of it is worth watching.
+      // A predicate rather than a glob: chokidar 4 dropped glob support in
+      // `ignored`, so "**/.codegraph/**" is matched literally and never fires.
+      watch: { ignored: (file: string) => file.includes("/.codegraph/") },
     },
   };
 });
