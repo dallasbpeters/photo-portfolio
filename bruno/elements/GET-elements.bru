@@ -7,11 +7,13 @@ meta {
 GET {
   url: {{baseUrl}}/api/elements
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/elements
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Saved elements.
 }

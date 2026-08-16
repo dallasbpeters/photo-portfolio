@@ -6,12 +6,22 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/pinterest/board
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "url": ""
+  }
 }
 
 docs {
-  POST /api/pinterest/board
+  Read the pins off a public Pinterest board.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Read from the board's public RSS feed, which carries only the most recent pins. More would need OAuth and a reviewed app.
 }

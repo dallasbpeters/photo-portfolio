@@ -6,12 +6,18 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/unsplash/search
-  body: none
+  body: json
   auth: none
 }
 
-docs {
-  POST /api/unsplash/search
+body:json {
+  {
+    "downloadLocation": ""
+  }
+}
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+docs {
+  Report a download to Unsplash.
+
+  Unsplash's terms require reporting that a photograph was used. Fire and forget — crediting must not stand between the image and the board.
 }

@@ -6,12 +6,21 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/boards
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "isPublic": false,
+    "title": ""
+  }
 }
 
 docs {
-  POST /api/boards
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Create a board.
 }

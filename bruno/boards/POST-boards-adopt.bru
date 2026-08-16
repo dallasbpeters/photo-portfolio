@@ -6,12 +6,20 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/boards/adopt
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "boardId": "00000000-0000-0000-0000-000000000000"
+  }
 }
 
 docs {
-  POST /api/boards/adopt
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Take ownership of a board created before accounts existed.
 }

@@ -7,11 +7,13 @@ meta {
 POST {
   url: {{baseUrl}}/api/daily-challenge
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  POST /api/daily-challenge
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Draw a different inspiration photograph for today.
 }

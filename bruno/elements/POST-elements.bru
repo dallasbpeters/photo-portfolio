@@ -6,12 +6,25 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/elements
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "coverUrl": "",
+    "description": "",
+    "imageUrls": [
+      ""
+    ],
+    "name": ""
+  }
 }
 
 docs {
-  POST /api/elements
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Save an element.
 }

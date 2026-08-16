@@ -6,12 +6,20 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/pinterest/pin
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "url": ""
+  }
 }
 
 docs {
-  POST /api/pinterest/pin
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Read one pin.
 }

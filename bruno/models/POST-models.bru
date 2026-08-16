@@ -6,12 +6,27 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/models
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "enabled": false,
+    "id": "",
+    "imageParam": "image_url",
+    "input": "",
+    "label": "",
+    "lora": "",
+    "sortOrder": 0,
+    "vector": false
+  }
 }
 
 docs {
-  POST /api/models
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Add a model.
 }

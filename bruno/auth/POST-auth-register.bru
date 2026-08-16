@@ -6,12 +6,17 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/auth/register
-  body: none
+  body: json
   auth: none
 }
 
-docs {
-  POST /api/auth/register
+body:json {
+  {
+    "email": "",
+    "password": ""
+  }
+}
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+docs {
+  Create the first admin. Closed once one exists.
 }

@@ -6,12 +6,18 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/boards/{{id}}/comments
-  body: none
+  body: json
   auth: none
 }
 
-docs {
-  POST /api/boards/{id}/comments
+body:json {
+  {
+    "authorName": "",
+    "body": "",
+    "itemId": ""
+  }
+}
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+docs {
+  Leave a comment. Open on a published board.
 }

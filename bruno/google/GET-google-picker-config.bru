@@ -7,11 +7,13 @@ meta {
 GET {
   url: {{baseUrl}}/api/google/picker-config
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/google/picker-config
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  What the Google Drive picker needs to open.
 }

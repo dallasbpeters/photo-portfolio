@@ -7,11 +7,13 @@ meta {
 POST {
   url: {{baseUrl}}/api/boards/{{id}}/dataset
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  POST /api/boards/{id}/dataset
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Export the board's images and prompts as a training dataset.
 }

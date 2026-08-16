@@ -7,11 +7,13 @@ meta {
 DELETE {
   url: {{baseUrl}}/api/boards/{{id}}
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  DELETE /api/boards/{id}
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Delete a board.
 }

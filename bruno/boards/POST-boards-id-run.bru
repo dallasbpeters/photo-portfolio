@@ -6,12 +6,22 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/boards/{{id}}/run
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "itemId": ""
+  }
 }
 
 docs {
-  POST /api/boards/{id}/run
+  Run a node in the board's graph.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Runs one node and everything downstream of it. The longest request in the API — generation is measured in tens of seconds.
 }

@@ -7,11 +7,15 @@ meta {
 GET {
   url: {{baseUrl}}/api/canva/connect
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/canva/connect
+  Begin connecting Canva.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Answers a redirect to Canva's consent screen.
 }

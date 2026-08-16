@@ -7,11 +7,13 @@ meta {
 GET {
   url: {{baseUrl}}/api/fal/library
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/fal/library
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  The fal account's own generation history, as a library.
 }

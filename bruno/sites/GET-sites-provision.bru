@@ -7,11 +7,13 @@ meta {
 GET {
   url: {{baseUrl}}/api/sites/provision
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/sites/provision
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Vercel projects this token can see.
 }

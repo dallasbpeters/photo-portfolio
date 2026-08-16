@@ -6,12 +6,25 @@ meta {
 
 POST {
   url: {{baseUrl}}/api/photos/batch
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "photoIds": [
+      "00000000-0000-0000-0000-000000000000"
+    ],
+    "categoryId": "00000000-0000-0000-0000-000000000000"
+  }
 }
 
 docs {
-  POST /api/photos/batch
+  Set the category on several photographs.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Moves a selection to another category in one statement.
 }
