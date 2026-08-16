@@ -1882,91 +1882,106 @@ export function BoardEditor({
 
           <motion.div
             animate={{ opacity: 1, x: 0 }}
-            className="fixed top-20 left-4 z-20 grid place-items-start justify-start gap-2 bg-board-surface text-board-ink"
+            className="fixed top-20 left-4 z-20 grid place-items-stretch justify-stretch gap-2 rounded border border-board-ink/20 bg-board-surface text-board-ink"
             initial={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.5 }}
           >
             <Button
+              fullWidthLeft
               onClick={() => addWritable("note")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={NotebookIcon} size={14} />
               Note
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addWritable("text")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
               Text
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => setIsPicking((v) => !v)}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
               Image
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("generate")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
               Generate
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("describe")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={SearchVisualIcon} size={14} />
               Analyse
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("join")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={LinkSquare01Icon} size={14} />
               Combine
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("iterate")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
               Iterate
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("icon")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={MagicWand01Icon} size={14} />
               Icon
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("palette")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={PaintBoardIcon} size={14} />
               Palette
             </Button>
             <Button
+              fullWidthLeft
               onClick={() => addNode("prompt")}
               type="button"
-              variant="ghost"
+              variant="noborder"
             >
               <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
               Prompt
             </Button>
-            <Button onClick={addFrame} type="button" variant="ghost">
+            <Button
+              fullWidthLeft
+              onClick={addFrame}
+              type="button"
+              variant="noborder"
+            >
               <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
               Frame
             </Button>

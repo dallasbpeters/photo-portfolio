@@ -11,7 +11,13 @@ import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
-import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
+import {
+  type Guides,
+  NO_GUIDES,
+  type ResizeHandle,
+  snapResize,
+  snapToGuides,
+} from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import {
@@ -35,6 +41,7 @@ import { LayersPanel } from "./LayersPanel";
 import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
+import { resizeBox } from "./resizeBox";
 import { StrokePreview } from "./StrokePreview";
 import {
   applyMarquee,
@@ -46,6 +53,11 @@ import {
   selectedItems,
   soleSelected,
 } from "./selectionModel";
+import {
+  buildSnapIndex,
+  type Box as SnapBox,
+  type SnapIndex,
+} from "./snapIndex";
 import { isImageDrop } from "./svgToRaster";
 import { type CanvasViewport, useCanvasViewport } from "./useCanvasViewport";
 import { useWireGesture } from "./useWireGesture";
@@ -216,31 +228,6 @@ const SNAP_PX = 6;
 /** Pointer movement (screen px) that counts as a drag rather than a click. */
 const DRAG_RAISE_PX = 4;
 
-/**
- * The new size of a corner-resized item.
- *
- * Without the lock both dimensions follow the pointer freely. With it, the
- * aspect is preserved: whichever side moved further dominates, and the other
- * follows so the ratio never changes — the standard shift-drag resize.
- */
-const resizedSize = (
-  originW: number,
-  originH: number,
-  dx: number,
-  dy: number,
-  lockAspect: boolean
-): { height: number; width: number } => {
-  const width = Math.max(MIN_ITEM_SIZE, originW + dx);
-  const height = Math.max(MIN_ITEM_SIZE, originH + dy);
-  if (!lockAspect || originW <= 0 || originH <= 0) {
-    return { height, width };
-  }
-  const ratio = originW / originH;
-  return width / originW >= height / originH
-    ? { height: width / ratio, width }
-    : { height, width: height * ratio };
-};
-
 /** True when a canvas point falls inside an item's box. */
 const covers = (item: BoardItem, point: Point): boolean =>
   point.x >= item.x &&
@@ -306,8 +293,10 @@ type Gesture =
       kind: "resize";
       startX: number;
       startY: number;
-      originW: number;
-      originH: number;
+      /** The box when the drag began; the pinned corner is derived from it. */
+      origin: SnapBox;
+      /** Which corner was taken. Decides which corner stays still. */
+      handle: ResizeHandle;
     };
 
 /**
@@ -390,6 +379,13 @@ export function BoardCanvas({
     }
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
+  /**
+   * Snap targets for the gesture in flight, built once when it starts.
+   *
+   * The one-shot helper rebuilt its coordinate arrays on every pointermove,
+   * which is the per-frame cost the indexed version exists to remove.
+   */
+  const snapIndexRef = useRef<SnapIndex | null>(null);
 
   // Ids outlive indices but not deletion: an item removed by an undo, a delete
   // or a concurrent edit must fall out of the selection rather than linger as
@@ -876,6 +872,10 @@ export function BoardCanvas({
       // put from here on, rather than re-framing on the next container resize.
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
+      snapIndexRef.current = buildSnapIndex(items, {
+        exclude: [item.id],
+        includeCanvas: true,
+      });
       const isFrame = item.kind === "frame";
       // Shift or cmd adds to the selection instead of replacing it, and does
       // not begin a drag — picking several one by one should not nudge them.
@@ -931,18 +931,28 @@ export function BoardCanvas({
   );
 
   const beginResize = useCallback(
-    (index: number, clientX: number, clientY: number) => {
+    (index: number, clientX: number, clientY: number, handle: ResizeHandle) => {
       const item = items[index];
       if (!item) {
         return;
       }
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
+      // The item being resized is excluded so it cannot snap to itself.
+      snapIndexRef.current = buildSnapIndex(items, {
+        exclude: [item.id],
+        includeCanvas: true,
+      });
       gesture.current = {
+        handle,
         index,
         kind: "resize",
-        originH: item.height,
-        originW: item.width,
+        origin: {
+          height: item.height,
+          width: item.width,
+          x: item.x,
+          y: item.y,
+        },
         startX: p.x,
         startY: p.y,
       };
@@ -1025,10 +1035,34 @@ export function BoardCanvas({
         return;
       }
 
-      const size = resizedSize(g.originW, g.originH, dx, dy, e.shiftKey);
+      const dragged = resizeBox({
+        dx,
+        dy,
+        handle: g.handle,
+        lockAspect: e.shiftKey,
+        minSize: MIN_ITEM_SIZE,
+        origin: g.origin,
+      });
+      // Only the dragged edges snap. The pinned corner is the whole meaning of
+      // a resize, so a snap that moved it would be a move in disguise.
+      const resizeIndex = snapIndexRef.current;
+      const sized = resizeIndex
+        ? snapResize(dragged, g.handle, resizeIndex, {
+            scale: view.viewport.scale,
+          })
+        : { ...dragged, guides: NO_GUIDES };
+      setGuides(sized.guides);
       onChange(
         items.map((it, i) =>
-          i === g.index ? { ...it, height: size.height, width: size.width } : it
+          i === g.index
+            ? {
+                ...it,
+                height: sized.height,
+                width: sized.width,
+                x: sized.x,
+                y: sized.y,
+              }
+            : it
         )
       );
     },

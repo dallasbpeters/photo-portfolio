@@ -571,7 +571,7 @@ export function OpNodeView({
     <>
       {isRunning ? <RunningGlow /> : null}
 
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-board-panel/95">
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded bg-board-panel/95">
         <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-2 py-1">
           <span className="flex items-center gap-1 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
             <HugeiconsIcon

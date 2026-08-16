@@ -3,7 +3,6 @@ import {
   Add01Icon,
   Delete02Icon,
   MinusSignIcon,
-  ResizeFieldIcon,
   Settings01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { type RefObject, useEffect, useRef, useState } from "react";
@@ -17,12 +16,14 @@ import {
 } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import type { BoardItem } from "../types";
+import type { ResizeHandle } from "./alignmentGuides";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
 import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
 import { BatchList, OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
+import { ResizeHandles } from "./ResizeHandles";
 import { ShaderControls } from "./ShaderControls";
 import { ShaderView } from "./ShaderView";
 import {
@@ -94,7 +95,12 @@ interface BoardItemViewProps {
   onEditBody: (body: string) => void;
   onFontSize: (fontSize: number) => void;
   onRemoveVersion?: (index: number) => void;
-  onResizeStart: (index: number, clientX: number, clientY: number) => void;
+  onResizeStart: (
+    index: number,
+    clientX: number,
+    clientY: number,
+    handle: ResizeHandle
+  ) => void;
   onRun?: (force: boolean) => void;
   onSelect: (
     index: number,
@@ -418,7 +424,7 @@ function FrameBody({
   readOnly: boolean;
 }) {
   return (
-    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-cyan-500/50 border-dashed bg-board-ink/2">
+    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-blue-500/50 border-dashed bg-board-ink/2">
       <input
         aria-label="Frame name"
         className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-board-ink uppercase tracking-[0.18em] outline-none placeholder:text-board-ink"
@@ -795,7 +801,7 @@ export function BoardItemView({
     // biome-ignore lint/a11y/useKeyWithClickEvents: same — an item is a canvas surface, not a button
     <div
       className={`group absolute ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-board-ink/10"
+        isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10"
       } ${isText && !isSelected ? "ring-0" : ""}`}
       onClick={
         onCommentTarget
@@ -904,20 +910,12 @@ export function BoardItemView({
       ) : null}
 
       {isSelected && !readOnly ? (
-        <div
-          className="absolute right-0 bottom-0 grid size-12 origin-bottom-right cursor-nwse-resize place-items-center text-board-ink/90"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            // Primary button only, like the item body above.
-            if (e.button !== 0) {
-              return;
-            }
-            onResizeStart(index, e.clientX, e.clientY);
-          }}
-          style={chromeScale}
-        >
-          <HugeiconsIcon icon={ResizeFieldIcon} size={32} />
-        </div>
+        <ResizeHandles
+          chromeScale={chromeScale}
+          onStart={(handle, clientX, clientY) =>
+            onResizeStart(index, clientX, clientY, handle)
+          }
+        />
       ) : null}
 
       {/* Open comments pinned to this item: the count, so a visitor can see at
