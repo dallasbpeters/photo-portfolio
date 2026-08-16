@@ -289,7 +289,13 @@ export const HomePage = () => {
               >
                 <OptimizedImage
                   alt={photo.alt || photo.title}
-                  className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+                  // A screenshot cropped from its centre shows the middle of a
+                  // page — no header, no context, and usually nothing that
+                  // identifies it. Anchoring the crop top-left keeps the part
+                  // that says what the page is.
+                  className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${
+                    photo.showChrome ? "object-left-top" : ""
+                  }`}
                   height={photo.height ?? undefined}
                   lqip={photo.lqip}
                   referrerPolicy="no-referrer"

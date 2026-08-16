@@ -33,6 +33,12 @@
      Only its geometry is fixed. */
   --dot-size: 2px;
   --dot-space: 16px;
+  --breakpoint-sm: 568px;
+  --breakpoint-md: 786px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --breakpoint-3xl: 1920px;
 }
 
 @keyframes stack-in {

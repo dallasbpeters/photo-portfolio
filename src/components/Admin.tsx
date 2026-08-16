@@ -314,7 +314,7 @@ const PhotoGrid = ({
       <p className="px-1 pb-2 text-[10px] text-white/40 uppercase tracking-[0.18em]">
         Drag to reorder
       </p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5">
         {order.map((photo) => (
           <PhotoCard
             isDragging={dragId.current === photo.id}

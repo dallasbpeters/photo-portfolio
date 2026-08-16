@@ -87,7 +87,9 @@ export const PhotoCard = ({
       >
         <OptimizedImage
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full object-cover ${
+            photo.showChrome ? "object-left-top" : ""
+          }`}
           referrerPolicy="no-referrer"
           sizes="(min-width: 1024px) 300px, (min-width: 640px) 45vw, 90vw"
           src={photo.url}
