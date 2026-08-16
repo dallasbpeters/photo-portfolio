@@ -15,6 +15,7 @@ import {
   TextIcon,
   Tick02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
+import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -2053,36 +2054,40 @@ export function BoardEditor({
             />
           ) : null}
 
-          {isPicking ? (
-            <BoardInsertPanel
-              initialTab={pickAt}
-              onAddElement={(element) => {
-                addElement(element);
-                setIsPicking(false);
-              }}
-              onAddExternal={addExternal}
-              onAddFiles={(files) =>
-                void dropFiles(
-                  files,
-                  dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
-                )
-              }
-              onAddNode={addNode}
-              onAddPhoto={addPhoto}
-              onAddShader={addShader}
-              onAttachSource={attachSource}
-              onClose={() => {
-                setIsPicking(false);
-                // Cleared on close so the next opening goes back to the usual
-                // first tab — being sent to the library once does not mean the
-                // panel now lives there.
-                setPickAt(undefined);
-              }}
-              onDetachSource={detachSource}
-              photos={photos}
-              sources={sources}
-            />
-          ) : null}
+          <AnimatePresence>
+            {isPicking ? (
+              <BoardInsertPanel
+                initialTab={pickAt}
+                onAddElement={(element) => {
+                  addElement(element);
+                  setIsPicking(false);
+                }}
+                onAddExternal={addExternal}
+                onAddFiles={(files) =>
+                  void dropFiles(
+                    files,
+                    dropPoint(items, DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT)
+                  )
+                }
+                onAddNode={addNode}
+                onAddPhoto={addPhoto}
+                onAddShader={addShader}
+                onAttachSource={attachSource}
+                onDetachSource={detachSource}
+                photos={photos}
+                setIsOpen={(open) => {
+                  setIsPicking(open);
+                  if (!open) {
+                    // Cleared on close so the next opening goes back to the usual
+                    // first tab — being sent to the library once does not mean the
+                    // panel now lives there.
+                    setPickAt(undefined);
+                  }
+                }}
+                sources={sources}
+              />
+            ) : null}
+          </AnimatePresence>
 
           {elementDraft ? (
             <ElementModal

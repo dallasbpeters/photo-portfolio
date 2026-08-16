@@ -5,6 +5,7 @@ import {
   Search01Icon,
   SparklesIcon,
 } from "@hugeicons-pro/core-stroke-standard";
+import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
@@ -55,9 +56,9 @@ interface BoardInsertPanelProps {
   onAddShader: (name: string) => void;
   /** Remembers a place this board pulls references from. */
   onAttachSource: (source: BoardSource) => void;
-  onClose: () => void;
   onDetachSource: (id: string) => void;
   photos: Photo[];
+  setIsOpen: (isOpen: boolean) => void;
   sources: BoardSource[];
 }
 
@@ -111,8 +112,8 @@ export function BoardInsertPanel({
   onAddPhoto,
   onAddShader,
   onAttachSource,
-  onClose,
   onDetachSource,
+  setIsOpen,
   photos,
   sources,
 }: BoardInsertPanelProps) {
@@ -160,7 +161,15 @@ export function BoardInsertPanel({
   };
 
   return (
-    <div className="absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-board-ink/10 border-l bg-board-surface/95 backdrop-blur">
+    <motion.div
+      animate={{ x: 0 }}
+      className="panel absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-board-ink/10 border-l bg-board-surface/95 backdrop-blur"
+      exit={{ x: "100%" }}
+      initial={{ x: "100%" }}
+      // Tween, not spring: the panel is flush to the right edge, and a spring's
+      // overshoot would pull it past the viewport and show a seam.
+      transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+    >
       {/* A select rather than a row of tabs. Nine sources do not fit across the
           panel at any sensible size — the row wrapped mid-label, putting "fal"
           above "library" — and a tab strip that wraps is worse than a list,
@@ -182,7 +191,7 @@ export function BoardInsertPanel({
         <button
           aria-label="Close insert panel"
           className="min-h-9 px-2 text-board-ink/50 hover:text-board-ink"
-          onClick={onClose}
+          onClick={() => setIsOpen(false)}
           type="button"
         >
           <HugeiconsIcon icon={Cancel01Icon} size={16} />
@@ -257,7 +266,7 @@ export function BoardInsertPanel({
             onAddImage={onAddExternal}
             onAddNode={() => {
               onAddNode("generate", { prompt });
-              onClose();
+              setIsOpen(false);
             }}
             onClearSource={() => setSource(null)}
             onGenerate={() => void generate()}
@@ -277,7 +286,7 @@ export function BoardInsertPanel({
 
         {tab === "icon" ? <IconTab onAdd={onAddExternal} /> : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

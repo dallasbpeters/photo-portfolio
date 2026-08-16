@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import type { Photo } from "../types";
+import { BrowserChrome } from "./BrowserChrome";
 import { optimizedImageSrc } from "./OptimizedImage";
 import { ShareButtons } from "./ShareButtons";
 
@@ -77,20 +78,39 @@ export function Lightbox({
 
       {/* The backdrop's handler already ignores clicks that land on a
           descendant, so this wrapper needs no handler of its own. */}
-      <div className="max-h-[80vh] max-w-5xl px-12">
-        <motion.img
-          alt={currentPhoto.title}
-          animate={{ opacity: 1, scale: 1 }}
-          className="h-auto max-h-[70vh] w-full object-contain"
-          height={currentPhoto.height ?? undefined}
-          initial={{ opacity: 0, scale: 0.9 }}
-          key={currentPhoto.id}
-          referrerPolicy="no-referrer"
-          // Capped at max-w-5xl, so 2048px covers a retina view without
-          // pulling the full-resolution original.
-          src={optimizedImageSrc(currentPhoto.url, 2048, 85)}
-          width={currentPhoto.width ?? undefined}
-        />
+      <div className="max-h-[80vh] w-full max-w-5xl px-12">
+        {currentPhoto.showChrome ? (
+          <BrowserChrome url={currentPhoto.chromeUrl}>
+            {/* No max-height and no object-contain: inside the frame the
+                screenshot is meant to overflow and scroll at full width, which
+                is the only way its text stays readable. */}
+            <motion.img
+              alt={currentPhoto.title}
+              animate={{ opacity: 1 }}
+              className="block h-auto w-full"
+              height={currentPhoto.height ?? undefined}
+              initial={{ opacity: 0 }}
+              key={currentPhoto.id}
+              referrerPolicy="no-referrer"
+              src={optimizedImageSrc(currentPhoto.url, 2048, 85)}
+              width={currentPhoto.width ?? undefined}
+            />
+          </BrowserChrome>
+        ) : (
+          <motion.img
+            alt={currentPhoto.title}
+            animate={{ opacity: 1, scale: 1 }}
+            className="h-auto max-h-[70vh] w-full object-contain"
+            height={currentPhoto.height ?? undefined}
+            initial={{ opacity: 0, scale: 0.9 }}
+            key={currentPhoto.id}
+            referrerPolicy="no-referrer"
+            // Capped at max-w-5xl, so 2048px covers a retina view without
+            // pulling the full-resolution original.
+            src={optimizedImageSrc(currentPhoto.url, 2048, 85)}
+            width={currentPhoto.width ?? undefined}
+          />
+        )}
         <div className="mt-4 text-center">
           <h3 className="font-light text-lg text-white uppercase tracking-widest">
             {currentPhoto.title}

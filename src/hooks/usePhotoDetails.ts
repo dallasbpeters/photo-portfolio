@@ -108,16 +108,20 @@ const toPayload = (form: ExifForm): PhotoExifData | null => {
 export interface PhotoDetailsResult {
   close: () => void;
   detailsCategoryId: string;
+  detailsChromeUrl: string;
   detailsExif: ExifForm;
   detailsOrder: number;
   detailsPhoto: Photo | null;
+  detailsShowChrome: boolean;
   detailsTitle: string;
   isSaving: boolean;
   open: (photo: Photo) => void;
   save: (e: FormEvent) => Promise<void>;
   setDetailsCategoryId: (id: string) => void;
+  setDetailsChromeUrl: (u: string) => void;
   setDetailsExifField: (field: keyof ExifForm, value: string) => void;
   setDetailsOrder: (o: number) => void;
+  setDetailsShowChrome: (v: boolean) => void;
   setDetailsTitle: (t: string) => void;
 }
 
@@ -130,6 +134,8 @@ export const usePhotoDetails = (
   const [detailsCategoryId, setDetailsCategoryId] = useState("");
   const [detailsOrder, setDetailsOrder] = useState(0);
   const [detailsExif, setDetailsExif] = useState<ExifForm>(EMPTY_EXIF);
+  const [detailsShowChrome, setDetailsShowChrome] = useState(false);
+  const [detailsChromeUrl, setDetailsChromeUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const open = (photo: Photo) => {
@@ -138,6 +144,8 @@ export const usePhotoDetails = (
     setDetailsCategoryId(photo.categoryId);
     setDetailsOrder(photo.order);
     setDetailsExif(toForm(photo.exif));
+    setDetailsShowChrome(photo.showChrome);
+    setDetailsChromeUrl(photo.chromeUrl ?? "");
   };
 
   const close = () => setDetailsPhoto(null);
@@ -164,8 +172,12 @@ export const usePhotoDetails = (
     try {
       const saved = await portfolioService.updatePhoto(detailsPhoto.id, {
         categoryId: detailsCategoryId,
+        // Always sent, so clearing the address actually clears the column --
+        // the API distinguishes an absent key from an empty one.
+        chromeUrl: detailsChromeUrl.trim(),
         exif: toPayload(detailsExif),
         order: detailsOrder,
+        showChrome: detailsShowChrome,
         title: detailsTitle.trim(),
       });
       onSaved(saved);
@@ -186,16 +198,20 @@ export const usePhotoDetails = (
   return {
     close,
     detailsCategoryId,
+    detailsChromeUrl,
     detailsExif,
     detailsOrder,
     detailsPhoto,
+    detailsShowChrome,
     detailsTitle,
     isSaving,
     open,
     save,
     setDetailsCategoryId,
+    setDetailsChromeUrl,
     setDetailsExifField,
     setDetailsOrder,
+    setDetailsShowChrome,
     setDetailsTitle,
   };
 };

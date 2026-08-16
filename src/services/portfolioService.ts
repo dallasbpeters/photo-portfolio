@@ -537,6 +537,14 @@ export const portfolioService = {
        * shooting details read off the file.
        */
       exif?: PhotoExifData | null;
+      /** Frames this image in a browser window in the lightbox. */
+      showChrome?: boolean;
+      /**
+       * Address drawn in that frame. Always send it when the chrome fields are
+       * being edited: the API treats an absent key as "leave alone" and an
+       * empty string as "clear", so omitting it makes the address unclearable.
+       */
+      chromeUrl?: string;
       /** Omit to leave the photograph's visibility as it is. */
       isPublished?: boolean;
       /** Omit to leave the photograph's featured status as it is. */

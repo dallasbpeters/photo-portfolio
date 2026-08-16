@@ -1017,6 +1017,54 @@ const DetailsDialog = ({
           />
         </div>
 
+        {/* For screenshots rather than photographs. Framing one in a browser
+            window says what it is, and lets a tall capture scroll at full
+            width in the lightbox instead of shrinking until it is unreadable. */}
+        <fieldset className="space-y-3 border-white/10 border-t pt-4">
+          <legend className="sr-only">Browser chrome</legend>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              checked={details.detailsShowChrome}
+              className="mt-0.5"
+              id="details-show-chrome"
+              onChange={(e) => details.setDetailsShowChrome(e.target.checked)}
+            />
+            <div className="space-y-1">
+              <Label
+                className="text-[10px] text-white/90 uppercase tracking-widest"
+                htmlFor="details-show-chrome"
+              >
+                Show browser chrome
+              </Label>
+              <p className="text-[10px] text-white/80">
+                Frames this image in a browser window and lets it scroll
+              </p>
+            </div>
+          </div>
+
+          {details.detailsShowChrome ? (
+            <div className="space-y-2">
+              <Label
+                className="text-[10px] text-white/90 uppercase tracking-widest"
+                htmlFor="details-chrome-url"
+              >
+                Address bar
+              </Label>
+              <Input
+                className="border-white/10 bg-black/40 focus:border-white/40"
+                id="details-chrome-url"
+                maxLength={300}
+                onChange={(e) => details.setDetailsChromeUrl(e.target.value)}
+                placeholder="dallaspeters.com/work"
+                value={details.detailsChromeUrl}
+              />
+              <p className="text-[10px] text-white/80">
+                Display only — never linked. Leave empty to hide the bar.
+              </p>
+            </div>
+          ) : null}
+        </fieldset>
+
         {/* Read off the file at upload, and wrong often enough to need
             correcting: adapted lenses report nothing, scans carry the
             scanner's date, and a borrowed body stamps someone else's make. */}

@@ -3,6 +3,8 @@ export interface PhotoRow {
   category_id: string;
   category_label: string;
   category_slug: string;
+  /** Null on databases where the browser-chrome patch has not been applied. */
+  chrome_url: string | null;
   created_at: string | Date;
   exif: unknown;
   height: number | null;
@@ -15,6 +17,8 @@ export interface PhotoRow {
   original_height: number | null;
   original_url: string | null;
   original_width: number | null;
+  /** Null on databases where the browser-chrome patch has not been applied. */
+  show_chrome: boolean | null;
   sort_order: number;
   title: string;
   url: string;
@@ -27,6 +31,8 @@ export interface PhotoDto {
   category: string;
   categoryId: string;
   categoryLabel: string;
+  /** Address shown in the chrome's title bar. Display only, never linked. */
+  chromeUrl: string | null;
   createdAt: string;
   exif: unknown;
   height: number | null;
@@ -39,6 +45,8 @@ export interface PhotoDto {
   order: number;
   /** The pre-edit image, kept so an edit can be undone. Null on untouched photos. */
   originalUrl: string | null;
+  /** Frames this image in a browser window — it is a screenshot, not a photo. */
+  showChrome: boolean;
   title: string;
   url: string;
   width: number | null;
@@ -57,6 +65,7 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   category: row.category_slug,
   categoryId: row.category_id,
   categoryLabel: row.category_label,
+  chromeUrl: (row.chrome_url ?? "").trim() || null,
   createdAt: toIso(row.created_at),
   exif: row.exif ?? null,
   height: row.height ?? null,
@@ -69,6 +78,8 @@ export const rowToDto = (row: PhotoRow): PhotoDto => ({
   lqip: row.lqip ?? null,
   order: Number(row.sort_order),
   originalUrl: row.original_url ?? null,
+  // Photographs predating the column are ordinary photos, not screenshots.
+  showChrome: row.show_chrome ?? false,
   title: row.title,
   url: row.url,
   width: row.width ?? null,
@@ -149,4 +160,5 @@ export const parseIncomingExif = (value: unknown): IncomingExif | null => {
 export const PHOTO_COLUMNS = `p.id, p.url, p.title, p.sort_order, p.created_at,
   p.alt, p.width, p.height, p.lqip, p.exif, p.is_published, p.is_featured,
   p.original_url, p.original_width, p.original_height,
+  p.show_chrome, p.chrome_url,
   c.id AS category_id, c.slug AS category_slug, c.label AS category_label`;

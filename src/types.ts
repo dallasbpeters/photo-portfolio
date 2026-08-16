@@ -29,6 +29,8 @@ export interface Photo {
   category: string;
   categoryId: string;
   categoryLabel: string;
+  /** Address drawn in the frame's title bar. Display only — never linked. */
+  chromeUrl: string | null;
   createdAt: string;
   exif: PhotoExifData | null;
   height: number | null;
@@ -42,6 +44,14 @@ export interface Photo {
   order: number;
   /** The pre-edit image, kept so an edit can be undone. Null on untouched photos. */
   originalUrl: string | null;
+  /**
+   * Frames this image in a browser window in the lightbox.
+   *
+   * For full-page screenshots rather than photographs: the frame says what the
+   * image is, and lets a tall capture scroll at full width instead of being
+   * shrunk until nothing on it is readable.
+   */
+  showChrome: boolean;
   title: string;
   url: string;
   /** Intrinsic size, used to reserve layout space before the image loads. */

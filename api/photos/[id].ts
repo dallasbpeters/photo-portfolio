@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
+import { sanitizeText } from "../_lib/httpUrl.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 import { type PhotoRow, parseIncomingExif, rowToDto } from "../_lib/photos.js";
 
@@ -38,6 +39,58 @@ const resolveOriginal = (
   };
 };
 
+interface PatchInput {
+  alt: string | null;
+  categoryId: string;
+  chromeUrl: string | null;
+  exifJson: string | null;
+  hasChromeUrl: boolean;
+  hasExif: boolean;
+  isFeatured: boolean | null;
+  isPublished: boolean | null;
+  order: number;
+  showChrome: boolean | null;
+  title: string;
+  url: string | null;
+}
+
+const parsePatchBody = (body: Record<string, unknown>): PatchInput => {
+  // Presence of the key, not its truthiness, decides whether EXIF is touched.
+  // Callers that only rename a photo omit it and keep whatever was read off the
+  // file; the details form sends it every time, and sending null clears it.
+  const hasExif = Object.hasOwn(body, "exif");
+  // Null rather than the string "null": the latter casts to a JSON null that
+  // sits in the column looking like data, where a cleared field should leave
+  // the column genuinely empty.
+  const parsedExif = hasExif ? parseIncomingExif(body.exif) : null;
+
+  // Presence, not truthiness: an empty string is a caller clearing the address,
+  // which must reach the column, while an absent key leaves it untouched.
+  const hasChromeUrl = Object.hasOwn(body, "chromeUrl");
+
+  return {
+    alt: typeof body.alt === "string" ? body.alt.trim().slice(0, 300) : null,
+    categoryId:
+      typeof body.categoryId === "string" ? body.categoryId.trim() : "",
+    chromeUrl: hasChromeUrl
+      ? sanitizeText(String(body.chromeUrl ?? "")).slice(0, 300) || null
+      : null,
+    exifJson: parsedExif === null ? null : JSON.stringify(parsedExif),
+    hasChromeUrl,
+    hasExif,
+    isFeatured: typeof body.isFeatured === "boolean" ? body.isFeatured : null,
+    // Same presence test as EXIF: a caller that says nothing about publishing
+    // must not accidentally republish a hidden photograph.
+    isPublished:
+      typeof body.isPublished === "boolean" ? body.isPublished : null,
+    order: typeof body.order === "number" ? body.order : Number(body.order),
+    showChrome: typeof body.showChrome === "boolean" ? body.showChrome : null,
+    title: typeof body.title === "string" ? body.title.trim() : "",
+    url:
+      typeof body.url === "string" && body.url.trim() ? body.url.trim() : null,
+  };
+};
+
 async function handlePatch(
   req: VercelRequest,
   res: VercelResponse,
@@ -48,34 +101,20 @@ async function handlePatch(
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const body = parseJsonBody(req.body);
-  const title = typeof body.title === "string" ? body.title.trim() : "";
-  const categoryId =
-    typeof body.categoryId === "string" ? body.categoryId.trim() : "";
-  const order =
-    typeof body.order === "number" ? body.order : Number(body.order);
-  const url =
-    typeof body.url === "string" && body.url.trim() ? body.url.trim() : null;
-  const alt =
-    typeof body.alt === "string" ? body.alt.trim().slice(0, 300) : null;
-
-  // Presence of the key, not its truthiness, decides whether EXIF is touched.
-  // Callers that only rename a photo omit it and keep whatever was read off the
-  // file; the details form sends it every time, and sending null clears it.
-  // Same presence test as EXIF below: a caller that says nothing about
-  // publishing must not accidentally republish a hidden photograph.
-  const isPublished =
-    typeof body.isPublished === "boolean" ? body.isPublished : null;
-
-  const isFeatured =
-    typeof body.isFeatured === "boolean" ? body.isFeatured : null;
-
-  const hasExif = Object.hasOwn(body, "exif");
-  // Null rather than the string "null": the latter casts to a JSON null that
-  // sits in the column looking like data, where a cleared field should leave
-  // the column genuinely empty.
-  const parsedExif = hasExif ? parseIncomingExif(body.exif) : null;
-  const exifJson = parsedExif === null ? null : JSON.stringify(parsedExif);
+  const {
+    alt,
+    categoryId,
+    chromeUrl,
+    exifJson,
+    hasChromeUrl,
+    hasExif,
+    isFeatured,
+    isPublished,
+    order,
+    showChrome,
+    title,
+    url,
+  } = parsePatchBody(parseJsonBody(req.body));
 
   if (!(title && categoryId)) {
     return res.status(400).json({ error: "Invalid title or categoryId" });
@@ -115,20 +154,28 @@ async function handlePatch(
             alt = COALESCE(${alt}, alt),
             is_published = COALESCE(${isPublished}, is_published),
             is_featured = COALESCE(${isFeatured}, is_featured),
+            show_chrome = COALESCE(${showChrome}, show_chrome),
             original_url = COALESCE(original_url, ${originalUrl}),
             original_width = COALESCE(original_width, ${originalWidth}),
             original_height = COALESCE(original_height, ${originalHeight}),
             -- COALESCE would make clearing impossible, since the cleared value
             -- is itself NULL. The flag says whether the caller spoke about
             -- EXIF at all; only then does this column change.
-            exif = CASE WHEN ${hasExif} THEN ${exifJson}::jsonb ELSE exif END
+            exif = CASE WHEN ${hasExif} THEN ${exifJson}::jsonb ELSE exif END,
+            -- Same reasoning as EXIF: clearing the address writes NULL, so only
+            -- the presence flag can distinguish that from an untouched column.
+            chrome_url = CASE
+              WHEN ${hasChromeUrl} THEN ${chromeUrl}::text ELSE chrome_url
+            END
           WHERE id = ${id}
           RETURNING id, url, title, sort_order, created_at, category_id,
             alt, width, height, lqip, exif, is_published, is_featured,
+            show_chrome, chrome_url,
             original_url, original_width, original_height
         )
         SELECT u.id, u.url, u.title, u.sort_order, u.created_at,
           u.alt, u.width, u.height, u.lqip, u.exif, u.is_published, u.is_featured,
+          u.show_chrome, u.chrome_url,
           u.original_url, u.original_width, u.original_height,
           c.id AS category_id, c.slug AS category_slug, c.label AS category_label
         FROM u
