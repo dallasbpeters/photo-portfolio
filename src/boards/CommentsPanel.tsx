@@ -61,9 +61,9 @@ export function CommentsPanel({
   const list = [...open, ...resolved];
 
   return (
-    <div className="pointer-events-auto absolute top-4 right-4 flex max-h-[calc(100%-6rem)] w-80 flex-col overflow-hidden rounded-lg border border-white/15 bg-[#181818]/95 shadow-xl backdrop-blur">
-      <header className="flex shrink-0 items-center justify-between gap-2 border-white/10 border-b px-3 py-2">
-        <span className="flex items-center gap-1.5 text-[10px] text-white/70 uppercase tracking-[0.18em]">
+    <div className="pointer-events-auto absolute top-4 right-4 flex max-h-[calc(100%-6rem)] w-80 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-3 py-2">
+        <span className="flex items-center gap-1.5 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
           <HugeiconsIcon aria-hidden icon={Message02Icon} size={13} />
           Comments
           <span className="text-white/40">
@@ -72,7 +72,7 @@ export function CommentsPanel({
         </span>
         <button
           aria-label="Close comments"
-          className="grid size-6 place-items-center rounded text-white/50 hover:bg-white/10 hover:text-white"
+          className="grid size-6 place-items-center rounded text-board-ink/70"
           onClick={onClose}
           type="button"
         >
@@ -82,7 +82,7 @@ export function CommentsPanel({
 
       <ul className="min-h-0 flex-1 overflow-y-auto p-2">
         {list.length === 0 ? (
-          <li className="px-2 py-6 text-center text-[11px] text-white/40 leading-relaxed">
+          <li className="px-2 py-6 text-center text-[11px] text-board-ink/70 leading-relaxed">
             No comments yet. Click an image or node to leave one.
           </li>
         ) : (
