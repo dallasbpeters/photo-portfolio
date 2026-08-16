@@ -4,14 +4,16 @@ meta {
   seq: 13
 }
 
-GET {
+get {
   url: {{baseUrl}}/api/boards
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/boards
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Every board, without its graph.
 }

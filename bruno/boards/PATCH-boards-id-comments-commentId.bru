@@ -4,14 +4,23 @@ meta {
   seq: 6
 }
 
-PATCH {
+patch {
   url: {{baseUrl}}/api/boards/{{id}}/comments/{{commentId}}
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "body": "",
+    "resolved": false
+  }
 }
 
 docs {
-  PATCH /api/boards/{id}/comments/{commentId}
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Edit or resolve a comment.
 }

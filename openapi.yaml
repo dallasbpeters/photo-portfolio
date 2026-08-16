@@ -556,6 +556,736 @@ components:
           additionalProperties: false
       additionalProperties: false
       id: SiteSettingsUpdate
+    AiModel:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        enabled:
+          type: boolean
+        id:
+          type: string
+          description: A fal.ai model id, or a namespaced "lora/..." one.
+        imageParam:
+          type: string
+          enum:
+            - image_url
+            - image_urls
+        input:
+          type: string
+          description: "What the model takes: prompt, image, or both."
+        label:
+          type: string
+          description: Shown on the node; model ids do not read.
+        lora:
+          anyOf:
+            - type: object
+              properties:
+                endpoint:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                imageEndpoint:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                path:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: URL to the safetensors weights.
+                scale:
+                  anyOf:
+                    - type: number
+                    - type: "null"
+                trigger:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+              required:
+                - endpoint
+                - imageEndpoint
+                - path
+                - scale
+                - trigger
+              additionalProperties: false
+            - type: "null"
+        sortOrder:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        vector:
+          type: boolean
+      required:
+        - createdAt
+        - enabled
+        - id
+        - imageParam
+        - input
+        - label
+        - lora
+        - sortOrder
+      additionalProperties: false
+      id: AiModel
+    AiModelInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        id:
+          type: string
+          description: A fal.ai model id, or a namespaced "lora/..." one.
+        imageParam:
+          type: string
+          enum:
+            - image_url
+            - image_urls
+        input:
+          type: string
+          description: "What the model takes: prompt, image, or both."
+        label:
+          type: string
+          description: Shown on the node; model ids do not read.
+        lora:
+          anyOf:
+            - type: object
+              properties:
+                endpoint:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                imageEndpoint:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                path:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: URL to the safetensors weights.
+                scale:
+                  anyOf:
+                    - type: number
+                    - type: "null"
+                trigger:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+              required:
+                - endpoint
+                - imageEndpoint
+                - path
+                - scale
+                - trigger
+              additionalProperties: false
+            - type: "null"
+        sortOrder:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        vector:
+          type: boolean
+      required:
+        - id
+        - label
+      additionalProperties: false
+      id: AiModelInput
+    Board:
+      type: object
+      properties:
+        coverUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        isPublic:
+          type: boolean
+        slug:
+          anyOf:
+            - type: string
+            - type: "null"
+        title:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        items:
+          type: array
+          items: {}
+          description: The graph's nodes. See config/nodeTypes.ts.
+        sources:
+          description: Admin detail only — never sent to a published board's reader.
+          type: array
+          items: {}
+        wires:
+          type: array
+          items: {}
+          description: Connections between items.
+      required:
+        - coverUrl
+        - createdAt
+        - id
+        - isPublic
+        - slug
+        - title
+        - updatedAt
+        - items
+        - wires
+      additionalProperties: false
+      id: Board
+    BoardComment:
+      type: object
+      properties:
+        authorName:
+          anyOf:
+            - type: string
+            - type: "null"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        itemId:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: Anchored to one item, or loose.
+        resolved:
+          type: boolean
+      required:
+        - authorName
+        - body
+        - createdAt
+        - id
+        - itemId
+        - resolved
+      additionalProperties: false
+      id: BoardComment
+    BoardCreate:
+      type: object
+      properties:
+        isPublic:
+          type: boolean
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - title
+      additionalProperties: false
+      id: BoardCreate
+    BoardSummary:
+      type: object
+      properties:
+        coverUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        isPublic:
+          type: boolean
+        itemCount:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+          description: List responses only.
+        slug:
+          anyOf:
+            - type: string
+            - type: "null"
+        title:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+      required:
+        - coverUrl
+        - createdAt
+        - id
+        - isPublic
+        - itemCount
+        - slug
+        - title
+        - updatedAt
+      additionalProperties: false
+      id: BoardSummary
+    BoardUpdate:
+      type: object
+      properties:
+        isPublic:
+          type: boolean
+        items:
+          type: array
+          items: {}
+        slug:
+          anyOf:
+            - type: string
+            - type: "null"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        wires:
+          type: array
+          items: {}
+      additionalProperties: false
+      id: BoardUpdate
+    DailyChallengeInfo:
+      type: object
+      properties:
+        altText:
+          anyOf:
+            - type: string
+            - type: "null"
+        challengeDate:
+          type: string
+          description: YYYY-MM-DD, UTC.
+        imageThumbUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        imageUrl:
+          type: string
+        photographerName:
+          anyOf:
+            - type: string
+            - type: "null"
+        photographerUsername:
+          anyOf:
+            - type: string
+            - type: "null"
+        unsplashHtmlLink:
+          anyOf:
+            - type: string
+            - type: "null"
+        unsplashPhotoId:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - altText
+        - challengeDate
+        - imageThumbUrl
+        - imageUrl
+        - photographerName
+        - photographerUsername
+        - unsplashHtmlLink
+        - unsplashPhotoId
+      additionalProperties: false
+      id: DailyChallengeInfo
+    DailyChallengeJournal:
+      type: object
+      properties:
+        body:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+      required:
+        - body
+        - updatedAt
+      additionalProperties: false
+      id: DailyChallengeJournal
+    DailyChallengeResponse:
+      type: object
+      properties:
+        challenge:
+          $ref: "#/components/schemas/DailyChallengeInfo"
+        journal:
+          anyOf:
+            - $ref: "#/components/schemas/DailyChallengeJournal"
+            - type: "null"
+      required:
+        - challenge
+        - journal
+      additionalProperties: false
+      id: DailyChallengeResponse
+    Element:
+      type: object
+      properties:
+        coverUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: The key image, and what a wired element hands over.
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: Substance, not a note — it travels into the prompt.
+        id:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        imageUrls:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+      required:
+        - coverUrl
+        - createdAt
+        - description
+        - id
+        - imageUrls
+        - name
+        - updatedAt
+      additionalProperties: false
+      id: Element
+    ElementInput:
+      type: object
+      properties:
+        coverUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: The key image, and what a wired element hands over.
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: Substance, not a note — it travels into the prompt.
+        imageUrls:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+      required:
+        - imageUrls
+        - name
+      additionalProperties: false
+      id: ElementInput
+    JournalInput:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 20000
+      required:
+        - body
+      additionalProperties: false
+      id: JournalInput
+    RunNodeResult:
+      type: object
+      properties:
+        error:
+          anyOf:
+            - type: string
+            - type: "null"
+        outputs:
+          type: array
+          items: {}
+          description: Whatever the node produced.
+        state:
+          type: string
+          description: See RunState in config/nodeTypes.ts.
+      required:
+        - outputs
+        - state
+      additionalProperties: false
+      id: RunNodeResult
+    CanvaStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        expiresAt:
+          anyOf:
+            - type: string
+              format: date-time
+              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+            - type: "null"
+      required:
+        - connected
+      additionalProperties: false
+      id: CanvaStatus
+    FalLibraryItem:
+      type: object
+      properties:
+        contentType:
+          anyOf:
+            - type: string
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        endpoint:
+          type: string
+        id:
+          type: string
+        previewUrl:
+          type: string
+          description: The fal URL, or an inlined data URI for vector output.
+        prompt:
+          anyOf:
+            - type: string
+            - type: "null"
+        url:
+          type: string
+      required:
+        - contentType
+        - createdAt
+        - endpoint
+        - id
+        - previewUrl
+        - prompt
+        - url
+      additionalProperties: false
+      id: FalLibraryItem
+    FalLibraryPage:
+      type: object
+      properties:
+        hasMore:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FalLibraryItem"
+      required:
+        - hasMore
+        - items
+      additionalProperties: false
+      id: FalLibraryPage
+    FramerImage:
+      type: object
+      properties:
+        altText:
+          anyOf:
+            - type: string
+            - type: "null"
+        imageUrl:
+          type: string
+        thumbUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - altText
+        - imageUrl
+        - thumbUrl
+      additionalProperties: false
+      id: FramerImage
+    GeneratedImage:
+      type: object
+      properties:
+        description:
+          anyOf:
+            - type: string
+            - type: "null"
+        height:
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
+        url:
+          type: string
+          description: Already copied to our blob host; fal's URLs expire.
+        width:
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
+      required:
+        - description
+        - height
+        - url
+        - width
+      additionalProperties: false
+      id: GeneratedImage
+    GenerateInput:
+      type: object
+      properties:
+        modelId:
+          type: string
+        prompt:
+          type: string
+          minLength: 1
+        sourceImageUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - prompt
+      additionalProperties: false
+      id: GenerateInput
+    PickerConfig:
+      type: object
+      properties:
+        appId:
+          anyOf:
+            - type: string
+            - type: "null"
+        clientId:
+          type: string
+        developerKey:
+          anyOf:
+            - type: string
+            - type: "null"
+        scope:
+          type: string
+      required:
+        - appId
+        - clientId
+        - developerKey
+        - scope
+      additionalProperties: false
+      id: PickerConfig
+    PinResult:
+      type: object
+      properties:
+        altText:
+          anyOf:
+            - type: string
+            - type: "null"
+        creditName:
+          anyOf:
+            - type: string
+            - type: "null"
+        creditUrl:
+          type: string
+          description: The pin itself, so a board links back.
+        imageUrl:
+          type: string
+        thumbUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - altText
+        - creditName
+        - creditUrl
+        - imageUrl
+        - thumbUrl
+      additionalProperties: false
+      id: PinResult
+    PinterestBoardResult:
+      type: object
+      properties:
+        pins:
+          type: array
+          items:
+            $ref: "#/components/schemas/PinResult"
+        title:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - pins
+        - title
+      additionalProperties: false
+      id: PinterestBoardResult
+    ProvisionResult:
+      type: object
+      properties:
+        databaseId:
+          anyOf:
+            - type: string
+            - type: "null"
+        projectId:
+          type: string
+        projectName:
+          type: string
+        url:
+          anyOf:
+            - type: string
+            - type: "null"
+      required:
+        - projectId
+        - projectName
+      additionalProperties: false
+      id: ProvisionResult
+    UnsplashResult:
+      type: object
+      properties:
+        altText:
+          anyOf:
+            - type: string
+            - type: "null"
+        creditName:
+          type: string
+          description: Required wherever the photograph shows.
+        creditUrl:
+          type: string
+        downloadLocation:
+          anyOf:
+            - type: string
+            - type: "null"
+        id:
+          type: string
+        imageUrl:
+          type: string
+        thumbUrl:
+          type: string
+      required:
+        - altText
+        - creditName
+        - creditUrl
+        - downloadLocation
+        - id
+        - imageUrl
+        - thumbUrl
+      additionalProperties: false
+      id: UnsplashResult
+    UploadResult:
+      type: object
+      properties:
+        height:
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
+        url:
+          type: string
+          format: uri
+          description: Blob URL the image is now served from.
+        width:
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
+      required:
+        - url
+      additionalProperties: false
+      id: UploadResult
   securitySchemes:
     bearerAuth:
       bearerFormat: JWT
@@ -569,11 +1299,27 @@ openapi: 3.1.0
 paths:
   /api/ai/generate:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: The result is copied to our own blob host before returning — fal serves from a temporary location that would expire under the board.
       operationId: post_api_ai_generate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateInput"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedImage"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -586,14 +1332,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/ai/generate
+      security:
+        - bearerAuth: []
+      summary: Generate an image from a prompt, optionally from a source image.
       tags:
         - ai
-      x-undocumented: true
   /api/ai/icon-webhook:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Called by fal, not by the app. Authenticated by the signature on the request rather than a bearer token.
       operationId: post_api_ai_icon-webhook
       responses:
         "200":
@@ -611,17 +1357,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/ai/icon-webhook
+      summary: Delivery callback for a queued icon generation.
       tags:
         - ai
-      x-undocumented: true
   /api/ai/icon:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_ai_icon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  minLength: 1
+                style:
+                  type: string
+              required:
+                - prompt
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedImage"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -634,18 +1403,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/ai/icon
+      security:
+        - bearerAuth: []
+      summary: Generate an SVG icon.
       tags:
         - ai
-      x-undocumented: true
   /api/auth/change-password:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_auth_change-password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+              required:
+                - currentPassword
+                - newPassword
+              additionalProperties: false
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -658,15 +1448,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/auth/change-password
+      security:
+        - bearerAuth: []
+      summary: Change the signed-in user's password.
       tags:
         - auth
-      x-undocumented: true
   /api/auth/forgot-password:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Always answers 200, whether or not the address is known — a different answer would confirm which addresses have accounts.
       operationId: post_api_auth_forgot-password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+              required:
+                - email
+              additionalProperties: false
       responses:
         "200":
           description: Success
@@ -683,17 +1487,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/auth/forgot-password
+      summary: Send a reset link.
       tags:
         - auth
-      x-undocumented: true
   /api/auth/google:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_auth_google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                credential:
+                  type: string
+                  description: Google ID token.
+              required:
+                - credential
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
         4XX:
           description: Request rejected
           content:
@@ -707,10 +1526,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/auth/google
+      summary: Exchange a Google credential for a bearer token.
       tags:
         - auth
-      x-undocumented: true
   /api/auth/login:
     post:
       operationId: post_api_auth_login
@@ -778,11 +1596,20 @@ paths:
         - auth
   /api/auth/register:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_auth_register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Credentials"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
         4XX:
           description: Request rejected
           content:
@@ -796,14 +1623,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/auth/register
+      summary: Create the first admin. Closed once one exists.
       tags:
         - auth
-      x-undocumented: true
   /api/auth/reset-password:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_auth_reset-password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                token:
+                  type: string
+              required:
+                - password
+                - token
+              additionalProperties: false
       responses:
         "200":
           description: Success
@@ -820,13 +1661,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/auth/reset-password
+      summary: Set a new password from a reset token.
       tags:
         - auth
-      x-undocumented: true
   /api/boards/{id}:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: A published board is readable without a token; `sources` is omitted in that case.
       operationId: get_api_boards__id_
       parameters:
         - in: path
@@ -837,6 +1677,10 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Board"
         4XX:
           description: Request rejected
           content:
@@ -850,12 +1694,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/boards/{id}
+      summary: One board, with items and wires.
       tags:
         - boards
-      x-undocumented: true
     patch:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: patch_api_boards__id_
       parameters:
         - in: path
@@ -863,9 +1705,25 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardUpdate"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Board"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -878,13 +1736,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PATCH /api/boards/{id}
+      security:
+        - bearerAuth: []
+      summary: Save a board. Absent keys are left alone.
       tags:
         - boards
-      x-undocumented: true
     delete:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: delete_api_boards__id_
       parameters:
         - in: path
@@ -895,6 +1752,12 @@ paths:
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -907,14 +1770,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: DELETE /api/boards/{id}
+      security:
+        - bearerAuth: []
+      summary: Delete a board.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/comments:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_boards__id__comments
       parameters:
         - in: path
@@ -925,6 +1787,12 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/BoardComment"
+                type: array
         4XX:
           description: Request rejected
           content:
@@ -938,12 +1806,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/boards/{id}/comments
+      summary: Comments on a board.
       tags:
         - boards
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards__id__comments
       parameters:
         - in: path
@@ -951,9 +1817,31 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                authorName:
+                  type: string
+                  maxLength: 120
+                body:
+                  type: string
+                  minLength: 1
+                itemId:
+                  type: string
+              required:
+                - body
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardComment"
         4XX:
           description: Request rejected
           content:
@@ -967,13 +1855,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/boards/{id}/comments
+      summary: Leave a comment. Open on a published board.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/comments/{commentId}:
     patch:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: patch_api_boards__id__comments__commentId_
       parameters:
         - in: path
@@ -986,9 +1872,31 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                resolved:
+                  type: boolean
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardComment"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1001,14 +1909,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PATCH /api/boards/{id}/comments/{commentId}
+      security:
+        - bearerAuth: []
+      summary: Edit or resolve a comment.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/dataset:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards__id__dataset
       parameters:
         - in: path
@@ -1019,6 +1926,23 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                required:
+                  - url
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1031,14 +1955,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/{id}/dataset
+      security:
+        - bearerAuth: []
+      summary: Export the board's images and prompts as a training dataset.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/export:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards__id__export
       parameters:
         - in: path
@@ -1049,6 +1972,23 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                required:
+                  - url
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1061,14 +2001,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/{id}/export
+      security:
+        - bearerAuth: []
+      summary: Export the board as a single image.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/run:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Runs one node and everything downstream of it. The longest request in the API — generation is measured in tens of seconds.
       operationId: post_api_boards__id__run
       parameters:
         - in: path
@@ -1076,9 +2016,31 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemId:
+                  type: string
+              required:
+                - itemId
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunNodeResult"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1091,14 +2053,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/{id}/run
+      security:
+        - bearerAuth: []
+      summary: Run a node in the board's graph.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/svg:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards__id__svg
       parameters:
         - in: path
@@ -1106,9 +2067,38 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                svg:
+                  type: string
+              required:
+                - svg
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                required:
+                  - url
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1121,14 +2111,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/{id}/svg
+      security:
+        - bearerAuth: []
+      summary: Store an SVG and return a URL for it.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/{id}/version:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards__id__version
       parameters:
         - in: path
@@ -1139,6 +2128,29 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                required:
+                  - createdAt
+                  - id
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1151,18 +2163,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/{id}/version
+      security:
+        - bearerAuth: []
+      summary: Snapshot the board so it can be restored.
       tags:
         - boards
-      x-undocumented: true
   /api/boards/adopt:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards_adopt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boardId:
+                  type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              required:
+                - boardId
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Board"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1175,18 +2210,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards/adopt
+      security:
+        - bearerAuth: []
+      summary: Take ownership of a board created before accounts existed.
       tags:
         - boards
-      x-undocumented: true
   /api/boards:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_boards
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/BoardSummary"
+                type: array
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1199,17 +2245,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/boards
+      security:
+        - bearerAuth: []
+      summary: Every board, without its graph.
       tags:
         - boards
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_boards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardCreate"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Board"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1222,14 +2283,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/boards
+      security:
+        - bearerAuth: []
+      summary: Create a board.
       tags:
         - boards
-      x-undocumented: true
   /api/canva/callback:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: The OAuth redirect target. Answers a redirect, not JSON.
       operationId: get_api_canva_callback
       responses:
         "200":
@@ -1247,17 +2308,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/canva/callback
+      summary: Finish connecting Canva.
       tags:
         - canva
-      x-undocumented: true
   /api/canva/connect:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Answers a redirect to Canva's consent screen.
       operationId: get_api_canva_connect
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1270,18 +2336,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/canva/connect
+      security:
+        - bearerAuth: []
+      summary: Begin connecting Canva.
       tags:
         - canva
-      x-undocumented: true
   /api/canva/send:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_canva_send
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageUrls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                templateId:
+                  type: string
+              required:
+                - imageUrls
+                - templateId
+              additionalProperties: false
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1294,18 +2383,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/canva/send
+      security:
+        - bearerAuth: []
+      summary: Push images into a Canva design.
       tags:
         - canva
-      x-undocumented: true
   /api/canva/status:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_canva_status
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanvaStatus"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1318,18 +2416,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/canva/status
+      security:
+        - bearerAuth: []
+      summary: Whether Canva is connected, and until when.
       tags:
         - canva
-      x-undocumented: true
   /api/canva/templates:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_canva_templates
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items: {}
+                required:
+                  - templates
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1342,14 +2456,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/canva/templates
+      security:
+        - bearerAuth: []
+      summary: Brand templates available to the connected account.
       tags:
         - canva
-      x-undocumented: true
   /api/canva/templates/{id}:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_canva_templates__id_
       parameters:
         - in: path
@@ -1360,6 +2473,12 @@ paths:
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1372,11 +2491,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/canva/templates/{id}
+      security:
+        - bearerAuth: []
+      summary: One brand template, with its data fields.
       tags:
         - canva
-      x-undocumented: true
   /api/categories/{id}:
     delete:
       operationId: delete_api_categories__id_
@@ -1480,11 +2599,22 @@ paths:
         - categories
   /api/daily-challenge/history:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_daily-challenge_history
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/DailyChallengeResponse"
+                type: array
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1497,17 +2627,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/daily-challenge/history
+      security:
+        - bearerAuth: []
+      summary: Past challenges and their entries.
       tags:
         - daily-challenge
-      x-undocumented: true
     put:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: put_api_daily-challenge_history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalInput"
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1520,17 +2661,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PUT /api/daily-challenge/history
+      security:
+        - bearerAuth: []
+      summary: Edit a past journal entry.
       tags:
         - daily-challenge
-      x-undocumented: true
     delete:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: delete_api_daily-challenge_history
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1543,18 +2689,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: DELETE /api/daily-challenge/history
+      security:
+        - bearerAuth: []
+      summary: Delete a journal entry.
       tags:
         - daily-challenge
-      x-undocumented: true
   /api/daily-challenge:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_daily-challenge
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyChallengeResponse"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1567,17 +2722,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/daily-challenge
+      security:
+        - bearerAuth: []
+      summary: Today's challenge and its journal entry.
       tags:
         - daily-challenge
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_daily-challenge
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyChallengeResponse"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1590,17 +2754,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/daily-challenge
+      security:
+        - bearerAuth: []
+      summary: Draw a different inspiration photograph for today.
       tags:
         - daily-challenge
-      x-undocumented: true
     put:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: put_api_daily-challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalInput"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyChallengeResponse"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1613,14 +2792,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PUT /api/daily-challenge
+      security:
+        - bearerAuth: []
+      summary: Save today's journal entry.
       tags:
         - daily-challenge
-      x-undocumented: true
   /api/elements/{id}:
     patch:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: patch_api_elements__id_
       parameters:
         - in: path
@@ -1628,9 +2806,43 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coverUrl:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: The key image, and what a wired element hands over.
+                description:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Substance, not a note — it travels into the prompt.
+                imageUrls:
+                  type: array
+                  items:
+                    type: string
+                name:
+                  type: string
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Element"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1643,13 +2855,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PATCH /api/elements/{id}
+      security:
+        - bearerAuth: []
+      summary: Update an element.
       tags:
         - elements
-      x-undocumented: true
     delete:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: delete_api_elements__id_
       parameters:
         - in: path
@@ -1660,6 +2871,12 @@ paths:
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1672,18 +2889,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: DELETE /api/elements/{id}
+      security:
+        - bearerAuth: []
+      summary: Delete an element.
       tags:
         - elements
-      x-undocumented: true
   /api/elements:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_elements
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Element"
+                type: array
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1696,17 +2924,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/elements
+      security:
+        - bearerAuth: []
+      summary: Saved elements.
       tags:
         - elements
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_elements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ElementInput"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Element"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1719,18 +2962,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/elements
+      security:
+        - bearerAuth: []
+      summary: Save an element.
       tags:
         - elements
-      x-undocumented: true
   /api/fal/library:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_fal_library
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FalLibraryPage"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1743,17 +2995,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/fal/library
+      security:
+        - bearerAuth: []
+      summary: The fal account's own generation history, as a library.
       tags:
         - fal
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_fal_library
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FalLibraryPage"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1766,18 +3027,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/fal/library
+      security:
+        - bearerAuth: []
+      summary: Page through the library.
       tags:
         - fal
-      x-undocumented: true
   /api/framer/page:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_framer_page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+              required:
+                - url
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  images:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FramerImage"
+                  title:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                required:
+                  - images
+                  - title
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1790,18 +3086,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/framer/page
+      security:
+        - bearerAuth: []
+      summary: Read the images off a published Framer page.
       tags:
         - framer
-      x-undocumented: true
   /api/google/picker-config:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_google_picker-config
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PickerConfig"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1814,14 +3119,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/google/picker-config
+      security:
+        - bearerAuth: []
+      summary: What the Google Drive picker needs to open.
       tags:
         - google
-      x-undocumented: true
   /api/manifest:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_manifest
       responses:
         "200":
@@ -1839,13 +3143,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/manifest
+      summary: PWA manifest for this site (JSON).
       tags:
         - manifest
-      x-undocumented: true
   /api/models/{id}:
     patch:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: patch_api_models__id_
       parameters:
         - in: path
@@ -1853,9 +3155,82 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                id:
+                  type: string
+                  description: A fal.ai model id, or a namespaced "lora/..." one.
+                imageParam:
+                  type: string
+                  enum:
+                    - image_url
+                    - image_urls
+                input:
+                  type: string
+                  description: "What the model takes: prompt, image, or both."
+                label:
+                  type: string
+                  description: Shown on the node; model ids do not read.
+                lora:
+                  anyOf:
+                    - type: object
+                      properties:
+                        endpoint:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        imageEndpoint:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        path:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the safetensors weights.
+                        scale:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                        trigger:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                      required:
+                        - endpoint
+                        - imageEndpoint
+                        - path
+                        - scale
+                        - trigger
+                      additionalProperties: false
+                    - type: "null"
+                sortOrder:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                vector:
+                  type: boolean
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiModel"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1868,13 +3243,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: PATCH /api/models/{id}
+      security:
+        - bearerAuth: []
+      summary: Update a model.
       tags:
         - models
-      x-undocumented: true
     delete:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: delete_api_models__id_
       parameters:
         - in: path
@@ -1885,6 +3259,12 @@ paths:
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1897,18 +3277,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: DELETE /api/models/{id}
+      security:
+        - bearerAuth: []
+      summary: Delete a model.
       tags:
         - models
-      x-undocumented: true
   /api/models:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_models
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/AiModel"
+                type: array
         4XX:
           description: Request rejected
           content:
@@ -1922,16 +3307,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/models
+      summary: Models a Generate node may ask for.
       tags:
         - models
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_models
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiModelInput"
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiModel"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -1944,11 +3343,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/models
+      security:
+        - bearerAuth: []
+      summary: Add a model.
       tags:
         - models
-      x-undocumented: true
   /api/pages/{slug}:
     get:
       operationId: get_api_pages__slug_
@@ -2339,11 +3738,39 @@ paths:
         - photos
   /api/photos/batch:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Moves a selection to another category in one statement.
       operationId: post_api_photos_batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoIds:
+                  minItems: 1
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                categoryId:
+                  type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              required:
+                - photoIds
+                - categoryId
+              additionalProperties: false
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2356,11 +3783,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/photos/batch
+      security:
+        - bearerAuth: []
+      summary: Set the category on several photographs.
       tags:
         - photos
-      x-undocumented: true
   /api/photos:
     get:
       description: Published photographs only for a visitor. With a bearer token the unpublished ones are included, which is what the admin library reads.
@@ -2472,11 +3899,34 @@ paths:
         - photos
   /api/pinterest/board:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Read from the board's public RSS feed, which carries only the most recent pins. More would need OAuth and a reviewed app.
       operationId: post_api_pinterest_board
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+              required:
+                - url
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PinterestBoardResult"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2489,18 +3939,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/pinterest/board
+      security:
+        - bearerAuth: []
+      summary: Read the pins off a public Pinterest board.
       tags:
         - pinterest
-      x-undocumented: true
   /api/pinterest/pin:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_pinterest_pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+              required:
+                - url
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PinResult"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2513,14 +3985,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/pinterest/pin
+      security:
+        - bearerAuth: []
+      summary: Read one pin.
       tags:
         - pinterest
-      x-undocumented: true
   /api/robots:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_robots
       responses:
         "200":
@@ -2538,13 +4009,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/robots
+      summary: robots.txt for this site (text/plain).
       tags:
         - robots
-      x-undocumented: true
   /api/shell:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Server-rendered <head> and a photograph list, so a crawler and a share card see real content rather than an empty root div.
       operationId: get_api_shell
       responses:
         "200":
@@ -2562,10 +4032,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/shell
+      summary: Pre-rendered HTML shell (text/html).
       tags:
         - shell
-      x-undocumented: true
   /api/site-settings:
     get:
       description: Falls back to the values compiled into config/sites.ts if the table is unreachable, so this never fails.
@@ -2633,7 +4102,6 @@ paths:
         - site-settings
   /api/sitemap:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_sitemap
       responses:
         "200":
@@ -2651,17 +4119,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: GET /api/sitemap
+      summary: sitemap.xml for this site (application/xml).
       tags:
         - sitemap
-      x-undocumented: true
   /api/sites/provision:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_sites_provision
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items: {}
+                required:
+                  - projects
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2674,17 +4157,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/sites/provision
+      security:
+        - bearerAuth: []
+      summary: Vercel projects this token can see.
       tags:
         - sites
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_sites_provision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                region:
+                  type: string
+              required:
+                - name
+              additionalProperties: false
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisionResult"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2697,18 +4204,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/sites/provision
+      security:
+        - bearerAuth: []
+      summary: Create a Vercel project and a Neon database for a new site.
       tags:
         - sites
-      x-undocumented: true
   /api/sites/setup:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: post_api_sites_setup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectId:
+                  type: string
+              required:
+                - projectId
+              additionalProperties: false
       responses:
         "200":
           description: Success
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2721,18 +4245,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/sites/setup
+      security:
+        - bearerAuth: []
+      summary: Run first-time setup against a provisioned site.
       tags:
         - sites
-      x-undocumented: true
   /api/unsplash/search:
     get:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
       operationId: get_api_unsplash_search
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UnsplashResult"
+                required:
+                  - results
+                additionalProperties: false
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2745,14 +4286,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: GET /api/unsplash/search
+      security:
+        - bearerAuth: []
+      summary: Search Unsplash. Takes `?q=`.
       tags:
         - unsplash
-      x-undocumented: true
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: Unsplash's terms require reporting that a photograph was used. Fire and forget — crediting must not stand between the image and the board.
       operationId: post_api_unsplash_search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                downloadLocation:
+                  type: string
+              required:
+                - downloadLocation
+              additionalProperties: false
       responses:
         "200":
           description: Success
@@ -2769,17 +4322,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
       security: []
-      summary: POST /api/unsplash/search
+      summary: Report a download to Unsplash.
       tags:
         - unsplash
-      x-undocumented: true
   /api/upload:
     post:
-      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      description: multipart/form-data with a single `file` field. Answers the blob URL the image is now served from.
       operationId: post_api_upload
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         4XX:
           description: Request rejected
           content:
@@ -2792,11 +4354,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      security: []
-      summary: POST /api/upload
+      security:
+        - bearerAuth: []
+      summary: Upload an image to blob storage.
       tags:
         - upload
-      x-undocumented: true
 servers:
   - description: Local
     url: http://localhost:3006

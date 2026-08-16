@@ -4,14 +4,18 @@ meta {
   seq: 3
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/auth/google
-  body: none
+  body: json
   auth: none
 }
 
-docs {
-  POST /api/auth/google
+body:json {
+  {
+    "credential": ""
+  }
+}
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+docs {
+  Exchange a Google credential for a bearer token.
 }

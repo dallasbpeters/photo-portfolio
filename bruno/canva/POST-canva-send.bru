@@ -4,14 +4,25 @@ meta {
   seq: 3
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/canva/send
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "imageUrls": [
+      ""
+    ],
+    "templateId": ""
+  }
 }
 
 docs {
-  POST /api/canva/send
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Push images into a Canva design.
 }

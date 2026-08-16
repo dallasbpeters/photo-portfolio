@@ -4,14 +4,30 @@ meta {
   seq: 2
 }
 
-PATCH {
+patch {
   url: {{baseUrl}}/api/boards/{{id}}
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "isPublic": false,
+    "items": [
+      ""
+    ],
+    "slug": "",
+    "title": "",
+    "wires": [
+      ""
+    ]
+  }
 }
 
 docs {
-  PATCH /api/boards/{id}
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Save a board. Absent keys are left alone.
 }

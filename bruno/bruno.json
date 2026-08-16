@@ -1,5 +1,15 @@
 {
   "name": "Photo portfolio API",
   "type": "collection",
-  "version": "1"
+  "version": "1",
+  "openapi": [
+    {
+      "sourceUrl": "http://localhost:3006/openapi.json",
+      "groupBy": "tags",
+      "autoCheck": true,
+      "autoCheckInterval": 5,
+      "lastSyncDate": "2026-08-16T15:57:20.175Z",
+      "specHash": "908b3f928e5bb196f55c0777cacf3fa6"
+    }
+  ]
 }

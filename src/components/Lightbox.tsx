@@ -100,7 +100,7 @@ export function Lightbox({
           <motion.img
             alt={currentPhoto.title}
             animate={{ opacity: 1, scale: 1 }}
-            className="h-auto max-h-[70vh] w-full object-contain"
+            className="h-auto max-h-[80vh] w-full object-contain"
             height={currentPhoto.height ?? undefined}
             initial={{ opacity: 0, scale: 0.9 }}
             key={currentPhoto.id}

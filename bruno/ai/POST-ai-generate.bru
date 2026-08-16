@@ -4,14 +4,26 @@ meta {
   seq: 1
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/ai/generate
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "modelId": "",
+    "prompt": "",
+    "sourceImageUrl": ""
+  }
 }
 
 docs {
-  POST /api/ai/generate
+  Generate an image from a prompt, optionally from a source image.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  The result is copied to our own blob host before returning — fal serves from a temporary location that would expire under the board.
 }

@@ -4,14 +4,18 @@ meta {
   seq: 1
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/upload
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  POST /api/upload
+  Upload an image to blob storage.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  multipart/form-data with a single `file` field. Answers the blob URL the image is now served from.
 }

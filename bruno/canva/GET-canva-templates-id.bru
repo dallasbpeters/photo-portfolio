@@ -4,14 +4,16 @@ meta {
   seq: 6
 }
 
-GET {
+get {
   url: {{baseUrl}}/api/canva/templates/{{id}}
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/canva/templates/{id}
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  One brand template, with its data fields.
 }

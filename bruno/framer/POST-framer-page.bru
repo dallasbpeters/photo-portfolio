@@ -4,14 +4,22 @@ meta {
   seq: 1
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/framer/page
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "url": ""
+  }
 }
 
 docs {
-  POST /api/framer/page
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Read the images off a published Framer page.
 }

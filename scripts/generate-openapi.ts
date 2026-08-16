@@ -23,8 +23,16 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { stringify } from "yaml";
 import { z } from "zod";
+import { BOARD_SCHEMAS } from "../schemas/boards";
 import { ErrorResponse, NAMED_SCHEMAS } from "../schemas/domain";
+import { INTEGRATION_SCHEMAS } from "../schemas/integrations";
 import { OPERATIONS, type Operation } from "../schemas/routes";
+import { INTEGRATION_OPERATIONS } from "../schemas/routes.integrations";
+
+const ALL_OPERATIONS: Record<string, Operation> = {
+  ...OPERATIONS,
+  ...INTEGRATION_OPERATIONS,
+};
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const API_DIR = path.join(ROOT, "api");
@@ -99,24 +107,54 @@ const methodsOf = (source: string): Method[] => {
  * the document readable, and anything unlisted is inlined at its use site,
  * which is right for a one-off request body.
  */
+const ALL_NAMED = {
+  ...NAMED_SCHEMAS,
+  ...BOARD_SCHEMAS,
+  ...INTEGRATION_SCHEMAS,
+} as Record<string, z.ZodType>;
+
 const byName = new Map<z.ZodType, string>(
-  Object.entries(NAMED_SCHEMAS).map(([name, schema]) => [
-    schema as z.ZodType,
-    name,
-  ])
+  Object.entries(ALL_NAMED).map(([name, schema]) => [schema as z.ZodType, name])
 );
 
+const components: Record<string, unknown> = {};
+
+/**
+ * One zod schema as JSON Schema, with anything it nests hoisted.
+ *
+ * zod emits a `$ref` into `$defs` for every nested schema carrying an id, so
+ * dropping `$defs` — as this did at first — leaves the refs dangling and the
+ * document fails validation. Pointing `uri` at the components section and
+ * merging the defs there keeps them resolvable, and named shapes end up
+ * defined once however many places nest them.
+ */
 const plain = (schema: z.ZodType): Record<string, unknown> => {
   const json = z.toJSONSchema(schema, { io: "output" }) as Record<
     string,
     unknown
   >;
+
+  const defs = json.$defs as Record<string, unknown> | undefined;
+  json.$defs = undefined;
   json.$schema = undefined;
-  return JSON.parse(JSON.stringify(json)) as Record<string, unknown>;
+
+  // zod points its refs at `#/$defs/...`; OpenAPI keeps shared schemas under
+  // `#/components/schemas/...`. Rewriting the whole subtree is simpler than
+  // walking it, and the two namespaces use the same names.
+  const retarget = <T>(value: T): T =>
+    JSON.parse(
+      JSON.stringify(value).replaceAll("#/$defs/", "#/components/schemas/")
+    ) as T;
+
+  if (defs) {
+    for (const [name, def] of Object.entries(defs)) {
+      components[name] ??= retarget(def);
+    }
+  }
+  return retarget(json) as Record<string, unknown>;
 };
 
-const components: Record<string, unknown> = {};
-for (const [name, schema] of Object.entries(NAMED_SCHEMAS)) {
+for (const [name, schema] of Object.entries(ALL_NAMED)) {
   components[name] = plain(schema as z.ZodType);
 }
 
@@ -207,7 +245,7 @@ for (const file of walk(API_DIR).sort(byCodeUnit)) {
   const source = readFileSync(file, "utf8");
   paths[p] ??= {};
   for (const method of methodsOf(source)) {
-    const spec = OPERATIONS[`${method.toUpperCase()} ${p}`];
+    const spec = ALL_OPERATIONS[`${method.toUpperCase()} ${p}`];
     total += 1;
     if (spec) {
       described += 1;

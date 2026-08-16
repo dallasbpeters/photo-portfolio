@@ -4,14 +4,23 @@ meta {
   seq: 2
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/sites/provision
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "",
+    "region": ""
+  }
 }
 
 docs {
-  POST /api/sites/provision
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Create a Vercel project and a Neon database for a new site.
 }

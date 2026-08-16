@@ -4,14 +4,16 @@ meta {
   seq: 4
 }
 
-GET {
+get {
   url: {{baseUrl}}/api/canva/status
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  GET /api/canva/status
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Whether Canva is connected, and until when.
 }

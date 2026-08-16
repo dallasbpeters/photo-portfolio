@@ -4,14 +4,14 @@ meta {
   seq: 2
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/ai/icon-webhook
   body: none
   auth: none
 }
 
 docs {
-  POST /api/ai/icon-webhook
+  Delivery callback for a queued icon generation.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Called by fal, not by the app. Authenticated by the signature on the request rather than a bearer token.
 }

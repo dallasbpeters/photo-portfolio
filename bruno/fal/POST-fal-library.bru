@@ -4,14 +4,16 @@ meta {
   seq: 2
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/fal/library
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 docs {
-  POST /api/fal/library
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Page through the library.
 }

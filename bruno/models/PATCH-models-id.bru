@@ -4,14 +4,29 @@ meta {
   seq: 1
 }
 
-PATCH {
+patch {
   url: {{baseUrl}}/api/models/{{id}}
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "enabled": false,
+    "id": "",
+    "imageParam": "image_url",
+    "input": "",
+    "label": "",
+    "lora": "",
+    "sortOrder": 0,
+    "vector": false
+  }
 }
 
 docs {
-  PATCH /api/models/{id}
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Update a model.
 }

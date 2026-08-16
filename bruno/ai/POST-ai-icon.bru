@@ -4,14 +4,23 @@ meta {
   seq: 3
 }
 
-POST {
+post {
   url: {{baseUrl}}/api/ai/icon
-  body: none
-  auth: none
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "prompt": "",
+    "style": ""
+  }
 }
 
 docs {
-  POST /api/ai/icon
-
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  Generate an SVG icon.
 }

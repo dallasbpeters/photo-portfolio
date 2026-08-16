@@ -4,14 +4,14 @@ meta {
   seq: 1
 }
 
-GET {
+get {
   url: {{baseUrl}}/api/boards/{{id}}
   body: none
   auth: none
 }
 
 docs {
-  GET /api/boards/{id}
+  One board, with items and wires.
 
-  Not yet described in schemas/routes.ts — path and method were read from the handler.
+  A published board is readable without a token; `sources` is omitted in that case.
 }
