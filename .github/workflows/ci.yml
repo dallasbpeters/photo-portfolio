@@ -1,16 +1,18 @@
 name: CI
 
-# Checks run on every push and pull request. Migrations run only after a push
-# to main passes those checks — see the `migrate` job below for why that
-# ordering matters.
+# Checks only. Migrations are not run here: each Vercel project's own build
+# command is `pnpm db:migrate && pnpm build`, so every deploy brings its own
+# database up to date using that environment's DATABASE_URL — including the
+# Neon branch a preview deployment gets. A separate CI job would duplicate
+# that, and could not guarantee it ran first anyway, since Vercel builds start
+# on push in parallel with this workflow.
 on:
   push:
     branches: [main]
   pull_request:
 
 concurrency:
-  # A newer push to the same branch supersedes this run. Migrations especially
-  # should not race each other against the same database.
+  # A newer push to the same branch supersedes this run.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -60,56 +62,3 @@ jobs:
             git diff --stat -- openapi.json openapi.yaml bruno
             exit 1
           fi
-
-  migrate:
-    name: Migrate ${{ matrix.site }}
-    # Only after the checks pass, and only for main. Migrating ahead of a
-    # failing build is how a database ends up describing code that never
-    # shipped.
-    needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    strategy:
-      # Sequential rather than parallel: three databases that must end up at
-      # the same schema, and a failure on the first should stop the rest rather
-      # than leave the estate half-migrated.
-      max-parallel: 1
-      fail-fast: true
-      matrix:
-        include:
-          - site: addison
-            secret: DATABASE_URL_ADDISON
-          - site: cyan
-            secret: DATABASE_URL_CYAN
-          - site: dallas-images
-            secret: DATABASE_URL_DALLAS_IMAGES
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Fail early if the connection string is missing
-        env:
-          DATABASE_URL: ${{ secrets[matrix.secret] }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::error::Secret ${{ matrix.secret }} is not set. Add each site's production Neon connection string under Settings → Secrets → Actions."
-            exit 1
-          fi
-
-      # Every patch is `IF NOT EXISTS`, so re-running is a no-op on a database
-      # that is already current. That is what makes this safe to run on every
-      # push rather than only when db/ changes.
-      - name: Run migrations
-        env:
-          DATABASE_URL: ${{ secrets[matrix.secret] }}
-        run: pnpm db:migrate
