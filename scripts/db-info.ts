@@ -39,16 +39,35 @@ try {
     await client.query("SELECT system_identifier FROM pg_control_system()")
   ).rows as { system_identifier: string }[];
 
-  const counts = await client.query<{ label: string; n: number }>(`
-    SELECT 'photos' AS label, count(*)::int AS n FROM photos
-    UNION ALL SELECT 'users', count(*)::int FROM users
-    UNION ALL SELECT 'site_settings', count(*)::int FROM site_settings
-    ORDER BY label
-  `);
+  // Counted one table at a time, tolerating absence. A fresh Neon branch has
+  // no schema yet, and "which database is this" has to be answerable before
+  // the migrations have run — that is exactly when you most need to check.
+  const countOf = async (table: string): Promise<string> => {
+    try {
+      const r = await client.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM ${table}`
+      );
+      return String(r.rows[0]?.n ?? 0);
+    } catch {
+      return "— (table missing)";
+    }
+  };
 
-  const sites = await client.query<{ site_key: string }>(
-    "SELECT site_key FROM site_settings ORDER BY site_key"
-  );
+  const counts = [
+    { label: "photos", n: await countOf("photos") },
+    { label: "site_settings", n: await countOf("site_settings") },
+    { label: "users", n: await countOf("users") },
+  ];
+
+  let siteKeys = "— (table missing)";
+  try {
+    const r = await client.query<{ site_key: string }>(
+      "SELECT site_key FROM site_settings ORDER BY site_key"
+    );
+    siteKeys = r.rows.map((x) => x.site_key).join(", ") || "none";
+  } catch {
+    // Left as the placeholder above.
+  }
 
   process.stdout.write(
     [
@@ -58,8 +77,8 @@ try {
       `  user              ${username}`,
       `  system_identifier ${id}`,
       "",
-      ...counts.rows.map((r) => `  ${r.label.padEnd(17)} ${r.n}`),
-      `  site keys         ${sites.rows.map((r) => r.site_key).join(", ") || "none"}`,
+      ...counts.map((r) => `  ${r.label.padEnd(17)} ${r.n}`),
+      `  site keys         ${siteKeys}`,
       "",
       "  Two connection strings reporting the same system_identifier are the",
       "  same database. Compare before running anything destructive.",
