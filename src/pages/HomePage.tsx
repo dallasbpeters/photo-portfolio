@@ -68,8 +68,13 @@ export const HomePage = () => {
     reportedError.current = message;
   }, [loadError]);
 
+  // Published only, to match the grid. An admin signed in on the public page
+  // otherwise gets a filter for a category whose every photograph is hidden,
+  // which selects and then shows nothing.
   const categoriesInUse = useMemo(() => {
-    const keys = [...new Set(photos.map((p) => p.category))];
+    const keys = [
+      ...new Set(photos.filter((p) => p.isPublished).map((p) => p.category)),
+    ];
     keys.sort((a, b) => a.localeCompare(b));
     return keys;
   }, [photos]);
@@ -105,8 +110,12 @@ export const HomePage = () => {
       .catch(() => undefined);
   }, []);
 
+  // Published only, stated here rather than relied on from the endpoint. The
+  // API returns unpublished rows to an admin, and this page is reachable while
+  // signed in — without this the gallery would show a visitor's view to
+  // everyone except the one person able to tell it was wrong.
   const filteredPhotos = photos.filter(
-    (p) => viewMode === "all" || p.category === viewMode
+    (p) => p.isPublished && (viewMode === "all" || p.category === viewMode)
   );
   const heroPhotos = photos
     .filter((p) => p.isPublished && p.isFeatured)

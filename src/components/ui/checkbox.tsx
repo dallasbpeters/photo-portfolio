@@ -11,7 +11,18 @@ const Checkbox = function Checkbox({
 }) {
   return (
     <span className={cn("relative inline-flex h-4 w-4 shrink-0", className)}>
-      <input className="peer sr-only" ref={ref} type="checkbox" {...props} />
+      {/* Transparent and stretched over the box rather than `sr-only`.
+          `sr-only` clips the input to a 1px square in the corner, so the
+          visible box below — an aria-hidden sibling with no behaviour of its
+          own — swallowed every click. The control looked correct, and both the
+          keyboard and a bound <label> worked, so the only symptom was that
+          clicking the checkbox did nothing. */}
+      <input
+        className="peer absolute inset-0 z-10 m-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+        ref={ref}
+        type="checkbox"
+        {...props}
+      />
       {/* Box */}
       <span
         aria-hidden

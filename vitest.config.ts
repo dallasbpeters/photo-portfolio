@@ -1,4 +1,5 @@
 import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
@@ -12,6 +13,11 @@ import { defineConfig } from "vitest/config";
  * for the toolchain and asserts on real pixels.
  */
 export default defineConfig({
+  // Tailwind must run here too. A test that asks what sits under the pointer
+  // is asking about geometry, and without the utilities the control has no
+  // size — the checkbox rendered 414x69 instead of 16x16 and every hit test
+  // was meaningless.
+  plugins: [tailwindcss()],
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, "./src") },
   },

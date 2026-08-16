@@ -388,7 +388,11 @@ export const portfolioService = {
   getPhotos: async (): Promise<Photo[]> => {
     let res: Response;
     try {
-      res = await fetch(photosPath());
+      // Sent with credentials when there are any. The endpoint answers
+      // `WHERE ${isAdmin} OR p.is_published`, so without the header an admin
+      // was served the visitor's list: a photograph hidden from the site
+      // disappeared from the library too, and could never be shown again.
+      res = await fetch(photosPath(), { headers: jsonHeaders() });
     } catch (cause) {
       if (import.meta.env.DEV) {
         const url = photosPath();
