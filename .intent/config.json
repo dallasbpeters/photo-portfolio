@@ -1,0 +1,166 @@
+{
+  "scripts": [
+    {
+      "name": "api:docs",
+      "command": "pnpm api:docs",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "bruno",
+      "command": "pnpm bruno",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "build",
+      "command": "pnpm build",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:addison",
+      "command": "pnpm build:addison",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:cyan",
+      "command": "pnpm build:cyan",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:dallas-images",
+      "command": "pnpm build:dallas-images",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "check:size",
+      "command": "pnpm check:size",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "clean",
+      "command": "pnpm clean",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:add-user",
+      "command": "pnpm db:add-user",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:info",
+      "command": "pnpm db:info",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:migrate",
+      "command": "pnpm db:migrate",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:seed",
+      "command": "pnpm db:seed",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:verify-login",
+      "command": "pnpm db:verify-login",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "dev",
+      "command": "pnpm dev",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:addison",
+      "command": "pnpm dev:addison",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:cyan",
+      "command": "pnpm dev:cyan",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "dev:dallas-images",
+      "command": "pnpm dev:dallas-images",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "fix",
+      "command": "pnpm fix",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "lint",
+      "command": "pnpm lint",
+      "mode": "command",
+      "category": "lint"
+    },
+    {
+      "name": "lora:upload",
+      "command": "pnpm lora:upload",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "openapi",
+      "command": "pnpm openapi",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "preview",
+      "command": "pnpm preview",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "test",
+      "command": "pnpm test",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:watch",
+      "command": "pnpm test:watch",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "ultracite",
+      "command": "pnpm ultracite",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "vercel:blob:create",
+      "command": "pnpm vercel:blob:create",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "vercel:env:pull",
+      "command": "pnpm vercel:env:pull",
+      "mode": "command",
+      "category": "other"
+    }
+  ]
+}

@@ -157,7 +157,7 @@ function BoardHeaderActions({
         aria-label="Comments"
         className={`min-h-11 rounded px-2 text-[10px] uppercase tracking-[0.18em] transition-colors ${
           showComments
-            ? "bg-amber-300/15 text-amber-300"
+            ? "bg-amber-300/15 text-amber-800"
             : "text-board-ink/70 hover:text-board-ink"
         }`}
         onClick={onToggleComments}
@@ -167,7 +167,7 @@ function BoardHeaderActions({
       </button>
       {publicUrl ? (
         <button
-          className="max-w-40 truncate text-[10px] text-emerald-300/80 underline-offset-2 hover:underline"
+          className="max-w-40 truncate text-[10px] text-emerald-500 underline-offset-2 hover:underline"
           onClick={() => {
             void navigator.clipboard.writeText(publicUrl);
             toast.success("Link copied");

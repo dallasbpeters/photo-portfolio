@@ -54,11 +54,11 @@ jobs:
 
       # The document is generated, so a route added without regenerating it
       # would leave the committed copy stale. Regenerate and fail on a diff.
-      - name: OpenAPI and Bruno are current
+      - name: OpenAPI is current
         run: |
           pnpm api:docs
-          if ! git diff --quiet -- openapi.json openapi.yaml bruno; then
-            echo "::error::openapi.json / bruno are out of date. Run 'pnpm api:docs' and commit."
-            git diff --stat -- openapi.json openapi.yaml bruno
+          if ! git diff --quiet -- openapi.json openapi.yaml; then
+            echo "::error::openapi.json / openapi.yaml are out of date. Run 'pnpm api:docs' and commit."
+            git diff --stat -- openapi.json openapi.yaml
             exit 1
           fi
