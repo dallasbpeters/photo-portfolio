@@ -1,3 +1,66 @@
+# Working in this repository
+
+Project-specific notes. The Ultracite standards further down are generic; what
+follows is the handful of things that have actually broken production here.
+
+## CodeGraph is indexed — query it before grep
+
+`.codegraph/` exists at the repo root, so structural questions are answered from
+the index rather than by reading files:
+
+- `codegraph_explore` — MCP tool. Verbatim source, call paths and blast radius in one call.
+- `codegraph explore "<symbols or question>"` — same output from the shell, available even when the MCP server is not connected.
+
+Read the **blast radius** section before changing any shared symbol: it lists
+every caller and flags symbols with no covering tests. `codegraph impact <sym>`
+and `codegraph callers <sym>` answer the narrower questions.
+
+Trust it for structure — who calls what, what breaks. Re-read the actual lines
+before editing them; the index lags writes by roughly a second.
+
+## Three sites, three separate databases
+
+`addison`, `cyan` and `dallas-images` are separate Vercel projects, each with
+its own Neon database. Only `site_settings` is keyed by site — `photos`,
+`users` and `categories` have no site column, because nothing is shared.
+
+**Migrate every database before deploying code that reads a new column.**
+Deploying first takes the un-migrated sites down: `PHOTO_COLUMNS` is consumed by
+both `api/photos/index.ts` and `api/shell.ts`, so one added column 503s every
+photo endpoint on any database that lacks it. Ask CodeGraph for the blast radius
+of a shared constant before touching it.
+
+```bash
+DATABASE_URL='<that site's production string>' pnpm db:migrate
+```
+
+Patches are idempotent (`ADD COLUMN IF NOT EXISTS`), so re-running is safe.
+
+`vercel env pull` defaults to the **development** environment. Pass
+`--environment=production`, or you will migrate a database the live site never
+reads and the failure will look unchanged.
+
+## The site key must match exactly
+
+`resolveSite()` compares `VITE_SITE` / `SITE` literally. An unmatched key falls
+through to the default site's configuration and serves that site's branding
+rather than erroring, so a typo looks like a styling bug. The deployed keys are
+`addison`, `cyan` and `dallas-images`.
+
+Locally, `scripts/dev-stack.mjs` mirrors `VITE_SITE` into `SITE`: the browser
+bundle reads the first and the serverless functions read the second.
+
+## Commands
+
+```bash
+pnpm test     # vitest in real Chromium — canvas code needs a real canvas,
+              # jsdom returns null from getContext and every assertion passes
+pnpm lint     # tsc --noEmit
+pnpm dlx ultracite check
+```
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
