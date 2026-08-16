@@ -21,6 +21,8 @@
     "lint": "tsc --noEmit",
     "lora:upload": "tsx scripts/upload-lora.ts",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "ultracite": "npx ultracite fix",
     "vercel:blob:create": "vercel blob create-store",
     "vercel:env:pull": "vercel env pull .env.development.local"
@@ -92,6 +94,8 @@
     "@types/react": "^19.2.14",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^19.2.3",
+    "@vitest/browser": "^4.1.10",
+    "@vitest/browser-playwright": "^4.1.10",
     "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
     "pg": "^8.14.1",
@@ -102,6 +106,7 @@
     "ultracite": "^7.10.1",
     "vercel": "^50.37.3",
     "vite": "^6.2.0",
+    "vitest": "^4.1.10",
     "wait-on": "^8.0.1"
   }
 }
