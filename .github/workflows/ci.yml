@@ -1,0 +1,115 @@
+name: CI
+
+# Checks run on every push and pull request. Migrations run only after a push
+# to main passes those checks — see the `migrate` job below for why that
+# ordering matters.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # A newer push to the same branch supersedes this run. Migrations especially
+  # should not race each other against the same database.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The suite runs in real Chromium rather than jsdom — the canvas and
+      # hit-testing assertions are meaningless without a browser — so the
+      # browser has to be present.
+      - name: Install Chromium for vitest
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Typecheck and file-size ceiling
+        run: pnpm lint
+
+      - name: Lint
+        run: pnpm exec ultracite check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      # The document is generated, so a route added without regenerating it
+      # would leave the committed copy stale. Regenerate and fail on a diff.
+      - name: OpenAPI and Bruno are current
+        run: |
+          pnpm api:docs
+          if ! git diff --quiet -- openapi.json bruno; then
+            echo "::error::openapi.json / bruno are out of date. Run 'pnpm api:docs' and commit."
+            git diff --stat -- openapi.json bruno
+            exit 1
+          fi
+
+  migrate:
+    name: Migrate ${{ matrix.site }}
+    # Only after the checks pass, and only for main. Migrating ahead of a
+    # failing build is how a database ends up describing code that never
+    # shipped.
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Sequential rather than parallel: three databases that must end up at the
+    # same schema, and a failure on the first should stop the rest rather than
+    # leave the estate half-migrated.
+    max-parallel: 1
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - site: addison
+            secret: DATABASE_URL_ADDISON
+          - site: cyan
+            secret: DATABASE_URL_CYAN
+          - site: dallas-images
+            secret: DATABASE_URL_DALLAS_IMAGES
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Fail early if the connection string is missing
+        env:
+          DATABASE_URL: ${{ secrets[matrix.secret] }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Secret ${{ matrix.secret }} is not set. Add each site's production Neon connection string under Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      # Every patch is `IF NOT EXISTS`, so re-running is a no-op on a database
+      # that is already current. That is what makes this safe to run on every
+      # push rather than only when db/ changes.
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets[matrix.secret] }}
+        run: pnpm db:migrate

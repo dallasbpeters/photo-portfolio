@@ -78,7 +78,7 @@ export function Lightbox({
 
       {/* The backdrop's handler already ignores clicks that land on a
           descendant, so this wrapper needs no handler of its own. */}
-      <div className="max-h-[80vh] w-full max-w-5xl px-12">
+      <div className="max-h-[90vh] w-full max-w-8xl px-12">
         {currentPhoto.showChrome ? (
           <BrowserChrome url={currentPhoto.chromeUrl}>
             {/* No max-height and no object-contain: inside the frame the

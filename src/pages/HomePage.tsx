@@ -189,7 +189,7 @@ export const HomePage = () => {
         <SiteNav pages={pages} />
       </header>
       <section className="relative z-40 flex h-screen w-full items-center overflow-hidden">
-        <div className="absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:w-[70%] md:px-24">
+        <div className="absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:px-24">
           <div className="space-y-1 md:space-y-2">
             {heroPhotos.map((photo, i) => (
               <button
