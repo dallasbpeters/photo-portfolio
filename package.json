@@ -13,6 +13,7 @@
     "check:size": "tsx scripts/check-file-size.ts",
     "clean": "rm -rf dist",
     "db:add-user": "tsx scripts/add-user.ts",
+    "db:info": "tsx scripts/db-info.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:verify-login": "tsx scripts/verify-login.ts",

@@ -18,11 +18,22 @@ and `codegraph callers <sym>` answer the narrower questions.
 Trust it for structure — who calls what, what breaks. Re-read the actual lines
 before editing them; the index lags writes by roughly a second.
 
-## Three sites, three separate databases
+## Three sites, three separate databases — and no separate dev database
 
 `addison`, `cyan` and `dallas-images` are separate Vercel projects, each with
 its own Neon database. Only `site_settings` is keyed by site — `photos`,
 `users` and `categories` have no site column, because nothing is shared.
+
+**Within a project, Development and Production point at the same Neon instance.**
+The two connection strings differ by password, which makes them look like two
+databases; they are not. `pnpm dev` reads and writes live data, and a
+destructive statement aimed at "the dev database" hits the real site. This was
+established the hard way — an `UPDATE ... WHERE show_chrome is true` intended
+as test cleanup wiped the live configuration.
+
+Run `pnpm db:info` before anything destructive. It prints the host and the
+Postgres `system_identifier`, which is the only reliable answer to "is this the
+same database" — two URLs reporting the same identifier are one instance.
 
 **Migrate every database before deploying code that reads a new column.**
 Deploying first takes the un-migrated sites down: `PHOTO_COLUMNS` is consumed by
@@ -53,11 +64,27 @@ bundle reads the first and the serverless functions read the second.
 ## Commands
 
 ```bash
+pnpm db:info  # which database am I pointed at, really
 pnpm test     # vitest in real Chromium — canvas code needs a real canvas,
               # jsdom returns null from getContext and every assertion passes
-pnpm lint     # tsc --noEmit
+pnpm lint     # tsc --noEmit + the 500-line ceiling
+pnpm api:docs # regenerate openapi.json, openapi.yaml and bruno/
 pnpm dlx ultracite check
 ```
+
+## Giving local development its own database
+
+Until this is done, `pnpm dev` writes to the live site. To separate them:
+
+1. Neon console → the project → **Branches** → create a branch from `main`,
+   named `dev`. It is copy-on-write, so it is instant, costs nothing extra, and
+   starts with a full copy of the real data.
+2. Copy that branch's pooled connection string.
+3. Vercel → the project → Settings → Environment Variables → set
+   `DATABASE_URL` for **Development only** to that string.
+4. `pnpm db:info` — the `system_identifier` must now differ from production's.
+
+Reset it whenever it drifts by deleting and recreating the branch.
 
 ---
 

@@ -68,8 +68,31 @@ for (const port of PORTS) {
 await new Promise((r) => setTimeout(r, 500));
 
 console.log(
-  `\n[${process.env.VITE_SITE || "addison"}] Starting dev server → http://localhost:${PORT}\n`
+  `\n[${process.env.VITE_SITE || "addison"}] Starting dev server → http://localhost:${PORT}`
 );
+
+// Name the database on every start.
+//
+// `vercel dev` pulls the Development environment, and for a long time that was
+// the same Neon instance as Production — the connection strings differ only by
+// password, so nothing on screen said the local server was reading and writing
+// the live site. Printing the host makes that impossible to be unsure about.
+// `pnpm db:info` gives the full answer, including the system identifier.
+const dbUrl = (
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  ""
+).trim();
+if (dbUrl) {
+  try {
+    console.log(`  database → ${new URL(dbUrl).hostname}\n`);
+  } catch {
+    console.log("  database → (unparseable DATABASE_URL)\n");
+  }
+} else {
+  // vercel dev pulls env itself, so this is the normal case locally.
+  console.log("  database → pulled by vercel dev; run `pnpm db:info` to see\n");
+}
 
 // The browser bundle reads VITE_SITE, but the serverless functions read SITE —
 // on Vercel both are set on the project. Locally only VITE_SITE is passed in, so
