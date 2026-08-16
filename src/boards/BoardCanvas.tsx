@@ -297,6 +297,8 @@ type Gesture =
       origin: SnapBox;
       /** Which corner was taken. Decides which corner stays still. */
       handle: ResizeHandle;
+      /** Snap targets, built once when the gesture began. */
+      snap: SnapIndex;
     };
 
 /**
@@ -379,13 +381,6 @@ export function BoardCanvas({
     }
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
-  /**
-   * Snap targets for the gesture in flight, built once when it starts.
-   *
-   * The one-shot helper rebuilt its coordinate arrays on every pointermove,
-   * which is the per-frame cost the indexed version exists to remove.
-   */
-  const snapIndexRef = useRef<SnapIndex | null>(null);
 
   // Ids outlive indices but not deletion: an item removed by an undo, a delete
   // or a concurrent edit must fall out of the selection rather than linger as
@@ -872,10 +867,6 @@ export function BoardCanvas({
       // put from here on, rather than re-framing on the next container resize.
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
-      snapIndexRef.current = buildSnapIndex(items, {
-        exclude: [item.id],
-        includeCanvas: true,
-      });
       const isFrame = item.kind === "frame";
       // Shift or cmd adds to the selection instead of replacing it, and does
       // not begin a drag — picking several one by one should not nudge them.
@@ -938,11 +929,6 @@ export function BoardCanvas({
       }
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
-      // The item being resized is excluded so it cannot snap to itself.
-      snapIndexRef.current = buildSnapIndex(items, {
-        exclude: [item.id],
-        includeCanvas: true,
-      });
       gesture.current = {
         handle,
         index,
@@ -953,6 +939,14 @@ export function BoardCanvas({
           x: item.x,
           y: item.y,
         },
+        // Built once, here: the one-shot helper rebuilt its coordinate arrays
+        // on every pointermove, which is the per-frame cost the indexed version
+        // exists to remove. The item being resized is excluded so it cannot
+        // snap to itself.
+        snap: buildSnapIndex(items, {
+          exclude: [item.id],
+          includeCanvas: true,
+        }),
         startX: p.x,
         startY: p.y,
       };
@@ -1045,12 +1039,9 @@ export function BoardCanvas({
       });
       // Only the dragged edges snap. The pinned corner is the whole meaning of
       // a resize, so a snap that moved it would be a move in disguise.
-      const resizeIndex = snapIndexRef.current;
-      const sized = resizeIndex
-        ? snapResize(dragged, g.handle, resizeIndex, {
-            scale: view.viewport.scale,
-          })
-        : { ...dragged, guides: NO_GUIDES };
+      const sized = snapResize(dragged, g.handle, g.snap, {
+        scale: view.viewport.scale,
+      });
       setGuides(sized.guides);
       onChange(
         items.map((it, i) =>
@@ -1271,6 +1262,7 @@ export function BoardCanvas({
       >
         <div
           className="relative origin-top-left outline outline-board-ink/5"
+          ref={view.layerRef}
           style={{
             height: CANVAS_HEIGHT,
             transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,

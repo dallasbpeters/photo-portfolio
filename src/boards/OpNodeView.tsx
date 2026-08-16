@@ -20,6 +20,8 @@ import {
 } from "./itemOutput";
 import { useModels } from "./ModelsContext";
 import { PaletteSwatches } from "./PaletteSwatches";
+import "./OpNodeView.css";
+import { Button } from "@/components/ui/button";
 
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
@@ -370,7 +372,7 @@ function RunningGlow() {
       className="pointer-events-none absolute -inset-1 animate-gradient-spin rounded-lg"
       style={{
         background:
-          "conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(52.74% 0.21 281.43deg) 30deg, oklch(73.91% 0.22 322.89deg) 60deg, transparent 100deg, transparent 360deg)",
+          "conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(69.01% 0.16 243.17) 30deg, oklch(81.41% 0.17 111.22) 60deg, transparent 100deg, transparent 360deg)",
         filter: "blur(20px)",
       }}
     />
@@ -571,9 +573,9 @@ export function OpNodeView({
     <>
       {isRunning ? <RunningGlow /> : null}
 
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded bg-board-panel/95">
-        <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-2 py-1">
-          <span className="flex items-center gap-1 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
+      <div className="op-node-view">
+        <header className="op-node-view__header">
+          <span className="op-node-view__title">
             <HugeiconsIcon
               aria-hidden
               icon={isSource ? TextIcon : SparklesIcon}
@@ -583,7 +585,7 @@ export function OpNodeView({
           </span>
           {isSource ? null : (
             <span
-              className={`text-[9px] uppercase tracking-widest ${STATE_CLASS[state]}`}
+              className={`text-[10px] uppercase tracking-widest ${STATE_CLASS[state]}`}
             >
               {STATE_LABEL[state]}
             </span>
@@ -612,12 +614,12 @@ export function OpNodeView({
           // dividing by the zoom made it 45% of the node's width at 220% and
           // wider than the node below 100% — the button never fit its box.
           // Scaling with the node, like the prompt field above it, is correct.
-          <footer className="flex shrink-0 items-center gap-1 border-board-ink/10 border-t p-1">
+          <footer className="op-node-view__footer">
             {/* The same button stops what it started. A separate Stop would sit
                 disabled and useless most of the time, and a running generation
                 is exactly when the Run button has nothing else to offer. */}
-            <button
-              className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded border border-board-ink/20 text-[10px] text-board-ink/80 uppercase tracking-[0.18em] hover:bg-board-ink hover:text-board-surface"
+            <Button
+              fullWidth
               onClick={() => (isRunning ? onCancel?.() : onRun(false))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
@@ -628,18 +630,18 @@ export function OpNodeView({
                 size={12}
               />
               {isRunning ? "Stop" : "Run"}
-            </button>
+            </Button>
             {item.result ? (
-              <button
+              <Button
                 aria-label="Run again, ignoring the stored result"
-                className="flex min-h-8 items-center justify-center rounded border border-board-ink/20 px-2 text-board-ink/60 hover:text-board-ink disabled:opacity-40"
                 disabled={isRunning}
+                fullWidth
                 onClick={() => onRun(true)}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
               >
                 <HugeiconsIcon icon={RefreshIcon} size={12} />
-              </button>
+              </Button>
             ) : null}
           </footer>
         )}

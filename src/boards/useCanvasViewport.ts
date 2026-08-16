@@ -1,12 +1,13 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  CANVAS_HEIGHT,
-  CANVAS_WIDTH,
-  clampScale,
-  START_VIEW_HEIGHT,
-  START_VIEW_WIDTH,
-} from "../../config/canvas.js";
+  frameBounds,
+  frameCanvas,
+  toCanvas as toCanvasPoint,
+  zoomAt as zoomAtPoint,
+  zoomByAtCentre,
+  zoomByWheel,
+} from "./viewportModel";
 
 export interface Viewport {
   /** Canvas units per CSS pixel. */
@@ -41,6 +42,13 @@ export interface CanvasViewport {
    */
   frameContent: () => void;
   isPanning: boolean;
+  /**
+   * The element carrying the transform.
+   *
+   * Attached by the canvas so a pan can write `style.transform` straight to
+   * the DOM. React state is resynced once, when the gesture ends.
+   */
+  layerRef: RefObject<HTMLDivElement | null>;
   /**
    * Records that the board has been taken hold of by something this hook cannot
    * see, such as dragging an item. Nothing re-frames the view afterwards.
@@ -98,9 +106,6 @@ const scrollableUnder = (
   }
   return null;
 };
-
-/** How much one wheel notch zooms. */
-const WHEEL_SENSITIVITY = 0.0015;
 
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y);
@@ -174,6 +179,32 @@ export const useCanvasViewport = (
   );
   const [isPanning, setIsPanning] = useState(false);
 
+  /**
+   * The viewport as it is right now, which during a gesture is ahead of state.
+   *
+   * Panning used to call setViewport per pointermove, re-rendering the canvas
+   * and every item on it at pointer rate — measured at ~35,000 item renders
+   * per second of panning on a 500-item board. The ref plus a direct
+   * `style.transform` write moves the whole gesture off the React path;
+   * `commitViewport` puts state back in step once, at the end.
+   */
+  const viewportRef = useRef<Viewport>(viewport);
+  const layerRef = useRef<HTMLDivElement | null>(null);
+
+  /** Writes the viewport to the DOM without telling React. */
+  const applyDirect = useCallback((next: Viewport) => {
+    viewportRef.current = next;
+    layerRef.current?.style.setProperty(
+      "transform",
+      `translate(${next.tx}px, ${next.ty}px) scale(${next.scale})`
+    );
+  }, []);
+
+  /** Puts React state back in step with the ref, once. */
+  const commitViewport = useCallback(() => {
+    setViewport(viewportRef.current);
+  }, []);
+
   // Live pointer positions, keyed by pointerId. Two of them means a pinch.
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const panOrigin = useRef<{ tx: number; ty: number; x: number; y: number }>({
@@ -210,20 +241,14 @@ export const useCanvasViewport = (
     if (!el) {
       return;
     }
-    const { width, height } = el.getBoundingClientRect();
-    // A little breathing room so the edges are not flush with the frame.
-    const scale = clampScale(
-      Math.min(width / START_VIEW_WIDTH, height / START_VIEW_HEIGHT) * 0.92
-    );
     // The opening screenful sits in the middle of the canvas, which is also
     // where an item with nowhere else to go is dropped — see dropPoint.
-    const left = (CANVAS_WIDTH - START_VIEW_WIDTH) / 2;
-    const top = (CANVAS_HEIGHT - START_VIEW_HEIGHT) / 2;
-    setViewport({
-      scale,
-      tx: (width - START_VIEW_WIDTH * scale) / 2 - left * scale,
-      ty: (height - START_VIEW_HEIGHT * scale) / 2 - top * scale,
-    });
+    // Null on a zero-sized container, where the old code produced a plausible
+    // but wrong view at MIN_SCALE that then never re-framed.
+    const framed = frameCanvas(el.getBoundingClientRect());
+    if (framed) {
+      setViewport(framed);
+    }
   }, [containerRef]);
 
   const fitToBounds = useCallback(
@@ -232,21 +257,14 @@ export const useCanvasViewport = (
       if (!el || bounds.width <= 0 || bounds.height <= 0) {
         return false;
       }
-      const { width, height } = el.getBoundingClientRect();
       // Reports failure rather than silently doing nothing: a caller that marks
       // itself done on a zero-sized container never frames the board at all.
-      if (width === 0 || height === 0) {
+      // frameBounds answers null in exactly that case.
+      const framed = frameBounds(bounds, el.getBoundingClientRect());
+      if (!framed) {
         return false;
       }
-      // Margin so the outermost items are not flush against the frame.
-      const scale = clampScale(
-        Math.min(width / bounds.width, height / bounds.height) * 0.85
-      );
-      setViewport({
-        scale,
-        tx: (width - bounds.width * scale) / 2 - bounds.x * scale,
-        ty: (height - bounds.height * scale) / 2 - bounds.y * scale,
-      });
+      setViewport(framed);
       return true;
     },
     [containerRef]
@@ -295,6 +313,13 @@ export const useCanvasViewport = (
     fitCanvas();
   }, [fitCanvas, markUserMoved]);
 
+  // Anything that sets state — framing, the zoom buttons, a restored view —
+  // must leave the ref agreeing with it, or the next gesture would start from
+  // a stale origin.
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
   const toCanvas = useCallback(
     (clientX: number, clientY: number) => {
       const el = containerRef.current;
@@ -302,36 +327,24 @@ export const useCanvasViewport = (
         return { x: 0, y: 0 };
       }
       const rect = el.getBoundingClientRect();
-      return {
-        x: (clientX - rect.left - viewport.tx) / viewport.scale,
-        y: (clientY - rect.top - viewport.ty) / viewport.scale,
-      };
+      // From the ref, not state: during a gesture state is behind, and a
+      // conversion against a stale viewport puts the pointer in the wrong
+      // place. Reading the ref also keeps this callback's identity stable,
+      // which matters because it is closed over all over the canvas.
+      return toCanvasPoint(viewportRef.current, clientX, clientY, rect);
     },
-    [containerRef, viewport]
+    [containerRef]
   );
 
   /** Zooms while keeping the given screen point pinned to the same canvas point. */
   const zoomAt = useCallback(
     (nextScaleRaw: number, screenX: number, screenY: number) => {
-      setViewport((v) => {
-        const nextScale = clampScale(nextScaleRaw);
-        const el = containerRef.current;
-        if (!el) {
-          return v;
-        }
-        const rect = el.getBoundingClientRect();
-        const px = screenX - rect.left;
-        const py = screenY - rect.top;
-        // The canvas point under the cursor before the zoom must land under it
-        // again afterwards; solving for the new offset gives this.
-        const canvasX = (px - v.tx) / v.scale;
-        const canvasY = (py - v.ty) / v.scale;
-        return {
-          scale: nextScale,
-          tx: px - canvasX * nextScale,
-          ty: py - canvasY * nextScale,
-        };
-      });
+      const el = containerRef.current;
+      if (!el) {
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      setViewport((v) => zoomAtPoint(v, nextScaleRaw, screenX, screenY, rect));
     },
     [containerRef]
   );
@@ -344,18 +357,7 @@ export const useCanvasViewport = (
       }
       markUserMoved();
       const rect = el.getBoundingClientRect();
-      setViewport((v) => {
-        const nextScale = clampScale(v.scale * factor);
-        const px = rect.width / 2;
-        const py = rect.height / 2;
-        const canvasX = (px - v.tx) / v.scale;
-        const canvasY = (py - v.ty) / v.scale;
-        return {
-          scale: nextScale,
-          tx: px - canvasX * nextScale,
-          ty: py - canvasY * nextScale,
-        };
-      });
+      setViewport((v) => zoomByAtCentre(v, factor, rect));
     },
     [containerRef, markUserMoved]
   );
@@ -379,21 +381,8 @@ export const useCanvasViewport = (
       e.preventDefault();
       markUserMoved();
       // A trackpad pinch arrives as ctrlKey+wheel; both should zoom.
-      setViewport((v) => {
-        const nextScale = clampScale(
-          v.scale * Math.exp(-e.deltaY * WHEEL_SENSITIVITY)
-        );
-        const rect = el.getBoundingClientRect();
-        const px = e.clientX - rect.left;
-        const py = e.clientY - rect.top;
-        const canvasX = (px - v.tx) / v.scale;
-        const canvasY = (py - v.ty) / v.scale;
-        return {
-          scale: nextScale,
-          tx: px - canvasX * nextScale,
-          ty: py - canvasY * nextScale,
-        };
-      });
+      const rect = el.getBoundingClientRect();
+      setViewport((v) => zoomByWheel(v, e.deltaY, e.clientX, e.clientY, rect));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -446,24 +435,29 @@ export const useCanvasViewport = (
         return;
       }
       const o = panOrigin.current;
-      setViewport((v) => ({
-        ...v,
+      applyDirect({
+        ...viewportRef.current,
         tx: o.tx + (e.clientX - o.x),
         ty: o.ty + (e.clientY - o.y),
-      }));
+      });
     },
-    [isPanning, zoomAt]
+    [applyDirect, isPanning, zoomAt]
   );
 
-  const endPointer = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) {
-      pinchStart.current = null;
-    }
-    if (pointers.current.size === 0) {
-      setIsPanning(false);
-    }
-  }, []);
+  const endPointer = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size < 2) {
+        pinchStart.current = null;
+      }
+      if (pointers.current.size === 0) {
+        setIsPanning(false);
+        // One render for the whole gesture, rather than one per frame.
+        commitViewport();
+      }
+    },
+    [commitViewport]
+  );
 
   /**
    * Frames the items the first time the board has any.
@@ -485,6 +479,7 @@ export const useCanvasViewport = (
     fitToBounds,
     frameContent,
     isPanning,
+    layerRef,
     markUserMoved,
     // Handlers are spread onto the container by the canvas component.
     onPointerCancel: endPointer,

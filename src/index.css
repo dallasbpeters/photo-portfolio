@@ -466,6 +466,20 @@
   --btn-danger-solid-bg: oklch(0.637 0.237 25.331);
   --btn-danger-solid-fg: rgb(255 255 255);
   --btn-danger-solid-hover-bg: oklch(0.577 0.245 27.325);
+  /* Typography Scale - Perfect Fourth (1.333) */
+  --text-xs: 0.528rem;
+  --text-sm: 0.703rem;
+  --text-base: 0.938rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.666rem;
+  --text-2xl: 2.221rem;
+  --text-3xl: 2.96rem;
+  --text-4xl: 3.946rem;
+  --text-5xl: 5.26rem;
+  --text-6xl: 7.011rem;
+  --text-7xl: 9.346rem;
+  --text-8xl: 12.458rem;
+  --text-9xl: 16.606rem;
 }
 
 /*
