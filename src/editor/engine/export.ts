@@ -123,7 +123,13 @@ export const applyTransform = (
   source: HTMLCanvasElement,
   transform: CanvasTransform
 ): HTMLCanvasElement => {
-  const { height: rotatedWidth, width: rotatedHeight } = rotatedSize(
+  // These two were transposed — `height` was being read into `rotatedWidth` and
+  // `width` into `rotatedHeight`. The preview path below (`drawFitted`) and the
+  // editor shell both destructure this correctly, so the crop looked right on
+  // screen and came out wrong in the file: the export canvas was allocated with
+  // the axes swapped, the source was drawn into it off-centre, and the crop
+  // rectangle's x/y were then scaled against the opposite dimension.
+  const { height: rotatedHeight, width: rotatedWidth } = rotatedSize(
     source.width,
     source.height,
     transform.rotation
