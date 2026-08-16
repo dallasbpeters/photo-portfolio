@@ -21,13 +21,18 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { stringify } from "yaml";
 import { z } from "zod";
 import { ErrorResponse, NAMED_SCHEMAS } from "../schemas/domain";
 import { OPERATIONS, type Operation } from "../schemas/routes";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const API_DIR = path.join(ROOT, "api");
-const OUT = path.join(ROOT, "openapi.json");
+// Both forms, from one build. YAML is what most editors and API clients want
+// pasted in and what reads best in review; JSON is what tooling parses without
+// a dependency. Neither is written by hand, so they cannot disagree.
+const OUT_JSON = path.join(ROOT, "openapi.json");
+const OUT_YAML = path.join(ROOT, "openapi.yaml");
 
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 type Method = (typeof METHODS)[number];
@@ -232,7 +237,11 @@ const document = {
   ],
 };
 
-writeFileSync(OUT, `${JSON.stringify(document, null, 2)}\n`);
+writeFileSync(OUT_JSON, `${JSON.stringify(document, null, 2)}\n`);
+writeFileSync(
+  OUT_YAML,
+  stringify(document, { aliasDuplicateObjects: false, lineWidth: 0 })
+);
 process.stdout.write(
-  `openapi.json — ${Object.keys(paths).length} paths, ${total} operations, ${described} with described bodies (${total - described} to go).\n`
+  `openapi.json + openapi.yaml — ${Object.keys(paths).length} paths, ${total} operations, ${described} with described bodies (${total - described} to go).\n`
 );

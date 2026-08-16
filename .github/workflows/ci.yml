@@ -55,9 +55,9 @@ jobs:
       - name: OpenAPI and Bruno are current
         run: |
           pnpm api:docs
-          if ! git diff --quiet -- openapi.json bruno; then
+          if ! git diff --quiet -- openapi.json openapi.yaml bruno; then
             echo "::error::openapi.json / bruno are out of date. Run 'pnpm api:docs' and commit."
-            git diff --stat -- openapi.json bruno
+            git diff --stat -- openapi.json openapi.yaml bruno
             exit 1
           fi
 
