@@ -40,6 +40,7 @@ import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import { OUTPUT_PORT_KEY } from "../../../config/ports.js";
+import { AutoplayToggle } from "../../boards/AutoplayToggle";
 import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
@@ -1286,12 +1287,9 @@ export function BoardEditor({
   };
 
   /**
-   * Images dragged onto the board.
-   *
-   * Working material — a reference shot, a sketch, something to feed a node —
-   * stored and pinned to the board and nothing else. Publishing is a separate
-   * act: a photograph reaches the site only through a `photos` row, which this
-   * deliberately never writes.
+   * Images dragged onto the board: working material, pinned to the board and
+   * nothing else. Publishing is a separate act — a photograph reaches the site
+   * only through a `photos` row, which this deliberately never writes.
    */
   /**
    * Uploads already-prepared files and places them on the board. Shared by the
@@ -1868,6 +1866,7 @@ export function BoardEditor({
           {/* Floating over the canvas: a tool wants to be near its subject. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
             <div className="pointer-events-auto">
+              <AutoplayToggle items={items} />
               <MaskControls onChange={changeMask} selected={selectedItem} />
               <BoardDrawTools
                 onConfigChange={changeConfig}

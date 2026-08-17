@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { OptimizedImage } from "../components/OptimizedImage";
+import { usePrefersReducedMotion } from "../lib/reducedMotion";
 import { imageLayout, isImageAlign } from "./imageAttributes";
 
 /**
@@ -133,7 +134,22 @@ const renderImage = (node: Node): ReactNode => {
   );
 };
 
-const renderPageVideo = (node: Node): ReactNode => {
+/**
+ * A clip in a published page.
+ *
+ * A component rather than a render function because it reads a media query:
+ * an autoplaying loop is precisely what `prefers-reduced-motion` is for, so
+ * someone who has asked for less movement gets the poster frame and a play
+ * button instead. Everyone else gets the clip already running.
+ *
+ * Muted is what makes autoplay legal as well as bearable — every browser
+ * refuses to start an unmuted video on its own, so a clip with sound would
+ * simply sit there. Controls stay: a page is read rather than arranged, there
+ * is no drag gesture for a control bar to swallow, and a reader who wants it
+ * to stop should be able to say so.
+ */
+function PageVideo({ node }: { node: Node }) {
+  const still = usePrefersReducedMotion();
   const src = safeHref(node.attrs?.src);
   if (!src) {
     return null;
@@ -141,24 +157,24 @@ const renderPageVideo = (node: Node): ReactNode => {
   const layout = mediaLayout(node.attrs);
   return (
     <figure className={`my-8 ${layout.className}`} style={layout.style}>
-      {/* Controls, because a page is read rather than arranged — there is no
-          drag gesture here for a control bar to swallow. Muted and looping,
-          and never autoplaying: a page that makes noise on load is the one
-          thing every reader agrees about. */}
       {/* biome-ignore lint/a11y/useMediaCaption: an admin-authored clip has no
           caption track to offer, and a silent decorative video needs none */}
       <video
+        autoPlay={!still}
         className="h-auto w-full"
         controls
         loop
         muted
         playsInline
-        preload="metadata"
+        // Autoplay fetches the whole clip regardless, so claiming "metadata"
+        // here described something that was never going to happen. Held back
+        // only when it is not going to start on its own.
+        preload={still ? "metadata" : "auto"}
         src={src}
       />
     </figure>
   );
-};
+}
 
 const renderNodes = (nodes: Node[] | undefined, keyPrefix = "n"): ReactNode =>
   (nodes ?? []).map((node, i) => (
@@ -239,7 +255,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
       return renderImage(node);
 
     case "pageVideo":
-      return renderPageVideo(node);
+      return <PageVideo node={node} />;
 
     default:
       // Unknown node: render its children if it has any, otherwise skip.
