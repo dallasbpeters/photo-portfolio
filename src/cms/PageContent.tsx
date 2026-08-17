@@ -157,8 +157,6 @@ function PageVideo({ node }: { node: Node }) {
   const layout = mediaLayout(node.attrs);
   return (
     <figure className={`my-8 ${layout.className}`} style={layout.style}>
-      {/* biome-ignore lint/a11y/useMediaCaption: an admin-authored clip has no
-          caption track to offer, and a silent decorative video needs none */}
       <video
         autoPlay={!still}
         className="h-auto w-full"
