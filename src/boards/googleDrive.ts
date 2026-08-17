@@ -207,15 +207,24 @@ const openPicker = (
     /**
      * Your own images, flat and searchable. The first tab, and the default.
      *
-     * GRID so the photos are browsable as a wall rather than a list. Under
-     * drive.file Google's guidance is that thumbnails may not render (the
-     * scope does not cover them), in which case tiles come up blank — the
-     * reason LIST was used originally. In practice the picker often loads the
-     * thumbnails through the signed-in browser session, so a grid is worth
-     * trying; fall back to LIST if the tiles are blank.
+     * LIST, not GRID, and this is not a preference.
+     *
+     * Under `drive.file` the picker cannot render thumbnails: the scope grants
+     * this app access only to files it created or you have already handed it,
+     * and a thumbnail for a file in neither category is a file the app may not
+     * read. GRID was tried on the theory that the picker loads them through
+     * your signed-in browser session instead. It does not — every tile came up
+     * blank, which is worse than a list, because a wall of blank squares reads
+     * as a broken picker rather than as a scope boundary.
+     *
+     * A list shows names, sizes and dates, all of which Google does send. The
+     * only way to get thumbnails is `drive.readonly` — read everything in the
+     * account — which is a restricted scope needing Google's security
+     * assessment, and far more than picking a few references is worth. See
+     * SCOPE above.
      */
     const images = new picker.DocsView(picker.ViewId.DOCS_IMAGES)
-      .setMode(picker.DocsViewMode.GRID)
+      .setMode(picker.DocsViewMode.LIST)
       .setMimeTypes(PICKABLE_TYPES);
 
     /** Browsing by folder, for when you know exactly where the work is. */

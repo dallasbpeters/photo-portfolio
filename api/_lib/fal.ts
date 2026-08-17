@@ -142,7 +142,11 @@ const bodyFor = (
       loras: [{ path: lora.path, scale: lora.scale }],
       prompt: withTrigger,
       // image_url only when there is one: the plain endpoint rejects it.
-      ...(sourceImageUrl ? { image_url: sourceImageUrl } : {}),
+      // `strength` goes with it, and only with it — the text-to-image endpoint
+      // has no such field. See LORA_STRENGTH for why it is sent at all.
+      ...(sourceImageUrl
+        ? { image_url: sourceImageUrl, strength: LORA_STRENGTH }
+        : {}),
     };
   }
   if (shape === "image") {
@@ -170,6 +174,21 @@ const bodyFor = (
     ? { ...imageField(sourceImageUrl), prompt }
     : { prompt };
 };
+
+/**
+ * How much of a wired picture a LoRA is allowed to repaint.
+ *
+ * fal-ai/flux-lora/image-to-image defaults this to 0.85, and this app never
+ * sent it — so wiring a photograph into a style node repainted 85% of it and
+ * handed back something with no visible relationship to the input. That reads
+ * as the LoRA being broken rather than as a parameter nobody set.
+ *
+ * 0.7 keeps the composition and the subject legible while still restyling.
+ * There is no correct value: below about 0.5 the style stops arriving, above
+ * about 0.8 the source stops surviving, and where in between depends on the
+ * LoRA. This is the value to change when a restyle is too faithful or too free.
+ */
+const LORA_STRENGTH = 0.7;
 
 /** Models that accept a color palette as a parameter rather than as prose. */
 const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
