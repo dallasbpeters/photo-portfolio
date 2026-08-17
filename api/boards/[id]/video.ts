@@ -70,7 +70,11 @@ const bodyFor = (
   duration: string
 ): Record<string, unknown> => ({
   [imageParam || "image_url"]: imageUrl,
-  prompt,
+  // Only when there is one. Background removal and upscaling take a clip and
+  // nothing else, and an empty `prompt` sent to a schema that declares no such
+  // field is a 422 — after the call has been made, like every other way of
+  // getting a video request wrong.
+  ...(prompt ? { prompt } : {}),
   // A string, because every schema that takes it declares an enum of strings —
   // "5", "10" — and a number is rejected after the request has been made.
   ...(duration ? { duration } : {}),
@@ -101,7 +105,7 @@ const submit = async (
   if (!imageUrl) {
     return res
       .status(400)
-      .json({ error: "A video needs a picture to animate." });
+      .json({ error: "A video node needs a picture or a clip wired into it." });
   }
 
   const model = typeof body.model === "string" ? body.model : "";

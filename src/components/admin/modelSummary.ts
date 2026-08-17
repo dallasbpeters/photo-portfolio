@@ -13,7 +13,9 @@ const INPUT_LABELS: Record<FalModelInput, string> = {
   image: "Image only",
   prompt: "Prompt only",
   "prompt-and-image": "Prompt and image (both)",
+  "prompt-and-video": "Prompt and video (both)",
   "prompt-or-image": "Prompt or image",
+  video: "Video only",
 };
 
 /** Falls back to the raw value: a shape added to the table but not here should

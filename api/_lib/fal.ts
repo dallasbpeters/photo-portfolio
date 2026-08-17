@@ -100,9 +100,24 @@ const bodyFor = (
   shape: FalModelInput,
   prompt: string,
   sourceImageUrl: string | null | undefined,
-  /** "image_url" for most, "image_urls" for the few that take a list. */
-  imageParam: "image_url" | "image_urls"
+  /** What this endpoint calls its source: "image_url" for most. */
+  imageParam: NonNullable<FalModelDef["imageParam"]>
 ): Record<string, unknown> => {
+  /*
+   * A clip is not this function's business.
+   *
+   * The video shapes are served by the queue — api/boards/[id]/video.ts — the
+   * same way every `output: "video"` row is, because reworking a clip takes
+   * minutes and neither the request timeout nor the serverless ceiling will
+   * wait. Falling through to the branches below would send a video URL as
+   * `image_url` to an endpoint that never asked for one, which fal answers
+   * with a 422 after the call has been made.
+   */
+  if (shape === "video" || shape === "prompt-and-video") {
+    throw new Error(
+      "This model reworks a clip; run it from a Video node rather than here"
+    );
+  }
   /**
    * The source image under whichever name this endpoint expects.
    *
@@ -112,7 +127,7 @@ const bodyFor = (
    * was one of seven. The style is read into words now — see elementBrief.ts.
    */
   const imageField = (url: string): Record<string, unknown> =>
-    imageParam === "image_urls" ? { image_urls: [url] } : { image_url: url };
+    imageParam === "image_urls" ? { image_urls: [url] } : { [imageParam]: url };
 
   if (lora) {
     // The trigger token is prepended rather than left to be remembered. A LoRA

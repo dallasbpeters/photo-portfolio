@@ -16,10 +16,12 @@ CREATE TABLE IF NOT EXISTS models (
   id TEXT PRIMARY KEY,
   label TEXT NOT NULL,
   -- What the model consumes. One of prompt / image / prompt-and-image /
-  -- prompt-or-image; see FalModelInput in config/nodeTypes.ts.
+  -- prompt-or-image / video / prompt-and-video; see FalModelInput in
+  -- config/nodeTypes.ts.
   input TEXT NOT NULL,
-  -- What the endpoint calls its source image. Orthogonal to `input`: these
-  -- endpoints disagree about the parameter's name as well as its necessity.
+  -- What the endpoint calls its source media. Orthogonal to `input`: these
+  -- endpoints disagree about the parameter's name as well as its necessity,
+  -- and a clip is a different name again.
   image_param TEXT NOT NULL DEFAULT 'image_url',
   -- True when the model returns vector art rather than a raster. It decides
   -- what a result claims to be, which is not cosmetic.
@@ -48,20 +50,32 @@ ALTER TABLE models DROP CONSTRAINT IF EXISTS models_label;
 ALTER TABLE models
   ADD CONSTRAINT models_label CHECK (length(btrim(label)) > 0);
 
+-- `video` and `prompt-and-video` are the endpoints that rework a clip rather
+-- than make one: background removal, upscaling, restyling. They are reached
+-- through the queue like every other video row — a clip takes minutes — and
+-- they are the reason `video_url` joins the parameter list below.
 ALTER TABLE models DROP CONSTRAINT IF EXISTS models_input;
 ALTER TABLE models
   ADD CONSTRAINT models_input
-  CHECK (input IN ('prompt', 'image', 'prompt-and-image', 'prompt-or-image'));
+  CHECK (input IN (
+    'prompt', 'image', 'prompt-and-image', 'prompt-or-image',
+    'video', 'prompt-and-video'
+  ));
 
 -- Widened here rather than only in a later patch. Every patch re-runs on every
 -- migration, so this is not a one-time delta — it is the current definition, and
 -- an older narrower one here fails against rows a later patch legitimately
 -- wrote. `start_image_url` is Kling v3's name for its source picture; see
 -- db/patches/028_video_model_params.sql for why one family disagrees with itself.
+-- `video_url` is the name the video-to-video endpoints use for their source
+-- clip; the column has always been "what this endpoint calls the thing you feed
+-- it" rather than specifically an image, and this is where that shows.
 ALTER TABLE models DROP CONSTRAINT IF EXISTS models_image_param;
 ALTER TABLE models
   ADD CONSTRAINT models_image_param
-  CHECK (image_param IN ('image_url', 'image_urls', 'start_image_url'));
+  CHECK (image_param IN (
+    'image_url', 'image_urls', 'start_image_url', 'video_url'
+  ));
 
 -- The default model's shape is what the API's "auto" behaviour is built on;
 -- letting it be edited would make the fallback mean something different from

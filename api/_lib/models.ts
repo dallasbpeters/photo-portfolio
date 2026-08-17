@@ -105,6 +105,12 @@ export const loadModelRows = async (
   return rows;
 };
 
+export const isModelImageParam = (
+  value: unknown
+): value is NonNullable<FalModelDef["imageParam"]> =>
+  typeof value === "string" &&
+  (MODEL_IMAGE_PARAMS as readonly string[]).includes(value);
+
 export const isModelInput = (value: unknown): value is FalModelInput =>
   typeof value === "string" &&
   (MODEL_INPUTS as readonly string[]).includes(value);
@@ -131,7 +137,12 @@ export const rowToModelDef = (row: ModelRow): FalModelDef => {
     : undefined;
   return {
     id: row.id,
-    imageParam: row.image_param === "image_urls" ? "image_urls" : undefined,
+    // The stored name, not a guess at it. Collapsing anything unfamiliar to
+    // `image_url` is what made a Kling v3 row send the field its own schema
+    // rejects; the column exists precisely because these endpoints disagree.
+    imageParam: isModelImageParam(row.image_param)
+      ? row.image_param
+      : undefined,
     input: isModelInput(row.input) ? row.input : "prompt-or-image",
     label: row.label,
     lora,

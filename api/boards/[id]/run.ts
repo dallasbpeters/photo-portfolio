@@ -236,18 +236,16 @@ const iteratedOutputsOf = (
 /**
  * The template filled in, once per row of the value lists.
  *
- * Each wire fills its own placeholder: the first list goes into the first slot,
- * the second into the second, and so on. That is what makes "a {} card with the
- * word {}" work with a list of colors and a list of words — replacing every
- * slot with the same value, which is what a naive replace does, produced "a
+ * Each wire fills its own placeholder — first list, first slot — which is what
+ * makes "a {} card with the word {}" work with a list of colors and a list of
+ * words. A naive replace fills every slot with the same value and produced "a
  * Brainstorm card with the word Brainstorm".
  *
  * Lists are read across rather than combined: four colors and five words give
- * five prompts, not twenty. A cross product is occasionally what someone wants
- * and is never what they expect, and it multiplies what a run costs.
- *
- * A list shorter than the longest repeats. Truncating to the shortest would
- * silently drop values that were deliberately typed in.
+ * five prompts, not twenty. A cross product is occasionally what someone wants,
+ * never what they expect, and it multiplies what a run costs. A list shorter
+ * than the longest repeats rather than truncating, which would silently drop
+ * values that were deliberately typed in.
  */
 const expandTemplate = (
   template: string,
@@ -311,16 +309,13 @@ const splitValues = (raw: string, mode: unknown): string[] => {
 };
 
 /**
- * A palette node's line of text.
- *
- * Written as a sentence containing the hex codes, which is the one shape that
- * serves both mechanisms: a model that can only be asked reads it as English,
- * and Ideogram v3 has the codes lifted back out into a real color palette.
+ * A palette node's line of text. Written as a sentence containing the hex
+ * codes, the one shape that serves both mechanisms: a model that can only be
+ * asked reads it as English, and Ideogram v3 has the codes lifted back out.
  */
 /**
- * What a palette sends: one constraint, or one color at a time.
- *
- * Sending them separately is what lets an Iterate node work through a palette —
+ * What a palette sends: one constraint, or one color at a time. Separately is
+ * what lets an Iterate node work through a palette —
  * a slot filled with each color in turn, one image per color — rather than
  * every color being pressed into a single image.
  */
@@ -352,21 +347,15 @@ const paletteTextOf = (config: Record<string, unknown>): string | null => {
 };
 
 /**
- * A Combine node's value: whatever feeds it, joined.
- *
- * Its output is a function of its inputs rather than of anything stored on it,
- * which is what makes it different from a Prompt node — so it is computed here
- * on every read instead of being saved anywhere.
- *
- * The depth limit is a backstop only. hasCycle already refuses a graph that
- * loops, and this recursion is bounded by that same acyclic structure.
+ * A Combine node's value: whatever feeds it, joined. Its output is a function
+ * of its inputs rather than of anything stored on it — unlike a Prompt node —
+ * so it is computed on every read. The depth limit is a backstop only:
+ * hasCycle already refuses a graph that loops.
  */
 /**
- * Everything wired into a Batch node, flattened in wire order.
- *
- * Recurses through outputsOf rather than singleOutputOf, so a frame wired into
- * a batch contributes all of its pictures rather than only its first — which
- * is the whole point of putting one there.
+ * Everything wired into a Batch node, flattened in wire order. Recurses through
+ * outputsOf rather than singleOutputOf, so a frame contributes all its pictures
+ * rather than only its first — the whole point of putting one there.
  */
 const batchOutputsOf = (
   row: BoardItemRow,
@@ -1044,6 +1033,20 @@ const unmetRequirement = (
   if (ignored) {
     return ignored;
   }
+  /*
+   * A clip-consuming model reached through the wrong door. `video` and
+   * `prompt-and-video` rework an existing clip, and everything returning one
+   * goes through the queue — see api/boards/[id]/video.ts. Sent from here it
+   * would submit a video URL as an image, which fal answers with a 422 after
+   * the call has been made.
+   */
+  if (shape === "video" || shape === "prompt-and-video") {
+    const label = falModelFor(models, model)?.label ?? "This model";
+    return {
+      error: `${label} reworks a clip. Use a Video node, and wire the clip into it.`,
+      missingPort: "image",
+    };
+  }
   if (shape === "prompt-and-image") {
     // Both, so both are checked before anything is spent.
     if ((values.image?.length ?? 0) === 0) {
@@ -1325,20 +1328,17 @@ const prepare = async (
   }
 
   // Every wired image becomes a job, each validated before being forwarded:
-  // these URLs are handed to a third party to go and fetch.
-  // Analyse is the exception. Its job is to look at a picture and write down
-  // what it sees, so handing it words describing a style would be handing it
-  // the answer to the question it was asked.
+  // these URLs are handed to a third party to go and fetch. Analyse is the
+  // exception — its job is to look and write down what it sees, so words
+  // describing a style would be handing it the answer to its own question.
   //
-  // The brief wins over the description when there is one. A description is
-  // seeded from a Describe node and, set to "subject", reads "a digital
-  // painting of a person's head and shoulders" — appended to a prompt that is
-  // meant to restyle a different picture, it tells the model to draw that
-  // person instead. The brief cannot say that: it is read under `focus:
-  // "style"`, which forbids naming a subject. The description is still the
-  // fallback for an element whose brief has not been read yet.
-  // `jobsFor` has already put the briefs in each prompt, so this is only the
-  // fallback: nothing to add when a brief was read.
+  // The brief wins over the description. A description is seeded from a
+  // Describe node and, set to "subject", reads "a digital painting of a
+  // person's head and shoulders" — appended to a prompt meant to restyle a
+  // different picture, it tells the model to draw that person instead. The
+  // brief cannot say that: read under `focus: "style"`, it may not name a
+  // subject. `jobsFor` has already put the briefs in each prompt, so the
+  // description is only the fallback for an element not yet read.
   const styleWords = element.briefs.length > 0 ? [] : element.words;
   const wordsForJobs = type.capability === "fal.describe" ? [] : styleWords;
   const { dropped, jobs } = validatedJobs(

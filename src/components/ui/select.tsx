@@ -111,7 +111,7 @@ function SelectLabel({
 }: SelectPrimitive.GroupLabel.Props) {
   return (
     <SelectPrimitive.GroupLabel
-      className={cn("px-1.5 py-1 text-muted-foreground text-xs", className)}
+      className={cn("px-1.5 py-1 text-foreground text-xs", className)}
       data-slot="select-label"
       {...props}
     />
