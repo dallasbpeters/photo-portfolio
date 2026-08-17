@@ -16,6 +16,7 @@ import { useId, useMemo, useState } from "react";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import type { BoardItemKind } from "../types";
+import { ToolPrompt } from "./ToolPrompt";
 import type { ToolContext } from "./tools/itemContext";
 import { blockedReason, searchTools, toolsForKind } from "./tools/registry";
 import { TOOL_GROUPS, type Tool, type ToolGroup } from "./tools/types";
@@ -262,7 +263,6 @@ export function ToolPicker({
   const [cursor, setCursor] = useState(0);
   /** The tool waiting for words, or null while the list is being browsed. */
   const [pending, setPending] = useState<Tool | null>(null);
-  const [prompt, setPrompt] = useState("");
   const listId = useId();
 
   const rows = useMemo(
@@ -308,15 +308,6 @@ export function ToolPicker({
     onPick(row.tool);
   };
 
-  /** Submits the collected words. Refuses empty, which is the whole point. */
-  const submitPrompt = () => {
-    const words = prompt.trim();
-    if (!(pending && words)) {
-      return;
-    }
-    onPick(pending, words);
-  };
-
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -342,58 +333,15 @@ export function ToolPicker({
   if (pending) {
     // The list is replaced rather than covered: this is one decision made in
     // two steps, and leaving the rows behind a panel invites picking a second
-    // tool while the first is still waiting for its words.
+    // tool while the first still waits for its words. ToolPrompt is its own
+    // component so the item's bar can reuse the same step.
     return (
       <div className={cn(SHELL, className)}>
-        <div className="flex items-center gap-2 border-board-ink/10 border-b px-3 py-2">
-          <button
-            aria-label="Back to tools"
-            className="text-[11px] text-board-ink/50 uppercase tracking-widest hover:text-board-ink"
-            onClick={() => {
-              setPending(null);
-              setPrompt("");
-            }}
-            type="button"
-          >
-            ←
-          </button>
-          <span className="truncate font-medium text-[12px] text-board-ink">
-            {pending.label}
-          </span>
-        </div>
-        <div className="flex flex-col gap-2 p-3">
-          <textarea
-            aria-label={`What should ${pending.label} do?`}
-            // biome-ignore lint/a11y/noAutofocus: this step exists only to be typed into
-            autoFocus
-            className="h-20 w-full resize-none rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none placeholder:text-board-ink/30 focus:border-board-ink/45"
-            onChange={(event) => setPrompt(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                setPending(null);
-                setPrompt("");
-                return;
-              }
-              // Enter submits, Shift+Enter breaks the line: the field is one
-              // sentence far more often than it is a paragraph.
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                submitPrompt();
-              }
-            }}
-            placeholder="Describe what you want…"
-            value={prompt}
-          />
-          <button
-            className="self-end rounded bg-board-ink px-3 py-1.5 text-[11px] text-board-surface uppercase tracking-widest disabled:opacity-40"
-            disabled={prompt.trim().length === 0}
-            onClick={submitPrompt}
-            type="button"
-          >
-            Run
-          </button>
-        </div>
+        <ToolPrompt
+          onCancel={() => setPending(null)}
+          onSubmit={(words) => onPick(pending, words)}
+          tool={pending}
+        />
       </div>
     );
   }

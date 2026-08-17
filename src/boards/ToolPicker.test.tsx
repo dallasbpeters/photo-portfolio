@@ -302,7 +302,7 @@ describe("ToolPicker — the prompt step", () => {
     box.querySelector<HTMLButtonElement>("button:not([role='option'])");
     const run = Array.from(
       box.querySelectorAll<HTMLButtonElement>("button")
-    ).find((button) => button.textContent === "Run");
+    ).find((button) => button.textContent?.startsWith("Run "));
     expect(run?.disabled).toBe(true);
     run?.click();
     await flush();
@@ -317,7 +317,7 @@ describe("ToolPicker — the prompt step", () => {
 
     const run = Array.from(
       box.querySelectorAll<HTMLButtonElement>("button")
-    ).find((button) => button.textContent === "Run");
+    ).find((button) => button.textContent?.startsWith("Run "));
     run?.click();
     await flush();
 
@@ -331,7 +331,7 @@ describe("ToolPicker — the prompt step", () => {
     await flush();
     const back = Array.from(
       box.querySelectorAll<HTMLButtonElement>("button")
-    ).find((button) => button.getAttribute("aria-label") === "Back to tools");
+    ).find((button) => button.textContent === "Cancel");
     back?.click();
     await flush();
 
