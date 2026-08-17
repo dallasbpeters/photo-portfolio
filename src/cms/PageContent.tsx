@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { OptimizedImage } from "../components/OptimizedImage";
+import { usePrefersReducedMotion } from "../lib/reducedMotion";
 import { imageLayout, isImageAlign } from "./imageAttributes";
 
 /**
@@ -97,6 +98,82 @@ const applyMarks = (
   }, text);
 };
 
+// Alignment and width are set in the editor; without honouring them here the
+// page would ignore the formatting the writer just applied. Images and videos
+// share the vocabulary, so the toolbar's controls mean one thing rather than
+// two and the two lay out alike.
+const mediaLayout = (attrs: Record<string, unknown> | undefined) => {
+  const align = isImageAlign(attrs?.align) ? attrs.align : "center";
+  const width = typeof attrs?.width === "number" ? attrs.width : null;
+  return imageLayout(align, width);
+};
+
+const renderImage = (node: Node): ReactNode => {
+  const src = safeHref(node.attrs?.src);
+  if (!src) {
+    return null;
+  }
+  const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
+  const layout = mediaLayout(node.attrs);
+  return (
+    <figure className={`my-8 ${layout.className}`} style={layout.style}>
+      {/* Routed through image optimization like the gallery, so page media
+          is not served at full resolution either. */}
+      <OptimizedImage
+        alt={alt}
+        className="h-auto w-full"
+        sizes="(min-width: 768px) 720px, 100vw"
+        src={src}
+      />
+      {alt ? (
+        <figcaption className="mt-2 text-[10px] text-white/80 uppercase tracking-[0.18em]">
+          {alt}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+};
+
+/**
+ * A clip in a published page.
+ *
+ * A component rather than a render function because it reads a media query:
+ * an autoplaying loop is precisely what `prefers-reduced-motion` is for, so
+ * someone who has asked for less movement gets the poster frame and a play
+ * button instead. Everyone else gets the clip already running.
+ *
+ * Muted is what makes autoplay legal as well as bearable — every browser
+ * refuses to start an unmuted video on its own, so a clip with sound would
+ * simply sit there. Controls stay: a page is read rather than arranged, there
+ * is no drag gesture for a control bar to swallow, and a reader who wants it
+ * to stop should be able to say so.
+ */
+function PageVideo({ node }: { node: Node }) {
+  const still = usePrefersReducedMotion();
+  const src = safeHref(node.attrs?.src);
+  if (!src) {
+    return null;
+  }
+  const layout = mediaLayout(node.attrs);
+  return (
+    <figure className={`my-8 ${layout.className}`} style={layout.style}>
+      <video
+        autoPlay={!still}
+        className="h-auto w-full"
+        controls
+        loop
+        muted
+        playsInline
+        // Autoplay fetches the whole clip regardless, so claiming "metadata"
+        // here described something that was never going to happen. Held back
+        // only when it is not going to start on its own.
+        preload={still ? "metadata" : "auto"}
+        src={src}
+      />
+    </figure>
+  );
+}
+
 const renderNodes = (nodes: Node[] | undefined, keyPrefix = "n"): ReactNode =>
   (nodes ?? []).map((node, i) => (
     // biome-ignore lint/suspicious/noArrayIndexKey: document nodes have no stable id and the tree is re-rendered whole rather than reordered, so position is the correct identity
@@ -172,38 +249,11 @@ const renderNode = (node: Node, key: string): ReactNode => {
     case "hardBreak":
       return <br />;
 
-    case "image": {
-      const src = safeHref(node.attrs?.src);
-      if (!src) {
-        return null;
-      }
-      const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
-      // Alignment and width are set in the editor; without honouring them here
-      // the page would ignore the formatting the writer just applied.
-      const align = isImageAlign(node.attrs?.align)
-        ? node.attrs.align
-        : "center";
-      const width =
-        typeof node.attrs?.width === "number" ? node.attrs.width : null;
-      const layout = imageLayout(align, width);
-      return (
-        <figure className={`my-8 ${layout.className}`} style={layout.style}>
-          {/* Routed through image optimization like the gallery, so page media
-              is not served at full resolution either. */}
-          <OptimizedImage
-            alt={alt}
-            className="h-auto w-full"
-            sizes="(min-width: 768px) 720px, 100vw"
-            src={src}
-          />
-          {alt ? (
-            <figcaption className="mt-2 text-[10px] text-white/80 uppercase tracking-[0.18em]">
-              {alt}
-            </figcaption>
-          ) : null}
-        </figure>
-      );
-    }
+    case "image":
+      return renderImage(node);
+
+    case "pageVideo":
+      return <PageVideo node={node} />;
 
     default:
       // Unknown node: render its children if it has any, otherwise skip.

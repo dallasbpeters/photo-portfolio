@@ -2,10 +2,11 @@ import type { RefObject } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { BoardItem } from "../types";
+import { isVideoUrl } from "./isVideo";
 import { PANEL_GAP } from "./panelPlacement";
 import { ToolPicker } from "./ToolPicker";
 import { ToolPrompt } from "./ToolPrompt";
-import { toolContextOf } from "./tools/itemContext";
+import { imageOf, toolContextOf } from "./tools/itemContext";
 import { blockedReason, toolsForKind } from "./tools/registry";
 import type { Tool } from "./tools/types";
 import { useAnchoredPanel } from "./useAnchoredPanel";
@@ -46,6 +47,11 @@ interface BoardToolBarProps {
   /** True while a tool is running on this item, so the bar can say so. */
   isRunning: boolean;
   item: BoardItem;
+  /**
+   * Opens the manual editor on this item. Absent when there is no board to save
+   * to — the editor's whole purpose is producing a version to keep.
+   */
+  onEditManually?: () => void;
   /** Runs the tool. The words come from the picker when the tool needs them. */
   onRun: (
     tool: Tool,
@@ -59,6 +65,7 @@ export function BoardToolBar({
   chromeScale,
   isRunning,
   item,
+  onEditManually,
   onRun,
 }: BoardToolBarProps) {
   const [picking, setPicking] = useState(false);
@@ -75,20 +82,34 @@ export function BoardToolBar({
   const above = placement === "above";
 
   const context = toolContextOf(item);
+  // A clip has a URL and so passes `hasImage`, but the photo editor draws its
+  // source into a canvas — handed an mp4 it would open on nothing.
+  const canEditByHand =
+    Boolean(onEditManually) && !isVideoUrl(imageOf(item) ?? "");
   const applicable = toolsForKind(item.kind);
   // Runnable ones first: the bar is the quick path, and a row that leads with
   // something greyed out spends its space saying no. The blocked ones are still
   // reachable through the picker, which explains why.
-  // A tool whose only obstacle is missing words counts as runnable here: the
-  // step below supplies them, so `collecting` answers the question the bar is
-  // actually asking — could this run if I pressed it?
-  const collecting = { ...context, hasPrompt: true };
+  // A tool whose only obstacle is a missing prompt or a missing mask counts as
+  // runnable here: pressing it collects the words, or hands over the brush, so
+  // `collecting` answers the question the bar is actually asking — could this
+  // get somewhere if I pressed it? Greying Replace out instead left the one
+  // control that would ungrey it in a different toolbar, unrelated to it.
+  const collecting = { ...context, hasMask: true, hasPrompt: true };
   const quick = applicable
     .filter((tool) => blockedReason(tool, collecting) === null)
     .slice(0, BAR_LIMIT);
 
-  /** A press on the bar: run it, or ask for the words it needs first. */
+  /** A press on the bar: run it, or take the next step towards running it. */
   const choose = (tool: Tool) => {
+    // The area before the words, and both before the run. Asking what goes
+    // there and *then* discovering nothing has been painted would throw the
+    // typed answer away — the runner arms the brush and stops, so anything
+    // collected first would be collected twice.
+    if (tool.needsMask && !context.hasMask) {
+      onRun(tool);
+      return;
+    }
     if (tool.needsPrompt && !context.hasPrompt) {
       setPending(tool);
       return;
@@ -113,7 +134,7 @@ export function BoardToolBar({
   ) : (
     <ToolPicker
       className="border-0 shadow-none"
-      context={context}
+      context={collecting}
       kind={item.kind}
       onClose={() => setPicking(false)}
       onPick={(tool, prompt, config) => {
@@ -168,6 +189,19 @@ export function BoardToolBar({
             </Button>
           ))
         )}
+        {/* Beside the AI tools rather than buried in the picker: the choice
+            between describing a change and making it by hand is the first one,
+            not one of thirty. Only for items that have a picture to open. */}
+        {canEditByHand && context.hasImage ? (
+          <Button
+            onClick={() => onEditManually?.()}
+            size="xs"
+            title="Crop, straighten and grade by hand"
+            variant="ghost"
+          >
+            Edit by hand
+          </Button>
+        ) : null}
         <Button
           aria-expanded={picking || pending !== null}
           onClick={() => {

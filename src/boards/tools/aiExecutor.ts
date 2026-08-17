@@ -4,29 +4,26 @@
  * Everything here goes through `aiApi.generate`, which is POST /api/ai/generate
  * — the endpoint that already exists, is already admin-gated, and already
  * returns a URL on our own blob host rather than fal's expiring one. It takes
- * exactly two things: `{ prompt, sourceImageUrl }`.
+ * exactly four things: `{ prompt, sourceImageUrl, model, maskUrl }`, which is
+ * every argument `generateImage` in api/_lib/fal.ts takes.
  *
- * ## What that endpoint cannot do, and what is done about it
+ * ## Masks
  *
- * `generateImage` in api/_lib/fal.ts takes four arguments — prompt, source
- * image, requested model, mask — and routes between a text-to-image model, an
- * edit model, an inpainting endpoint and LoRA weights on the strength of the
- * last two. `/api/ai/generate` forwards only the first two. So from the client:
+ * A mask is a rendered bitmap's URL, not a `MaskConfig`: rasterising and
+ * uploading happens in `useBoardTools`, which is the surface that knows what
+ * the item is displaying and can pick the right pixel size. This file only
+ * forwards it.
  *
- * - **A mask cannot be sent.** There is no `maskUrl` in the request body.
- * - **A model cannot be chosen.** Every call resolves through `endpointFor` to
- *   nano-banana/edit (with an image) or the text-to-image default (without).
+ * It is forwarded only for a tool whose registry entry declares `needsMask`.
+ * A mask arriving for a tool that never asked for one is refused rather than
+ * dropped: an endpoint that ignores a mask repaints the whole picture and bills
+ * for it, and the result is indistinguishable from a mask painted wrong. The
+ * server refuses on the same grounds when the *model* cannot use one — see the
+ * mask branch in api/ai/generate.ts, and `maskRefusal` in the board's run
+ * endpoint, which is where the reasoning was first written down.
  *
- * Both are refused here rather than dropped. Sending a masked invocation to an
- * endpoint that ignores masks produces a fully repainted picture, a full bill,
- * and a result indistinguishable from a mask that was painted wrong — which is
- * precisely the reasoning `maskRefusal` in api/boards/[id]/run.ts sets out for
- * refusing rather than proceeding. The `replace-area` and `restyle` tools are
- * registered as "planned" for this reason and not because the executor is
- * unfinished.
- *
- * The board run endpoint (`boardsApi.runNode`) *does* support both, but it is a
- * different thing: it runs a saved `op` node against its wired graph inputs,
+ * The board run endpoint (`boardsApi.runNode`) covers the same ground for a
+ * saved `op` node against its wired graph inputs. It is a different thing: it
  * needs a board id and an item that is a node, and skips on an unchanged
  * fingerprint. A bar acting on a selected photograph has none of that.
  */
@@ -41,20 +38,14 @@ import {
 } from "./types.js";
 
 /** Tools this executor actually calls the service for. See the header. */
-const IMPLEMENTED = new Set(["edit-image", "generate-image"]);
-
-/**
- * Tools that need a request field /api/ai/generate does not have, with the
- * sentence to say about each. Separated from the merely-unbuilt so the message
- * names the real obstacle — "not built yet" would send someone looking in this
- * file for the missing branch.
- */
-const BLOCKED_ON_ENDPOINT: Record<string, string> = {
-  "replace-area":
-    "Painting into part of an image needs the mask to reach the generator, and the image endpoint does not take one yet.",
-  restyle:
-    "Choosing a style needs the model to reach the generator, and the image endpoint does not take one yet.",
-};
+const IMPLEMENTED = new Set([
+  "edit-image",
+  "generate-image",
+  "remove-background",
+  "replace-area",
+  "restyle",
+  "vectorize",
+]);
 
 /** Matches MAX_PROMPT in api/ai/generate.ts, which truncates silently past it. */
 const MAX_PROMPT = 1200;
@@ -67,7 +58,13 @@ const MAX_PROMPT = 1200;
  * Getting it backwards is not an error anywhere — it just quietly produces the
  * wrong kind of picture.
  */
-const USES_SOURCE_IMAGE = new Set(["edit-image"]);
+const USES_SOURCE_IMAGE = new Set([
+  "edit-image",
+  "remove-background",
+  "replace-area",
+  "restyle",
+  "vectorize",
+]);
 
 const CANCELLED_MESSAGE = "Cancelled before it finished.";
 
@@ -153,14 +150,15 @@ export interface AiDeps {
   generate: (
     prompt: string,
     sourceImageUrl: string | null,
-    model: string | null
+    model: string | null,
+    maskUrl: string | null
   ) => Promise<GeneratedImage>;
   now: () => number;
 }
 
 const DEFAULTS: AiDeps = {
-  generate: (prompt, sourceImageUrl, model) =>
-    aiApi.generate(prompt, sourceImageUrl, model),
+  generate: (prompt, sourceImageUrl, model, maskUrl) =>
+    aiApi.generate(prompt, sourceImageUrl, model, maskUrl),
   now: () => Date.now(),
 };
 
@@ -179,19 +177,14 @@ const promptFrom = (invocation: ToolInvocation): string => {
 
 const refuse = (invocation: ToolInvocation) => {
   const { tool } = invocation;
-  const blocked = BLOCKED_ON_ENDPOINT[tool.id];
-  if (blocked) {
-    return failed("unsupported", blocked);
-  }
   if (!IMPLEMENTED.has(tool.id)) {
     return failed("unsupported", `${tool.label} is not built yet.`, {
       hint: "It is listed so you can see it is coming.",
     });
   }
-  if (invocation.maskUrl) {
-    // A mask on a tool that never declared it needs one still cannot be
-    // honoured, and silently ignoring it is the failure this whole branch is
-    // about. Refuse, and say which it is.
+  if (invocation.maskUrl && !tool.needsMask) {
+    // A mask on a tool that never declared it needs one cannot be honoured,
+    // and silently ignoring it is the failure this whole branch is about.
     return failed(
       "unsupported",
       `${tool.label} cannot paint into part of an image.`,
@@ -214,7 +207,10 @@ const run = async (
   }
 
   const prompt = promptFrom(invocation);
-  if (!prompt) {
+  // Only the tools that read words insist on them. Removing a background and
+  // vectorising take a picture and nothing else, and demanding a description
+  // for them meant inventing one to send to a model that ignores it.
+  if (!prompt && tool.needsPrompt) {
     return failed(
       "missing-input",
       `${tool.label} needs a description of what you want.`
@@ -251,7 +247,14 @@ const run = async (
       phase: "running",
     });
     image = await raceAbort(
-      deps.generate(prompt, sourceImageUrl, modelOf(invocation)),
+      deps.generate(
+        prompt,
+        sourceImageUrl,
+        modelOf(invocation),
+        // Only where the tool asked for one. Forwarding a stray mask is the
+        // silent repaint `refuse` above exists to prevent.
+        tool.needsMask ? invocation.maskUrl : null
+      ),
       invocation.signal
     );
   } catch (cause) {

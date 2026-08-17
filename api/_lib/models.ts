@@ -6,6 +6,7 @@ import {
   MAX_MODEL_LORA_TRIGGER,
   MODEL_IMAGE_PARAMS,
   MODEL_INPUTS,
+  MODEL_OUTPUTS,
   PROTECTED_MODEL_ID,
 } from "../../config/models.js";
 import type {
@@ -105,6 +106,12 @@ export const loadModelRows = async (
   return rows;
 };
 
+export const isModelImageParam = (
+  value: unknown
+): value is NonNullable<FalModelDef["imageParam"]> =>
+  typeof value === "string" &&
+  (MODEL_IMAGE_PARAMS as readonly string[]).includes(value);
+
 export const isModelInput = (value: unknown): value is FalModelInput =>
   typeof value === "string" &&
   (MODEL_INPUTS as readonly string[]).includes(value);
@@ -131,7 +138,12 @@ export const rowToModelDef = (row: ModelRow): FalModelDef => {
     : undefined;
   return {
     id: row.id,
-    imageParam: row.image_param === "image_urls" ? "image_urls" : undefined,
+    // The stored name, not a guess at it. Collapsing anything unfamiliar to
+    // `image_url` is what made a Kling v3 row send the field its own schema
+    // rejects; the column exists precisely because these endpoints disagree.
+    imageParam: isModelImageParam(row.image_param)
+      ? row.image_param
+      : undefined,
     input: isModelInput(row.input) ? row.input : "prompt-or-image",
     label: row.label,
     lora,
@@ -188,7 +200,7 @@ export const isUsableLoraRow = (row: ModelRow): boolean =>
 export interface ModelPatch {
   enabled?: boolean;
   id?: string;
-  imageParam?: "image_url" | "image_urls";
+  imageParam?: NonNullable<FalModelDef["imageParam"]>;
   input?: FalModelInput;
   label?: string;
   /**
@@ -204,6 +216,8 @@ export interface ModelPatch {
     scale: number | null;
     trigger: string | null;
   } | null;
+  /** What the endpoint returns. See MODEL_OUTPUTS for why it is not derived. */
+  output?: "image" | "video";
   sortOrder?: number;
   vector?: boolean;
 }
@@ -324,6 +338,33 @@ const readInput = (
   return null;
 };
 
+/**
+ * Image or video, or a reason it is neither.
+ *
+ * Its absence is why a video model could not be added by hand at all: the
+ * column defaulted to 'image', nothing here ever wrote it, and the Video node
+ * refuses anything that says it makes pictures — so a background-removal
+ * endpoint was rejected with "makes pictures, not video" by the very row that
+ * had just been created for it.
+ */
+const readOutput = (
+  body: Record<string, unknown>,
+  patch: ModelPatch,
+  create: boolean
+): string | null => {
+  if (typeof body.output === "string") {
+    if (!(MODEL_OUTPUTS as readonly string[]).includes(body.output)) {
+      return "A model returns either an image or a video.";
+    }
+    patch.output = body.output as "image" | "video";
+    return null;
+  }
+  if (create) {
+    patch.output = "image";
+  }
+  return null;
+};
+
 /** One known source-image parameter, or a reason it is not. */
 const readImageParam = (
   body: Record<string, unknown>,
@@ -383,6 +424,11 @@ export const readModelFields = (
     return label;
   }
   patch.label = label.label;
+
+  const output = readOutput(body, patch, create);
+  if (output) {
+    return output;
+  }
 
   const input = readInput(body, patch, create);
   if (input) {

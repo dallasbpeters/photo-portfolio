@@ -93,6 +93,11 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
 interface BoardCanvasProps {
   /** Item to open for typing as soon as it appears — a just-placed note. */
   autoEditId?: string | null;
+  /**
+   * The board a tool's result is written to, null where there is none. Omitting
+   * it is how every tool result came to be dropped on reload.
+   */
+  boardId: string | null;
   /** When true, clicking an item targets it for a comment rather than selecting. */
   commentMode?: boolean;
   /** Comments on the board's items, shown as badges and in the sidebar. */
@@ -105,16 +110,12 @@ interface BoardCanvasProps {
   /** Stable per-item React key. */
   keyOf: (item: BoardItem) => string;
   /**
-   * A stroke painted onto an image with the mask brush.
-   *
-   * The canvas owns the gesture and knows which picture it landed on; the
-   * editor owns the item's config, which is where the mask is kept.
+   * A stroke painted onto an image with the mask brush. The canvas owns the
+   * gesture and knows which picture it landed on; the editor owns the config.
    */
   /**
-   * Wraps the given items in a frame of their own.
-   *
-   * The canvas knows what is selected; only the editor can mint an item, which
-   * is the same division onCreateFromPort and onCopyFrame already use.
+   * Wraps the given items in a frame of their own. The canvas knows what is
+   * selected, only the editor can mint an item.
    */
   /** Lays a frame's contents out in a grid, keeping their order. */
   onArrangeFrame?: (itemId: string) => void;
@@ -152,6 +153,8 @@ interface BoardCanvasProps {
    * coordinate; the editor turns the result into an item.
    */
   onDraw?: (config: DrawingConfig, box: Box) => void;
+  /** Picks the drawing tool, so a mask tool can arm the brush it needs. */
+  onDrawTool?: (tool: DrawTool) => void;
   /**
    * Image files dragged onto the board, with the canvas point they landed on.
    *
@@ -171,6 +174,8 @@ interface BoardCanvasProps {
     image: { url: string },
     point: { x: number; y: number }
   ) => void;
+  /** Opens the manual photo editor on one item. */
+  onEditImage?: (item: BoardItem) => void;
   /** Downloads everything a node made, or a frame holds, as one archive. */
   onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
@@ -288,6 +293,9 @@ export function BoardCanvas({
   onRemoveVersion,
   onRun,
   onSaveElement,
+  boardId,
+  onDrawTool,
+  onEditImage,
   onSendToCanva,
   onSelectionChange,
   onSendVersions,
@@ -307,14 +315,12 @@ export function BoardCanvas({
   // container settles, until the board is panned, zoomed or rearranged.
   const view = useCanvasViewport(containerRef, () => contentBounds(items));
   const space = useSpaceKey();
-  // Held space is what tells a background press to pan instead of sweeping a
-  // selection box, so it is read by the pointerdown handler below.
+  // Held space pans rather than sweeps a box; the pointerdown handler reads it.
   /**
-   * Which items are selected, by index.
-   *
-   * A list rather than one index: several can be picked with a marquee or with
-   * shift, and dragging any of them moves the whole set. One selection is just
-   * a list of length one, which keeps every read the same shape.
+   * Which items are selected, by index. A list rather than one index: several
+   * can be picked with a marquee or with shift, and dragging any moves the
+   * whole set. One selection is a list of length one, so every read is the
+   * same shape.
    */
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   /** The marquee being dragged out on the background, in canvas units. */
@@ -336,7 +342,12 @@ export function BoardCanvas({
   const [menu, setMenu] = useState<CanvasMenuTarget | null>(null);
   // Owned here rather than in CanvasMenu so a run outlives the menu that
   // started it: the menu is dismissed the instant a tool is picked.
-  const tools = useBoardTools({ items, onChange });
+  const tools = useBoardTools({
+    boardId,
+    items,
+    onChange,
+    onNeedsMask: () => onDrawTool?.("mask"),
+  });
 
   useEffect(() => {
     if (autoEditId) {
@@ -532,20 +543,15 @@ export function BoardCanvas({
   }, [view]);
 
   // Published so the editor can drop new items where you are looking. Assigned
-  // during render rather than in an effect: an insert can happen on the very
-  // first interaction, before effects from a later render have run.
+  // during render, not in an effect: an insert can happen on the very first
+  // interaction, before effects from a later render have run.
   viewCentreRef.current = viewCentre;
 
   /**
-   * Pasting an image onto the board.
-   *
-   * The same act as dropping a file, and it goes down the same path — a
-   * screenshot is the commonest way an image reaches a moodboard, and having to
-   * save it to disk first only to drag it back in is a detour.
-   *
-   * Listens on the window rather than an element because paste is not delivered
-   * to something merely hovered; it goes to whatever has focus, which on a board
-   * you are just looking at is the document.
+   * Pasting an image onto the board: the same act as dropping a file, down the
+   * same path. Listens on the window rather than an element because paste is
+   * not delivered to something merely hovered — it goes to whatever has focus,
+   * which on a board you are looking at is the document.
    */
   useEffect(() => {
     if (readOnly || !(onDropFiles || onDropImage)) {
@@ -623,18 +629,12 @@ export function BoardCanvas({
   );
 
   /**
-   * What a node that composes text will send, so it can be read before it runs.
-   *
-   * A Combine node answers with one string; an Iterate node answers with one
-   * per value, numbered, because seeing "3 prompts" and what they say is the
-   * only way to know a batch is set up the way you meant.
+   * What a node that composes text will send, read before it runs. Combine
+   * answers with one string, Iterate with one per value — seeing "3 prompts"
+   * and what they say is the only way to know a batch is set up right.
    */
-  /**
-   * The pictures a Batch node is holding, so it can show them.
-   *
-   * Only for that node: resolving every image behind every node on every
-   * render would walk the graph once per node, and nothing else displays one.
-   */
+  /** The pictures a Batch node holds. Only that node: resolving every image
+   * behind every node on every render walks the graph once per node. */
   const previewImagesFor = (item: BoardItem): string[] | undefined =>
     item.nodeType === "batch"
       ? outputImagesOf(item, { items, wires })
@@ -1059,11 +1059,10 @@ export function BoardCanvas({
   /**
    * The dot grid, drawn on the unscaled viewport rather than on the board.
    *
-   * On the scaled layer it zoomed with everything else: dots turned into
-   * boulders zoomed in and vanished zoomed out. Here the spacing is in screen
-   * pixels, so it is identical at every zoom level. It still slides with the
-   * pan, which is what keeps the movement legible — background-position moves
-   * the pattern without resizing it.
+   * On the scaled layer it zoomed with everything else: boulders zoomed in,
+   * nothing zoomed out. Here the spacing is in screen pixels, identical at
+   * every zoom. It still slides with the pan, which keeps the movement legible
+   * — background-position moves the pattern without resizing it.
    */
   const dotGridStyle = {
     background:
@@ -1336,6 +1335,7 @@ export function BoardCanvas({
                   items.map((it, i) => (i === index ? { ...it, body } : it))
                 )
               }
+              onEditManually={onEditImage ? () => onEditImage(item) : undefined}
               onPatch={(patch) =>
                 onChange(
                   items.map((it, i) => (i === index ? { ...it, ...patch } : it))

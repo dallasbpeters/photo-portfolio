@@ -60,7 +60,7 @@ async function handlePost(
   const lora = patch.lora ?? null;
   const rows = (await sql`
     INSERT INTO models (
-      id, label, input, image_param, vector,
+      id, label, input, output, image_param, vector,
       lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
       enabled, sort_order
     )
@@ -68,6 +68,7 @@ async function handlePost(
       ${patch.id},
       ${patch.label},
       ${patch.input},
+      ${patch.output},
       ${patch.imageParam},
       ${patch.vector},
       ${lora?.endpoint ?? null},
@@ -80,7 +81,7 @@ async function handlePost(
     )
     RETURNING created_at, enabled, id, image_param, input, label,
       lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-      sort_order, updated_at, vector
+      output, sort_order, updated_at, vector
   `) as ModelRow[];
 
   return res.status(201).json(rowToModelDto(rows[0]));

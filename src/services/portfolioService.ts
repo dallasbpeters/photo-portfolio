@@ -1127,17 +1127,13 @@ export const boardsApi = {
   },
 
   /**
-   * Writes an SVG edited in Affinity back onto a node as a new version.
-   *
-   * Its own call because `result` is not written by the board save — see
-   * api/boards/[id]/svg.ts for why that column is left alone.
+   * Writes an SVG edited in Affinity back onto a node as a new version. Its own
+   * call because `result` is not written by the board save — see svg.ts.
    */
   /**
-   * Keeps a tool's output on the item.
-   *
-   * Its own call because a board save never writes `result` — see
-   * api/boards/[id]/result.ts for why. Without this a tool ran, showed its
-   * work, and lost it on the next reload.
+   * Keeps a tool's output on the item. Its own call because a board save never
+   * writes `result` — see api/boards/[id]/result.ts. Without this a tool ran,
+   * showed its work, and lost it on the next reload.
    */
   saveToolResult: async (
     boardId: string,
@@ -1150,7 +1146,9 @@ export const boardsApi = {
       url: string;
       width?: number | null;
     }
-  ): Promise<void> => {
+    // The stored result is returned so a caller that is not the tool runner —
+    // the manual editor — can show what it saved without re-reading the board.
+  ): Promise<{ result: BoardItemResult }> => {
     const res = await fetch(`${apiBase()}/api/boards/${boardId}/result`, {
       body: JSON.stringify({ itemId, ...variation }),
       headers: jsonHeaders(),
@@ -1159,6 +1157,7 @@ export const boardsApi = {
     if (!res.ok) {
       throw new Error(await readPageError(res, "Could not save the result"));
     }
+    return (await res.json()) as { result: BoardItemResult };
   },
 
   /**
@@ -1435,19 +1434,23 @@ export const pinterestApi = {
 
 export const aiApi = {
   /**
-   * Generates an image, or a variation of `sourceImageUrl` when given one.
-   *
-   * The returned URL is already stored on our own blob host — fal serves
-   * results from a temporary location that would expire under the board.
+   * Generates an image, or a variation of `sourceImageUrl` when given one. The
+   * returned URL is already on our own blob host — fal serves results from a
+   * temporary location that would expire under the board.
    */
   generate: async (
     prompt: string,
     sourceImageUrl?: string | null,
     /** A fal model id from the models table, or omitted to let it choose. */
-    model?: string | null
+    model?: string | null,
+    /**
+     * A rendered mask bitmap's URL: white where the model may paint. Refused
+     * server-side rather than dropped when the chosen model cannot use one.
+     */
+    maskUrl?: string | null
   ): Promise<GeneratedImage> => {
     const res = await fetch(`${apiBase()}/api/ai/generate`, {
-      body: JSON.stringify({ model, prompt, sourceImageUrl }),
+      body: JSON.stringify({ maskUrl, model, prompt, sourceImageUrl }),
       headers: jsonHeaders(),
       method: "POST",
     });
@@ -1564,17 +1567,14 @@ export const siteSetupApi = {
 const elementsPath = (): string => `${apiBase()}/api/elements`;
 
 /**
- * The library of styles, which belongs to nobody's board.
- *
- * Separate from boardsApi because an element outlives the board it was found
- * on: deleting that board must not take the style with it, and the same element
- * is meant to turn up on the next board and the one after.
+ * The library of styles, which belongs to nobody's board. Separate from
+ * boardsApi because an element outlives the board it was found on: deleting
+ * that board must not take the style with it.
  */
 /**
- * The collections: assets kept for use in both apps.
- *
- * Distinct from `photosApi`, which is the portfolio, and from `elementsApi`,
- * which is a style rather than a set of assets. See api/_lib/collections.ts.
+ * The collections: assets kept for use in both apps. Distinct from `photosApi`,
+ * which is the portfolio, and from `elementsApi`, which is a style rather than
+ * a set of assets. See api/_lib/collections.ts.
  */
 export const collectionsApi = {
   /** Adds one asset. Saving the same url twice is a no-op, not an error. */

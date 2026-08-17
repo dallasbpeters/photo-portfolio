@@ -163,13 +163,14 @@ export const TOOLS: readonly Tool[] = [
   {
     appliesTo: IMAGE_KINDS,
     /*
-     * Planned, and blocked on the API rather than on the executor.
+     * The only tool with `needsMask`, and the whole mask path exists for it.
      *
-     * api/_lib/fal.ts already routes a mask to FLUX_INPAINT_ENDPOINT, but
-     * /api/ai/generate takes only { prompt, sourceImageUrl } and has no
-     * maskUrl to forward. Sending one anyway would be silently dropped, the
-     * whole picture repainted, and the bill paid — the exact failure
-     * `maskRefusal` in the run endpoint exists to prevent.
+     * A mask changes which endpoint is called rather than only what is sent —
+     * fal serves inpainting separately — so it routes to FLUX_INPAINT_ENDPOINT,
+     * and Auto is a Flux model precisely so this works without a model setting
+     * to choose. A model that cannot inpaint is refused by /api/ai/generate
+     * rather than having its mask dropped, which would repaint the whole
+     * picture and bill for it.
      */
     description: "Paint over part of the image and describe what goes there.",
     executor: "ai",
@@ -182,15 +183,10 @@ export const TOOLS: readonly Tool[] = [
     settings: [
       { ...PROMPT_SETTING, placeholder: "What should be there instead?" },
     ],
-    status: "planned",
+    status: "ready",
   },
   {
     appliesTo: IMAGE_KINDS,
-    /*
-     * Also blocked on the endpoint: `generateImage` takes a `requestedModel`
-     * and resolves LoRA styles through the `models` table, but /api/ai/generate
-     * never passes one, so every call resolves to nano-banana/edit.
-     */
     description: "Re-render this image in a chosen style or model.",
     executor: "ai",
     group: "ai",
@@ -200,9 +196,64 @@ export const TOOLS: readonly Tool[] = [
     needsMask: false,
     needsPrompt: false,
     settings: [
+      // Where a LoRA is chosen: the table's style rows are models as far as fal
+      // is concerned, and that is how they reach the endpoint now that it
+      // forwards one. The prompt is optional, so a restyle can be the style
+      // alone or the style plus a note about what to keep.
+      { ...PROMPT_SETTING, placeholder: "Anything to keep or change…" },
       { default: "auto", key: "model", kind: "model", label: "Style" },
     ],
-    status: "planned",
+    status: "ready",
+  },
+
+  /*
+   * Two tools that take a picture and nothing else.
+   *
+   * Their models' `input` is "image", which is why they could not exist until
+   * /api/ai/generate stopped demanding a prompt: there was nothing to type, and
+   * whatever was typed to get past the check was sent to a model that ignores
+   * it. The model is fixed rather than chosen — asking which background remover
+   * to use is a question about our plumbing, not about the picture.
+   */
+  {
+    appliesTo: IMAGE_KINDS,
+    description: "Cut the subject out, leaving a transparent background.",
+    executor: "ai",
+    group: "ai",
+    id: "remove-background",
+    keywords: ["cutout", "cut out", "transparent", "isolate", "rembg", "matte"],
+    label: "Remove background",
+    needsMask: false,
+    needsPrompt: false,
+    settings: [
+      {
+        default: "fal-ai/birefnet/v2",
+        key: "model",
+        kind: "model",
+        label: "Model",
+      },
+    ],
+    status: "ready",
+  },
+  {
+    appliesTo: IMAGE_KINDS,
+    description: "Trace this image into vector art.",
+    executor: "ai",
+    group: "ai",
+    id: "vectorize",
+    keywords: ["svg", "vector", "trace", "outline", "recraft"],
+    label: "Vectorize",
+    needsMask: false,
+    needsPrompt: false,
+    settings: [
+      {
+        default: "fal-ai/recraft/vectorize",
+        key: "model",
+        kind: "model",
+        label: "Model",
+      },
+    ],
+    status: "ready",
   },
   {
     appliesTo: IMAGE_KINDS,

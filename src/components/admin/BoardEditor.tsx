@@ -40,6 +40,7 @@ import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import { OUTPUT_PORT_KEY } from "../../../config/ports.js";
+import { AutoplayToggle } from "../../boards/AutoplayToggle";
 import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
@@ -80,6 +81,7 @@ import { newShaderConfig } from "../../boards/shaderConfig";
 import { isSvgFile, svgToPng } from "../../boards/svgToRaster";
 import { useAffinityBridge } from "../../boards/useAffinityBridge";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
+import { useBoardImageEditor } from "../../boards/useBoardImageEditor";
 import { useGraphRun } from "../../boards/useGraphRun";
 import { useVideoNode } from "../../boards/useVideoNode";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -250,21 +252,16 @@ const dropOrigin = (
 };
 
 /**
- * The fields every item carries whatever its kind, all empty.
- *
- * Spread first and then overridden, so adding a field to BoardItem does not
- * mean remembering to add `null` in four different places — the compiler used
- * to catch that, but only after four identical edits.
+ * The fields every item carries whatever its kind, all empty. Spread first and
+ * overridden, so adding a field to BoardItem is not four identical edits.
  */
 /**
  * Throws away any rendered composite.
  *
- * A composite is a picture of the arrangement, so *any* edit can invalidate it
- * — something moved, was resized, changed z-order, was deleted, or had its own
- * result replaced. Working out which edits actually mattered would be a
- * dependency graph over geometry, and getting it subtly wrong means a node that
- * quietly shows yesterday's layout. Clearing it always costs one render on the
- * next run and cannot be wrong.
+ * A composite is a picture of the arrangement, so *any* edit can invalidate it.
+ * Working out which ones actually mattered would be a dependency graph over
+ * geometry, and getting it subtly wrong means a node quietly showing
+ * yesterday's layout. Clearing always costs one render and cannot be wrong.
  */
 const dropComposites = (list: BoardItem[]): BoardItem[] =>
   list.map((item) =>
@@ -993,12 +990,11 @@ export function BoardEditor({
   /**
    * Places a saved style on the canvas.
    *
-   * The key image, the name, and the words are copied onto the node so the
-   * canvas can draw them without a request per node. The id travels with them,
-   * and it is the id the run endpoint reads — so what a run actually sends is
-   * whatever the library holds now, not what it held the day this node was
-   * placed. The copies exist only so a board still shows what it was built with
-   * after the element is deleted out from under it.
+   * The key image, the name and the words are copied onto the node so the
+   * canvas can draw them without a request per node. The id travels with them
+   * and it is the id the run endpoint reads, so a run sends whatever the
+   * library holds now. The copies exist only so a board still shows what it was
+   * built with after the element is deleted out from under it.
    *
    * Square-ish, because what it shows is a picture rather than a stack of
    * settings: the tall default node shape left an element mostly empty.
@@ -1032,10 +1028,9 @@ export function BoardEditor({
    * same list the menu counted. Repeats are dropped: selecting a frame and
    * something on it means one picture, not two.
    *
-   * The words come from a Describe node in the selection when there is one,
-   * because that reading of what the references have in common is the thing an
-   * element carries down the wire; otherwise the panel opens with an empty
-   * description to write by hand.
+   * The words come from a Describe node in the selection when there is one —
+   * that reading of what the references have in common is what an element
+   * carries down the wire — otherwise the panel opens empty to write by hand.
    */
   const beginElement = (chosen: BoardItem[]) => {
     const graph = { items, wires };
@@ -1084,13 +1079,11 @@ export function BoardEditor({
    * The way a group of pictures becomes one thing: select them, group them,
    * nudge them about inside the frame, and wire the frame into a Composite —
    * which renders them exactly where they sit. Building that arrangement by
-   * dragging an empty frame around existing work is fiddly and easy to get
-   * wrong by a few pixels, and a picture whose centre falls outside is silently
-   * not in the group.
+   * dragging an empty frame around existing work is fiddly, and a picture whose
+   * centre falls a few pixels outside is silently not in the group.
    *
-   * The frame is sized to the selection with room to move, and its z puts it
-   * behind everything — a frame drawn over its own contents would swallow the
-   * clicks meant for them.
+   * Sized to the selection with room to move, and its z puts it behind
+   * everything — a frame over its contents swallows the clicks meant for them.
    */
   const groupIntoFrame = (chosen: BoardItem[]) => {
     if (chosen.length === 0) {
@@ -1294,20 +1287,13 @@ export function BoardEditor({
   };
 
   /**
-   * Images dragged onto the board.
-   *
-   * These are working material — a reference shot, a sketch, something to feed
-   * a node — so they are stored and pinned to the board and nothing else. The
-   * site's gallery is a separate act: a photograph appears there only when a
-   * row is written to `photos`, which this deliberately never does. Uploading
-   * and publishing stay different decisions.
+   * Images dragged onto the board: working material, pinned to the board and
+   * nothing else. Publishing is a separate act — a photograph reaches the site
+   * only through a `photos` row, which this deliberately never writes.
    */
   /**
-   * Uploads already-prepared files and places them on the board.
-   *
-   * Shared by the immediate path (non-SVG drops) and the SVG chooser, so both
-   * land identically. Files arrive rasterised or kept as vectors before this
-   * is called.
+   * Uploads already-prepared files and places them on the board. Shared by the
+   * immediate path (non-SVG drops) and the SVG chooser, so both land the same.
    */
   const placeUploaded = async (
     files: File[],
@@ -1621,6 +1607,10 @@ export function BoardEditor({
   );
 
   const { openInAffinity } = useAffinityBridge(boardId, applyEditedSvg);
+  const { editorNode, openEditor } = useBoardImageEditor(
+    boardId,
+    applyEditedSvg
+  );
 
   /**
    * Opens a node's SVG in Affinity Designer, through the local bridge.
@@ -1825,7 +1815,11 @@ export function BoardEditor({
           every Button inside this tree paints itself for paper without the
           call site having to say so. See index.css. */}
       <CustomCursor cursorColor="#9100FF" userName={displayName} />
-      <div className="board" data-surface="board">
+      <div
+        className="board"
+        data-editing={editorNode ? "" : undefined}
+        data-surface="board"
+      >
         {/* Wraps rather than overflowing: the palette has grown past what fits on
           one line at laptop width, and a row of shrink-0 buttons pushed Publish
           and Close off the edge instead of moving them down. */}
@@ -1872,6 +1866,7 @@ export function BoardEditor({
           {/* Floating over the canvas: a tool wants to be near its subject. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
             <div className="pointer-events-auto">
+              <AutoplayToggle items={items} />
               <MaskControls onChange={changeMask} selected={selectedItem} />
               <BoardDrawTools
                 onConfigChange={changeConfig}
@@ -1993,6 +1988,7 @@ export function BoardEditor({
 
           <BoardCanvas
             autoEditId={autoEditId}
+            boardId={boardId}
             comments={comments}
             drawStyle={drawStyle}
             drawTool={drawTool}
@@ -2006,8 +2002,10 @@ export function BoardEditor({
             onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
             onCreateFromPort={createFromPort}
             onDraw={addDrawing}
+            onDrawTool={setDrawTool}
             onDropFiles={(files, point) => void dropFiles(files, point)}
             onDropImage={dropImage}
+            onEditImage={openEditor}
             onExportItem={(itemId) => void exportItem(itemId)}
             onGroupIntoFrame={groupIntoFrame}
             onMaskStroke={addMaskStroke}
@@ -2111,6 +2109,8 @@ export function BoardEditor({
               />
             ) : null}
           </AnimatePresence>
+
+          {editorNode}
 
           {elementDraft ? (
             <ElementModal

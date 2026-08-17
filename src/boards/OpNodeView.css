@@ -1,3 +1,14 @@
+/*
+ * A node's body.
+ *
+ * Three of the variables here named nothing: `--radius-xs`, `--color-text-muted`
+ * and `--letter-spacing-widest` have never existed in this project. An unknown
+ * custom property makes the whole declaration invalid, so the corners were
+ * square, the title had no tracking, and its colour fell back to whatever it
+ * inherited — which on light paper was near-white type on near-white ground.
+ * The real names are below; `--muted-foreground` and `--border` follow the
+ * board because [data-surface="board"] re-points them in index.css.
+ */
 .op-node-view {
   display: flex;
   flex-direction: column;
@@ -5,7 +16,7 @@
   contain: paint;
   background-color: var(--color-board-panel);
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
 }
 
 .op-node-view__header {
@@ -22,9 +33,9 @@
   gap: var(--spacing);
   align-items: center;
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  color: var(--muted-foreground);
   text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-widest);
+  letter-spacing: var(--tracking-widest);
 }
 
 .op-node-view__footer {

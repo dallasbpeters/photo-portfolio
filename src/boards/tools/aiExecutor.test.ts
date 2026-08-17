@@ -113,18 +113,65 @@ describe("aiExecutor", () => {
     expect(outcome.failure.code).toBe("unsupported");
   });
 
-  it("explains that a masked tool is blocked on the endpoint, not unbuilt", async () => {
+  it("forwards the mask for the tool that asked for one", async () => {
+    // The whole point of Replace: the bitmap has to reach fal, which routes to
+    // its inpainting endpoint on the strength of it. Dropped, the model
+    // repaints the entire picture and bills for it.
+    const sent: (string | null)[] = [];
+    const executor = createAiExecutor({
+      generate: (_prompt, _source, _model, maskUrl) => {
+        sent.push(maskUrl);
+        return Promise.resolve(generated);
+      },
+    });
+    const outcome = await executor(
+      invocation(toolNamed("replace-area"), {
+        maskUrl: "https://blob.example/mask.png",
+        prompt: "a bird",
+      })
+    );
+    expect(outcome.ok).toBe(true);
+    expect(sent).toEqual(["https://blob.example/mask.png"]);
+  });
+
+  it("sends Replace the picture to paint into, not a blank canvas", async () => {
+    // Without a source image the inpaint route is never taken — `generateImage`
+    // only masks when there is something to mask — so the prompt would be
+    // rendered from nothing and the painted area would mean nothing.
+    const sent: (string | null)[] = [];
+    const executor = createAiExecutor({
+      generate: (_prompt, sourceImageUrl) => {
+        sent.push(sourceImageUrl);
+        return Promise.resolve(generated);
+      },
+    });
+    await executor(
+      invocation(toolNamed("replace-area"), {
+        maskUrl: "https://blob.example/mask.png",
+        prompt: "a bird",
+      })
+    );
+    expect(sent).toEqual([ORIGINAL_URL]);
+  });
+
+  it("refuses a mask on a tool that never asked for one", async () => {
+    // Silently dropping it is the failure the whole mask path is written
+    // around: a full repaint, a full bill, and a result indistinguishable from
+    // a mask painted wrong.
     const executor = createAiExecutor({
       generate: () => Promise.reject(new Error("should not be reached")),
     });
     const outcome = await executor(
-      invocation(toolNamed("replace-area"), { prompt: "a bird" })
+      invocation(toolNamed("edit-image"), {
+        maskUrl: "https://blob.example/mask.png",
+        prompt: "a bird",
+      })
     );
     if (outcome.ok) {
       throw new Error("expected a failure");
     }
     expect(outcome.failure.code).toBe("unsupported");
-    expect(outcome.failure.message).toContain("mask");
+    expect(outcome.failure.message).toContain("part of an image");
   });
 
   it("passes the endpoint's own words through, since they are already useful", async () => {

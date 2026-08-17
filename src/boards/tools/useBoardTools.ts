@@ -2,7 +2,9 @@ import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { boardsApi } from "../../services/portfolioService";
 import type { BoardItem } from "../../types.js";
+import { maskOf } from "../mask.js";
 import { promptOf } from "./itemContext.js";
+import { maskBitmapUrl } from "./maskBitmap.js";
 import type { RunTool } from "./types.js";
 import { useToolRunner } from "./useToolRunner.js";
 
@@ -26,9 +28,26 @@ import { useToolRunner } from "./useToolRunner.js";
  */
 
 export interface UseBoardToolsOptions {
-  boardId?: string | null;
+  /**
+   * The board the result is written to. Required, and deliberately without a
+   * default: it was optional, BoardCanvas never passed one, and every tool
+   * result was quietly dropped on the next reload — the save is guarded by
+   * `if (boardId)`, so the omission failed silently and looked like the tool
+   * having done nothing at all.
+   */
+  boardId: string | null;
   items: BoardItem[];
   onChange: (items: BoardItem[]) => void;
+  /**
+   * Arms the mask brush, for a tool that needs a painted area and has none.
+   *
+   * Here rather than in the bar because the bar cannot reach the drawing tool
+   * — that state lives in BoardEditor — and because this is the one place both
+   * the bar and any future slash command pass through. Without it Replace is
+   * simply greyed out, with the brush that would ungrey it in a different
+   * toolbar and no way to know they are related.
+   */
+  onNeedsMask?: () => void;
 }
 
 export interface BoardTools {
@@ -37,9 +56,10 @@ export interface BoardTools {
 }
 
 export const useBoardTools = ({
-  boardId = null,
+  boardId,
   items,
   onChange,
+  onNeedsMask,
 }: UseBoardToolsOptions): BoardTools => {
   /**
    * The list as it is when the run *lands*, not when it started.
@@ -99,40 +119,57 @@ export const useBoardTools = ({
        * it are already handled — the result through `onResult`, the failure
        * through a toast — and awaiting here would only give the canvas a
        * promise it has nothing to do with.
+       *
+       * The mask is rendered first, and only for a tool that asked for one:
+       * the picker enables a mask tool from `toolContextOf`, which reads the
+       * painted strokes, while the runner decides from `maskUrl`. Building it
+       * anywhere else is how those two come to disagree.
        */
-      void start({
-        boardId,
-        config,
-        item,
-        /*
-         * Always null, and a trap to disarm before `replace-area` ships.
-         *
-         * `ToolInvocation.maskUrl` is a *rendered* bitmap's URL, and nothing
-         * rasterises one on this path — rasterising and uploading happens in
-         * `flushBeforeRun` in BoardEditor, on the graph-run path. No executor
-         * reads a mask yet either: /api/ai/generate takes only
-         * `{ prompt, sourceImageUrl }`, which is precisely why `replace-area`
-         * is still "planned", so the runner's mask check is unreachable today.
-         *
-         * The day it is not: the picker enables a mask tool from
-         * `toolContextOf`, which reads the painted strokes, while the runner
-         * decides from this field. Rasterise here, or the two will disagree.
-         */
-        maskUrl: null,
-        /*
-         * What the surface collected, else what the item already carries.
-         *
-         * Typed words win: a picker that offered a field and then ran on the
-         * note's body instead would be the worst kind of wrong — it would
-         * produce something, and it would not be what was asked for. Trimmed
-         * to nothing counts as nothing, so an all-whitespace field falls back
-         * rather than reaching the runner as a prompt that is not one.
-         */
-        prompt: prompt?.trim() || promptOf(item),
-        tool,
-      });
+      // Nothing painted yet: hand over the brush rather than refusing. The
+      // press said what they want to do, and the only thing missing is the
+      // area — so the useful answer is to let them paint it.
+      if (tool.needsMask && !maskOf(item.config)) {
+        toast("Paint over the part to change, then press it again", {
+          description: `${tool.label} works on the painted area only.`,
+        });
+        onNeedsMask?.();
+        return;
+      }
+
+      void (async () => {
+        let maskUrl: string | null = null;
+        if (tool.needsMask) {
+          try {
+            maskUrl = await maskBitmapUrl(item);
+          } catch (cause) {
+            toast.error(
+              cause instanceof Error
+                ? cause.message
+                : "The mask could not be prepared"
+            );
+            return;
+          }
+        }
+        await start({
+          boardId,
+          config,
+          item,
+          maskUrl,
+          /*
+           * What the surface collected, else what the item already carries.
+           *
+           * Typed words win: a picker that offered a field and then ran on the
+           * note's body instead would be the worst kind of wrong — it would
+           * produce something, and it would not be what was asked for. Trimmed
+           * to nothing counts as nothing, so an all-whitespace field falls back
+           * rather than reaching the runner as a prompt that is not one.
+           */
+          prompt: prompt?.trim() || promptOf(item),
+          tool,
+        });
+      })();
     },
-    [boardId, start]
+    [boardId, onNeedsMask, start]
   );
 
   return { isRunning, run };

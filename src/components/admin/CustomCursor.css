@@ -83,7 +83,13 @@ body.cursor-precise * {
 /*
  * Last, so it wins over the container rule above rather than relying on
  * specificity ordering the linter would object to.
+ *
+ * The second selector is the manual photo editor: it is cropping and dragging
+ * handles, all aimed by eye, and a large arrow with a name label beside it
+ * covers the edge being dragged. The editor is a sibling of the board rather
+ * than a child, so its state is read from above with `:has`.
  */
-body.cursor-precise .custom-cursor-container {
+body.cursor-precise .custom-cursor-container,
+body:has(.board[data-editing]) .custom-cursor-container {
   display: none;
 }

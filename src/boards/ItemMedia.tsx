@@ -1,4 +1,5 @@
 import type { BoardItem } from "../types";
+import { useAutoplay } from "./autoplayPref";
 import { isVideoUrl } from "./isVideo";
 
 /**
@@ -28,6 +29,7 @@ export function ItemMedia({
   isIcon: boolean;
   item: BoardItem;
 }) {
+  const playing = useAutoplay();
   const url = shownUrl(item);
   if (isVideoUrl(url)) {
     // Muted and looping because a board holds a dozen of these at once and one
@@ -36,19 +38,24 @@ export function ItemMedia({
     // absent — the item is dragged and resized like any other, and a control
     // bar would swallow those gestures.
     //
+    // Whether they start on their own is a viewing preference, not a property
+    // of the board — see autoplayPref. Stopped, a clip still shows its first
+    // frame, which `#t=0.1` is what makes appear: asked for frame zero several
+    // browsers render nothing at all until the video is played.
+    //
     // Sized from the item, as the image below is: without width and height a
     // video reports its own intrinsic 300×150 until metadata loads, and the
     // box is measured against that in the meantime.
     return (
       <video
-        autoPlay
+        autoPlay={playing}
         className="h-full w-full object-cover"
         height={item.height}
         loop
         muted
         playsInline
         preload="metadata"
-        src={url ?? ""}
+        src={playing ? (url ?? "") : `${url ?? ""}#t=0.1`}
         width={item.width}
       >
         <track kind="captions" />

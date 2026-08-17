@@ -17,10 +17,35 @@ export const MODEL_INPUTS = [
   "prompt-and-image",
   "prompt",
   "image",
+  "video",
+  "prompt-and-video",
 ] as const;
 
-/** The names endpoints give their source image. */
-export const MODEL_IMAGE_PARAMS = ["image_url", "image_urls"] as const;
+/**
+ * The names endpoints give the thing you feed them.
+ *
+ * Not only images, despite the name the column has always had: Kling v3 calls
+ * its source picture `start_image_url` where its own v2.5 says `image_url`, and
+ * an endpoint that reworks a clip calls it `video_url`. Both were already legal
+ * in the table; listing them here is what lets the admin panel edit such a row
+ * instead of refusing its own data.
+ */
+export const MODEL_IMAGE_PARAMS = [
+  "image_url",
+  "image_urls",
+  "start_image_url",
+  "video_url",
+] as const;
+
+/**
+ * What an endpoint hands back.
+ *
+ * Not cosmetic, and not derivable from `input`: it decides which door a run
+ * goes through. An image is fetched synchronously through fal.run, a clip is
+ * submitted to the queue and polled, because a clip takes minutes and neither
+ * the request timeout nor the serverless ceiling will wait.
+ */
+export const MODEL_OUTPUTS = ["image", "video"] as const;
 
 /** A fal model id or a namespaced "lora/..." one — never an essay. */
 export const MAX_MODEL_ID = 120;

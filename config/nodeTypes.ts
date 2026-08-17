@@ -4,16 +4,14 @@
  * A board is a graph: items are nodes, and a wire runs from an output port on
  * one to an input port on another. The canvas draws those ports and refuses an
  * invalid drop; the API refuses an invalid wire on save and dispatches a run.
- * All three need the same answer, so the definition lives here once — the same
- * reasoning config/canvas.ts gives for the canvas dimensions.
+ * All three need the same answer, so it is defined here once.
  *
  * The moodboard item kinds get their output ports from SOURCE_PORTS, which is
  * what makes a photograph already pinned to a board a valid input to a
  * generation with no conversion step and no wrapper node.
  *
- * Like config/canvas.ts and config/iconStyles.ts, this module stays
- * dependency-free and free of browser and Node globals so every layer can
- * import it.
+ * Like config/canvas.ts, this module stays dependency-free and free of browser
+ * and Node globals so every layer can import it.
  */
 
 import { ICON_STYLES } from "./iconStyles.js";
@@ -149,7 +147,18 @@ export type FalModelInput =
   /** A prompt. Any wired image is ignored. */
   | "prompt"
   /** An image, and nothing else. Refused when none is wired. */
-  | "image";
+  | "image"
+  /**
+   * A clip, and nothing else — background removal, upscaling, interpolation.
+   *
+   * Its own shape rather than folded into "image" because what gets wired in is
+   * a different kind of thing, and an endpoint handed a still where it wanted a
+   * clip fails after it has been billed. Reached through the queue like every
+   * other `output: "video"` row: reworking a clip takes minutes.
+   */
+  | "video"
+  /** A clip and words: restyling, and anything that takes direction. */
+  | "prompt-and-video";
 
 export interface FalLora {
   /**
@@ -181,7 +190,7 @@ export interface FalModelDef {
    * and nano-banana wants a list where Recraft and Ideogram want one URL.
    * Defaults to "image_url", which is the majority.
    */
-  imageParam?: "image_url" | "image_urls";
+  imageParam?: "image_url" | "image_urls" | "start_image_url" | "video_url";
   input: FalModelInput;
   /** Shown on the node — model ids are too long and too alike to read. */
   label: string;
@@ -222,13 +231,11 @@ export interface FalModelDef {
  * "auto" is the default and reproduces the behaviour api/_lib/fal.ts has always
  * had: an image wired in means the edit model, no image means text-to-image.
  *
- * These used to be a constant here, an allowlist rather than a free-text field,
- * for the same reason config/iconStyles.ts is one: the value is handed to a
- * third party, and a typo'd model id fails *after* the call has been made and
- * billed. The list now lives in the `models` table so it can be edited from the
- * admin without a code change; api/_lib/models.ts loads it per request. The
- * shape helpers below take the loaded list, so the run path checks the exact
- * ids that are actually offered.
+ * These used to be a constant here, an allowlist rather than free text: the
+ * value is handed to a third party, and a typo'd id fails *after* the call has
+ * been billed. The list lives in the `models` table now so it can be edited
+ * without a code change, and the shape helpers below take the loaded list — so
+ * the run path checks the exact ids on offer.
  */
 /** The fal endpoint a LoRA style runs on unless it names its own. */
 export const FLUX_LORA_ENDPOINT = "fal-ai/flux-lora";
@@ -315,7 +322,7 @@ export const falModelInput = (
 export const falImageParam = (
   models: readonly FalModelDef[],
   value: unknown
-): "image_url" | "image_urls" =>
+): NonNullable<FalModelDef["imageParam"]> =>
   falModelFor(models, value)?.imageParam ?? "image_url";
 
 export const MAX_BATCH_COUNT = 8;
@@ -453,18 +460,16 @@ const PROMPT: NodeType = {
  *
  * An element is a handful of references that share a look, the words for what
  * they share, and a name — kept outside any board so it outlives the one it was
- * found on. This node is how you spend it: it hands over its key image, so it
- * wires into a Generate node exactly as a picture does, and the words ride the
- * same wire into the prompt. See elementTextOf in api/boards/[id]/run.ts.
+ * found on. This node spends it: it hands over its key image, wiring into a
+ * Generate node exactly as a picture does, and the words ride the same wire
+ * into the prompt. See elementTextOf in api/boards/[id]/run.ts.
  *
- * One wire, one job, one charge. The other pictures in the element are what it
- * is made of and what you recognise it by in the panel; they are deliberately
- * not on the canvas, which is the entire reason an element exists rather than
- * six pinned references.
+ * One wire, one job, one charge. Keeping the element's other pictures off the
+ * canvas is the entire reason it exists rather than six pinned references.
  *
  * No capability, so it never runs and never costs anything. No settings either:
- * a name and a picture that could be typed over here would be a second copy of
- * the library, free to disagree with it.
+ * a name and picture typed over here would be a second copy of the library,
+ * free to disagree with it.
  */
 const ELEMENT: NodeType = {
   id: "element",
@@ -575,17 +580,16 @@ const JOIN: NodeType = {
  * Several pictures flattened into one.
  *
  * A frame groups images but is not itself an image — it has no pixels to hand
- * on, so there was no way to take an arrangement you had already made and use
- * it as a single reference. This renders the arrangement.
+ * on, so an arrangement you had already made could not be used as a single
+ * reference. This renders it.
  *
- * Layout comes from the board rather than from settings: the images are drawn
- * where they sit, at the size they were dragged to, scaled together into the
- * box they occupy. Overlap them and they layer; the order is the same z-order
- * you see, so "bring to front" is how you reorder a composite.
+ * Layout comes from the board rather than from settings: images are drawn where
+ * they sit, at the size they were dragged to, scaled into the box they occupy.
+ * Overlap them and they layer, in the z-order you see — so "bring to front" is
+ * how a composite is reordered.
  *
- * The rendering happens in the browser, which is the only place that knows the
- * geometry, and the run stores what it produced — see board.composite in the
- * run endpoint. It costs nothing beyond storing the file.
+ * Rendered in the browser, the only place that knows the geometry, and the run
+ * stores what it produced. It costs nothing beyond storing the file.
  */
 const COMPOSITE: NodeType = {
   capability: "board.composite",
@@ -622,15 +626,12 @@ const COMPOSITE: NodeType = {
 /**
  * A batch, made visible.
  *
- * A frame already hands over every picture on it, and a Generate node already
- * treats each as its own run — so this adds no capability. What it adds is
- * sight of the thing: the pictures about to be processed, listed and counted,
- * before anything is spent.
- *
- * That turned out to matter more than any feature. A batch that silently
- * resolved to nothing, or to forty images when five were meant, looked exactly
- * like a batch that worked — and the only way to tell was to run it and read
- * the bill.
+ * A frame already hands over every picture on it and a Generate node treats
+ * each as its own run, so this adds no capability. What it adds is sight of
+ * the thing: the pictures about to be processed, listed and counted, before
+ * anything is spent. A batch that silently resolved to nothing, or to forty
+ * images when five were meant, looked exactly like one that worked — and the
+ * only way to tell was to run it and read the bill.
  *
  * No capability: it passes its inputs along and should not cost anything.
  */
@@ -672,16 +673,15 @@ export const DEFAULT_PLACEHOLDER = "{}";
  * One prompt, written many times over.
  *
  * A template with a hole in it, and a list of things to put in the hole. Wire
- * "a {} chair, studio lit" to a list of "oak, steel, moulded plastic" and three
- * prompts come out. Whatever consumes them runs three times.
+ * "a {} chair, studio lit" to "oak, steel, moulded plastic" and three prompts
+ * come out; whatever consumes them runs three times.
  *
- * This is the one node whose output is deliberately plural. A frame already
- * emits every image on it, so the wire model has always carried lists — this
- * puts text on the same footing, and the batching that already fans a Generate
- * node out over several references now fans it out over several prompts too.
+ * The one node whose output is deliberately plural. A frame already emits every
+ * image on it, so the wire model has always carried lists — this puts text on
+ * the same footing, and the batching that fans a Generate node out over several
+ * references now fans it out over several prompts too.
  *
- * No capability: it composes strings, and composing strings should not cost
- * anything or need a round trip.
+ * No capability: composing strings should not cost anything or need a trip.
  */
 const ITERATE: NodeType = {
   id: "iterate",

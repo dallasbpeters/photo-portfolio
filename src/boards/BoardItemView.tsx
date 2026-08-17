@@ -38,6 +38,15 @@ import { useTextFont } from "./useTextFont";
  * Recursive because the effect that needs filling may be nested — an empty
  * Group two levels down is exactly the case the canvas button exists for.
  */
+/**
+ * Where a selected item sits while its chrome is open.
+ *
+ * Above any stored `z`, which the API bounds at 9999 (see `parseIncomingItem`),
+ * and below the canvas's own overlays — the guides and the marquee sit at 9999
+ * and should stay visible over a selected item.
+ */
+const CHROME_STACK = 9998;
+
 const fillEmptyEffect = (
   layers: ShaderLayer[],
   layerId: string
@@ -95,6 +104,8 @@ interface BoardItemViewProps {
   onConfigChange?: (config: Record<string, unknown>) => void;
   onDelete: () => void;
   onEditBody: (body: string) => void;
+  /** Opens the manual editor on this item, when there is a board to save to. */
+  onEditManually?: () => void;
   /** Writes any field of this item back — how the text panel saves. */
   onPatch: (patch: Partial<BoardItem>) => void;
   onRemoveVersion?: (index: number) => void;
@@ -668,6 +679,7 @@ export function BoardItemView({
   isEditing,
   isSelected,
   isSoleSelected = false,
+  onEditManually,
   tools,
   onBeginEdit,
   item,
@@ -689,6 +701,14 @@ export function BoardItemView({
   // An operation node is never typed into directly — its settings are its own
   // fields, handled inside OpNodeView.
   const isWritable = isNote || isText;
+  /**
+   * True while this item carries chrome that must not be covered.
+   *
+   * A frame is excluded: it is a backdrop by definition, and lifting one over
+   * the items sitting on it would make them unclickable — the exact bug the
+   * negative z-index below exists to prevent.
+   */
+  const chromeOnTop = isSoleSelected && !readOnly && item.kind !== "frame";
 
   // Controls live inside the scaled canvas, so without this they would grow and
   // shrink with the zoom — unusably small when zoomed out to see the whole
@@ -800,14 +820,17 @@ export function BoardItemView({
         left: item.x,
         top: item.y,
         width: item.width,
-        // A frame is a backdrop: pinned below everything so items sitting on
-        // it stay clickable, whatever stacking order they were given.
+        // A frame is a backdrop: below everything so items on it stay
+        // clickable, and below the wires too, hence negative — at zero it tied
+        // with the wire layer and won on DOM order, swallowing the clicks meant
+        // for a wire, so a node inside a frame could not be disconnected.
         //
-        // Below the wires too, hence negative. At zero it tied with the wire
-        // layer and won on DOM order, so a frame drawn over a wire swallowed
-        // the clicks meant for it — and a node inside a frame could not have
-        // its connections removed at all.
-        zIndex: item.kind === "frame" ? -1 : item.z + 1,
+        // The item holding the chrome comes to the front while it holds it. A
+        // panel is a child of the item and cannot escape its parent's place in
+        // the stack, so a neighbour with a higher `z` drew over the tool bar
+        // whatever z-index the bar used. Raising the *item* is the only thing
+        // that works, and only while the chrome shows: `item.z` is untouched.
+        zIndex: chromeOnTop ? CHROME_STACK : item.z + 1,
       }}
     >
       <ItemContent
@@ -860,6 +883,7 @@ export function BoardItemView({
           chromeScale={chromeScale}
           isRunning={tools.isRunning(item.id)}
           item={item}
+          onEditManually={onEditManually}
           onRun={(tool, prompt, config) =>
             tools.run(item, tool, prompt, config)
           }

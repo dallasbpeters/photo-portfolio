@@ -5,6 +5,7 @@ import { Toaster, toast } from "sonner";
 import { Admin, AdminGate } from "../components/Admin";
 import { BoardsPanel } from "../components/admin/BoardsPanel";
 import { ChangePasswordForm } from "../components/admin/ChangePasswordForm";
+import { CollectionsPanel } from "../components/admin/CollectionsPanel";
 import { ConfirmProvider } from "../components/admin/ConfirmProvider";
 import { ModelsPanel } from "../components/admin/ModelsPanel";
 import { PagesPanel } from "../components/admin/PagesPanel";
@@ -32,6 +33,7 @@ import { useSiteSettings } from "../theme/SiteSettingsProvider";
 const SECTIONS = [
   { end: true, label: "Photos", to: "/admin" },
   { end: false, label: "Moodboards", to: "/admin/boards" },
+  { end: false, label: "Collections", to: "/admin/collections" },
   { end: false, label: "Pages", to: "/admin/pages" },
   { end: false, label: "Models", to: "/admin/models" },
   { end: false, label: "Settings", to: "/admin/settings" },
@@ -149,6 +151,7 @@ export function AdminPage() {
             <Routes>
               <Route element={<Admin />} index />
               <Route element={<BoardsPanel />} path="boards" />
+              <Route element={<CollectionsPanel />} path="collections" />
               <Route element={<PagesPanel />} path="pages" />
               <Route element={<ModelsPanel />} path="models" />
               {/* Same component: it reads the slug and opens that page, so the

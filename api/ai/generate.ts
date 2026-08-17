@@ -1,5 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { isFalModel } from "../../config/nodeTypes.js";
+import {
+  falModelInput,
+  falModelMasks,
+  isFalModel,
+} from "../../config/nodeTypes.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
@@ -13,6 +17,52 @@ const MAX_PROMPT = 1200;
 
 /** An explicit http(s) scheme, which the source image URL must carry. */
 const HTTP_SCHEME = /^https?:\/\//i;
+
+/**
+ * Reads a URL somebody else supplied, saying whether it was refused.
+ *
+ * An absent field is not a refusal — both URLs here are optional — so "no URL"
+ * and "a URL we would not forward" have to be told apart by the caller.
+ *
+ * An explicit scheme is required. parsePublicHttpUrl helpfully prepends
+ * https:// to a bare host, which is right for an admin pasting one into a form
+ * but wrong for this: it turns "file:///etc/passwd" into a URL that looks
+ * legitimate and forwards it to someone else's fetcher.
+ */
+function readRemoteUrl(value: unknown): { url: string | null; bad: boolean } {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) {
+    return { bad: false, url: null };
+  }
+  const url = HTTP_SCHEME.test(raw) ? parsePublicHttpUrl(raw) : null;
+  return { bad: !url, url };
+}
+
+/**
+ * Why a mask cannot be honoured, or null if it can.
+ *
+ * `generateImage` ignores one it cannot route, which would repaint the whole
+ * picture, bill for it, and hand back something indistinguishable from a mask
+ * painted wrong. The same reasoning as `maskRefusal` in the board's run
+ * endpoint, and the reason the Replace tool waited on this field.
+ */
+function maskRefusal(
+  defs: Awaited<ReturnType<typeof loadModelDefs>>,
+  model: string,
+  maskUrl: string | null,
+  sourceImageUrl: string | null
+): string | null {
+  if (!maskUrl) {
+    return null;
+  }
+  if (!sourceImageUrl) {
+    return "A mask needs a source image to paint into";
+  }
+  if (!falModelMasks(defs, model)) {
+    return "That model cannot paint into part of an image. Choose Auto or a Flux style, or clear the mask.";
+  }
+  return null;
+}
 
 /**
  * Generates a board image, or a variation of an existing one.
@@ -47,27 +97,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     typeof body.prompt === "string"
       ? sanitizeText(body.prompt).slice(0, MAX_PROMPT)
       : "";
-  if (!prompt) {
-    return res.status(400).json({ error: "A prompt is required" });
-  }
 
   // Validated rather than passed through: this URL is handed to a third party
   // to go and fetch, so it must be an ordinary public http(s) address.
-  //
-  // An explicit scheme is required here. parsePublicHttpUrl helpfully prepends
-  // https:// to a bare host, which is right for an admin pasting one into a
-  // form but wrong for this: it turns "file:///etc/passwd" into a URL that
-  // looks legitimate and forwards it to someone else's fetcher.
-  const rawSource =
-    typeof body.sourceImageUrl === "string" ? body.sourceImageUrl.trim() : "";
-  const hasScheme = HTTP_SCHEME.test(rawSource);
-  const sourceImageUrl =
-    rawSource && hasScheme ? parsePublicHttpUrl(rawSource) : null;
-  if (rawSource && !sourceImageUrl) {
+  const source = readRemoteUrl(body.sourceImageUrl);
+  if (source.bad) {
     return res.status(400).json({
       error: "The source image must be a public http(s) URL",
     });
   }
+  const sourceImageUrl = source.url;
+
+  /*
+   * The mask: a bitmap confining the repaint, white where the model may paint.
+   *
+   * Validated exactly like the source image, and for the same reason — it is
+   * handed to fal to go and fetch, so a scheme-less string that parses into
+   * something plausible must not get that far.
+   */
+  const mask = readRemoteUrl(body.maskUrl);
+  if (mask.bad) {
+    return res.status(400).json({
+      error: "The mask must be a public http(s) URL",
+    });
+  }
+  const maskUrl = mask.url;
 
   /*
    * The model, checked against the table rather than trusted.
@@ -78,14 +132,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
    * have no model to offer, and the choice is an improvement on the default
    * rather than a requirement of it.
    */
+  const defs = await loadModelDefs(getSql());
   const requested = typeof body.model === "string" ? body.model.trim() : "";
-  let model: string | null = null;
-  if (requested && isFalModel(await loadModelDefs(getSql()), requested)) {
-    model = requested;
+  const model = requested && isFalModel(defs, requested) ? requested : null;
+
+  /*
+   * A prompt is required only by the models that read one.
+   *
+   * Removing a background and vectorising take a picture and nothing else —
+   * their `input` is "image" — so demanding words for them meant inventing some
+   * to get past this check, and whatever was invented was then sent to a model
+   * that ignores it. The shape in the table is the authority, as it is
+   * everywhere else fal's disagreements are recorded.
+   */
+  const shape = falModelInput(defs, model ?? "auto");
+  if (!prompt && shape !== "image") {
+    return res.status(400).json({ error: "A prompt is required" });
+  }
+
+  // A mask that could not be honoured is refused, never dropped.
+  const refusal = maskRefusal(defs, model ?? "auto", maskUrl, sourceImageUrl);
+  if (refusal) {
+    return res.status(400).json({ error: refusal });
   }
 
   try {
-    const image = await generateImage(prompt, sourceImageUrl, model);
+    const image = await generateImage(prompt, sourceImageUrl, model, maskUrl);
     return res.status(200).json(image);
   } catch (e) {
     console.error(e);

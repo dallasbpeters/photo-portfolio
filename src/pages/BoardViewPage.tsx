@@ -185,6 +185,8 @@ export function BoardViewPage() {
 
       <div className="relative min-h-0 flex-1">
         <BoardCanvas
+          // A visitor runs no tools, so there is no result to write back.
+          boardId={null}
           commentMode={commentMode}
           comments={comments}
           items={board?.items ?? []}
