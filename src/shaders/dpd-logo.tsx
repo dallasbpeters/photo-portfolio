@@ -65,13 +65,13 @@ export default function DPDLogoShader({
           ]}
         />
         <ChromaFlow
-          baseColor="oklch(61.6% 0.09 172.45)"
-          downColor="oklch(61.6% 0.09 172.45)"
-          leftColor="oklch(61.6% 0.09 172.45)"
+          baseColor="oklch(62.96% 0.2 264.88)"
+          downColor="oklch(62.96% 0.2 264.88)"
+          leftColor="oklch(62.96% 0.2 264.88)"
           momentum={10}
           radius={2}
-          rightColor="oklch(61.6% 0.09 172.45)"
-          upColor="oklch(61.6% 0.09 172.45)"
+          rightColor="oklch(62.96% 0.2 264.88)"
+          upColor="oklch(62.96% 0.2 264.88)"
         />
       </Glass>
     </Shader>
