@@ -189,7 +189,7 @@ describe("shaping jobs around a style", () => {
     }
   });
 
-  it("still runs an element on its own, at the same price", () => {
+  it("generates from words when an element is the only thing wired", () => {
     const jobs = jobsFor(
       shape({
         briefs: ["oil on linen"],
@@ -198,9 +198,26 @@ describe("shaping jobs around a style", () => {
       })
     );
     expect(jobs).toHaveLength(1);
-    // Nothing to restyle, so the cover is the picture and the rest reference it.
-    expect(jobs[0].image).toBe("cover.jpg");
+    // No subject, so no picture is sent. The cover used to stand in as one,
+    // and an edit model handed a single image does the only thing it can with
+    // it — so an element on its own returned a copy of its own cover.
+    expect(jobs[0].image).toBeNull();
+    // The style still arrives; it travels as words, which is the whole design.
     expect(jobs[0].prompt).toBe("a portrait, oil on linen");
+  });
+
+  it("never sends a cover, even alongside a real subject", () => {
+    // The cover rides in on the image port like any other picture and has to be
+    // subtracted. Left in, it becomes a second job — a run of the style applied
+    // to itself, billed beside the one that was asked for.
+    const jobs = jobsFor(
+      shape({
+        briefs: ["oil on linen"],
+        elementImages: ["cover.jpg"],
+        values: { image: ["cover.jpg", "subject.jpg"] },
+      })
+    );
+    expect(images(jobs)).toEqual(["subject.jpg"]);
   });
 
   it("invents from the prompt when nothing at all is wired", () => {

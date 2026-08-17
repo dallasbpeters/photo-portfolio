@@ -105,16 +105,13 @@ const rasterizeSvgUrl = async (url: string): Promise<string> => {
 /**
  * Runs exactly one node on a board.
  *
- * One node per request, and no run state kept between requests, because a
- * single generation already budgets close to two minutes — 120s in
- * api/_lib/fal.ts, 110s in api/_lib/magnific.ts — against a serverless ceiling.
- * A three-node chain could not fit in one call under any timeout the platform
- * allows, so the browser walks the graph in dependency order and calls this
- * once per node. That keeps every run an individually authorised request.
+ * One node per request, no state between them: a single generation budgets
+ * close to two minutes (120s in api/_lib/fal.ts, 110s in magnific.ts) against
+ * a serverless ceiling, so a chain fits in no call the platform allows. The
+ * browser walks the graph in order and calls this once per node.
  *
- * Admin-only, and deliberately so: every call spends money on the project's
- * accounts. Publishing a board does not open this — an anonymous caller gets a
- * 401 whether or not the board is public.
+ * Admin-only, deliberately: every call spends money. Publishing a board does
+ * not open this — an anonymous caller gets a 401 either way.
  */
 
 interface RunnableItem {
@@ -188,8 +185,8 @@ const iteratedOutputsOf = (
       .filter((text) => text.trim());
 
   const config = asObject(row.config);
-  // A wire beats the typed field, the same rule a Generate node's prompt
-  // follows: wiring is the more deliberate act.
+  // A wire beats the typed field, as a Generate node's prompt does: wiring is
+  // the more deliberate act.
   const typedTemplate =
     typeof config.template === "string" ? config.template.trim() : "";
   const template = readPerWire("template", true).at(-1) ?? typedTemplate;
@@ -236,16 +233,14 @@ const iteratedOutputsOf = (
 /**
  * The template filled in, once per row of the value lists.
  *
- * Each wire fills its own placeholder — first list, first slot — which is what
- * makes "a {} card with the word {}" work with a list of colors and a list of
- * words. A naive replace fills every slot with the same value and produced "a
- * Brainstorm card with the word Brainstorm".
+ * Each wire fills its own placeholder — first list, first slot — which makes
+ * "a {} card with the word {}" work with a list of colors and a list of words.
+ * A naive replace fills every slot alike: "a Brainstorm card with the word
+ * Brainstorm".
  *
- * Lists are read across rather than combined: four colors and five words give
- * five prompts, not twenty. A cross product is occasionally what someone wants,
- * never what they expect, and it multiplies what a run costs. A list shorter
- * than the longest repeats rather than truncating, which would silently drop
- * values that were deliberately typed in.
+ * Lists are read across, not combined: four colors and five words give five
+ * prompts, not twenty. A cross product is occasionally wanted, never expected,
+ * and multiplies the cost. A short list repeats rather than truncating.
  */
 const expandTemplate = (
   template: string,
@@ -730,14 +725,13 @@ type Produced =
 /**
  * Dispatches to the generator a node type declares.
  *
- * The only place a node type turns into a third-party call. Adding a node type
- * is therefore an entry in config/nodeTypes.ts plus one branch here — no schema
- * change, no change to the wire model, and nothing at all in the canvas.
- * `models` is the same list the picker was built from, so the vector claim and
- * the fal call agree with what the board was showing.
+ * The only place a node type turns into a third-party call, so adding one is an
+ * entry in config/nodeTypes.ts plus a branch here — no schema change, no wire
+ * model change, nothing in the canvas. `models` is the list the picker was
+ * built from, so the vector claim and the fal call agree with the board.
  *
- * Both generators already copy their output into blob storage before returning,
- * so a result is durable by the time it reaches this function.
+ * Both generators copy their output into blob storage before returning, so a
+ * result is durable by the time it reaches here.
  */
 const produce = async (
   capability: NodeCapability,
@@ -985,7 +979,6 @@ const maskRefusal = (
 
 /**
  * A picture wired into a model with nowhere to put one.
- *
  * Refused for the same reason a mask is. "input: prompt" means every wired
  * image is dropped before the request is built — a reference, a subject, and an
  * element's style along with it — so the run invents something from the words
@@ -1307,13 +1300,22 @@ const prepare = async (
 
   const masks = maskByUrl(rows);
   const masked = (values.image ?? []).some((url) => masks.has(url));
+  /*
+   * What was wired in, minus the elements. A cover arrives on the image port
+   * like any other picture and every rule below asks "is there an image?", so
+   * a node with only a style wired looked fully wired — and an edit model
+   * handed that cover returned it. Subtracted before the refusals, not in
+   * jobsFor, which runs after them.
+   */
+  const covers = new Set(element.images);
+  const subjects = (values.image ?? []).filter((url) => !covers.has(url));
   const unmet = unmetRequirement(
     shape,
     model,
     // The composed prompt, so a node whose only words come from a wired element
     // is not refused for having none.
     withElementWords(prompt, element.words),
-    values,
+    { ...values, image: subjects },
     masked,
     type.capability,
     models
@@ -1327,18 +1329,16 @@ const prepare = async (
     return unconfigured;
   }
 
-  // Every wired image becomes a job, each validated before being forwarded:
-  // these URLs are handed to a third party to go and fetch. Analyse is the
-  // exception — its job is to look and write down what it sees, so words
-  // describing a style would be handing it the answer to its own question.
+  // Every wired image becomes a job, validated before forwarding: these URLs go
+  // to a third party to fetch. Analyse is the exception — its job is to look
+  // and say what it sees, so style words would hand it its own answer.
   //
-  // The brief wins over the description. A description is seeded from a
-  // Describe node and, set to "subject", reads "a digital painting of a
-  // person's head and shoulders" — appended to a prompt meant to restyle a
-  // different picture, it tells the model to draw that person instead. The
-  // brief cannot say that: read under `focus: "style"`, it may not name a
-  // subject. `jobsFor` has already put the briefs in each prompt, so the
-  // description is only the fallback for an element not yet read.
+  // The brief wins over the description. A description seeded from a Describe
+  // node set to "subject" reads "a digital painting of a person's head and
+  // shoulders", which appended to a restyle prompt tells the model to draw that
+  // person. A brief cannot: read under `focus: "style"`, it may not name a
+  // subject. `jobsFor` has already placed the briefs, so the description is
+  // only the fallback for an element not yet read.
   const styleWords = element.briefs.length > 0 ? [] : element.words;
   const wordsForJobs = type.capability === "fal.describe" ? [] : styleWords;
   const { dropped, jobs } = validatedJobs(

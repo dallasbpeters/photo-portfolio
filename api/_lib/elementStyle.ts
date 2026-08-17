@@ -31,9 +31,10 @@ export interface ElementStyle {
   /**
    * Each wired element's cover.
    *
-   * Not sent as a reference: it arrives on the image port like any other
-   * picture and has to be taken back out, and it stands in as the subject when
-   * an element is the only thing wired in.
+   * Not sent at all. It arrives on the image port like any other picture and
+   * has to be taken back out — an element is a style, and a style is never the
+   * subject. Kept here so both the job builder and the refusal check can
+   * subtract it from what was wired.
    */
   images: string[];
   /** Each wired element's description, in wire order, deduped. */
@@ -172,9 +173,11 @@ export interface JobShape {
  * ride along with every job as references, so wiring a style in costs nothing
  * extra and changes what comes back rather than how much of it does.
  *
- * With nothing but an element wired in there is no subject to restyle, so its
- * cover becomes the picture and its remaining references stay references —
- * which is what an element on its own has always done, at the same price.
+ * With nothing but an element wired in there is no subject, and none is
+ * invented: the run generates from the prompt with the style read into it. Its
+ * cover used to stand in as the subject, which meant an element on its own
+ * produced a copy of its own cover — the style applied to itself. An element is
+ * a look to work in, not a picture to rework.
  */
 export const jobsFor = ({
   capability,
@@ -224,9 +227,13 @@ export const jobsFor = ({
   // looking like the element instead of like the subject.
   const fromElements = new Set(covers);
   const subjects = wiredImages.filter((url) => !fromElements.has(url));
-  // An element on its own has no subject to restyle, so it supplies one.
+  // No subject means no picture, not the cover standing in for one. Handed the
+  // cover, an edit model does the only thing it can with a single image and
+  // reproduces it — which is what "the model just recreates the cover" was.
+  // With nothing to rework, a model that can generate from words does that, and
+  // one that cannot is refused before it is billed.
   const images: (string | null)[] =
-    subjects.length === 0 ? [covers[0] ?? null] : [...subjects];
+    subjects.length === 0 ? [null] : [...subjects];
   // One wire carrying several prompts is an Iterate node: each is its own run.
   // Several wires are several *parts* of each run — a subject and a palette,
   // say — so they are joined. Both at once: five subjects and one palette line
