@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { boardsApi } from "../../services/portfolioService";
 import type { BoardItem } from "../../types.js";
 import { promptOf } from "./itemContext.js";
+import { maskBitmapUrl } from "./maskBitmap.js";
 import type { RunTool } from "./types.js";
 import { useToolRunner } from "./useToolRunner.js";
 
@@ -99,38 +100,44 @@ export const useBoardTools = ({
        * it are already handled — the result through `onResult`, the failure
        * through a toast — and awaiting here would only give the canvas a
        * promise it has nothing to do with.
+       *
+       * The mask is rendered first, and only for a tool that asked for one:
+       * the picker enables a mask tool from `toolContextOf`, which reads the
+       * painted strokes, while the runner decides from `maskUrl`. Building it
+       * anywhere else is how those two come to disagree.
        */
-      void start({
-        boardId,
-        config,
-        item,
-        /*
-         * Always null, and a trap to disarm before `replace-area` ships.
-         *
-         * `ToolInvocation.maskUrl` is a *rendered* bitmap's URL, and nothing
-         * rasterises one on this path — rasterising and uploading happens in
-         * `flushBeforeRun` in BoardEditor, on the graph-run path. No executor
-         * reads a mask yet either: /api/ai/generate takes only
-         * `{ prompt, sourceImageUrl }`, which is precisely why `replace-area`
-         * is still "planned", so the runner's mask check is unreachable today.
-         *
-         * The day it is not: the picker enables a mask tool from
-         * `toolContextOf`, which reads the painted strokes, while the runner
-         * decides from this field. Rasterise here, or the two will disagree.
-         */
-        maskUrl: null,
-        /*
-         * What the surface collected, else what the item already carries.
-         *
-         * Typed words win: a picker that offered a field and then ran on the
-         * note's body instead would be the worst kind of wrong — it would
-         * produce something, and it would not be what was asked for. Trimmed
-         * to nothing counts as nothing, so an all-whitespace field falls back
-         * rather than reaching the runner as a prompt that is not one.
-         */
-        prompt: prompt?.trim() || promptOf(item),
-        tool,
-      });
+      void (async () => {
+        let maskUrl: string | null = null;
+        if (tool.needsMask) {
+          try {
+            maskUrl = await maskBitmapUrl(item);
+          } catch (cause) {
+            toast.error(
+              cause instanceof Error
+                ? cause.message
+                : "The mask could not be prepared"
+            );
+            return;
+          }
+        }
+        await start({
+          boardId,
+          config,
+          item,
+          maskUrl,
+          /*
+           * What the surface collected, else what the item already carries.
+           *
+           * Typed words win: a picker that offered a field and then ran on the
+           * note's body instead would be the worst kind of wrong — it would
+           * produce something, and it would not be what was asked for. Trimmed
+           * to nothing counts as nothing, so an all-whitespace field falls back
+           * rather than reaching the runner as a prompt that is not one.
+           */
+          prompt: prompt?.trim() || promptOf(item),
+          tool,
+        });
+      })();
     },
     [boardId, start]
   );

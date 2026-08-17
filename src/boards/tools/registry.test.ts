@@ -9,7 +9,7 @@ import {
   toolsInGroup,
   withDefaults,
 } from "./registry";
-import { TOOL_EXECUTOR_IDS, TOOL_GROUPS, type Tool } from "./types";
+import { TOOL_EXECUTOR_IDS, TOOL_GROUPS } from "./types";
 
 describe("lookup", () => {
   it("finds a tool by id", () => {
@@ -181,28 +181,25 @@ describe("blockedReason", () => {
   });
 
   it("says a planned tool is unbuilt before it says anything else", () => {
-    // replace-area needs a mask and is not built. "Not built yet" is the more
-    // useful of the two answers, so it must win — telling someone to paint a
-    // mask for a tool that could not use one would be a small betrayal.
-    const reason = blockedReason(toolById("replace-area") as never, {
+    // Crop needs an image and is not built. "Not built yet" is the more useful
+    // of the two answers, so it must win — sending someone to find a picture
+    // for a tool that could not use one would be a small betrayal.
+    const reason = blockedReason(toolById("crop") as never, {
       ...ready,
-      hasMask: false,
+      hasImage: false,
     });
     expect(reason).toContain("not built yet");
   });
 
   it("names the missing mask", () => {
-    // Built inline: every registered mask tool is still planned, and the
-    // planned check would shadow this branch. The branch is what the bar's
-    // disabled reason will read from the moment one ships.
-    const masked: Tool = {
-      ...(toolById("replace-area") as Tool),
-      status: "ready",
-    };
-    expect(blockedReason(masked, { ...ready, hasMask: false })).toContain(
+    // Replace is the one tool that declares `needsMask`, and it is the reason
+    // the whole mask path exists. Running it unmasked would repaint the entire
+    // picture, which is the opposite of what was asked.
+    const replace = toolById("replace-area") as never;
+    expect(blockedReason(replace, { ...ready, hasMask: false })).toContain(
       "mask"
     );
-    expect(blockedReason(masked, ready)).toBeNull();
+    expect(blockedReason(replace, ready)).toBeNull();
   });
 
   it("names the missing prompt", () => {

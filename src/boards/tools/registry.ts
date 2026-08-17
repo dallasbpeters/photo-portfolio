@@ -163,13 +163,14 @@ export const TOOLS: readonly Tool[] = [
   {
     appliesTo: IMAGE_KINDS,
     /*
-     * Planned, and blocked on the API rather than on the executor.
+     * The only tool with `needsMask`, and the whole mask path exists for it.
      *
-     * api/_lib/fal.ts already routes a mask to FLUX_INPAINT_ENDPOINT, but
-     * /api/ai/generate takes only { prompt, sourceImageUrl } and has no
-     * maskUrl to forward. Sending one anyway would be silently dropped, the
-     * whole picture repainted, and the bill paid — the exact failure
-     * `maskRefusal` in the run endpoint exists to prevent.
+     * A mask changes which endpoint is called rather than only what is sent —
+     * fal serves inpainting separately — so it routes to FLUX_INPAINT_ENDPOINT,
+     * and Auto is a Flux model precisely so this works without a model setting
+     * to choose. A model that cannot inpaint is refused by /api/ai/generate
+     * rather than having its mask dropped, which would repaint the whole
+     * picture and bill for it.
      */
     description: "Paint over part of the image and describe what goes there.",
     executor: "ai",
@@ -182,7 +183,7 @@ export const TOOLS: readonly Tool[] = [
     settings: [
       { ...PROMPT_SETTING, placeholder: "What should be there instead?" },
     ],
-    status: "planned",
+    status: "ready",
   },
   {
     appliesTo: IMAGE_KINDS,

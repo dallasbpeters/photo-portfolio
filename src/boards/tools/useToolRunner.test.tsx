@@ -170,7 +170,7 @@ describe("useToolRunner — refusing before it spends", () => {
     const outcome = await harness.runner().run({
       item: item("a"),
       prompt: "make it blue",
-      tool: tool("replace-area"),
+      tool: tool("crop"),
     });
     await flush();
 
