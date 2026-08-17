@@ -20,6 +20,17 @@ import { mergeAttributes, Node } from "@tiptap/react";
 
 export interface VideoAttributes {
   align: string;
+  /**
+   * Whether the reader gets a control bar.
+   *
+   * Optional because a clip in a page is one of two things and they want
+   * opposite treatment: a video someone is meant to watch needs a way to pause
+   * it, while a short loop used as a texture is furniture, and a control bar
+   * over furniture is clutter that also invites a click that does nothing
+   * useful. Defaults to on — a reader who cannot stop a video is the worse
+   * failure of the two.
+   */
+  controls: boolean;
   src: string;
   title: string | null;
   width: number | null;
@@ -32,6 +43,19 @@ export const PageVideo = Node.create({
         default: "center",
         parseHTML: (element) => element.getAttribute("data-align") ?? "center",
         renderHTML: (attributes) => ({ "data-align": attributes.align }),
+      },
+      controls: {
+        default: true,
+        // Read off the attribute's presence, which is how HTML says it: an
+        // empty `controls` is on. Stored documents that predate this have no
+        // attribute at all, so `hasAttribute` would make every one of them
+        // silently lose its controls — hence the explicit "false" check.
+        parseHTML: (element) =>
+          element.getAttribute("data-controls") !== "false",
+        renderHTML: (attributes) =>
+          attributes.controls
+            ? { controls: "true" }
+            : { "data-controls": "false" },
       },
       src: {
         default: null,
@@ -82,13 +106,11 @@ export const PageVideo = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "video",
+      // `controls` comes from the attribute above rather than being forced
+      // here, which is the whole point of the setting. Muted and looping stay
+      // fixed: a page that makes noise on load is the one thing every reader
+      // agrees about, and muted is also what makes autoplay legal.
       mergeAttributes(HTMLAttributes, {
-        // Controls, unlike the board: a page is read rather than arranged, so
-        // there is no drag gesture for a control bar to swallow, and a reader
-        // who wants to pause should be able to.
-        controls: "true",
-        // Muted and looping by default, and never autoplaying: a page that makes
-        // noise on load is the one thing every reader agrees about.
         loop: "true",
         muted: "true",
         playsinline: "true",

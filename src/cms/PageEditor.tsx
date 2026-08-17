@@ -27,7 +27,8 @@ import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
 import { AssetPicker } from "./AssetPicker";
 import type { ImageAlign } from "./imageAttributes";
-import { FormattedImage, IMAGE_WIDTHS } from "./imageAttributes";
+import { FormattedImage } from "./imageAttributes";
+import { MediaToolbar } from "./MediaToolbar";
 import { PageVideo } from "./videoNode";
 
 interface PageEditorProps {
@@ -109,6 +110,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       // Only meaningful when an image is selected, and read together with
       // isImage so the width and alignment buttons agree with what is shown.
       const image = e.getAttributes("image");
+      const video = e.getAttributes("pageVideo");
       return {
         imageAlign: (image.align ?? null) as ImageAlign | null,
         imageAlt: typeof image.alt === "string" ? image.alt : "",
@@ -122,10 +124,16 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         isLink: e.isActive("link"),
         isOrderedList: e.isActive("orderedList"),
         isStrike: e.isActive("strike"),
+        isVideo: e.isActive("pageVideo"),
         textAlign:
           (["left", "center", "right"] as const).find((align) =>
             e.isActive({ textAlign: align })
           ) ?? null,
+        videoAlign: (video.align ?? null) as ImageAlign | null,
+        // Absent means on, matching the node's default and what every clip
+        // written before the setting existed already does.
+        videoControls: video.controls !== false,
+        videoWidth: (video.width ?? null) as number | null,
       };
     },
   });
@@ -357,77 +365,7 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
       {/* Only while an image is selected: these controls are meaningless
           otherwise, and a permanently visible row of them implies they apply to
           whatever the cursor is in. */}
-      {toolbar.isImage ? (
-        <div className="flex flex-wrap items-center gap-1 border-white/10 border-b bg-white/2 px-2 py-1">
-          <span className="px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
-            Image
-          </span>
-          {(
-            [
-              ["left", TextAlignLeftIcon],
-              ["center", TextAlignCenterIcon],
-              ["right", TextAlignRightIcon],
-            ] as const
-          ).map(([align, icon]) => (
-            <ToolButton
-              editor={editor}
-              isActive={toolbar.imageAlign === align}
-              key={align}
-              label={`Image ${align}`}
-              onClick={() =>
-                editor
-                  .chain()
-                  .focus()
-                  .updateAttributes("image", { align })
-                  .run()
-              }
-            >
-              <HugeiconsIcon icon={icon} size={14} />
-            </ToolButton>
-          ))}
-
-          <Divider />
-
-          {IMAGE_WIDTHS.map((width) => (
-            <ToolButton
-              editor={editor}
-              isActive={toolbar.imageWidth === width}
-              key={width}
-              label={`Image width ${width}%`}
-              onClick={() =>
-                editor
-                  .chain()
-                  .focus()
-                  .updateAttributes("image", { width })
-                  .run()
-              }
-            >
-              <span className="text-[10px] tabular-nums">{width}%</span>
-            </ToolButton>
-          ))}
-
-          {/* The page prints this under the photograph, so it needs to be
-              typed rather than inherited from the upload. On its own line
-              because a caption is a sentence, not a toggle. */}
-          <label className="mt-1 flex w-full items-center gap-2">
-            <span className="shrink-0 px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
-              Caption
-            </span>
-            <input
-              className="min-h-8 flex-1 border border-white/10 bg-black/40 px-2 text-[12px] text-white/85 outline-none focus:border-white/40"
-              onChange={(e) =>
-                editor
-                  .chain()
-                  .focus()
-                  .updateAttributes("image", { alt: e.target.value })
-                  .run()
-              }
-              placeholder="Describe the photograph — shown beneath it, and read aloud to anyone who cannot see it"
-              value={toolbar.imageAlt}
-            />
-          </label>
-        </div>
-      ) : null}
+      <MediaToolbar editor={editor} state={toolbar} />
 
       <EditorContent className="cms-editor" editor={editor} />
     </div>

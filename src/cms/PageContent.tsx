@@ -144,12 +144,18 @@ const renderImage = (node: Node): ReactNode => {
  *
  * Muted is what makes autoplay legal as well as bearable — every browser
  * refuses to start an unmuted video on its own, so a clip with sound would
- * simply sit there. Controls stay: a page is read rather than arranged, there
- * is no drag gesture for a control bar to swallow, and a reader who wants it
- * to stop should be able to say so.
+ * simply sit there.
+ *
+ * Controls are the author's call, set per clip in the editor. A video meant to
+ * be watched needs a way to pause it; a short loop used as a texture is
+ * furniture, and a control bar over furniture is clutter. Absent means on, so
+ * nothing written before the setting existed loses its bar.
  */
 function PageVideo({ node }: { node: Node }) {
   const still = usePrefersReducedMotion();
+  // Absent means on: pages written before the setting existed had a control bar,
+  // and a silent upgrade that took it away would be the reader's loss.
+  const controls = node.attrs?.controls !== false;
   const src = safeHref(node.attrs?.src);
   if (!src) {
     return null;
@@ -160,7 +166,7 @@ function PageVideo({ node }: { node: Node }) {
       <video
         autoPlay={!still}
         className="h-auto w-full"
-        controls
+        controls={controls}
         loop
         muted
         playsInline

@@ -39,9 +39,48 @@ describe("PageVideo", () => {
     ) as Record<string, unknown>;
     expect(Object.keys(attributes).sort()).toEqual([
       "align",
+      "controls",
       "src",
       "title",
       "width",
     ]);
+  });
+
+  describe("the control bar", () => {
+    const attribute = () => {
+      const all = PageVideo.config.addAttributes?.call(
+        PageVideo as never
+      ) as Record<
+        string,
+        { default: unknown; parseHTML: (el: Element) => unknown }
+      >;
+      return all.controls;
+    };
+
+    const element = (html: string): Element => {
+      const host = document.createElement("div");
+      host.innerHTML = html;
+      return host.firstElementChild as Element;
+    };
+
+    it("is shown unless the author turned it off", () => {
+      // The safer default of the two: a reader who cannot pause a video is a
+      // worse outcome than a texture clip carrying a bar nobody needed.
+      expect(attribute().default).toBe(true);
+    });
+
+    it("survives a page written before the setting existed", () => {
+      // No attribute at all is every stored document to date. Read as "off",
+      // every clip already published would quietly lose its controls.
+      expect(attribute().parseHTML(element("<video src=x></video>"))).toBe(
+        true
+      );
+    });
+
+    it("reads back an author who turned it off", () => {
+      expect(
+        attribute().parseHTML(element('<video src=x data-controls="false">'))
+      ).toBe(false);
+    });
   });
 });
