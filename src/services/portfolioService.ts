@@ -1125,6 +1125,41 @@ export const boardsApi = {
   },
 
   /**
+   * Writes an SVG edited in Affinity back onto a node as a new version.
+   *
+   * Its own call because `result` is not written by the board save — see
+   * api/boards/[id]/svg.ts for why that column is left alone.
+   */
+  /**
+   * Keeps a tool's output on the item.
+   *
+   * Its own call because a board save never writes `result` — see
+   * api/boards/[id]/result.ts for why. Without this a tool ran, showed its
+   * work, and lost it on the next reload.
+   */
+  saveToolResult: async (
+    boardId: string,
+    itemId: string,
+    variation: {
+      description?: string | null;
+      height?: number | null;
+      isVector?: boolean;
+      kind?: "image" | "video";
+      url: string;
+      width?: number | null;
+    }
+  ): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/boards/${boardId}/result`, {
+      body: JSON.stringify({ itemId, ...variation }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save the result"));
+    }
+  },
+
+  /**
    * Saves the board. Passing `items` replaces the whole arrangement, so the
    * canvas must send every item it still has — anything omitted is deleted.
    * `wires` works the same way.
@@ -1154,12 +1189,6 @@ export const boardsApi = {
     return (await res.json()) as Board;
   },
 
-  /**
-   * Writes an SVG edited in Affinity back onto a node as a new version.
-   *
-   * Its own call because `result` is not written by the board save — see
-   * api/boards/[id]/svg.ts for why that column is left alone.
-   */
   writebackSvg: async (
     boardId: string,
     itemId: string,
@@ -1411,10 +1440,12 @@ export const aiApi = {
    */
   generate: async (
     prompt: string,
-    sourceImageUrl?: string | null
+    sourceImageUrl?: string | null,
+    /** A fal model id from the models table, or omitted to let it choose. */
+    model?: string | null
   ): Promise<GeneratedImage> => {
     const res = await fetch(`${apiBase()}/api/ai/generate`, {
-      body: JSON.stringify({ prompt, sourceImageUrl }),
+      body: JSON.stringify({ model, prompt, sourceImageUrl }),
       headers: jsonHeaders(),
       method: "POST",
     });

@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { boardsApi } from "../../services/portfolioService";
 import type { BoardItem } from "../../types.js";
 import { promptOf } from "./itemContext.js";
 import type { RunTool } from "./types.js";
@@ -65,11 +66,34 @@ export const useBoardTools = ({
           item.id === itemId ? { ...item, result: success.result } : item
         )
       );
+      // Written through its own endpoint, because a board save never carries
+      // `result` — see api/boards/[id]/result.ts. Until this existed a tool
+      // showed its work and lost it on the next reload.
+      //
+      // Not awaited, and a failure only warns: the picture is already on the
+      // item and in blob storage, so the run was not wasted. Blocking the
+      // canvas on a write it cannot influence would make a slow save look like
+      // a slow tool.
+      if (boardId) {
+        void boardsApi
+          .saveToolResult(boardId, itemId, {
+            description: success.variation.description,
+            height: success.variation.height,
+            isVector: success.variation.isVector ?? false,
+            url: success.variation.url,
+            width: success.variation.width,
+          })
+          .catch((e: unknown) => {
+            toast.warning("That result may not survive a reload", {
+              description: e instanceof Error ? e.message : undefined,
+            });
+          });
+      }
     },
   });
 
   const run = useCallback<RunTool>(
-    (item, tool, prompt) => {
+    (item, tool, prompt, config) => {
       /*
        * Fire and forget. `start` resolves to the outcome, but both ends of
        * it are already handled — the result through `onResult`, the failure
@@ -78,6 +102,7 @@ export const useBoardTools = ({
        */
       void start({
         boardId,
+        config,
         item,
         /*
          * Always null, and a trap to disarm before `replace-area` ships.

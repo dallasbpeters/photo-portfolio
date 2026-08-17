@@ -1,8 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { isFalModel } from "../../config/nodeTypes.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
+import { getSql } from "../_lib/db.js";
 import { generateImage, isFalConfigured } from "../_lib/fal.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
+import { loadModelDefs } from "../_lib/models.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /** Long enough for a considered prompt, short enough to bound the request. */
@@ -66,8 +69,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  /*
+   * The model, checked against the table rather than trusted.
+   *
+   * `generateImage` hands this straight to fal, so an arbitrary string here
+   * would be a paid request to whatever it named. An unknown id is treated as
+   * "auto" rather than refused: this endpoint is also reached by callers that
+   * have no model to offer, and the choice is an improvement on the default
+   * rather than a requirement of it.
+   */
+  const requested = typeof body.model === "string" ? body.model.trim() : "";
+  let model: string | null = null;
+  if (requested && isFalModel(await loadModelDefs(getSql()), requested)) {
+    model = requested;
+  }
+
   try {
-    const image = await generateImage(prompt, sourceImageUrl);
+    const image = await generateImage(prompt, sourceImageUrl, model);
     return res.status(200).json(image);
   } catch (e) {
     console.error(e);

@@ -371,8 +371,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: var(--color-c);
-  --primary-foreground: oklch(from var(--color-c) 0 c 2);
+  --primary: oklch(44.262% 0.25243 267.827);
+  --primary-foreground: oklch(100% 0.00011 271.152);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -495,7 +495,7 @@
   --btn-hover-bg: var(--board-ink);
   --btn-hover-fg: var(--board-surface);
   --btn-ghost-hover-bg: color-mix(in oklch, var(--board-ink) 10%, transparent);
-  --btn-solid-bg: var(--primary);
+  --btn-solid-bg: oklch(44.262% 0.25243 267.827);
   --btn-solid-fg: var(--board-surface);
   --btn-solid-hover-bg: color-mix(in oklch, var(--primary) 80%, var(--color-c));
   --btn-selected-border: color-mix(in oklch, var(--board-ink) 30%, transparent);

@@ -72,6 +72,19 @@ const USES_SOURCE_IMAGE = new Set(["edit-image"]);
 const CANCELLED_MESSAGE = "Cancelled before it finished.";
 
 /**
+ * The model the tool was asked to use, if any.
+ *
+ * Read off `config`, where the registry's settings land, and null when the tool
+ * declares no model setting or nothing was chosen — the endpoint then keeps its
+ * own default. Not validated here: the server checks it against the models
+ * table, because that is the side that pays for a wrong answer.
+ */
+const modelOf = (invocation: ToolInvocation): string | null => {
+  const chosen = invocation.config.model;
+  return typeof chosen === "string" && chosen.trim() ? chosen.trim() : null;
+};
+
+/**
  * Rejects as soon as the signal fires.
  *
  * `aiApi.generate` takes no `AbortSignal`, so this abandons the *wait* and not
@@ -139,13 +152,15 @@ const sourceUrlOf = (invocation: ToolInvocation): string | null => {
 export interface AiDeps {
   generate: (
     prompt: string,
-    sourceImageUrl: string | null
+    sourceImageUrl: string | null,
+    model: string | null
   ) => Promise<GeneratedImage>;
   now: () => number;
 }
 
 const DEFAULTS: AiDeps = {
-  generate: (prompt, sourceImageUrl) => aiApi.generate(prompt, sourceImageUrl),
+  generate: (prompt, sourceImageUrl, model) =>
+    aiApi.generate(prompt, sourceImageUrl, model),
   now: () => Date.now(),
 };
 
@@ -236,7 +251,7 @@ const run = async (
       phase: "running",
     });
     image = await raceAbort(
-      deps.generate(prompt, sourceImageUrl),
+      deps.generate(prompt, sourceImageUrl, modelOf(invocation)),
       invocation.signal
     );
   } catch (cause) {

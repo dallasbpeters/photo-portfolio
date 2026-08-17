@@ -153,11 +153,16 @@ describe("defaults", () => {
   it("leaves text settings absent rather than defaulting them to empty", () => {
     // An empty string would read as "the user cleared this", which is a
     // different thing from "the user has not typed anything yet".
+    //
+    // Asserted key by key rather than against an empty object: the tool also
+    // declares a model, which does have a default, and a whole-object match
+    // would fail for the wrong reason the moment any settable thing gained one.
     const tool = toolById("edit-image");
     if (!tool) {
       throw new Error("edit-image must exist");
     }
-    expect(withDefaults(tool)).toEqual({});
+    expect(withDefaults(tool)).not.toHaveProperty("prompt");
+    expect(withDefaults(tool).model).toBe("auto");
   });
 });
 

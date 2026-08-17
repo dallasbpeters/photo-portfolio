@@ -47,7 +47,11 @@ interface BoardToolBarProps {
   isRunning: boolean;
   item: BoardItem;
   /** Runs the tool. The words come from the picker when the tool needs them. */
-  onRun: (tool: Tool, prompt?: string) => void;
+  onRun: (
+    tool: Tool,
+    prompt?: string,
+    config?: Record<string, unknown>
+  ) => void;
 }
 
 export function BoardToolBar({
@@ -99,10 +103,10 @@ export function BoardToolBar({
   const panel = pending ? (
     <ToolPrompt
       onCancel={() => setPending(null)}
-      onSubmit={(words) => {
+      onSubmit={(words, config) => {
         const tool = pending;
         setPending(null);
-        onRun(tool, words);
+        onRun(tool, words, config);
       }}
       tool={pending}
     />
@@ -112,9 +116,9 @@ export function BoardToolBar({
       context={context}
       kind={item.kind}
       onClose={() => setPicking(false)}
-      onPick={(tool, prompt) => {
+      onPick={(tool, prompt, config) => {
         setPicking(false);
-        onRun(tool, prompt);
+        onRun(tool, prompt, config);
       }}
     />
   );

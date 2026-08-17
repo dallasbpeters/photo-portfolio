@@ -77,7 +77,11 @@ export interface ToolPickerProps {
    * prompt-needing tool without the words: those arrive as the second
    * argument, already trimmed and never empty.
    */
-  onPick: (tool: Tool, prompt?: string) => void;
+  onPick: (
+    tool: Tool,
+    prompt?: string,
+    config?: Record<string, unknown>
+  ) => void;
 }
 
 /**
@@ -339,7 +343,7 @@ export function ToolPicker({
       <div className={cn(SHELL, className)}>
         <ToolPrompt
           onCancel={() => setPending(null)}
-          onSubmit={(words) => onPick(pending, words)}
+          onSubmit={(words, config) => onPick(pending, words, config)}
           tool={pending}
         />
       </div>

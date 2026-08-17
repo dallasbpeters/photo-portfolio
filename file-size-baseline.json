@@ -11,5 +11,5 @@
   "src/components/admin/BoardInsertPanel.tsx": 1200,
   "src/components/admin/DailyChallengePanel.tsx": 743,
   "src/editor/presets.ts": 1316,
-  "src/services/portfolioService.ts": 1669
+  "src/services/portfolioService.ts": 1700
 }

@@ -860,7 +860,9 @@ export function BoardItemView({
           chromeScale={chromeScale}
           isRunning={tools.isRunning(item.id)}
           item={item}
-          onRun={(tool, prompt) => tools.run(item, tool, prompt)}
+          onRun={(tool, prompt, config) =>
+            tools.run(item, tool, prompt, config)
+          }
         />
       ) : null}
 

@@ -137,7 +137,18 @@ export interface Tool {
  * ToolPrompt — and takes precedence over whatever the item already carries,
  * which is what makes "type something else here" mean anything.
  */
-export type RunTool = (item: BoardItem, tool: Tool, prompt?: string) => void;
+export type RunTool = (
+  item: BoardItem,
+  tool: Tool,
+  prompt?: string,
+  /**
+   * Settings the surface collected — a model, so far.
+   *
+   * Merged over the registry's defaults by the runner, so a surface that offers
+   * none behaves exactly as it did before there was anything to offer.
+   */
+  config?: Readonly<Record<string, unknown>>
+) => void;
 
 // ── Invocation ───────────────────────────────────────────────────────────────
 

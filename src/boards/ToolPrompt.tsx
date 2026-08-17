@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ModelSetting } from "./SettingField";
 import type { Tool } from "./tools/types";
 
 /**
@@ -44,7 +45,14 @@ export interface ToolPromptProps {
   defaultValue?: string | null;
   onCancel: () => void;
   /** Never called with a blank string: an empty field cannot be submitted. */
-  onSubmit: (prompt: string) => void;
+  /**
+   * The words, and the settings collected alongside them.
+   *
+   * The model is the only one so far, and it is here rather than on the item
+   * because a one-off choice of endpoint is part of this run, not an edit to
+   * the board — the same reasoning the prompt itself follows.
+   */
+  onSubmit: (prompt: string, config: Record<string, unknown>) => void;
   tool: Tool;
 }
 
@@ -55,15 +63,18 @@ export function ToolPrompt({
   tool,
 }: ToolPromptProps) {
   const [value, setValue] = useState(defaultValue ?? "");
+  /** "auto" keeps the endpoint's own choice, which is what it did before. */
+  const [model, setModel] = useState("auto");
   const setting = promptSetting(tool);
   // Trimmed here and not only at the runner, because this is what decides
   // whether the button is live — a field holding three spaces must read as
   // empty to the person looking at it, not merely to the executor.
   const words = value.trim();
+  const modelSetting = tool.settings.find((s) => s.kind === "model");
 
   const submit = () => {
     if (words) {
-      onSubmit(words);
+      onSubmit(words, model ? { model } : {});
     }
   };
 
@@ -101,6 +112,15 @@ export function ToolPrompt({
         rows={3}
         value={value}
       />
+      {modelSetting ? (
+        <div className="mt-2">
+          <ModelSetting
+            onChange={setModel}
+            setting={modelSetting}
+            value={model}
+          />
+        </div>
+      ) : null}
       <p className="mt-1.5 text-[10px] text-board-ink/40 leading-relaxed">
         {tool.description}
       </p>

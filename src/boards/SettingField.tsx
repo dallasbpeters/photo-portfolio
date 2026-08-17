@@ -129,7 +129,7 @@ export function SettingField({
  * is); only the options are data, which is the whole point of moving the list
  * out of code.
  */
-function ModelSetting({
+export function ModelSetting({
   onChange,
   setting,
   value,

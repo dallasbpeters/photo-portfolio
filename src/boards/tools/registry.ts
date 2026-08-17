@@ -26,6 +26,26 @@ const IMAGE_KINDS: readonly BoardItemKind[] = [
 /** Matches MAX_PROMPT in api/ai/generate.ts, which truncates past it silently. */
 const PROMPT_MAX = 1200;
 
+/**
+ * The model an AI tool runs on, chosen rather than assumed.
+ *
+ * `/api/ai/generate` used a constant — nano-banana/edit for anything with a
+ * picture — so there was no way to reach the four other endpoints in the models
+ * table that also edit, and no sign one existed. "auto" keeps the old behaviour
+ * as the default, so a tool run without touching this behaves exactly as it did.
+ *
+ * `video: false` because these edit pictures: the control offers the rows whose
+ * output is an image, and a video endpoint handed an edit request fails after it
+ * has been billed.
+ */
+const MODEL_SETTING: SettingDef = {
+  default: "auto",
+  key: "model",
+  kind: "model",
+  label: "Model",
+  video: false,
+};
+
 const PROMPT_SETTING: SettingDef = {
   key: "prompt",
   kind: "text",
@@ -121,7 +141,7 @@ export const TOOLS: readonly Tool[] = [
     label: "Edit",
     needsMask: false,
     needsPrompt: true,
-    settings: [PROMPT_SETTING],
+    settings: [PROMPT_SETTING, MODEL_SETTING],
     status: "ready",
   },
   {
@@ -134,7 +154,10 @@ export const TOOLS: readonly Tool[] = [
     label: "Generate",
     needsMask: false,
     needsPrompt: true,
-    settings: [{ ...PROMPT_SETTING, placeholder: "Describe the image…" }],
+    settings: [
+      { ...PROMPT_SETTING, placeholder: "Describe the image…" },
+      MODEL_SETTING,
+    ],
     status: "ready",
   },
   {
