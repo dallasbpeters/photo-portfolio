@@ -8,6 +8,18 @@ import { isVideoUrl } from "./isVideo";
  * carries its own playback rules, and inlining both branches pushed
  * BoardItemView back over the size ceiling it had just come under.
  */
+/**
+ * What the item currently shows: what a tool made of it, or its own picture.
+ *
+ * The same precedence `transformExecutor.sourceUrlOf` uses, and it has to be:
+ * a tool reads the newest version as its input and writes the next one to
+ * `result`, so a renderer that only ever read `imageUrl` showed the original
+ * for ever. Rotate and Edit both ran, both stored a new picture, and both
+ * looked like they had done nothing at all.
+ */
+const shownUrl = (item: BoardItem): string | null =>
+  item.result?.url ?? item.imageUrl ?? null;
+
 export function ItemMedia({
   isIcon,
   item,
@@ -16,7 +28,8 @@ export function ItemMedia({
   isIcon: boolean;
   item: BoardItem;
 }) {
-  if (isVideoUrl(item.imageUrl)) {
+  const url = shownUrl(item);
+  if (isVideoUrl(url)) {
     // Muted and looping because a board holds a dozen of these at once and one
     // of them shouting is the wrong kind of surprise; `playsInline` stops iOS
     // taking it fullscreen the moment it starts. Controls are deliberately
@@ -35,7 +48,7 @@ export function ItemMedia({
         muted
         playsInline
         preload="metadata"
-        src={item.imageUrl ?? ""}
+        src={url ?? ""}
         width={item.width}
       >
         <track kind="captions" />
@@ -54,7 +67,7 @@ export function ItemMedia({
       draggable={false}
       height={item.height}
       loading="lazy"
-      src={item.imageUrl ?? ""}
+      src={url ?? ""}
       width={item.width}
     />
   );
