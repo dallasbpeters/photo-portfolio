@@ -28,8 +28,8 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card: oklch(10.668% 0.00001 271.152);
+  --card-foreground: oklch(94.007% 0.00011 271.152);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
@@ -217,6 +217,33 @@
  * `<Button variant="outline">` as an admin one.
  */
 [data-surface="board"] {
+  /*
+   * The shadcn set, re-pointed at the board's palette.
+   *
+   * A `Select` or an `Input` reads `--foreground`, `--input` and
+   * `--muted-foreground`, which describe the admin's chrome. Dropped on the
+   * board they went on painting with it, so the Seconds picker showed a value
+   * in the admin's near-white on the board's near-white paper. Every one of
+   * these is the board's own colour expressed in the name the component
+   * already asks for, so no component had to learn where it is.
+   */
+  --foreground: var(--board-ink);
+  --muted-foreground: color-mix(
+    in oklch,
+    var(--board-ink) 55%,
+    var(--board-surface)
+  );
+  --card: var(--board-panel);
+  --card-foreground: var(--board-ink);
+  --popover: var(--board-panel);
+  --popover-foreground: var(--board-ink);
+  --muted: color-mix(in oklch, var(--board-ink) 8%, transparent);
+  --accent: color-mix(in oklch, var(--board-ink) 10%, transparent);
+  --accent-foreground: var(--board-ink);
+  --border: color-mix(in oklch, var(--board-ink) 15%, transparent);
+  --input: color-mix(in oklch, var(--board-ink) 15%, transparent);
+  --ring: color-mix(in oklch, var(--board-ink) 40%, transparent);
+
   --btn-fg: color-mix(in oklch, var(--board-ink) 80%, transparent);
   --btn-fg-strong: var(--board-ink);
   --btn-border: color-mix(in oklch, var(--board-ink) 20%, transparent);

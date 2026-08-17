@@ -49,9 +49,27 @@ const applyTheme = (settings: ResolvedSiteSettings): void => {
   const { theme } = settings;
   const root = document.documentElement;
 
-  root.style.setProperty("--background", theme.background);
-  root.style.setProperty("--foreground", theme.foreground);
-  root.style.setProperty("--accent", theme.accent);
+  /*
+   * Both names, deliberately.
+   *
+   * `--background` is what the palette in index.css declares and what
+   * `bg-background` compiles to under `@theme inline`. `--color-background` is
+   * the name Tailwind emits for anything that still reads the alias — some
+   * utilities do, and hand-written CSS elsewhere in the app does.
+   *
+   * Setting only one of them is how the admin turned white: its chrome is built
+   * entirely from `text-white/90` and `bg-black/40`, which only work over a
+   * dark ground, and that ground comes from here rather than from the
+   * light/dark switch. Writing both costs three lines and cannot be half-right.
+   */
+  for (const [name, value] of [
+    ["background", theme.background],
+    ["foreground", theme.foreground],
+    ["accent", theme.accent],
+  ] as const) {
+    root.style.setProperty(`--${name}`, value);
+    root.style.setProperty(`--color-${name}`, value);
+  }
 
   const sans = findFont(theme.sansFont);
   const serif = findFont(theme.serifFont);
