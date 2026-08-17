@@ -1,4 +1,5 @@
 import {
+  type FalModelDef,
   type FalModelInput,
   FLUX_INPAINT_ENDPOINT,
   FLUX_LORA_INPAINT_ENDPOINT,
@@ -102,7 +103,14 @@ const bodyFor = (
   /** "image_url" for most, "image_urls" for the few that take a list. */
   imageParam: "image_url" | "image_urls"
 ): Record<string, unknown> => {
-  /** The source image under whichever name this endpoint expects. */
+  /**
+   * The source image under whichever name this endpoint expects.
+   *
+   * One picture either way. A wired Element's style used to ride here as extra
+   * entries beside the subject, which is why a restyle came back looking like
+   * the element: an edit endpoint weighs every entry equally, so the subject
+   * was one of seven. The style is read into words now — see elementBrief.ts.
+   */
   const imageField = (url: string): Record<string, unknown> =>
     imageParam === "image_urls" ? { image_urls: [url] } : { image_url: url };
 
@@ -191,22 +199,22 @@ const paletteFrom = (
  * wired in.
  */
 const endpointFor = ({
+  hasSourceImage,
   lora,
   masking,
   requestedModel,
-  sourceImageUrl,
 }: {
+  hasSourceImage: boolean;
   lora: ReturnType<typeof falModelLora>;
   masking: boolean;
   requestedModel: string | null;
-  sourceImageUrl: string | null;
 }): string => {
   if (lora) {
     return masking
       ? FLUX_LORA_INPAINT_ENDPOINT
       : // A wired image reworks rather than invents, so the style is applied
         // to it through the image-to-image endpoint instead.
-        falLoraEndpoint(lora, Boolean(sourceImageUrl));
+        falLoraEndpoint(lora, hasSourceImage);
   }
   if (masking) {
     return FLUX_INPAINT_ENDPOINT;
@@ -214,12 +222,43 @@ const endpointFor = ({
   if (requestedModel && requestedModel !== "auto") {
     return requestedModel;
   }
-  return sourceImageUrl ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
+  return hasSourceImage ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
 };
 
 const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
+
+/**
+ * Whether this run's endpoint takes a list of images rather than one.
+ *
+ * The only way a style reference can be sent: it rides in `image_urls` after
+ * the subject. Answered here rather than in the run endpoint because the
+ * endpoint a run reaches is not the model that was asked for — "auto" with a
+ * picture resolves to nano-banana/edit, which takes a list, and a LoRA or a
+ * mask resolves to endpoints that take a single `image_url` whatever the row
+ * says. The run endpoint asks this before spending anything, and refuses by
+ * name when the answer is no.
+ */
+export const falAcceptsImageList = ({
+  hasSourceImage,
+  masking,
+  models,
+  requestedModel,
+}: {
+  hasSourceImage: boolean;
+  masking: boolean;
+  models: readonly FalModelDef[];
+  requestedModel: string | null;
+}): boolean => {
+  const lora = falModelLora(models, requestedModel);
+  // Both send the picture as image_url; see bodyFor and the mask override.
+  if (lora || masking) {
+    return false;
+  }
+  const model = endpointFor({ hasSourceImage, lora, masking, requestedModel });
+  return falImageParam(models, model) === "image_urls";
+};
 
 /**
  * Generates an image, or a variation of one, and stores it.
@@ -269,10 +308,10 @@ export const generateImage = async (
     maskUrl && sourceImageUrl && falModelMasks(models, requestedModel ?? "auto")
   );
   const model = endpointFor({
+    hasSourceImage: Boolean(sourceImageUrl),
     lora,
     masking,
     requestedModel: requestedModel ?? null,
-    sourceImageUrl: sourceImageUrl ?? null,
   });
 
   const body = bodyFor(

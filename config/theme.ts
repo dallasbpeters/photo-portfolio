@@ -26,6 +26,14 @@ export interface FontChoice {
   label: string;
   /** The value written into --font-sans / --font-serif. */
   stack: string;
+  /**
+   * The family's variable `wght` axis, copied from its @fontsource metadata.
+   *
+   * Recorded because a browser silently clamps a weight outside the axis:
+   * asking Playfair Display for 300 draws 400. Anything offering a weight
+   * picker has to cut the list to this range, or half the options do nothing.
+   */
+  weight: { max: number; min: number };
 }
 
 /**
@@ -43,60 +51,70 @@ export const FONT_CHOICES: FontChoice[] = [
     id: "figtree",
     label: "Figtree",
     stack: '"Figtree", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 900, min: 300 },
   },
   {
     category: "sans",
     id: "plus-jakarta-sans",
     label: "Plus Jakarta Sans",
     stack: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 800, min: 200 },
   },
   {
     category: "sans",
     id: "mulish",
     label: "Mulish",
     stack: '"Mulish Variable", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 1000, min: 200 },
   },
   {
     category: "sans",
     id: "geist",
     label: "Geist",
     stack: '"Geist Variable", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 900, min: 100 },
   },
   {
     category: "sans",
     id: "inter",
     label: "Inter",
     stack: '"Inter Variable", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 900, min: 100 },
   },
   {
     category: "sans",
     id: "space-grotesk",
     label: "Space Grotesk",
     stack: '"Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 700, min: 300 },
   },
   {
     category: "sans",
     id: "manrope",
     label: "Manrope",
     stack: '"Manrope Variable", ui-sans-serif, system-ui, sans-serif',
+    weight: { max: 800, min: 200 },
   },
   {
     category: "serif",
     id: "playfair-display",
     label: "Playfair Display",
     stack: '"Playfair Display Variable", Georgia, serif',
+    weight: { max: 900, min: 400 },
   },
   {
     category: "serif",
     id: "fraunces",
     label: "Fraunces",
     stack: '"Fraunces Variable", Georgia, serif',
+    weight: { max: 900, min: 100 },
   },
   {
     category: "serif",
     id: "cormorant-garamond",
     label: "Cormorant Garamond",
     stack: '"Cormorant Garamond Variable", Georgia, serif',
+    weight: { max: 700, min: 300 },
   },
 ];
 

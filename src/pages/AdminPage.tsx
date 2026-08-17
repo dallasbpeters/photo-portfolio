@@ -106,7 +106,7 @@ export function AdminPage() {
       <Toaster position="top-center" theme="dark" />
       <nav className="fixed top-0 left-0 z-50 w-full border-white/10 border-b bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
         <div className="mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-3 sm:min-h-20 sm:px-6 sm:py-0">
-          <h1 className="truncate font-light text-lg uppercase tracking-[0.25em] sm:text-xl sm:tracking-[0.3em]">
+          <h1 className="truncate font-light text-lg sm:text-xl">
             {settings.shortName} Admin
           </h1>
           <div className="flex shrink-0 items-center gap-2">

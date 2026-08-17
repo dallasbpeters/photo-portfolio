@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Album02Icon,
   Image01Icon,
   LeftToRightListBulletIcon,
   LeftToRightListNumberIcon,
@@ -20,10 +21,11 @@ import TextAlign from "@tiptap/extension-text-align";
 import type { Editor } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useConfirm } from "../components/admin/ConfirmProvider";
 import { portfolioService } from "../services/portfolioService";
+import { AssetPicker } from "./AssetPicker";
 import type { ImageAlign } from "./imageAttributes";
 import { FormattedImage, IMAGE_WIDTHS } from "./imageAttributes";
 
@@ -45,6 +47,7 @@ const EMPTY_DOC = { content: [{ type: "paragraph" }], type: "doc" };
 export function PageEditor({ value, onChange }: PageEditorProps) {
   const { prompt } = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPicking, setIsPicking] = useState(false);
 
   const editor = useEditor({
     content: (value as object | null | undefined) ?? EMPTY_DOC,
@@ -267,10 +270,21 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         <ToolButton
           editor={editor}
           isActive={false}
-          label="Image"
+          label="Upload a picture"
           onClick={() => fileInputRef.current?.click()}
         >
           <HugeiconsIcon icon={Image01Icon} size={14} />
+        </ToolButton>
+        {/* Two buttons, not one with a menu: uploading and choosing from the
+            library are both one click, and hiding either behind a chooser
+            would make the common case slower to reach than it was. */}
+        <ToolButton
+          editor={editor}
+          isActive={false}
+          label="From your pictures"
+          onClick={() => setIsPicking(true)}
+        >
+          <HugeiconsIcon icon={Album02Icon} size={14} />
         </ToolButton>
 
         <div className="flex-1" />
@@ -307,6 +321,19 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         ref={fileInputRef}
         type="file"
       />
+
+      {isPicking ? (
+        <AssetPicker
+          onChoose={(url, alt) => {
+            // The same insertion the upload path uses, so a picture from the
+            // library carries the width and alignment attributes the editor's
+            // image controls expect — inserting a bare <img> would leave those
+            // buttons doing nothing on it.
+            editor.chain().focus().setImage({ alt, src: url }).run();
+          }}
+          onClose={() => setIsPicking(false)}
+        />
+      ) : null}
 
       {/* Only while an image is selected: these controls are meaningless
           otherwise, and a permanently visible row of them implies they apply to

@@ -12,6 +12,7 @@ import {
   SearchVisualIcon,
   SparklesIcon,
   TextIcon,
+  VideoReplayIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NodeTypeId } from "../../config/nodeTypes.js";
@@ -81,6 +82,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "ai image fal model batch",
     icon: SparklesIcon,
     label: "Generate",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "video" },
+    hint: "animate motion clip mp4 image-to-video",
+    icon: VideoReplayIcon,
+    label: "Video",
     section: "Nodes",
   },
   {
@@ -219,7 +227,7 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
         type="button"
       />
 
-      <div className="relative w-[32rem] max-w-[90vw] overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel/95 shadow-2xl">
+      <div className="relative w-lg max-w-[90vw] overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel/95 shadow-2xl">
         <input
           className="w-full border-board-ink/10 border-b bg-transparent px-4 py-3 text-[14px] text-board-ink outline-none placeholder:text-board-ink/30"
           onChange={(e) => {

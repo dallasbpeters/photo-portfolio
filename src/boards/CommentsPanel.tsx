@@ -61,8 +61,8 @@ export function CommentsPanel({
   const list = [...open, ...resolved];
 
   return (
-    <div className="pointer-events-auto absolute top-4 right-4 flex max-h-[calc(100%-6rem)] w-80 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
-      <header className="flex shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-3 py-2">
+    <div className="board-panel board-panel--column pointer-events-auto absolute top-40 right-4 flex max-h-[calc(100%-6rem)] w-80 flex-col overflow-hidden rounded-lg bg-board-panel/95 shadow-xl backdrop-blur">
+      <header className="flex w-full shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
           <HugeiconsIcon aria-hidden icon={Message02Icon} size={13} />
           Comments
@@ -105,7 +105,7 @@ export function CommentsPanel({
                     {timeAgo(comment.createdAt)}
                   </span>
                 </p>
-                <p className="mt-0.5 break-words text-[12px] text-white/85 leading-relaxed">
+                <p className="wrap-break-word mt-0.5 text-[12px] text-white/85 leading-relaxed">
                   {comment.body}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-2">

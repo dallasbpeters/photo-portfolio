@@ -8,6 +8,14 @@ import {
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
@@ -16,7 +24,6 @@ import { newItemId } from "../../boards/newItemId";
 import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
 import {
   aiApi,
-  elementsApi,
   type FalLibraryItem,
   type FramerImage,
   falLibraryApi,
@@ -31,6 +38,7 @@ import {
 import type { BoardSource, Element, Photo } from "../../types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { ElementsTab } from "./ElementsTab";
 
 /** What the board needs to pin an image that is not one of their own. */
 export interface ExternalImage {
@@ -163,7 +171,7 @@ export function BoardInsertPanel({
   return (
     <motion.div
       animate={{ x: 0 }}
-      className="panel absolute inset-y-0 right-0 z-10 flex w-120 flex-col border-board-ink/10 border-l bg-board-surface/95 backdrop-blur"
+      className="panel absolute top-24 right-0 bottom-0 z-10 flex w-120 flex-col rounded-tl-sm border-board-ink/10 border-t border-l bg-board-surface/95 backdrop-blur"
       exit={{ x: "100%" }}
       initial={{ x: "100%" }}
       // Tween, not spring: the panel is flush to the right edge, and a spring's
@@ -176,18 +184,27 @@ export function BoardInsertPanel({
           because it reflows as the panel resizes and nothing stays where you
           last saw it. */}
       <div className="flex items-center gap-2 border-board-ink/10 border-b px-2 py-2">
-        <select
-          aria-label="Where to insert from"
-          className="min-h-9 flex-1 rounded border border-board-ink/10 bg-board-surface/60 px-2 text-[11px] text-board-ink uppercase tracking-[0.18em] outline-none focus:border-board-ink/40"
-          onChange={(e) => setTab(e.target.value as Tab)}
+        <Select
+          onValueChange={(value) => {
+            if (value !== null) {
+              setTab(value);
+            }
+          }}
           value={tab}
         >
-          {TABS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full" data-size="lg">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {TABS.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <button
           aria-label="Close insert panel"
           className="min-h-9 px-2 text-board-ink/50 hover:text-board-ink"
@@ -405,7 +422,7 @@ function AiTab({
         </div>
       ) : null}
 
-      <p className="text-[10px] text-board-ink/30 leading-relaxed">
+      <p className="text-[12px] text-board-ink/30 leading-relaxed">
         Generated images are stored with the board, so they stay after the
         model's temporary link expires.
       </p>
@@ -1177,128 +1194,6 @@ function IconTab({ onAdd }: { onAdd: (image: ExternalImage) => void }) {
         Icons are drawn as SVG so they stay sharp at any zoom, falling back to
         PNG when the vectoriser is down. Simple shapes vectorise best.
       </p>
-    </div>
-  );
-}
-
-/**
- * The library of styles, as covers.
- *
- * Only the key image is shown. An element is a handful of pictures, but laying
- * all of them out would turn a library of a dozen styles into a hundred
- * thumbnails to read — the cover exists precisely so the style can be
- * recognised in one glance.
- *
- * Loaded when the tab is first opened rather than with the board: most sessions
- * never come in here, and this is a request that can wait until it is wanted.
- */
-function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
-  const [elements, setElements] = useState<Element[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    elementsApi
-      .list()
-      .then((found) => {
-        if (!cancelled) {
-          setElements(found);
-        }
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Could not load elements");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const remove = async (element: Element) => {
-    setConfirming(null);
-    try {
-      await elementsApi.remove(element.id);
-      setElements(
-        (current) => current?.filter((one) => one.id !== element.id) ?? null
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete that");
-    }
-  };
-
-  if (error) {
-    return <p className="text-[12px] text-board-ink/50">{error}</p>;
-  }
-  if (!elements) {
-    return <p className="text-[12px] text-board-ink/40">Loading…</p>;
-  }
-  if (elements.length === 0) {
-    return (
-      <p className="text-[12px] text-board-ink/50 leading-relaxed">
-        No elements yet. Select the pictures that share a look on a board,
-        right-click, and save them as one.
-      </p>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {elements.map((element) => (
-        <div className="group relative" key={element.id}>
-          {/* Two presses, and the second one says what it is. Sits over the
-              cover rather than in the row below it, which is the only part of
-              the card that is not the button that places it. */}
-          {confirming === element.id ? (
-            <button
-              className="absolute top-1 right-1 z-10 rounded bg-red-500/90 px-1.5 py-0.5 text-[9px] text-white uppercase tracking-[0.14em]"
-              onClick={() => void remove(element)}
-              type="button"
-            >
-              Delete?
-            </button>
-          ) : (
-            <button
-              aria-label={`Delete ${element.name}`}
-              className="absolute top-1 right-1 z-10 grid size-5 place-items-center rounded bg-board-surface/70 text-board-ink/70 opacity-0 backdrop-blur-sm transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100"
-              onClick={() => setConfirming(element.id)}
-              type="button"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={11} />
-            </button>
-          )}
-          <button
-            className="block w-full overflow-hidden rounded-lg border border-board-ink/10 text-left transition-colors hover:border-board-ink/40"
-            onClick={() => onAdd(element)}
-            type="button"
-          >
-            <div className="aspect-square w-full overflow-hidden bg-board-surface/30">
-              {element.coverUrl ? (
-                <img
-                  alt=""
-                  className="h-full w-full object-cover"
-                  draggable={false}
-                  height={160}
-                  loading="lazy"
-                  src={element.coverUrl}
-                  width={160}
-                />
-              ) : null}
-            </div>
-            <div className="px-2 py-1.5">
-              <span className="block truncate text-[11px] text-board-ink uppercase tracking-[0.14em]">
-                {element.name}
-              </span>
-              <span className="block truncate text-[10px] text-board-ink/40">
-                {element.imageUrls.length === 1
-                  ? "1 picture"
-                  : `${element.imageUrls.length} pictures`}
-              </span>
-            </div>
-          </button>
-        </div>
-      ))}
     </div>
   );
 }

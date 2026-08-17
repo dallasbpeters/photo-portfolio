@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MAX_SCALE, MIN_SCALE } from "../../config/canvas.js";
 import {
   frameBounds,
   frameCanvas,
@@ -123,9 +124,14 @@ const readSavedView = (): Viewport | null => {
     const parsed = JSON.parse(raw) as Partial<Viewport>;
     if (
       typeof parsed.scale === "number" &&
-      Number.isFinite(parsed.scale) &&
+      // Bounded, not merely finite: zero is finite, is reachable by framing
+      // against an unlaid-out container, and renders every item at nothing.
+      parsed.scale >= MIN_SCALE &&
+      parsed.scale <= MAX_SCALE &&
       typeof parsed.tx === "number" &&
-      typeof parsed.ty === "number"
+      Number.isFinite(parsed.tx) &&
+      typeof parsed.ty === "number" &&
+      Number.isFinite(parsed.ty)
     ) {
       return { scale: parsed.scale, tx: parsed.tx, ty: parsed.ty };
     }

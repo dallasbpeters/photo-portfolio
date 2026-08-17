@@ -2,24 +2,18 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Alert02Icon,
   Cancel01Icon,
-  Download01Icon,
   PlayIcon,
   RefreshIcon,
   SparklesIcon,
   StopIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { nodeTypeFor, type SettingDef } from "../../config/nodeTypes.js";
+import { nodeTypeFor } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
-import { downloadImage } from "./downloadImage";
-import {
-  BOARD_IMAGE_TYPE,
-  excludedFrom,
-  pickImages,
-  selectedIndex,
-} from "./itemOutput";
-import { useModels } from "./ModelsContext";
+import { excludedFrom, pickImages, selectedIndex } from "./itemOutput";
 import { PaletteSwatches } from "./PaletteSwatches";
+import { ResultImages } from "./ResultImages";
+import { SettingField } from "./SettingField";
 import "./OpNodeView.css";
 import { Button } from "@/components/ui/button";
 
@@ -58,305 +52,6 @@ const STATE_CLASS: Record<string, string> = {
   succeeded: "text-emerald-300",
 };
 
-interface SettingFieldProps {
-  onChange: (value: string) => void;
-  readOnly: boolean;
-  setting: SettingDef;
-  value: string;
-}
-
-/**
- * One setting, rendered from its definition rather than from a switch per node
- * type.
- *
- * Driven by the registry so a node type that gains an option gains its control
- * with no change here — the same reason the registry exists at all.
- */
-function SettingField({
-  onChange,
-  readOnly,
-  setting,
-  value,
-}: SettingFieldProps) {
-  if (setting.kind === "number") {
-    return (
-      <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
-        {setting.label}
-        <input
-          className="w-16 rounded border border-board-ink/10 bg-board-surface/40 px-2 py-1 text-right text-[12px] text-board-ink tabular-nums outline-none focus:border-board-ink/40 disabled:opacity-60"
-          disabled={readOnly}
-          max={setting.max}
-          min={setting.min}
-          onChange={(e) => onChange(e.target.value)}
-          onPointerDown={(e) => e.stopPropagation()}
-          type="number"
-          value={Number(value) || setting.default}
-        />
-      </label>
-    );
-  }
-
-  if (setting.kind === "model") {
-    return <ModelSetting {...{ onChange, readOnly, setting, value }} />;
-  }
-
-  if (setting.kind === "select") {
-    return (
-      <div className="space-y-1">
-        <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-          {setting.label}
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {setting.options.map((option) => (
-            <button
-              className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
-                (value || setting.default) === option
-                  ? "bg-board-ink/10 text-board-ink"
-                  : "text-board-ink/40 hover:text-board-ink/80"
-              }`}
-              disabled={readOnly}
-              key={option}
-              onClick={() => onChange(option)}
-              onPointerDown={(e) => e.stopPropagation()}
-              type="button"
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    // Labelled visibly, not only for screen readers. A node with one text field
-    // could get away with an aria-label; the Iterate node has three, and three
-    // unlabelled boxes are a guessing game — which is exactly how a list ended
-    // up in the template field.
-    <label className="block space-y-1">
-      <span className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-        {setting.label}
-      </span>
-      <textarea
-        className="max-h-96 min-h-16 w-full resize-y rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/40 disabled:opacity-60"
-        disabled={readOnly}
-        maxLength={setting.maxLength}
-        onChange={(e) => onChange(e.target.value)}
-        // The surface owns dragging, so a press meant for the caret — or for
-        // the resize corner — must not reach it, or typing into a node moves
-        // the node and dragging the corner drags the board.
-        onPointerDown={(e) => e.stopPropagation()}
-        placeholder={setting.placeholder}
-        value={value}
-      />
-    </label>
-  );
-}
-
-/**
- * The model setting: a select whose choices are the `models` table rather than
- * a static option list.
- *
- * The registry still owns the control (the node type says "model" and here it
- * is); only the options are data, which is the whole point of moving the list
- * out of code.
- */
-function ModelSetting({
-  onChange,
-  readOnly,
-  setting,
-  value,
-}: SettingFieldProps & { setting: Extract<SettingDef, { kind: "model" }> }) {
-  const { models } = useModels();
-  // While the list is loading — or on a visitor's read-only board, where the
-  // fetch is refused — the node still has to say what it is set to, even if
-  // that means the raw id for a label.
-  const options =
-    models.length > 0
-      ? models
-      : [{ id: value || setting.default, label: value || setting.default }];
-  return (
-    <div className="space-y-1">
-      <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-        {setting.label}
-      </p>
-      <div className="flex flex-wrap gap-1">
-        {options.map((model) => (
-          <button
-            className={`min-h-7 rounded px-2 text-[10px] tracking-[0.08em] transition-colors ${
-              (value || setting.default) === model.id
-                ? "bg-board-ink/10 text-board-ink"
-                : "text-board-ink/40 hover:text-board-ink/80"
-            }`}
-            disabled={readOnly}
-            key={model.id}
-            onClick={() => onChange(model.id)}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={model.id}
-            type="button"
-          >
-            {model.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Starts dragging a result off the node.
- *
- * A version sitting in a node's gallery is one of several; pulling one onto the
- * canvas is how it becomes a thing in its own right — pinned where you put it,
- * and able to feed something else without dragging the whole node along.
- *
- * The URL travels as a board-specific type so the canvas can tell it from a
- * file drop, and as text/uri-list as well, so dropping it into another
- * application still hands over something meaningful.
- */
-const beginImageDrag = (
-  e: React.DragEvent,
-  image: BoardItemVariation
-): void => {
-  // The canvas would otherwise read the press underneath as "pick this node up
-  // and move it", leaving the node adrift when the drag ends elsewhere.
-  e.stopPropagation();
-  e.dataTransfer.effectAllowed = "copy";
-  e.dataTransfer.setData(BOARD_IMAGE_TYPE, JSON.stringify(image));
-  e.dataTransfer.setData("text/uri-list", image.url);
-  e.dataTransfer.setData("text/plain", image.url);
-};
-
-/**
- * What a node produced: one image, or a batch laid out as a grid.
- *
- * A grid because comparing them is the entire reason for asking for several.
- */
-function ResultImages({
-  images,
-  onRemove,
-  onSelect,
-  onSendAll,
-  selected,
-}: {
-  images: BoardItemVariation[];
-  /** Deletes one version for good. Absent on a published board. */
-  onRemove?: (index: number) => void;
-  onSelect: (index: number) => void;
-  /** Pins every version onto the board as its own image. */
-  onSendAll?: () => void;
-  selected: number;
-}) {
-  if (images.length === 0) {
-    return null;
-  }
-  const hero = images[Math.min(selected, images.length - 1)] ?? images[0];
-
-  return (
-    <div className="space-y-1">
-      {hero ? (
-        <div className="group relative">
-          {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: dragstart is the browser's own drag affordance on an image, not a bespoke click handler — the picture is also reachable via the download button beside it */}
-          <img
-            alt={hero.description ?? "Result"}
-            className="h-auto w-full cursor-grab rounded border border-board-ink/10 object-contain"
-            decoding="async"
-            draggable
-            height={hero.height ?? undefined}
-            loading="lazy"
-            onDragStart={(e) => beginImageDrag(e, hero)}
-            src={hero.url}
-            width={hero.width ?? undefined}
-          />
-          {/* Saving the picture is the point of having made it, and there was
-              no way to get one off the board short of a right-click. Sits on
-              the image rather than in the footer so it always refers to the
-              version being looked at. */}
-          <button
-            aria-label="Download this version"
-            className="absolute top-1 right-1 rounded bg-board-surface/70 p-1.5 text-board-ink/70 opacity-0 backdrop-blur transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100"
-            onClick={() => {
-              void downloadImage(hero.url, hero.description ?? "generated");
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            type="button"
-          >
-            <HugeiconsIcon icon={Download01Icon} size={13} />
-          </button>
-        </div>
-      ) : null}
-
-      {/* The gallery: everything this node has made, not just the last one.
-          Shown from the first image rather than the second, so it is visibly
-          the place versions collect instead of appearing only once there
-          happen to be two. */}
-      {images.length > 0 ? (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
-              {images.length === 1 ? "1 version" : `${images.length} versions`}
-            </p>
-            {/* Getting the whole set onto the board at once: a node's gallery
-                is for comparing, and the moment you have chosen you usually
-                want them out where they can be arranged. */}
-            {onSendAll ? (
-              <button
-                className="text-[9px] text-board-ink/40 uppercase tracking-[0.14em] hover:text-board-ink"
-                onClick={onSendAll}
-                onPointerDown={(e) => e.stopPropagation()}
-                type="button"
-              >
-                Send to board
-              </button>
-            ) : null}
-          </div>
-          <div className="flex gap-1 overflow-x-auto pb-1">
-            {images.map((variation, index) => (
-              <div className="group/v relative shrink-0" key={variation.url}>
-                <button
-                  aria-label={`Version ${index + 1}`}
-                  aria-pressed={index === selected}
-                  className={`block overflow-hidden rounded border transition-colors ${
-                    index === selected
-                      ? "border-sky-300"
-                      : "border-board-ink/10 hover:border-board-ink/40"
-                  }`}
-                  onClick={() => onSelect(index)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  type="button"
-                >
-                  {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — native image drag, and the surrounding button already carries the keyboard-reachable action */}
-                  <img
-                    alt={variation.description ?? `Version ${index + 1}`}
-                    className="size-12 cursor-grab object-cover"
-                    draggable
-                    height={48}
-                    loading="lazy"
-                    onDragStart={(e) => beginImageDrag(e, variation)}
-                    src={variation.url}
-                    width={48}
-                  />
-                </button>
-                {onRemove ? (
-                  <button
-                    aria-label={`Remove version ${index + 1}`}
-                    className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-board-surface/90 text-board-ink/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/v:opacity-100"
-                    onClick={() => onRemove(index)}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    type="button"
-                  >
-                    <HugeiconsIcon icon={Cancel01Icon} size={9} />
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 /**
  * The rotating glow that marks a node as working.
  *
@@ -373,7 +68,7 @@ function RunningGlow() {
       style={{
         background:
           "conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(69.01% 0.16 243.17) 30deg, oklch(81.41% 0.17 111.22) 60deg, transparent 100deg, transparent 360deg)",
-        filter: "blur(20px)",
+        filter: "blur(10px)",
       }}
     />
   );
@@ -623,11 +318,12 @@ export function OpNodeView({
               onClick={() => (isRunning ? onCancel?.() : onRun(false))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
+              variant="default"
             >
               <HugeiconsIcon
                 aria-hidden
                 icon={isRunning ? StopIcon : PlayIcon}
-                size={12}
+                size={18}
               />
               {isRunning ? "Stop" : "Run"}
             </Button>
@@ -639,6 +335,7 @@ export function OpNodeView({
                 onClick={() => onRun(true)}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
+                variant="default"
               >
                 <HugeiconsIcon icon={RefreshIcon} size={12} />
               </Button>

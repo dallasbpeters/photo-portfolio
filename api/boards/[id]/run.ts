@@ -19,7 +19,6 @@ import {
   isFalModel,
   isRunnableNodeType,
   isVectorModel,
-  MAX_BATCH_COUNT,
   type NodeCapability,
   nodeTypeFor,
 } from "../../../config/nodeTypes.js";
@@ -27,6 +26,14 @@ import { getBearerUser } from "../../_lib/auth.js";
 import type { BoardItemRow, BoardWireRow } from "../../_lib/boards.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
+import { withElements } from "../../_lib/elementBrief.js";
+import {
+  type ElementStyle,
+  elementStyleOf,
+  type Job,
+  jobsFor,
+  withElementWords,
+} from "../../_lib/elementStyle.js";
 import {
   describeImage,
   generateImage,
@@ -139,79 +146,6 @@ const loadWires = async (sql: Sql, boardId: string) =>
     FROM board_wires
     WHERE board_id = ${boardId}
   `) as BoardWireRow[];
-
-/** Anything else in `elementId` would make `::uuid[]` throw for the whole board. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-interface ElementFields {
-  cover_url: string | null;
-  description: string | null;
-  id: string;
-}
-
-/**
- * The library rows every element node points at, folded into the board's rows.
- *
- * An element node stores only an id. The picture it hands over and the words it
- * carries belong to the library, so that a style can be corrected in one place
- * and every board using it follows — which is the difference between a library
- * and a stamp.
- *
- * Resolved here, once, before anything walks the graph: `singleOutputOf` then
- * finds a plain image on the row and the prompt finds plain words, so nothing
- * downstream has to know an element was involved.
- *
- * The copy stored on the node is the fallback. An element deleted from the
- * library leaves the boards built with it still showing, and still able to run,
- * the picture they were built with — a tidy-up in a side panel must not quietly
- * break work.
- */
-const withElements = async (
-  sql: Sql,
-  rows: BoardItemRow[]
-): Promise<BoardItemRow[]> => {
-  const wanted = new Set<string>();
-  for (const row of rows) {
-    const id = asObject(row.config).elementId;
-    if (
-      row.node_type === "element" &&
-      typeof id === "string" &&
-      UUID.test(id)
-    ) {
-      wanted.add(id);
-    }
-  }
-  if (wanted.size === 0) {
-    return rows;
-  }
-
-  const found = (await sql`
-    SELECT id, cover_url, description
-    FROM elements
-    WHERE id = ANY(${[...wanted]}::uuid[])
-  `) as ElementFields[];
-  const byId = new Map(found.map((element) => [element.id, element]));
-
-  return rows.map((row) => {
-    if (row.node_type !== "element") {
-      return row;
-    }
-    const config = asObject(row.config);
-    const element =
-      typeof config.elementId === "string"
-        ? byId.get(config.elementId)
-        : undefined;
-    const storedImage =
-      typeof config.imageUrl === "string" ? config.imageUrl : null;
-    const storedWords =
-      typeof config.description === "string" ? config.description : null;
-    return {
-      ...row,
-      body: element?.description ?? storedWords,
-      image_url: element?.cover_url ?? storedImage,
-    };
-  });
-};
 
 /**
  * Every prompt an Iterate node describes.
@@ -721,121 +655,6 @@ const promptFor = (
 };
 
 /**
- * The words every element wired into this node carries, in wire order.
- *
- * An element's only output port is an image, so its description never arrives
- * through `resolveInputs` — a second, text port would mean two wires for one
- * thing. It is read off the wires instead, from the body `withElements` folded
- * onto the row, so the words the library holds travel with the picture it hands
- * over rather than being left behind on the canvas.
- */
-const elementTextOf = (
-  itemId: string,
-  rows: BoardItemRow[],
-  wires: BoardWireRow[]
-): string[] => {
-  const byId = new Map(rows.map((row) => [row.id, row]));
-  return (
-    wires
-      .filter((wire) => wire.target_item_id === itemId)
-      .map((wire) => byId.get(wire.source_item_id))
-      .filter((source) => source?.node_type === "element")
-      .map((source) => source?.body?.trim())
-      .filter((words): words is string => Boolean(words))
-      // The same element wired in twice says the same thing twice, which reads to
-      // a model as emphasis nobody asked for.
-      .filter((words, index, all) => all.indexOf(words) === index)
-  );
-};
-
-/**
- * A prompt with the wired elements' words after it.
- *
- * Appended rather than substituted: an element says how a picture should look,
- * while what to draw stays whatever was typed. Joined with the separator a Join
- * node defaults to, because a prompt is a list of phrases.
- */
-const withElementWords = (prompt: string, words: string[]): string =>
-  [prompt.trim(), ...words].filter((part) => part.length > 0).join(", ");
-
-/**
- * How many runs this node's settings and wiring describe.
- *
- * One per wired image, times the variation count — so three references at two
- * variations is six. With no image wired at all it is still `count` runs, each
- * invented from the prompt alone.
- */
-const jobsFor = (
-  item: RunnableItem,
-  values: Record<string, string[] | undefined>,
-  lists: Record<string, string[][] | undefined>,
-  shape: FalModelInput,
-  capability: NodeCapability,
-  typedPrompt: string,
-  /** Rendered mask for each masked picture, keyed by its image URL. */
-  masks: Map<string, string>
-): Job[] => {
-  // Analyse reads every wired image in one call and answers once, so its
-  // wiring describes a single run no matter how many references feed it.
-  // Fanning out here would bill one description per image and then throw all
-  // but the last away.
-  if (capability === "board.composite") {
-    // One run however many pictures feed it: the images are its material, not
-    // a batch to iterate over. Fanning out here would store the same rendered
-    // composite once per source.
-    return [{ image: null, mask: null, prompt: "" }];
-  }
-  if (capability === "fal.describe") {
-    // Reading a picture back as words is not affected by a mask.
-    return [
-      { image: values.image?.[0] ?? null, mask: null, prompt: typedPrompt },
-    ];
-  }
-  const raw = Number(item.config.count);
-  const count = Number.isFinite(raw)
-    ? Math.min(Math.max(Math.trunc(raw), 1), MAX_BATCH_COUNT)
-    : 1;
-  // A prompt-only model has no use for wired images, so fanning out over them
-  // would bill the same prompt several times for identical results.
-  const wiredImages = shape === "prompt" ? [] : (values.image ?? []);
-  const images: (string | null)[] =
-    wiredImages.length > 0 ? wiredImages : [null];
-  // One wire carrying several prompts is an Iterate node: each is its own run.
-  // Several wires are several *parts* of each run — a subject and a palette,
-  // say — so they are joined. Both at once: five subjects and one palette line
-  // give five runs, each ending with the same colors.
-  const promptWires =
-    (values.prompt ?? []).length > 0 ? (lists.prompt ?? []) : [];
-  const rows = promptWires.length
-    ? Math.max(...promptWires.map((list) => list.length))
-    : 0;
-  const prompts =
-    rows > 0
-      ? Array.from({ length: rows }, (_, row) =>
-          promptWires
-            .map((list) => list[row % list.length] ?? "")
-            .filter((part) => part.trim())
-            .join(", ")
-        )
-      : [typedPrompt];
-
-  // The mask belongs to the picture, so it is looked up per image rather than
-  // carried on the node: two references wired into one Generate may each be
-  // masked differently, or only one of them at all.
-  // Prompt outermost, then image, then the repeat count — the order the
-  // variations index into, so it must not be rearranged for tidiness.
-  return prompts.flatMap((prompt) =>
-    images.flatMap((image) =>
-      Array.from({ length: count }, () => ({
-        image,
-        mask: image ? (masks.get(image) ?? null) : null,
-        prompt,
-      }))
-    )
-  );
-};
-
-/**
  * Every masked picture on the board, as image URL to rendered-mask URL.
  *
  * Keyed by URL because that is all a resolved image input carries: outputsOf
@@ -890,13 +709,6 @@ const priorHistoryOf = (previous: Record<string, unknown>): Variation[] => {
 };
 
 /** One image in a node's result. Mirrors BoardItemVariation in src/types.ts. */
-/** One run: which image it reworks, which mask confines it, which prompt. */
-interface Job {
-  image: string | null;
-  /** The rendered mask belonging to `image`, when that picture carries one. */
-  mask: string | null;
-  prompt: string;
-}
 
 interface Variation {
   description: string | null;
@@ -1022,7 +834,6 @@ const produce = async (
     args.sourceImageUrl && SVG_URL.test(args.sourceImageUrl)
       ? await rasterizeSvgUrl(args.sourceImageUrl)
       : args.sourceImageUrl;
-
   const image = await generateImage(
     args.prompt,
     sourceImageUrl,
@@ -1080,6 +891,54 @@ const buildImageResult = (
   };
 };
 
+/**
+ * The stored shape of a run, whichever of the two shapes it came back as.
+ *
+ * Pulled out of the handler because assembling a result and performing a run
+ * are different jobs: the sparse-array bookkeeping below reads better away from
+ * the request plumbing, and the handler is left saying only what it does.
+ */
+const buildResult = (
+  produced: Produced,
+  previous: Record<string, unknown>,
+  fingerprint: string,
+  variation: number,
+  jobCount: number
+): Record<string, unknown> => {
+  // Words rather than a picture: an Analyse node's whole output is its text, so
+  // there is no batch, no history and nothing to pick between — the variation
+  // machinery below simply does not apply to it.
+  if (produced.kind === "text") {
+    return {
+      fingerprint,
+      kind: "text",
+      ranAt: new Date().toISOString(),
+      text: produced.text,
+    };
+  }
+
+  // Variations accumulate into one result rather than replacing it, so a batch
+  // fills in as it goes and a part-finished run still shows what it has. A
+  // stale array from an earlier, differently-shaped run is discarded — the
+  // fingerprint moving is what says the old images no longer belong.
+  //
+  // Sparse on purpose: a cancelled and resumed run can fill variation 3 before
+  // 1, so the gaps are real and the type says so.
+  const kept: (Variation | undefined)[] =
+    previous.fingerprint === fingerprint && Array.isArray(previous.variations)
+      ? (previous.variations as (Variation | undefined)[]).slice(0, jobCount)
+      : [];
+  const variations: (Variation | undefined)[] = [...kept];
+  variations[variation] = {
+    description: produced.description,
+    height: produced.height,
+    isVector: produced.isVector,
+    url: produced.url,
+    width: produced.width,
+  };
+  return buildImageResult(produced, variations, previous, fingerprint);
+};
+
 const setRunning = (sql: Sql, itemId: string) =>
   sql`
     UPDATE board_items
@@ -1135,6 +994,32 @@ const maskRefusal = (
   };
 };
 
+/**
+ * A picture wired into a model with nowhere to put one.
+ *
+ * Refused for the same reason a mask is. "input: prompt" means every wired
+ * image is dropped before the request is built — a reference, a subject, and an
+ * element's style along with it — so the run invents something from the words
+ * alone and bills in full for ignoring what was wired in. That reads as a model
+ * that did not take the reference, which is indistinguishable from a reference
+ * that was wired wrong.
+ */
+const imageIgnoredRefusal = (
+  shape: FalModelInput,
+  model: string | null,
+  values: Record<string, string[] | undefined>,
+  models: readonly FalModelDef[]
+): Refusal | null => {
+  if (shape !== "prompt" || (values.image?.length ?? 0) === 0) {
+    return null;
+  }
+  const label = falModelFor(models, model)?.label ?? "This model";
+  return {
+    error: `${label} works from a prompt alone and would ignore the wired image. Choose another model, or unwire it.`,
+    missingPort: "image",
+  };
+};
+
 const unmetRequirement = (
   shape: FalModelInput,
   model: string | null,
@@ -1154,6 +1039,10 @@ const unmetRequirement = (
   const mask = maskRefusal(model, masked, models);
   if (mask) {
     return mask;
+  }
+  const ignored = imageIgnoredRefusal(shape, model, values, models);
+  if (ignored) {
+    return ignored;
   }
   if (shape === "prompt-and-image") {
     // Both, so both are checked before anything is spent.
@@ -1292,17 +1181,22 @@ const reply = (status: number, body: Record<string, unknown>): Prepared => ({
 const fingerprintFor = (
   item: RunnableItem,
   values: Record<string, string[] | undefined>,
-  elementWords: string[]
+  element: ElementStyle
 ): Promise<string> =>
   inputFingerprint({
-    // The wired elements' words count as settings for this purpose: they decide
-    // what is sent, so a style corrected in the library has to make the nodes
-    // using it stale or the correction would never reach a picture. Folded in
-    // only when there is one, so no existing node's fingerprint moves and a
-    // board full of finished work is not quietly offered up for re-running.
+    // The wired elements' words and pictures count as settings for this
+    // purpose: they decide what is sent, so a style corrected in the library —
+    // a reworded description, a reference added or removed — has to make the
+    // nodes using it stale or the correction would never reach a picture.
+    // Folded in only when there is an element, so no fingerprint on a board
+    // without one moves and finished work is not offered up for re-running.
     config:
-      elementWords.length > 0
-        ? { ...item.config, element: elementWords }
+      element.words.length > 0 || element.images.length > 0
+        ? {
+            ...item.config,
+            element: element.words,
+            elementImages: element.images,
+          }
         : item.config,
     // Joined per port: the fingerprint only has to change when the inputs do,
     // and a stable string does that as well as an array while keeping the
@@ -1406,17 +1300,18 @@ const prepare = async (
   const shape = falModelInput(models, model ?? "auto");
 
   const prompt = promptFor(item, values);
-  const elementWords = elementTextOf(item.id, rows, wireRows);
+  const element = elementStyleOf(item.id, rows, wireRows);
 
   const masks = maskByUrl(rows);
+  const masked = (values.image ?? []).some((url) => masks.has(url));
   const unmet = unmetRequirement(
     shape,
     model,
     // The composed prompt, so a node whose only words come from a wired element
     // is not refused for having none.
-    withElementWords(prompt, elementWords),
+    withElementWords(prompt, element.words),
     values,
-    (values.image ?? []).some((url) => masks.has(url)),
+    masked,
     type.capability,
     models
   );
@@ -1434,7 +1329,18 @@ const prepare = async (
   // Analyse is the exception. Its job is to look at a picture and write down
   // what it sees, so handing it words describing a style would be handing it
   // the answer to the question it was asked.
-  const wordsForJobs = type.capability === "fal.describe" ? [] : elementWords;
+  //
+  // The brief wins over the description when there is one. A description is
+  // seeded from a Describe node and, set to "subject", reads "a digital
+  // painting of a person's head and shoulders" — appended to a prompt that is
+  // meant to restyle a different picture, it tells the model to draw that
+  // person instead. The brief cannot say that: it is read under `focus:
+  // "style"`, which forbids naming a subject. The description is still the
+  // fallback for an element whose brief has not been read yet.
+  // `jobsFor` has already put the briefs in each prompt, so this is only the
+  // fallback: nothing to add when a brief was read.
+  const styleWords = element.briefs.length > 0 ? [] : element.words;
+  const wordsForJobs = type.capability === "fal.describe" ? [] : styleWords;
   const { dropped, jobs } = validatedJobs(
     // Every job carries the wired elements' words, whether its prompt was typed
     // on the node or arrived down a wire. Applied here rather than inside
@@ -1442,12 +1348,20 @@ const prepare = async (
     // a Prompt node wired in alongside an element is the ordinary arrangement —
     // appending only to the typed fallback would drop the style in exactly the
     // case elements exist for.
-    jobsFor(item, values, lists, shape, type.capability, prompt, masks).map(
-      (job) => ({
-        ...job,
-        prompt: withElementWords(job.prompt, wordsForJobs),
-      })
-    )
+    jobsFor({
+      briefs: element.briefs,
+      capability: type.capability,
+      config: item.config,
+      elementImages: element.images,
+      lists,
+      masks,
+      shape,
+      typedPrompt: prompt,
+      values,
+    }).map((job) => ({
+      ...job,
+      prompt: withElementWords(job.prompt, wordsForJobs),
+    }))
   );
   // Refused only when nothing survived. A batch reduced to nothing has no work
   // left to do, whereas one that lost a single unusable address still has
@@ -1462,7 +1376,7 @@ const prepare = async (
   // cost money to arrive at the same images. A batch is only skipped once every
   // variation is present — a run cancelled halfway resumes rather than being
   // treated as finished.
-  const fingerprint = await fingerprintFor(item, values, elementWords);
+  const fingerprint = await fingerprintFor(item, values, element);
   const stored = asObject(item.result);
   const done = Array.isArray(stored.variations)
     ? (stored.variations as unknown[]).filter(Boolean).length
@@ -1603,44 +1517,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const previous = asObject(item.result);
 
-      // Words rather than a picture: an Analyse node's whole output is its
-      // text, so there is no batch, no history and nothing to pick between —
-      // the variation machinery below simply does not apply to it.
-      let result: Record<string, unknown>;
-      if (produced.kind === "text") {
-        result = {
-          fingerprint,
-          kind: "text",
-          ranAt: new Date().toISOString(),
-          text: produced.text,
-        };
-      } else {
-        // Variations accumulate into one result rather than replacing it, so a
-        // batch fills in as it goes and a part-finished run still shows what it
-        // has. A stale array from an earlier, differently-shaped run is
-        // discarded — the fingerprint moving is what says the old images no
-        // longer belong.
-        //
-        // Sparse on purpose: a cancelled and resumed run can fill variation 3
-        // before 1, so the gaps are real and the type says so.
-        const kept: (Variation | undefined)[] =
-          previous.fingerprint === fingerprint &&
-          Array.isArray(previous.variations)
-            ? (previous.variations as (Variation | undefined)[]).slice(
-                0,
-                jobs.length
-              )
-            : [];
-        const variations: (Variation | undefined)[] = [...kept];
-        variations[variation] = {
-          description: produced.description,
-          height: produced.height,
-          isVector: produced.isVector,
-          url: produced.url,
-          width: produced.width,
-        };
-        result = buildImageResult(produced, variations, previous, fingerprint);
-      }
+      const result = buildResult(
+        produced,
+        previous,
+        fingerprint,
+        variation,
+        jobs.length
+      );
 
       await sql`
         UPDATE board_items
@@ -1675,6 +1558,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Could not run this node" });
+    // The message, not a shrug. Everything before the inner try — resolving the
+    // board's rows, reading the elements they point at, ordering the graph —
+    // fails here, and answering "Could not run this node" to a missing column
+    // or an unorderable graph sends whoever is looking at the node to read the
+    // server log, which on a deployed build they cannot do.
+    return res.status(500).json({
+      error: e instanceof Error ? e.message : "Could not run this node",
+    });
   }
 }

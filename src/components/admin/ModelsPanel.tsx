@@ -1,6 +1,14 @@
-import { ArrowDown, ArrowUp, Box, Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   MAX_MODEL_LORA_FIELD,
   MAX_MODEL_LORA_SCALE,
@@ -18,29 +26,13 @@ import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useConfirm } from "./ConfirmProvider";
+import { ModelRow } from "./ModelRow";
+import { inputLabel } from "./modelSummary";
 
 const labelClass = "text-[10px] uppercase tracking-widest text-white/90";
 const inputClass =
   "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
 const hintClass = "text-xs text-white/50";
-
-const INPUT_LABELS: Record<FalModelInput, string> = {
-  image: "Image only",
-  prompt: "Prompt only",
-  "prompt-and-image": "Prompt and image (both)",
-  "prompt-or-image": "Prompt or image",
-};
-
-const inputLabel = (input: string): string =>
-  INPUT_LABELS[input as FalModelInput] ?? input;
-
-const loraSummary = (model: AiModel): string | null => {
-  if (!model.lora) {
-    return null;
-  }
-  const base = model.lora.endpoint ?? "Flux";
-  return `LoRA · ${base} · ${model.lora.scale ?? 1}`;
-};
 
 interface ModelFormProps {
   /** The model being edited, or null for a new one. */
@@ -188,39 +180,54 @@ function ModelForm({ editing, onCancel, onSaved }: ModelFormProps) {
               <Label className={labelClass} htmlFor="model-input">
                 Consumes
               </Label>
-              <select
-                className={`${inputClass} w-full rounded-md border bg-transparent px-3 text-white`}
-                disabled={shapeLocked}
-                id="model-input"
-                onChange={(e) => setInput(e.target.value as FalModelInput)}
+              <Select
+                onValueChange={(value) => {
+                  if (value !== null) {
+                    setInput(value);
+                  }
+                }}
                 value={input}
               >
-                {MODEL_INPUTS.map((shape) => (
-                  <option className="bg-black" key={shape} value={shape}>
-                    {inputLabel(shape)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {MODEL_INPUTS.map((shape) => (
+                      <SelectItem key={shape} value={shape}>
+                        {inputLabel(shape)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label className={labelClass} htmlFor="model-image-param">
                 Source-image parameter
               </Label>
-              <select
-                className={`${inputClass} w-full rounded-md border bg-transparent px-3 text-white`}
-                disabled={shapeLocked}
-                id="model-image-param"
-                onChange={(e) =>
-                  setImageParam(e.target.value as "image_url" | "image_urls")
-                }
+              <Select
+                data-size="md"
+                onValueChange={(value) => {
+                  if (value !== null) {
+                    setImageParam(value);
+                  }
+                }}
                 value={imageParam}
               >
-                {MODEL_IMAGE_PARAMS.map((param) => (
-                  <option className="bg-black" key={param} value={param}>
-                    {param}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {MODEL_IMAGE_PARAMS.map((param) => (
+                      <SelectItem key={param} value={param}>
+                        {param}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -356,111 +363,6 @@ function ModelForm({ editing, onCancel, onSaved }: ModelFormProps) {
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-interface ModelRowProps {
-  isFirst: boolean;
-  isLast: boolean;
-  model: AiModel;
-  onEdit: () => void;
-  onMoved: (id: string, direction: -1 | 1) => void;
-  onRemoved: (model: AiModel) => void;
-  onToggled: (model: AiModel) => void;
-}
-
-function ModelRow({
-  isFirst,
-  isLast,
-  model,
-  onEdit,
-  onMoved,
-  onRemoved,
-  onToggled,
-}: ModelRowProps) {
-  const isAuto = model.id === PROTECTED_MODEL_ID;
-  const summary = loraSummary(model);
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-white/90">
-            {model.label}
-          </span>
-          {model.vector ? (
-            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-300 uppercase tracking-wider">
-              Vector
-            </span>
-          ) : null}
-          {model.enabled ? null : (
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50 uppercase tracking-wider">
-              Off
-            </span>
-          )}
-          {isAuto ? (
-            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300 uppercase tracking-wider">
-              Default
-            </span>
-          ) : null}
-        </div>
-        <p className="truncate font-mono text-white/40 text-xs">{model.id}</p>
-        <p className="text-white/60 text-xs">
-          {inputLabel(model.input)}
-          {summary ? ` · ${summary}` : ""}
-        </p>
-      </div>
-      <div className="flex items-center gap-1">
-        <Button
-          aria-label={`Move ${model.label} up`}
-          disabled={isFirst}
-          onClick={() => onMoved(model.id, -1)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <ArrowUp size={14} />
-        </Button>
-        <Button
-          aria-label={`Move ${model.label} down`}
-          disabled={isLast}
-          onClick={() => onMoved(model.id, 1)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <ArrowDown size={14} />
-        </Button>
-        <Button
-          aria-label={`Toggle ${model.label}`}
-          disabled={isAuto}
-          onClick={() => onToggled(model)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <Box size={14} />
-        </Button>
-        <Button
-          aria-label={`Edit ${model.label}`}
-          onClick={onEdit}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <Pencil size={14} />
-        </Button>
-        <Button
-          aria-label={`Delete ${model.label}`}
-          disabled={isAuto}
-          onClick={() => onRemoved(model)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <Trash2 size={14} />
-        </Button>
-      </div>
-    </div>
   );
 }
 

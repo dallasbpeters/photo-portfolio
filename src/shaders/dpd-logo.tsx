@@ -1,7 +1,6 @@
 import {
   ChromaFlow,
   Dither,
-  FilmGrain,
   Glass,
   Shader,
   SineWave,
@@ -46,6 +45,7 @@ export default function DPDLogoShader({
         fresnel={0.04}
         fresnelSoftness={0.05}
         highlight={0.5}
+        highlightColor="#47a690"
         highlightSoftness={0.21}
         innerZoom={1.5}
         lightAngle={237}
@@ -55,13 +55,13 @@ export default function DPDLogoShader({
         thickness={1}
       >
         <Swirl
-          colorA={colorA}
-          colorB={colorB}
+          colorA="oklch(27.07% 0.0092 285.77)"
+          colorB="oklch(27.07% 0.0092 285.77)"
           detail={5}
           speed={0.2}
           stops={[
-            { color: "oklch(0.4% 0.13 160.46)", position: 0 },
-            { color: "oklch(.1% 0.13 160.46)", position: 1 },
+            { color: "#26262b", position: 0 },
+            { color: "#0d111a", position: 1 },
           ]}
         />
         <ChromaFlow
@@ -74,7 +74,6 @@ export default function DPDLogoShader({
           upColor="#ffdd00"
         />
       </Glass>
-      <FilmGrain opacity={0.1} />
     </Shader>
   );
 }

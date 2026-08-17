@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
   FrameIcon,
+  GridViewIcon,
   Image01Icon,
   LinkSquare01Icon,
   MagicWand01Icon,
@@ -37,7 +38,8 @@ import {
 } from "../../../config/canvas.js";
 import { containedBy } from "../../../config/graph.js";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
-import { nodeTypeFor, OUTPUT_PORT_KEY } from "../../../config/nodeTypes.js";
+import { nodeTypeFor } from "../../../config/nodeTypes.js";
+import { OUTPUT_PORT_KEY } from "../../../config/ports.js";
 import { type AffinityWriteback, isSvgUrl } from "../../boards/affinity";
 import { FRAME_PAD, gridLayout, readingOrder } from "../../boards/arrange";
 import { BoardCanvas, type Box } from "../../boards/BoardCanvas";
@@ -55,6 +57,7 @@ import {
   NO_FILL,
 } from "../../boards/drawing";
 import { ElementModal } from "../../boards/ElementModal";
+import { configFromSource, elementConfig } from "../../boards/elementNode";
 import { InsertPalette } from "../../boards/InsertPalette";
 import {
   outputImageOf,
@@ -78,6 +81,7 @@ import { isSvgFile, svgToPng } from "../../boards/svgToRaster";
 import { useAffinityBridge } from "../../boards/useAffinityBridge";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
+import { useVideoNode } from "../../boards/useVideoNode";
 import ThemeToggle from "../../components/ThemeToggle";
 import { type BoardComment, commentsApi } from "../../services/comments";
 import {
@@ -99,6 +103,7 @@ import { BoardInsertPanel, type ExternalImage } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCursor";
 import { SendToCanvaModal } from "./SendToCanvaModal";
 import { SvgImportDialog } from "./SvgImportDialog";
+import "./BoardEditor.css";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
@@ -785,7 +790,9 @@ export function BoardEditor({
         ...current,
         {
           ...BLANK_ITEM,
-          ...(isFrame ? { body: "" } : { config: {}, runState: "idle" }),
+          ...(isFrame
+            ? { body: "" }
+            : { config: configFromSource(source), runState: "idle" }),
           height,
           id,
           kind: isFrame ? "frame" : "op",
@@ -921,6 +928,9 @@ export function BoardEditor({
     }
   }, [graphRun.error]);
 
+  // A video cannot travel the graph runner's one-request path; see useVideoNode.
+  const runNode = useVideoNode(boardId, items, wires, change, graphRun.runNode);
+
   /**
    * Adds a note or a plain text item.
    *
@@ -1000,12 +1010,7 @@ export function BoardEditor({
       ...items,
       {
         ...BLANK_ITEM,
-        config: {
-          description: element.description ?? "",
-          elementId: element.id,
-          imageUrl: element.coverUrl ?? "",
-          name: element.name,
-        },
+        config: elementConfig(element),
         height: size,
         id: newItemId(),
         kind: "op",
@@ -1589,15 +1594,15 @@ export function BoardEditor({
             return item;
           }
           if (writeback.result) {
-            const historyLength =
-              (writeback.result as BoardItemResult).history?.length ?? 0;
+            const result = writeback.result as BoardItemResult;
+            const historyLength = result.history?.length ?? 0;
             return {
               ...item,
               config: {
                 ...item.config,
                 selectedVersion: Math.max(0, historyLength - 1),
               },
-              result: writeback.result as BoardItemResult,
+              result,
             };
           }
           if (writeback.imageUrl) {
@@ -1819,53 +1824,52 @@ export function BoardEditor({
       {/* data-surface re-points the --btn-* variables at the board's ink, so
           every Button inside this tree paints itself for paper without the
           call site having to say so. See index.css. */}
-      <div
-        className="fixed inset-0 z-50 flex flex-col bg-board-surface text-board-ink"
-        data-surface="board"
-      >
-        <CustomCursor cursorColor="#9100FF" userName={displayName} />
+      <CustomCursor cursorColor="#9100FF" userName={displayName} />
+      <div className="board" data-surface="board">
         {/* Wraps rather than overflowing: the palette has grown past what fits on
           one line at laptop width, and a row of shrink-0 buttons pushed Publish
           and Close off the edge instead of moving them down. */}
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-board-ink/10 border-b px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate font-light text-board-ink/90 text-sm uppercase tracking-[0.2em]">
-              {board?.title ?? "Board"}
-            </h2>
-            <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.2em]">
-              {isSaving ? "Saving…" : null}
-              {!isSaving && isDirty ? "Unsaved changes" : null}
-              {isSaving || isDirty ? null : (
-                <span className="flex items-center gap-1">
-                  <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
-                  Saved
-                </span>
-              )}
-            </p>
-          </div>
+        <div className="board-panel board-panel--top min-w-0">
+          <HugeiconsIcon
+            aria-hidden
+            className="text-board-ink"
+            icon={GridViewIcon}
+            size={14}
+          />
+          <h2 className="truncate font-light text-board-ink/90 text-sm uppercase tracking-[0.2em]">
+            {board?.title ?? "Board"}
+          </h2>
+          <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.2em]">
+            {isSaving ? "Saving…" : null}
+            {!isSaving && isDirty ? "Unsaved changes" : null}
+            {isSaving || isDirty ? null : (
+              <span className="flex items-center gap-1">
+                <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
+                Saved
+              </span>
+            )}
+          </p>
+        </div>
 
-          <div className="flex flex-1 items-center justify-end gap-2">
-            <BoardHeaderActions
-              commentCount={comments.length}
-              hasNodes={items.some((item) => item.kind === "op")}
-              isPublic={board?.isPublic ?? false}
-              isPublishing={isPublishing}
-              isRunning={graphRun.isRunning}
-              onCancelRun={() => graphRun.cancel()}
-              onClose={() => void close()}
-              onPublish={() => void publish(!board?.isPublic)}
-              onRun={() => void graphRun.runBoard()}
-              onToggleComments={() => setShowComments((open) => !open)}
-              publicUrl={publicUrl}
-              showComments={showComments}
-            />
-          </div>
-        </header>
+        <div className="board-panel board-panel--top-right">
+          <BoardHeaderActions
+            commentCount={comments.length}
+            hasNodes={items.some((item) => item.kind === "op")}
+            isPublic={board?.isPublic ?? false}
+            isPublishing={isPublishing}
+            isRunning={graphRun.isRunning}
+            onCancelRun={() => graphRun.cancel()}
+            onClose={() => void close()}
+            onPublish={() => void publish(!board?.isPublic)}
+            onRun={() => void graphRun.runBoard()}
+            onToggleComments={() => setShowComments((open) => !open)}
+            publicUrl={publicUrl}
+            showComments={showComments}
+          />
+        </div>
 
-        <div className="relative min-h-0 flex-1">
-          {/* Floating over the canvas rather than in the header: the header
-            already wraps at laptop width, and a drawing tool wants to be near
-            what it is drawing on. */}
+        <div className="relative z-100 min-h-0 flex-1">
+          {/* Floating over the canvas: a tool wants to be near its subject. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
             <div className="pointer-events-auto">
               <MaskControls onChange={changeMask} selected={selectedItem} />
@@ -1882,7 +1886,7 @@ export function BoardEditor({
 
           <motion.div
             animate={{ opacity: 1, x: 0 }}
-            className="fixed top-20 left-4 z-20 grid place-items-stretch justify-stretch gap-2 rounded border border-board-ink/20 bg-board-surface text-board-ink"
+            className="board-panel board-panel--column top-20 left-4 z-20 grid place-items-stretch justify-stretch gap-2 rounded bg-board-surface text-board-ink"
             initial={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.5 }}
           >
@@ -2011,7 +2015,7 @@ export function BoardEditor({
             onRemoveVersion={(itemId, index) =>
               void removeVersion(itemId, index)
             }
-            onRun={(itemId, force) => void graphRun.runNode(itemId, force)}
+            onRun={(itemId, force) => void runNode(itemId, force)}
             onSaveElement={beginElement}
             onSelectionChange={setSelectedItem}
             onSendToBack={sendToBack}

@@ -1,4 +1,5 @@
 import type { FalModelInput, RunState } from "../config/nodeTypes.js";
+import type { TextStyle } from "../config/textStyle.js";
 
 export type { RunState } from "../config/nodeTypes.js";
 
@@ -201,6 +202,16 @@ export interface BoardItem {
   /** Why the last run failed, in terms the owner can act on. */
   runError: string | null;
   runState: RunState | null;
+  /**
+   * How a `text` or `note` item's words are set: family, weight, colour and the
+   * rest. Optional rather than required because an item built by a tool, or
+   * returned by an older deploy, simply has none — and null on every property
+   * renders exactly what the board rendered before any of this existed.
+   *
+   * The vocabulary and the property → CSS mapping live in config/textStyle.ts,
+   * which the API shares, so both sides agree on what a stored style means.
+   */
+  textStyle?: TextStyle | null;
   thumbUrl: string | null;
   width: number;
   x: number;
@@ -297,6 +308,8 @@ export interface AiModel {
     scale: number | null;
     trigger: string | null;
   } | null;
+  /** What it returns. A video endpoint is submitted to a queue and polled. */
+  output: "image" | "video";
   sortOrder: number;
   updatedAt: string;
   /** True when the model returns vector art rather than a raster. */

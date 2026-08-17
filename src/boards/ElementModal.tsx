@@ -1,20 +1,168 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MAX_ELEMENT_IMAGES } from "../../config/elements.js";
+import { Button } from "../components/ui/button";
 import { elementsApi } from "../services/portfolioService";
 import type { Element } from "../types";
 
-interface ElementModalProps {
+/** Saving a new element out of what is selected on the board. */
+interface ElementDraftProps {
   /** The analysis text, when the selection had an Analyse node to take it from. */
   description: string;
+  element?: undefined;
   /** Every picture the selection can hand over, in the order it was found. */
   images: string[];
   onCancel: () => void;
   onSaved: (element: Element) => void;
 }
 
+/** Editing one that is already in the library. */
+interface ElementEditProps {
+  description?: undefined;
+  /** The element as the library has it; every field here is editable. */
+  element: Element;
+  images?: undefined;
+  onCancel: () => void;
+  onSaved: (element: Element) => void;
+}
+
+type ElementModalProps = ElementDraftProps | ElementEditProps;
+
+/** The four fields a save carries, already trimmed and capped. */
+interface ElementFields {
+  cover: string;
+  description: string;
+  imageUrls: string[];
+  name: string;
+}
+
 /**
- * Naming a style before it is kept.
+ * Where a save goes: back to the element it came from, or to a new one.
+ *
+ * The two endpoints disagree about how to say "no cover". An update leaves an
+ * empty one out rather than sending it empty, because the endpoint reads any
+ * string it is given as an address and refuses one it cannot parse — so on that
+ * side "no cover" has to be said by silence.
+ */
+function persist(
+  element: Element | undefined,
+  fields: ElementFields
+): Promise<Element & { dropped?: number }> {
+  if (element) {
+    return elementsApi.update(element.id, {
+      ...(fields.cover ? { coverUrl: fields.cover } : {}),
+      description: fields.description,
+      imageUrls: fields.imageUrls,
+      name: fields.name,
+    });
+  }
+  return elementsApi.create({
+    coverUrl: fields.cover || null,
+    description: fields.description,
+    imageUrls: fields.imageUrls,
+    name: fields.name,
+  });
+}
+
+/**
+ * Never silent about a picture that did not make it: an element that quietly
+ * kept four of six references is worse than one that says so.
+ */
+function reportDropped(dropped: number | undefined) {
+  if (!dropped || dropped <= 0) {
+    return;
+  }
+  toast.warning(
+    dropped === 1
+      ? "One picture could not be copied and was left out."
+      : `${dropped} pictures could not be copied and were left out.`
+  );
+}
+
+/**
+ * The pictures, with the key image marked and — when editing — droppable.
+ *
+ * A draft's set is fixed: it is whatever was selected on the board, and the way
+ * to change it is to change the selection. An element in the library has no
+ * selection behind it any more, so this is the only place a picture that no
+ * longer belongs to the style can leave it.
+ */
+function PictureGrid({
+  cover,
+  onDrop,
+  onPick,
+  urls,
+}: {
+  cover: string;
+  /** Absent for a draft, which cannot lose pictures here. */
+  onDrop?: (url: string) => void;
+  onPick: (url: string) => void;
+  urls: string[];
+}) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
+      {urls.map((url) => (
+        <div className="relative" key={url}>
+          <button
+            aria-label={
+              url === cover ? "The key image" : "Make this the key image"
+            }
+            className={`block aspect-square w-full overflow-hidden rounded-lg border transition-colors ${
+              url === cover
+                ? "border-board-ink/70"
+                : "border-board-ink/10 hover:border-board-ink/40"
+            }`}
+            onClick={() => onPick(url)}
+            type="button"
+          >
+            <img
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+              height={112}
+              src={url}
+              width={112}
+            />
+            {url === cover ? (
+              <span className="absolute inset-x-0 bottom-0 bg-board-surface/70 py-0.5 text-[9px] text-board-ink uppercase tracking-[0.16em] backdrop-blur-sm">
+                Key image
+              </span>
+            ) : null}
+          </button>
+          {/* A sibling of the tile rather than a child of it: the tile is
+              already a button, and the last picture keeps no remove at all —
+              an element with none is refused, and rightly. The tray carries
+              the backdrop so the button stays a plain variant. */}
+          {onDrop && urls.length > 1 ? (
+            <div className="absolute top-1 right-1 rounded-lg bg-board-surface/70 p-0.5 backdrop-blur-sm">
+              <Button
+                aria-label="Remove this picture from the element"
+                onClick={() => onDrop(url)}
+                size="icon-sm"
+                tone="danger"
+                type="button"
+                variant="ghost"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={12} />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Naming a style before it is kept — and re-naming it afterwards.
+ *
+ * One modal for both because they are one job. An element is a name, some
+ * words, a set of pictures and a key image; whether those are being decided for
+ * the first time or reconsidered a week later changes what the Save button
+ * calls, and nothing else. A separate editor would have been the same four
+ * fields with a second, drifting opinion about how they look.
  *
  * Deliberately not the shadcn Dialog. That is built on `bg-background`, which
  * SiteSettingsProvider pins to the site's branded near-black on every page — so
@@ -28,26 +176,35 @@ interface ElementModalProps {
  */
 export function ElementModal({
   description,
+  element,
   images,
   onCancel,
   onSaved,
 }: ElementModalProps) {
-  const [name, setName] = useState("");
-  const [words, setWords] = useState(description);
-  const [cover, setCover] = useState(images[0] ?? "");
+  const [name, setName] = useState(element?.name ?? "");
+  const [words, setWords] = useState(element?.description ?? description ?? "");
+  // Held in state rather than read from the props each render because an edit
+  // can thin the set: a draft's pictures never move, an element's do.
+  const [pictures, setPictures] = useState<string[]>(
+    element?.imageUrls ?? images ?? []
+  );
+  const [cover, setCover] = useState(
+    element?.coverUrl ?? images?.[0] ?? pictures[0] ?? ""
+  );
   const [isSaving, setIsSaving] = useState(false);
   const field = useRef<HTMLInputElement>(null);
 
   // The endpoint keeps the first MAX_ELEMENT_IMAGES of whatever it is handed,
   // so a larger selection is told what will be left out before it is saved
-  // rather than after.
-  const dropping = Math.max(0, images.length - MAX_ELEMENT_IMAGES);
+  // rather than after. An element already in the library is within the cap by
+  // construction, so this only ever speaks for a draft.
+  const dropping = Math.max(0, pictures.length - MAX_ELEMENT_IMAGES);
 
   // The key image leads, so a selection larger than the limit cannot lose the
   // one picture that was chosen to stand for the element — the endpoint keeps
   // the first MAX_ELEMENT_IMAGES it is handed and drops the rest.
   const kept = (
-    cover ? [cover, ...images.filter((url) => url !== cover)] : images
+    cover ? [cover, ...pictures.filter((url) => url !== cover)] : pictures
   ).slice(0, MAX_ELEMENT_IMAGES);
 
   useEffect(() => {
@@ -66,6 +223,24 @@ export function ElementModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
+  /**
+   * Drops a picture from the element being edited.
+   *
+   * Dropping the key image promotes whatever is left, so the element is never
+   * briefly coverless — and the last picture cannot go at all, because an
+   * element with none has nothing to show and nothing to hand down a wire.
+   */
+  const drop = (url: string) => {
+    const left = pictures.filter((one) => one !== url);
+    if (left.length === 0) {
+      return;
+    }
+    setPictures(left);
+    if (url === cover) {
+      setCover(left[0]);
+    }
+  };
+
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed || isSaving) {
@@ -73,22 +248,18 @@ export function ElementModal({
     }
     setIsSaving(true);
     try {
-      const saved = await elementsApi.create({
-        coverUrl: cover || null,
+      const saved = await persist(element, {
+        cover,
         description: words.trim(),
         imageUrls: kept,
         name: trimmed,
       });
-      // Never silent about a picture that did not make it: an element that
-      // quietly kept four of six references is worse than one that says so.
-      if (saved.dropped && saved.dropped > 0) {
-        toast.warning(
-          saved.dropped === 1
-            ? "One picture could not be copied and was left out."
-            : `${saved.dropped} pictures could not be copied and were left out.`
-        );
-      }
-      toast.success(`Saved “${saved.name}” to your elements`);
+      reportDropped(saved.dropped);
+      toast.success(
+        element
+          ? `Saved “${saved.name}”`
+          : `Saved “${saved.name}” to your elements`
+      );
       onSaved(saved);
     } catch (e) {
       toast.error(
@@ -101,7 +272,7 @@ export function ElementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-6">
       <button
         aria-label="Cancel"
         className="absolute inset-0 cursor-default bg-board-surface/70 backdrop-blur-sm"
@@ -113,13 +284,20 @@ export function ElementModal({
       <div className="relative flex max-h-full w-[min(92vw,44rem)] flex-col overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel shadow-2xl">
         <header className="shrink-0 border-board-ink/10 border-b px-4 py-3">
           <h2 className="text-[11px] text-board-ink uppercase tracking-[0.18em]">
-            Save as an element
+            {element ? "Edit this element" : "Save as an element"}
           </h2>
           <p className="mt-1 text-[11px] text-board-ink/45 leading-relaxed">
-            {images.length === 1
+            {pictures.length === 1
               ? "One picture, kept for reuse on any board."
-              : `${images.length} pictures, kept for reuse on any board.`}{" "}
+              : `${pictures.length} pictures, kept for reuse on any board.`}{" "}
             Click one to make it the key image.
+            {/* Where an edit lands is worth saying, because it is not only
+                here: a run reads the library row, so new words reach boards
+                that were built before them. What is already drawn on a canvas
+                is the copy the node was placed with and does not move. */}
+            {element
+              ? " The library is what a run reads, so an edit reaches every board that uses this element."
+              : null}
           </p>
           {/* Said before saving rather than discovered afterwards. An element
               is a style, not an archive, and a selection can easily be a whole
@@ -134,37 +312,12 @@ export function ElementModal({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
-            {images.map((url) => (
-              <button
-                aria-label={
-                  url === cover ? "The key image" : "Make this the key image"
-                }
-                className={`relative aspect-square overflow-hidden rounded-lg border transition-colors ${
-                  url === cover
-                    ? "border-board-ink/70"
-                    : "border-board-ink/10 hover:border-board-ink/40"
-                }`}
-                key={url}
-                onClick={() => setCover(url)}
-                type="button"
-              >
-                <img
-                  alt=""
-                  className="h-full w-full object-cover"
-                  draggable={false}
-                  height={112}
-                  src={url}
-                  width={112}
-                />
-                {url === cover ? (
-                  <span className="absolute inset-x-0 bottom-0 bg-board-surface/70 py-0.5 text-[9px] text-board-ink uppercase tracking-[0.16em] backdrop-blur-sm">
-                    Key image
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
+          <PictureGrid
+            cover={cover}
+            onDrop={element ? drop : undefined}
+            onPick={setCover}
+            urls={pictures}
+          />
 
           <label className="mt-4 block">
             <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
@@ -191,7 +344,7 @@ export function ElementModal({
               What they have in common
             </span>
             <textarea
-              className="h-24 w-full resize-none rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/45"
+              className="h-40 w-full resize-y rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/45"
               maxLength={2000}
               onChange={(e) => setWords(e.target.value)}
               placeholder="muted greens, soft overcast light, shallow depth of field, 35mm…"
@@ -205,21 +358,18 @@ export function ElementModal({
         </div>
 
         <footer className="flex shrink-0 justify-end gap-1.5 border-board-ink/10 border-t px-4 py-3">
-          <button
-            className="rounded px-2.5 py-1.5 text-[11px] text-board-ink/50 uppercase tracking-[0.16em] hover:text-board-ink"
-            onClick={onCancel}
-            type="button"
-          >
+          <Button onClick={onCancel} size="sm" type="button" variant="ghost">
             Cancel
-          </button>
-          <button
-            className="rounded bg-board-ink/15 px-3 py-1.5 text-[11px] text-board-ink uppercase tracking-[0.16em] hover:bg-board-ink/25 disabled:opacity-40"
+          </Button>
+          <Button
             disabled={isSaving || !name.trim()}
             onClick={() => void save()}
+            size="sm"
             type="button"
+            variant="default"
           >
             {isSaving ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </footer>
       </div>
     </div>

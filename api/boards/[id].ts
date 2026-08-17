@@ -38,6 +38,7 @@ const loadItems = async (
     SELECT i.id, i.kind, i.photo_id, i.image_url, i.thumb_url,
            i.credit_name, i.credit_url, i.body, i.font_size,
            i.node_type, i.config, i.result, i.run_state, i.run_error,
+           i.text_style,
            i.x, i.y, i.width, i.height, i.z_index, i.created_at,
            p.url AS photo_url
     FROM board_items i
@@ -152,20 +153,22 @@ async function replaceItems(sql: Sql, boardId: string, items: IncomingItem[]) {
       INSERT INTO board_items (
         id, board_id, kind, photo_id, image_url, thumb_url,
         credit_name, credit_url, body, font_size,
-        node_type, config,
+        node_type, config, text_style,
         x, y, width, height, z_index
       ) VALUES (
         ${item.id}, ${boardId}, ${item.kind}, ${item.photoId}, ${item.imageUrl},
         ${item.thumbUrl}, ${item.creditName}, ${item.creditUrl}, ${item.body},
         ${item.fontSize},
         ${item.nodeType}, ${item.config === null ? null : JSON.stringify(item.config)},
+        ${item.textStyle === null ? null : JSON.stringify(item.textStyle)},
         ${item.x}, ${item.y}, ${item.width}, ${item.height}, ${item.z}
       )
       ON CONFLICT (id) DO UPDATE
       SET x = EXCLUDED.x, y = EXCLUDED.y,
           width = EXCLUDED.width, height = EXCLUDED.height,
           z_index = EXCLUDED.z_index, body = EXCLUDED.body,
-          font_size = EXCLUDED.font_size, config = EXCLUDED.config
+          font_size = EXCLUDED.font_size, config = EXCLUDED.config,
+          text_style = EXCLUDED.text_style
       WHERE board_items.board_id = ${boardId}
     `;
   }
@@ -184,7 +187,26 @@ async function replaceWires(sql: Sql, boardId: string, wires: IncomingWire[]) {
   // before the old row had gone.
   await sql`DELETE FROM board_wires WHERE board_id = ${boardId}`;
 
-  for (const wire of wires) {
+  // Deduplicated by id, because the rows above are already gone: a collision
+  // here can only be the same wire twice in one payload, and the insert would
+  // fail on the primary key and take the whole save with it — losing the
+  // arrangement, not just the extra wire.
+  //
+  // The canvas can produce one. A wire is appended to the list on drop, and a
+  // handler that runs twice for one gesture — a re-render mid-drag, or React's
+  // double-invocation in development — appends the same object twice. Fixing
+  // that at the source is right too, but the save is where it costs the board,
+  // so it is also refused here.
+  const seen = new Set<string>();
+  const unique = wires.filter((wire) => {
+    if (seen.has(wire.id)) {
+      return false;
+    }
+    seen.add(wire.id);
+    return true;
+  });
+
+  for (const wire of unique) {
     // biome-ignore lint/performance/noAwaitInLoops: as with items — no multi-statement batch, and the set is bounded at MAX_WIRES
     await sql`
       INSERT INTO board_wires (

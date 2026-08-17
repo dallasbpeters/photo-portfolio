@@ -5,7 +5,7 @@
   contain: paint;
   background-color: var(--color-board-panel);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xs);
 }
 
 .op-node-view__header {

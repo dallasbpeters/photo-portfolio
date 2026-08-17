@@ -114,7 +114,7 @@ const buttonVariants = cva(
       },
       variant: {
         default:
-          "bg-[var(--btn-solid-bg)] text-[var(--btn-solid-fg)] hover:bg-[var(--btn-solid-hover-bg)]",
+          "bg-primary text-primary-foreground hover:bg-[var(--btn-solid-hover-bg)]",
         ghost:
           "text-[var(--btn-fg)] hover:bg-[var(--btn-ghost-hover-bg)] hover:text-[var(--btn-fg-strong)] aria-expanded:bg-[var(--btn-ghost-hover-bg)] aria-expanded:text-[var(--btn-fg-strong)]",
         link: "text-[var(--btn-fg)] underline-offset-4 hover:text-[var(--btn-fg-strong)] hover:underline",

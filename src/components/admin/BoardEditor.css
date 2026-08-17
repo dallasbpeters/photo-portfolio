@@ -1,0 +1,49 @@
+/*
+ * The editor's root: a full-screen surface the canvas fills.
+ *
+ * Every line here is load-bearing, which is why they are spelled out rather
+ * than trimmed to what looks tidy:
+ *
+ * - `display: flex` with `column` because the canvas below is `flex-1`. Without
+ *   a flex parent that declaration does nothing, the canvas gets no height, and
+ *   the board renders empty — which looks exactly like losing your work.
+ * - No `align-items`, deliberately. Centring on a column axis shrinks children
+ *   to their content width, so the canvas would stop filling the screen.
+ * - `z-index` because this is fixed and overlays the admin behind it.
+ * - The two colours, because `data-surface="board"` sets the `--btn-*` and ink
+ *   variables everything inside reads; without them the board paints itself in
+ *   the site palette.
+ */
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-board-ink);
+  background-color: var(--color-board-surface);
+}
+
+.board-panel {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  height: fit-content;
+  padding: 8px;
+  background-color: var(--color-board-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  &.board-panel--top {
+    top: 12px;
+    left: 12px;
+  }
+  &.board-panel--top-right {
+    top: 12px;
+    right: 12px;
+  }
+  &.board-panel--column {
+    flex-direction: column;
+  }
+}

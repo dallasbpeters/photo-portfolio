@@ -128,6 +128,17 @@ export interface Tool {
   status: ToolStatus;
 }
 
+/**
+ * Running a tool on an item, from whichever surface picked it.
+ *
+ * One signature for the right-click menu, the contextual bar and anything
+ * later, so a surface is a way of *composing* this call rather than a variant
+ * of it. `prompt` is the words collected at the moment of picking — see
+ * ToolPrompt — and takes precedence over whatever the item already carries,
+ * which is what makes "type something else here" mean anything.
+ */
+export type RunTool = (item: BoardItem, tool: Tool, prompt?: string) => void;
+
 // ── Invocation ───────────────────────────────────────────────────────────────
 
 /**
