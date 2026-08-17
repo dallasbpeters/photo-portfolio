@@ -274,6 +274,42 @@ export interface Board {
  * `description` is the substance rather than a note about it — it travels down
  * the wire into the prompt of whatever the element feeds.
  */
+/**
+ * One asset in a collection.
+ *
+ * Not a `Photo`: it has no category, no EXIF and no published state, because it
+ * is material rather than portfolio. `kind` is carried rather than guessed from
+ * the address — a signed URL may have no extension, and a clip rendered into an
+ * <img> is a broken icon for an asset that works.
+ */
+export interface CollectionItem {
+  alt: string | null;
+  height: number | null;
+  id: string;
+  kind: "image" | "video";
+  title: string | null;
+  url: string;
+  width: number | null;
+}
+
+/**
+ * A named set of assets, shared by the boards and the pages.
+ *
+ * `items` arrives when one collection is read and is absent from the list,
+ * which sends `itemCount` instead — the list draws a card with a number on it,
+ * and fetching every item to reach that number is the whole library.
+ */
+export interface Collection {
+  coverUrl: string | null;
+  createdAt: string;
+  description: string | null;
+  id: string;
+  itemCount?: number;
+  items?: CollectionItem[];
+  name: string;
+  updatedAt: string;
+}
+
 export interface Element {
   /** The key image: what the panel shows, and what a wired element hands over. */
   coverUrl: string | null;

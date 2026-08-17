@@ -1,5 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MagicWand01Icon } from "@hugeicons-pro/core-stroke-standard";
+import {
+  Album02Icon,
+  MagicWand01Icon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef } from "react";
 import type { BoardItem } from "../types";
 import { frameBoardTitle } from "./copyToBoard";
@@ -106,6 +109,31 @@ export function NamePanel({
  */
 export const hasTools = (item: BoardItem): boolean =>
   toolsForKind(item.kind).length > 0;
+
+/**
+ * Opens the collection panel for the selection's pictures.
+ *
+ * Beside "save as an element", because both keep something — but an element is a
+ * style distilled from pictures, where a collection is the pictures themselves,
+ * kept as material for a page. Two rows rather than one with a choice, since the
+ * two answers are not versions of each other.
+ */
+export function CollectionRow({
+  className,
+  count,
+  onOpen,
+}: {
+  className: string;
+  count: number;
+  onOpen: () => void;
+}) {
+  return (
+    <button className={className} onClick={onOpen} type="button">
+      <HugeiconsIcon aria-hidden icon={Album02Icon} size={14} />
+      <span>Save {count === 1 ? "it" : String(count)} to a collection</span>
+    </button>
+  );
+}
 
 /** Opens the tool list for the one selected item. */
 export function ToolsRow({

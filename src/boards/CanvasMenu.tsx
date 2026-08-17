@@ -14,7 +14,14 @@ import {
 import { useState } from "react";
 import type { BoardItem, BoardWire } from "../types";
 import { isSvgUrl } from "./affinity";
-import { hasTools, NamePanel, ToolsPanel, ToolsRow } from "./CanvasMenuPanels";
+import {
+  CollectionRow,
+  hasTools,
+  NamePanel,
+  ToolsPanel,
+  ToolsRow,
+} from "./CanvasMenuPanels";
+import { CollectionPanel } from "./CollectionPanel";
 import { frameBoardTitle, frameSummary } from "./copyToBoard";
 import { outputImageOf, outputImagesOf } from "./itemOutput";
 import type { Tool } from "./tools/types";
@@ -302,6 +309,7 @@ function MenuRows({
   menu,
   onArrange,
   onBringToFront,
+  onCollect,
   onCopy,
   onExport,
   onGroup,
@@ -317,6 +325,8 @@ function MenuRows({
   menu: CanvasMenuTarget;
   onArrange: (itemId: string) => void;
   onBringToFront: (itemId: string) => void;
+  /** Opens the collection panel on the pictures the selection can hand over. */
+  onCollect: (urls: string[]) => void;
   onCopy: (frame: BoardItem) => void;
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
@@ -386,6 +396,14 @@ function MenuRows({
         </button>
       ) : null}
 
+      {pictures.length > 0 ? (
+        <CollectionRow
+          className={rowClass}
+          count={pictures.length}
+          onOpen={() => onCollect(pictures)}
+        />
+      ) : null}
+
       {frame ? (
         <FrameRows
           canArrange={(summary?.count ?? 0) > 1}
@@ -426,6 +444,12 @@ export function CanvasMenu({
    * cheaper than an effect and impossible to forget. The frame rides along so
    * the panel has one without asking the menu again.
    */
+  /** Null until "Save to a collection" is chosen; then what is being saved. */
+  const [collecting, setCollecting] = useState<{
+    for: CanvasMenuTarget;
+    urls: string[];
+  } | null>(null);
+
   const [naming, setNaming] = useState<{
     for: CanvasMenuTarget;
     frame: BoardItem;
@@ -446,6 +470,7 @@ export function CanvasMenu({
   }
 
   const typing = naming?.for === menu ? naming : null;
+  const collectingNow = collecting?.for === menu ? collecting : null;
   const picked = picking?.for === menu ? picking : null;
 
   const { frame, point, selection } = menu;
@@ -456,23 +481,47 @@ export function CanvasMenu({
 
   // The picker sits on top of the rows it was opened from: picking a tool is a
   // step on the way to a run, not a way back to the rest of the menu.
-  const rows = picked ? (
-    <ToolsPanel
-      item={picked.item}
-      onClose={onDismiss}
-      onPick={(item, tool) => {
-        onRunTool?.(item, tool);
-        // Dismissed immediately: the run outlives this menu, and a menu left
-        // open over the item would hide the change it is making.
-        onDismiss();
-      }}
-    />
-  ) : (
+  /**
+   * What the menu is showing: its rows, or the one panel that replaced them.
+   *
+   * Chosen by name rather than by a chain of ternaries — there are three now,
+   * and a fourth would nest deeper than anyone can read. Each panel sits on top
+   * of the rows it was opened from: choosing is a step towards doing something,
+   * not a way back to the rest of the menu.
+   */
+  const panel = (() => {
+    if (collectingNow) {
+      return (
+        <CollectionPanel
+          assets={collectingNow.urls.map((url) => ({ url }))}
+          onClose={onDismiss}
+        />
+      );
+    }
+    if (picked) {
+      return (
+        <ToolsPanel
+          item={picked.item}
+          onClose={onDismiss}
+          onPick={(item, tool) => {
+            onRunTool?.(item, tool);
+            // Dismissed immediately: the run outlives this menu, and a menu
+            // left open over the item would hide the change it is making.
+            onDismiss();
+          }}
+        />
+      );
+    }
+    return null;
+  })();
+
+  const rows = panel ?? (
     <MenuRows
       items={items}
       menu={menu}
       onArrange={onArrange}
       onBringToFront={onBringToFront}
+      onCollect={(urls) => setCollecting({ for: menu, urls })}
       onCopy={(frameToCopy) =>
         setNaming({
           for: menu,
