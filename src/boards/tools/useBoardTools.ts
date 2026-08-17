@@ -28,7 +28,14 @@ import { useToolRunner } from "./useToolRunner.js";
  */
 
 export interface UseBoardToolsOptions {
-  boardId?: string | null;
+  /**
+   * The board the result is written to. Required, and deliberately without a
+   * default: it was optional, BoardCanvas never passed one, and every tool
+   * result was quietly dropped on the next reload — the save is guarded by
+   * `if (boardId)`, so the omission failed silently and looked like the tool
+   * having done nothing at all.
+   */
+  boardId: string | null;
   items: BoardItem[];
   onChange: (items: BoardItem[]) => void;
   /**
@@ -49,7 +56,7 @@ export interface BoardTools {
 }
 
 export const useBoardTools = ({
-  boardId = null,
+  boardId,
   items,
   onChange,
   onNeedsMask,

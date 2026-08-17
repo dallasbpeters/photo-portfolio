@@ -1988,6 +1988,7 @@ export function BoardEditor({
 
           <BoardCanvas
             autoEditId={autoEditId}
+            boardId={boardId}
             comments={comments}
             drawStyle={drawStyle}
             drawTool={drawTool}

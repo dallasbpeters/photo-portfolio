@@ -93,6 +93,11 @@ const HTTP_URL = /^https?:\/\/\S+$/i;
 interface BoardCanvasProps {
   /** Item to open for typing as soon as it appears — a just-placed note. */
   autoEditId?: string | null;
+  /**
+   * The board a tool's result is written to, null where there is none. Omitting
+   * it is how every tool result came to be dropped on reload.
+   */
+  boardId: string | null;
   /** When true, clicking an item targets it for a comment rather than selecting. */
   commentMode?: boolean;
   /** Comments on the board's items, shown as badges and in the sidebar. */
@@ -288,6 +293,7 @@ export function BoardCanvas({
   onRemoveVersion,
   onRun,
   onSaveElement,
+  boardId,
   onDrawTool,
   onEditImage,
   onSendToCanva,
@@ -309,14 +315,12 @@ export function BoardCanvas({
   // container settles, until the board is panned, zoomed or rearranged.
   const view = useCanvasViewport(containerRef, () => contentBounds(items));
   const space = useSpaceKey();
-  // Held space is what tells a background press to pan instead of sweeping a
-  // selection box, so it is read by the pointerdown handler below.
+  // Held space pans rather than sweeps a box; the pointerdown handler reads it.
   /**
-   * Which items are selected, by index.
-   *
-   * A list rather than one index: several can be picked with a marquee or with
-   * shift, and dragging any of them moves the whole set. One selection is just
-   * a list of length one, which keeps every read the same shape.
+   * Which items are selected, by index. A list rather than one index: several
+   * can be picked with a marquee or with shift, and dragging any moves the
+   * whole set. One selection is a list of length one, so every read is the
+   * same shape.
    */
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   /** The marquee being dragged out on the background, in canvas units. */
@@ -339,6 +343,7 @@ export function BoardCanvas({
   // Owned here rather than in CanvasMenu so a run outlives the menu that
   // started it: the menu is dismissed the instant a tool is picked.
   const tools = useBoardTools({
+    boardId,
     items,
     onChange,
     onNeedsMask: () => onDrawTool?.("mask"),
@@ -544,12 +549,9 @@ export function BoardCanvas({
 
   /**
    * Pasting an image onto the board: the same act as dropping a file, down the
-   * same path. A screenshot is the commonest way an image reaches a moodboard,
-   * and saving it to disk only to drag it back in is a detour.
-   *
-   * Listens on the window rather than an element because paste is not delivered
-   * to something merely hovered; it goes to whatever has focus, which on a board
-   * you are just looking at is the document.
+   * same path. Listens on the window rather than an element because paste is
+   * not delivered to something merely hovered — it goes to whatever has focus,
+   * which on a board you are looking at is the document.
    */
   useEffect(() => {
     if (readOnly || !(onDropFiles || onDropImage)) {
@@ -628,13 +630,11 @@ export function BoardCanvas({
 
   /**
    * What a node that composes text will send, read before it runs. Combine
-   * answers with one string, Iterate with one per value, numbered — seeing "3
-   * prompts" and what they say is the only way to know a batch is set up right.
+   * answers with one string, Iterate with one per value — seeing "3 prompts"
+   * and what they say is the only way to know a batch is set up right.
    */
-  /**
-   * The pictures a Batch node is holding. Only that node: resolving every image
-   * behind every node on every render walks the graph once per node.
-   */
+  /** The pictures a Batch node holds. Only that node: resolving every image
+   * behind every node on every render walks the graph once per node. */
   const previewImagesFor = (item: BoardItem): string[] | undefined =>
     item.nodeType === "batch"
       ? outputImagesOf(item, { items, wires })
