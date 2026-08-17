@@ -1,29 +1,102 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { isVideoUrl } from "../boards/isVideo";
+import { useCollections } from "../hooks/useCollections";
 import { usePhotos } from "../hooks/usePhotos";
+import { collectionsApi } from "../services/portfolioService";
+import type { CollectionItem } from "../types";
 
 /**
- * Choosing a picture already in the library, rather than uploading another.
+ * Choosing an asset that already exists, rather than uploading another.
  *
- * The editor could only ever take a new file, so putting a photograph that was
- * already on the site into a page meant downloading it and uploading it back —
- * which produced a second copy in blob storage, with its own URL, that no
- * longer followed the original when it was replaced.
+ * Two sources, because the site has two kinds of picture. The photo library is
+ * the portfolio — published work, with categories and credits. A collection is
+ * material: whatever a board generated, kept for use without appearing on the
+ * site. The page editor is the one place that wants both, and before this it
+ * could reach neither: putting a picture already on the site into a page meant
+ * downloading and re-uploading it, which made a second copy in blob storage that
+ * no longer followed the original when it was replaced.
  *
- * Reads the same SWR entry the gallery and the admin grid use, so opening this
- * costs nothing when the library is already loaded, and a photo added in
- * another tab is here without a refetch.
+ * Both sources read the SWR entries their own panels use, so opening this costs
+ * nothing when either is already loaded, and anything added elsewhere is here
+ * without a refetch.
  */
 
 interface AssetPickerProps {
-  /** Hands back the address to insert. The editor decides what to do with it. */
-  onChoose: (url: string, alt: string) => void;
+  /**
+   * Hands back the address, a description, and what it is.
+   *
+   * `kind` is what decides between an image node and a video node — a clip
+   * inserted as an image is a broken icon, the mistake the board made until
+   * ItemMedia learned to tell them apart.
+   */
+  onChoose: (url: string, alt: string, kind: "image" | "video") => void;
   onClose: () => void;
 }
 
+type Source = "photos" | "collections";
+
+/** One tile. A clip shows its first frame rather than a broken image. */
+function Tile({
+  alt,
+  kind,
+  onPick,
+  title,
+  url,
+}: {
+  alt: string;
+  kind: "image" | "video";
+  onPick: () => void;
+  title: string;
+  url: string;
+}) {
+  return (
+    <button
+      className="group relative overflow-hidden rounded border border-white/10 hover:border-white/40"
+      onClick={onPick}
+      type="button"
+    >
+      {kind === "video" ? (
+        // `#t=0.1` is what makes a frame appear: asked for frame zero, several
+        // browsers render nothing until the clip is played.
+        <video
+          className="aspect-square w-full object-cover"
+          muted
+          preload="metadata"
+          src={`${url}#t=0.1`}
+        >
+          <track kind="captions" />
+        </video>
+      ) : (
+        <img
+          alt={alt}
+          className="aspect-square w-full object-cover"
+          decoding="async"
+          height={200}
+          loading="lazy"
+          src={url}
+          width={200}
+        />
+      )}
+      <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] text-white/80 opacity-0 group-hover:opacity-100">
+        {title}
+      </span>
+    </button>
+  );
+}
+
+/** What an item is, trusting the stored kind before the address. */
+const kindOf = (item: CollectionItem): "image" | "video" =>
+  item.kind === "video" || isVideoUrl(item.url) ? "video" : "image";
+
 export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
-  const { isLoading, photos } = usePhotos();
+  const [source, setSource] = useState<Source>("photos");
   const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [items, setItems] = useState<CollectionItem[]>([]);
+
+  const { photos } = usePhotos();
+  const { collections } = useCollections();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -35,17 +108,59 @@ export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const found = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) {
-      return photos;
+  // The list sends a count rather than its items, so opening one fetches. The
+  // flag guards a late answer: switching collections quickly would otherwise let
+  // the slower request land last and show the wrong contents.
+  useEffect(() => {
+    if (!openId) {
+      setItems([]);
+      return;
     }
-    // Title and category, because those are what anyone would type. A filename
-    // is not searched: it is rarely what the picture is called in anyone's head.
-    return photos.filter((photo) =>
-      `${photo.title} ${photo.category ?? ""}`.toLowerCase().includes(term)
-    );
-  }, [photos, query]);
+    let live = true;
+    void collectionsApi.get(openId).then((full) => {
+      if (live) {
+        setItems(full.items ?? []);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [openId]);
+
+  const term = query.trim().toLowerCase();
+
+  const foundPhotos = useMemo(
+    () =>
+      term
+        ? photos.filter((photo) =>
+            `${photo.title} ${photo.category ?? ""}`
+              .toLowerCase()
+              .includes(term)
+          )
+        : photos,
+    [photos, term]
+  );
+
+  const foundItems = useMemo(
+    () =>
+      term
+        ? items.filter((item) =>
+            `${item.title ?? ""} ${item.alt ?? ""}`.toLowerCase().includes(term)
+          )
+        : items,
+    [items, term]
+  );
+
+  const tab = (id: Source, label: string) => (
+    <Button
+      aria-pressed={source === id}
+      onClick={() => setSource(id)}
+      size="xs"
+      variant={source === id ? "selected" : "ghost"}
+    >
+      {label}
+    </Button>
+  );
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-6">
@@ -57,68 +172,93 @@ export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
         onKeyDown={undefined}
       />
       <div
-        aria-label="Choose a picture"
+        aria-label="Choose an asset"
         aria-modal
         className="relative flex max-h-[80vh] w-full max-w-3xl flex-col gap-3 rounded-lg border border-white/10 bg-neutral-900 p-4 shadow-xl"
         role="dialog"
       >
         <div className="flex items-center gap-2">
-          <input
-            // The field the dialog opens on: this is a search-first list, and
-            // reaching for the mouse to type is the wrong first move.
-            autoFocus
-            className="min-w-0 flex-1 rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your pictures…"
-            type="search"
-            value={query}
-          />
+          {tab("photos", "Your photos")}
+          {tab("collections", "Collections")}
+          <div className="flex-1" />
           <Button onClick={onClose} size="sm" variant="ghost">
             Close
           </Button>
         </div>
 
-        {isLoading ? (
-          <p className="py-8 text-center text-sm text-white/40">Loading…</p>
-        ) : null}
+        <input
+          className="w-full rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            source === "photos" ? "Search your pictures…" : "Search assets…"
+          }
+          type="search"
+          value={query}
+        />
 
-        {!isLoading && found.length === 0 ? (
-          <p className="py-8 text-center text-sm text-white/40">
-            {photos.length === 0
-              ? "Nothing in the library yet."
-              : "No pictures match that."}
-          </p>
+        {source === "collections" ? (
+          <div className="flex flex-wrap gap-1.5">
+            {collections.length === 0 ? (
+              <p className="text-white/40 text-xs">
+                No collections yet. Save something into one from a board.
+              </p>
+            ) : null}
+            {collections.map((collection) => (
+              <Button
+                aria-pressed={openId === collection.id}
+                key={collection.id}
+                onClick={() => setOpenId(collection.id)}
+                size="xs"
+                variant={openId === collection.id ? "selected" : "outline"}
+              >
+                {collection.name} · {collection.itemCount ?? 0}
+              </Button>
+            ))}
+          </div>
         ) : null}
 
         <div className="grid grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-          {found.map((photo) => (
-            <button
-              className="group relative overflow-hidden rounded border border-white/10 hover:border-white/40"
-              key={photo.id}
-              onClick={() => {
-                // The library's own alt text when it has one — it was written
-                // for this picture and is better than the title, which is a
-                // label rather than a description of what is in the frame.
-                onChoose(photo.url, photo.alt || photo.title);
-                onClose();
-              }}
-              type="button"
-            >
-              <img
-                alt={photo.title}
-                className="aspect-square w-full object-cover"
-                decoding="async"
-                height={200}
-                loading="lazy"
-                src={photo.url}
-                width={200}
-              />
-              <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] text-white/80 opacity-0 group-hover:opacity-100">
-                {photo.title}
-              </span>
-            </button>
-          ))}
+          {source === "photos"
+            ? foundPhotos.map((photo) => (
+                <Tile
+                  alt={photo.alt || photo.title}
+                  key={photo.id}
+                  kind="image"
+                  onPick={() => {
+                    onChoose(photo.url, photo.alt || photo.title, "image");
+                    // Closed here rather than by the caller: picking is the end
+                    // of this dialog's job, and leaving it open over the page
+                    // hides the insertion it just made.
+                    onClose();
+                  }}
+                  title={photo.title}
+                  url={photo.url}
+                />
+              ))
+            : foundItems.map((item) => (
+                <Tile
+                  alt={item.alt ?? item.title ?? ""}
+                  key={item.id}
+                  kind={kindOf(item)}
+                  onPick={() => {
+                    onChoose(
+                      item.url,
+                      item.alt ?? item.title ?? "",
+                      kindOf(item)
+                    );
+                    onClose();
+                  }}
+                  title={item.title ?? ""}
+                  url={item.url}
+                />
+              ))}
         </div>
+
+        {source === "collections" && openId && foundItems.length === 0 ? (
+          <p className="py-4 text-center text-sm text-white/40">
+            Nothing here yet.
+          </p>
+        ) : null}
       </div>
     </div>
   );

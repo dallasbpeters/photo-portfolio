@@ -28,6 +28,7 @@ import { portfolioService } from "../services/portfolioService";
 import { AssetPicker } from "./AssetPicker";
 import type { ImageAlign } from "./imageAttributes";
 import { FormattedImage, IMAGE_WIDTHS } from "./imageAttributes";
+import { PageVideo } from "./videoNode";
 
 interface PageEditorProps {
   onChange: (doc: unknown) => void;
@@ -68,6 +69,11 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
         // compete with it.
       }),
       FormattedImage.configure({
+        HTMLAttributes: { class: "rounded max-w-full h-auto" },
+      }),
+      // Its own node: TipTap's image renders an <img>, and an mp4 in one is a
+      // broken icon for an asset that works. See src/cms/videoNode.ts.
+      PageVideo.configure({
         HTMLAttributes: { class: "rounded max-w-full h-auto" },
       }),
       Link.configure({
@@ -324,7 +330,20 @@ export function PageEditor({ value, onChange }: PageEditorProps) {
 
       {isPicking ? (
         <AssetPicker
-          onChoose={(url, alt) => {
+          onChoose={(url, alt, kind) => {
+            // A clip becomes a video node and a picture an image: the same
+            // choice ItemMedia makes on the board, for the same reason.
+            if (kind === "video") {
+              editor
+                .chain()
+                .focus()
+                .insertContent({
+                  attrs: { src: url, title: alt },
+                  type: "pageVideo",
+                })
+                .run();
+              return;
+            }
             // The same insertion the upload path uses, so a picture from the
             // library carries the width and alignment attributes the editor's
             // image controls expect — inserting a bare <img> would leave those
