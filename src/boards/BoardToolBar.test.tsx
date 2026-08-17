@@ -79,6 +79,55 @@ const bar = async (node: BoardItem, onEditManually?: () => void) => {
   return found ?? null;
 };
 
+describe("which items get a bar at all", () => {
+  it("gives a generating node none, even when it has produced something", async () => {
+    // The whole bar, not one button. `toolsForKind` is what decides, so the
+    // right-click menu's Tools section disappears with it — one answer, two
+    // surfaces, which is the point of the registry.
+    const anchor = createRef<HTMLDivElement>();
+    const box = document.createElement("div");
+    document.body.append(box);
+    Object.assign(anchor, { current: box });
+    const el = await render(
+      <BoardToolBar
+        anchor={anchor}
+        chromeScale={{ transform: "scale(1)" }}
+        isRunning={false}
+        item={item({
+          kind: "op",
+          nodeType: "generate",
+          result: { url: "https://example.com/made.png" },
+        } as Partial<BoardItem>)}
+        onRun={() => {
+          /* not under test */
+        }}
+      />
+    );
+    box.remove();
+    expect(el.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("gives a placed picture the full bar", async () => {
+    const anchor = createRef<HTMLDivElement>();
+    const box = document.createElement("div");
+    document.body.append(box);
+    Object.assign(anchor, { current: box });
+    const el = await render(
+      <BoardToolBar
+        anchor={anchor}
+        chromeScale={{ transform: "scale(1)" }}
+        isRunning={false}
+        item={item({ imageUrl: "https://example.com/a.png" })}
+        onRun={() => {
+          /* not under test */
+        }}
+      />
+    );
+    box.remove();
+    expect(el.querySelectorAll("button").length).toBeGreaterThan(0);
+  });
+});
+
 describe("BoardToolBar's mask tools", () => {
   it("offers Replace on an unmasked picture rather than greying it out", async () => {
     // The bug this fixes: Replace sat disabled in the picker until something
@@ -140,11 +189,22 @@ describe("BoardToolBar's manual editor button", () => {
     ).toBeNull();
   });
 
-  it("is withheld from a node with nothing on it yet", async () => {
+  it("is withheld from a generating node, which has no picture of its own", async () => {
+    // And not only this button: a node gets no bar at all. It is the recipe for
+    // a picture rather than a picture, with its own model, prompt and Run, and
+    // a tool pointed at it could only mean the selected version — which the
+    // next run replaces, taking the edit with it and saying nothing.
     expect(
-      await bar(item({ kind: "op", nodeType: "generate" }), () => {
-        /* noop */
-      })
+      await bar(
+        item({
+          kind: "op",
+          nodeType: "generate",
+          result: { url: "https://example.com/made.png" },
+        } as Partial<BoardItem>),
+        () => {
+          /* noop */
+        }
+      )
     ).toBeNull();
   });
 

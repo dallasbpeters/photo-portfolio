@@ -15,13 +15,21 @@
 import type { BoardItemKind } from "../../types.js";
 import type { SettingDef, Tool, ToolGroup } from "./types.js";
 
-/** Item kinds a tool can be pointed at. Written out so a `photo`-only tool is obvious. */
-const IMAGE_KINDS: readonly BoardItemKind[] = [
-  "photo",
-  "reference",
-  "op",
-  "drawing",
-];
+/**
+ * Item kinds a tool can be pointed at. Written out so a `photo`-only tool is
+ * obvious.
+ *
+ * `op` is deliberately absent. A node is not a picture — it is the recipe for
+ * one, with its own model, prompt and Run. Rotating "it" would have to mean
+ * rotating whichever version happens to be selected, and then the next run
+ * throws that away and nobody can say why the rotation vanished. The bar
+ * offering Edit and Restyle beside a node's own settings said you could work on
+ * the node directly, and you cannot.
+ *
+ * Reach a node's output by placing it: drag the result out, and the placed
+ * image is a `reference` with every tool available to it.
+ */
+const IMAGE_KINDS: readonly BoardItemKind[] = ["photo", "reference", "drawing"];
 
 /** Matches MAX_PROMPT in api/ai/generate.ts, which truncates past it silently. */
 const PROMPT_MAX = 1200;
