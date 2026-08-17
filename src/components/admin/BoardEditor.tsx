@@ -989,12 +989,11 @@ export function BoardEditor({
   /**
    * Places a saved style on the canvas.
    *
-   * The key image, the name, and the words are copied onto the node so the
-   * canvas can draw them without a request per node. The id travels with them,
-   * and it is the id the run endpoint reads — so what a run actually sends is
-   * whatever the library holds now, not what it held the day this node was
-   * placed. The copies exist only so a board still shows what it was built with
-   * after the element is deleted out from under it.
+   * The key image, the name and the words are copied onto the node so the
+   * canvas can draw them without a request per node. The id travels with them
+   * and it is the id the run endpoint reads, so a run sends whatever the
+   * library holds now. The copies exist only so a board still shows what it was
+   * built with after the element is deleted out from under it.
    *
    * Square-ish, because what it shows is a picture rather than a stack of
    * settings: the tall default node shape left an element mostly empty.
@@ -2003,6 +2002,7 @@ export function BoardEditor({
             onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
             onCreateFromPort={createFromPort}
             onDraw={addDrawing}
+            onDrawTool={setDrawTool}
             onDropFiles={(files, point) => void dropFiles(files, point)}
             onDropImage={dropImage}
             onEditImage={openEditor}

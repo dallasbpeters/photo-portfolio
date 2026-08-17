@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { boardsApi } from "../../services/portfolioService";
 import type { BoardItem } from "../../types.js";
+import { maskOf } from "../mask.js";
 import { promptOf } from "./itemContext.js";
 import { maskBitmapUrl } from "./maskBitmap.js";
 import type { RunTool } from "./types.js";
@@ -30,6 +31,16 @@ export interface UseBoardToolsOptions {
   boardId?: string | null;
   items: BoardItem[];
   onChange: (items: BoardItem[]) => void;
+  /**
+   * Arms the mask brush, for a tool that needs a painted area and has none.
+   *
+   * Here rather than in the bar because the bar cannot reach the drawing tool
+   * — that state lives in BoardEditor — and because this is the one place both
+   * the bar and any future slash command pass through. Without it Replace is
+   * simply greyed out, with the brush that would ungrey it in a different
+   * toolbar and no way to know they are related.
+   */
+  onNeedsMask?: () => void;
 }
 
 export interface BoardTools {
@@ -41,6 +52,7 @@ export const useBoardTools = ({
   boardId = null,
   items,
   onChange,
+  onNeedsMask,
 }: UseBoardToolsOptions): BoardTools => {
   /**
    * The list as it is when the run *lands*, not when it started.
@@ -106,6 +118,17 @@ export const useBoardTools = ({
        * painted strokes, while the runner decides from `maskUrl`. Building it
        * anywhere else is how those two come to disagree.
        */
+      // Nothing painted yet: hand over the brush rather than refusing. The
+      // press said what they want to do, and the only thing missing is the
+      // area — so the useful answer is to let them paint it.
+      if (tool.needsMask && !maskOf(item.config)) {
+        toast("Paint over the part to change, then press it again", {
+          description: `${tool.label} works on the painted area only.`,
+        });
+        onNeedsMask?.();
+        return;
+      }
+
       void (async () => {
         let maskUrl: string | null = null;
         if (tool.needsMask) {
@@ -139,7 +162,7 @@ export const useBoardTools = ({
         });
       })();
     },
-    [boardId, start]
+    [boardId, onNeedsMask, start]
   );
 
   return { isRunning, run };

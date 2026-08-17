@@ -51,6 +51,10 @@ const item = (over: Partial<BoardItem>): BoardItem =>
     ...over,
   }) as BoardItem;
 
+/** The first button whose label contains `text`. */
+const buttonSaying = (el: HTMLElement, text: string) =>
+  [...el.querySelectorAll("button")].find((b) => b.textContent?.includes(text));
+
 const bar = async (node: BoardItem, onEditManually?: () => void) => {
   const anchor = createRef<HTMLDivElement>();
   const box = document.createElement("div");
@@ -74,6 +78,46 @@ const bar = async (node: BoardItem, onEditManually?: () => void) => {
   box.remove();
   return found ?? null;
 };
+
+describe("BoardToolBar's mask tools", () => {
+  it("offers Replace on an unmasked picture rather than greying it out", async () => {
+    // The bug this fixes: Replace sat disabled in the picker until something
+    // was painted, and the brush that would paint it lives in a different
+    // toolbar with nothing to connect the two. Pressing it now arms that
+    // brush, so it has to be pressable while there is still no mask.
+    const runs: string[] = [];
+    const anchor = createRef<HTMLDivElement>();
+    const box = document.createElement("div");
+    document.body.append(box);
+    Object.assign(anchor, { current: box });
+    const el = await render(
+      <BoardToolBar
+        anchor={anchor}
+        chromeScale={{ transform: "scale(1)" }}
+        isRunning={false}
+        item={item({ imageUrl: "https://example.com/a.png" })}
+        onRun={(tool) => runs.push(tool.id)}
+      />
+    );
+
+    // Behind the picker rather than on the bar itself, which shows only the
+    // first few.
+    buttonSaying(el, "Tools")?.click();
+    await flush();
+    const replace = buttonSaying(el, "Replace");
+    expect(replace).toBeTruthy();
+    expect(replace?.disabled).toBe(false);
+
+    replace?.click();
+    await flush();
+    box.remove();
+
+    // Straight to the runner, not into the prompt panel: it is the runner that
+    // hands over the brush, and words collected first would be thrown away
+    // when it stops to ask for the area.
+    expect(runs).toEqual(["replace-area"]);
+  });
+});
 
 describe("BoardToolBar's manual editor button", () => {
   it("is offered on a placed picture", async () => {
