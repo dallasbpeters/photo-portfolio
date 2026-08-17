@@ -1028,10 +1028,9 @@ export function BoardEditor({
    * same list the menu counted. Repeats are dropped: selecting a frame and
    * something on it means one picture, not two.
    *
-   * The words come from a Describe node in the selection when there is one,
-   * because that reading of what the references have in common is the thing an
-   * element carries down the wire; otherwise the panel opens with an empty
-   * description to write by hand.
+   * The words come from a Describe node in the selection when there is one —
+   * that reading of what the references have in common is what an element
+   * carries down the wire — otherwise the panel opens empty to write by hand.
    */
   const beginElement = (chosen: BoardItem[]) => {
     const graph = { items, wires };
@@ -1080,13 +1079,11 @@ export function BoardEditor({
    * The way a group of pictures becomes one thing: select them, group them,
    * nudge them about inside the frame, and wire the frame into a Composite —
    * which renders them exactly where they sit. Building that arrangement by
-   * dragging an empty frame around existing work is fiddly and easy to get
-   * wrong by a few pixels, and a picture whose centre falls outside is silently
-   * not in the group.
+   * dragging an empty frame around existing work is fiddly, and a picture whose
+   * centre falls a few pixels outside is silently not in the group.
    *
-   * The frame is sized to the selection with room to move, and its z puts it
-   * behind everything — a frame drawn over its own contents would swallow the
-   * clicks meant for them.
+   * Sized to the selection with room to move, and its z puts it behind
+   * everything — a frame over its contents swallows the clicks meant for them.
    */
   const groupIntoFrame = (chosen: BoardItem[]) => {
     if (chosen.length === 0) {
@@ -1821,7 +1818,11 @@ export function BoardEditor({
           every Button inside this tree paints itself for paper without the
           call site having to say so. See index.css. */}
       <CustomCursor cursorColor="#9100FF" userName={displayName} />
-      <div className="board" data-surface="board">
+      <div
+        className="board"
+        data-editing={editorNode ? "" : undefined}
+        data-surface="board"
+      >
         {/* Wraps rather than overflowing: the palette has grown past what fits on
           one line at laptop width, and a row of shrink-0 buttons pushed Publish
           and Close off the edge instead of moving them down. */}

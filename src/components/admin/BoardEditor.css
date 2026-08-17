@@ -47,3 +47,28 @@
     flex-direction: column;
   }
 }
+
+/*
+ * The board gets out of the way while the manual editor is open.
+ *
+ * The editor is a full-screen fixed surface at z-index 100, and the panels are
+ * fixed at 200 — inside `.board`'s own stacking context the panels win, so
+ * without this the board's toolbars hang over the editor's, and a press on one
+ * operates a board nobody can see.
+ *
+ * Hidden rather than unmounted: the panels hold live state — which tab the
+ * insert palette is on, whether comments are open — and taking them out of the
+ * tree throws all of it away, so closing the editor would land on a board that
+ * had quietly reset itself.
+ *
+ * The cursor comes back for the same reason it does over a colour picker: the
+ * editor is cropping and dragging handles, all of which are aimed by eye, and
+ * the drawn cursor is a large arrow with a name beside it.
+ */
+.board[data-editing] {
+  cursor: auto;
+
+  & .board-panel {
+    display: none;
+  }
+}
