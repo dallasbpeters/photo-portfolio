@@ -16,14 +16,11 @@
 --    admin may want it back when there is somewhere to supply the audio, and
 --    removing rows is what this project's migration rules forbid outright.
 
--- The constraint was written when every endpoint was an image endpoint, and it
--- allows exactly the two names those use. Widened rather than dropped: it is
--- still worth refusing a typo, and a free-text column here would fail at fal
--- with a 422 instead of at the insert.
-ALTER TABLE models DROP CONSTRAINT IF EXISTS models_image_param;
-ALTER TABLE models
-  ADD CONSTRAINT models_image_param
-  CHECK (image_param IN ('image_url', 'image_urls', 'start_image_url'));
+-- The constraint that allows `start_image_url` lives in 017 with the rest of the
+-- models schema, not here. It was added here first, which broke every later
+-- `db:migrate`: patches all re-run, so 017 kept re-adding the narrower list and
+-- failing against the rows this patch had written. One definition, in the patch
+-- that owns the table.
 
 -- migration-safety: both statements below rewrite two columns on rows this
 -- project seeded four patches ago and nobody else writes. No user content is
