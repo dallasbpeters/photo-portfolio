@@ -171,6 +171,8 @@ interface BoardCanvasProps {
     image: { url: string },
     point: { x: number; y: number }
   ) => void;
+  /** Opens the manual photo editor on one item. */
+  onEditImage?: (item: BoardItem) => void;
   /** Downloads everything a node made, or a frame holds, as one archive. */
   onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
@@ -288,6 +290,7 @@ export function BoardCanvas({
   onRemoveVersion,
   onRun,
   onSaveElement,
+  onEditImage,
   onSendToCanva,
   onSelectionChange,
   onSendVersions,
@@ -623,17 +626,13 @@ export function BoardCanvas({
   );
 
   /**
-   * What a node that composes text will send, so it can be read before it runs.
-   *
-   * A Combine node answers with one string; an Iterate node answers with one
-   * per value, numbered, because seeing "3 prompts" and what they say is the
-   * only way to know a batch is set up the way you meant.
+   * What a node that composes text will send, read before it runs. Combine
+   * answers with one string, Iterate with one per value, numbered — seeing "3
+   * prompts" and what they say is the only way to know a batch is set up right.
    */
   /**
-   * The pictures a Batch node is holding, so it can show them.
-   *
-   * Only for that node: resolving every image behind every node on every
-   * render would walk the graph once per node, and nothing else displays one.
+   * The pictures a Batch node is holding. Only that node: resolving every image
+   * behind every node on every render walks the graph once per node.
    */
   const previewImagesFor = (item: BoardItem): string[] | undefined =>
     item.nodeType === "batch"
@@ -1336,6 +1335,7 @@ export function BoardCanvas({
                   items.map((it, i) => (i === index ? { ...it, body } : it))
                 )
               }
+              onEditManually={onEditImage ? () => onEditImage(item) : undefined}
               onPatch={(patch) =>
                 onChange(
                   items.map((it, i) => (i === index ? { ...it, ...patch } : it))

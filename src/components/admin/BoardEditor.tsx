@@ -80,6 +80,7 @@ import { newShaderConfig } from "../../boards/shaderConfig";
 import { isSvgFile, svgToPng } from "../../boards/svgToRaster";
 import { useAffinityBridge } from "../../boards/useAffinityBridge";
 import { restore, useBoardHistory } from "../../boards/useBoardHistory";
+import { useBoardImageEditor } from "../../boards/useBoardImageEditor";
 import { useGraphRun } from "../../boards/useGraphRun";
 import { useVideoNode } from "../../boards/useVideoNode";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -250,21 +251,16 @@ const dropOrigin = (
 };
 
 /**
- * The fields every item carries whatever its kind, all empty.
- *
- * Spread first and then overridden, so adding a field to BoardItem does not
- * mean remembering to add `null` in four different places — the compiler used
- * to catch that, but only after four identical edits.
+ * The fields every item carries whatever its kind, all empty. Spread first and
+ * overridden, so adding a field to BoardItem is not four identical edits.
  */
 /**
  * Throws away any rendered composite.
  *
- * A composite is a picture of the arrangement, so *any* edit can invalidate it
- * — something moved, was resized, changed z-order, was deleted, or had its own
- * result replaced. Working out which edits actually mattered would be a
- * dependency graph over geometry, and getting it subtly wrong means a node that
- * quietly shows yesterday's layout. Clearing it always costs one render on the
- * next run and cannot be wrong.
+ * A composite is a picture of the arrangement, so *any* edit can invalidate it.
+ * Working out which ones actually mattered would be a dependency graph over
+ * geometry, and getting it subtly wrong means a node quietly showing
+ * yesterday's layout. Clearing always costs one render and cannot be wrong.
  */
 const dropComposites = (list: BoardItem[]): BoardItem[] =>
   list.map((item) =>
@@ -1296,18 +1292,14 @@ export function BoardEditor({
   /**
    * Images dragged onto the board.
    *
-   * These are working material — a reference shot, a sketch, something to feed
-   * a node — so they are stored and pinned to the board and nothing else. The
-   * site's gallery is a separate act: a photograph appears there only when a
-   * row is written to `photos`, which this deliberately never does. Uploading
-   * and publishing stay different decisions.
+   * Working material — a reference shot, a sketch, something to feed a node —
+   * stored and pinned to the board and nothing else. Publishing is a separate
+   * act: a photograph reaches the site only through a `photos` row, which this
+   * deliberately never writes.
    */
   /**
-   * Uploads already-prepared files and places them on the board.
-   *
-   * Shared by the immediate path (non-SVG drops) and the SVG chooser, so both
-   * land identically. Files arrive rasterised or kept as vectors before this
-   * is called.
+   * Uploads already-prepared files and places them on the board. Shared by the
+   * immediate path (non-SVG drops) and the SVG chooser, so both land the same.
    */
   const placeUploaded = async (
     files: File[],
@@ -1621,6 +1613,10 @@ export function BoardEditor({
   );
 
   const { openInAffinity } = useAffinityBridge(boardId, applyEditedSvg);
+  const { editorNode, openEditor } = useBoardImageEditor(
+    boardId,
+    applyEditedSvg
+  );
 
   /**
    * Opens a node's SVG in Affinity Designer, through the local bridge.
@@ -2008,6 +2004,7 @@ export function BoardEditor({
             onDraw={addDrawing}
             onDropFiles={(files, point) => void dropFiles(files, point)}
             onDropImage={dropImage}
+            onEditImage={openEditor}
             onExportItem={(itemId) => void exportItem(itemId)}
             onGroupIntoFrame={groupIntoFrame}
             onMaskStroke={addMaskStroke}
@@ -2111,6 +2108,8 @@ export function BoardEditor({
               />
             ) : null}
           </AnimatePresence>
+
+          {editorNode}
 
           {elementDraft ? (
             <ElementModal

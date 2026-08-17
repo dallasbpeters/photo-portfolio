@@ -1127,17 +1127,13 @@ export const boardsApi = {
   },
 
   /**
-   * Writes an SVG edited in Affinity back onto a node as a new version.
-   *
-   * Its own call because `result` is not written by the board save — see
-   * api/boards/[id]/svg.ts for why that column is left alone.
+   * Writes an SVG edited in Affinity back onto a node as a new version. Its own
+   * call because `result` is not written by the board save — see svg.ts.
    */
   /**
-   * Keeps a tool's output on the item.
-   *
-   * Its own call because a board save never writes `result` — see
-   * api/boards/[id]/result.ts for why. Without this a tool ran, showed its
-   * work, and lost it on the next reload.
+   * Keeps a tool's output on the item. Its own call because a board save never
+   * writes `result` — see api/boards/[id]/result.ts. Without this a tool ran,
+   * showed its work, and lost it on the next reload.
    */
   saveToolResult: async (
     boardId: string,
@@ -1150,7 +1146,9 @@ export const boardsApi = {
       url: string;
       width?: number | null;
     }
-  ): Promise<void> => {
+    // The stored result is returned so a caller that is not the tool runner —
+    // the manual editor — can show what it saved without re-reading the board.
+  ): Promise<{ result: BoardItemResult }> => {
     const res = await fetch(`${apiBase()}/api/boards/${boardId}/result`, {
       body: JSON.stringify({ itemId, ...variation }),
       headers: jsonHeaders(),
@@ -1159,6 +1157,7 @@ export const boardsApi = {
     if (!res.ok) {
       throw new Error(await readPageError(res, "Could not save the result"));
     }
+    return (await res.json()) as { result: BoardItemResult };
   },
 
   /**
