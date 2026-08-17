@@ -1291,10 +1291,8 @@ export function BoardEditor({
    * nothing else. Publishing is a separate act — a photograph reaches the site
    * only through a `photos` row, which this deliberately never writes.
    */
-  /**
-   * Uploads already-prepared files and places them on the board. Shared by the
-   * immediate path (non-SVG drops) and the SVG chooser, so both land the same.
-   */
+  /** Uploads prepared files and places them. Shared by the immediate path
+   * (non-SVG drops) and the SVG chooser, so both land the same. */
   const placeUploaded = async (
     files: File[],
     point: { x: number; y: number }
@@ -1862,7 +1860,9 @@ export function BoardEditor({
           />
         </div>
 
-        <div className="relative z-100 min-h-0 flex-1">
+        {/* The layer every board overlay belongs in. Named so a panel escaping
+            its own transform has somewhere to escape to — see ElementsTab. */}
+        <div className="relative z-100 min-h-0 flex-1" data-board-overlays>
           {/* Floating over the canvas: a tool wants to be near its subject. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
             <div className="pointer-events-auto">

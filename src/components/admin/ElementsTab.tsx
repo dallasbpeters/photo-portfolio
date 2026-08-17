@@ -158,13 +158,18 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
           naming a style and re-naming one are the same job, and the panel would
           otherwise grow a second, slightly different opinion about it.
 
-          Portalled, and specifically to the board's own surface rather than to
-          the body. The insert panel slides in on a transform, and a transformed
-          ancestor is what `position: fixed` resolves against — so left in place
-          the modal opened inside the 480px panel with its backdrop covering
-          only that. The board element is the target because it carries
-          `data-surface="board"` and the board's ink colour; hung off the body
-          the modal would paint itself in the site's palette instead. */}
+          Portalled, because the insert panel slides in on a transform and a
+          transformed ancestor is what `position: fixed` resolves against — left
+          in place the modal opened inside the 480px panel, with its backdrop
+          covering only that.
+
+          The target is the overlay layer, not the board element. Aimed at the
+          board it escaped too far: that puts it beside the canvas wrapper,
+          which is `z-100`, so a `z-60` modal rendered behind the canvas and the
+          panel that opened it. It looked like the Edit button did nothing. The
+          overlay layer is inside the board, so the board's ink still applies,
+          and inside the wrapper, so every other board modal is its neighbour
+          rather than its superior. */}
       {editing
         ? createPortal(
             <ElementModal
@@ -180,7 +185,9 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
                 setEditing(null);
               }}
             />,
-            document.querySelector("[data-surface='board']") ?? document.body
+            document.querySelector("[data-board-overlays]") ??
+              document.querySelector("[data-surface='board']") ??
+              document.body
           )
         : null}
     </>
