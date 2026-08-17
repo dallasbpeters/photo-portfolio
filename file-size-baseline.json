@@ -3,7 +3,7 @@
   "api/boards/[id]/run.ts": 1571,
   "config/nodeTypes.ts": 921,
   "src/boards/BoardCanvas.tsx": 1532,
-  "src/boards/BoardItemView.tsx": 897,
+  "src/boards/BoardItemView.tsx": 922,
   "src/boards/CanvasMenu.tsx": 575,
   "src/boards/ShaderControls.tsx": 675,
   "src/components/Admin.tsx": 679,

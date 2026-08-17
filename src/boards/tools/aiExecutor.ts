@@ -41,7 +41,13 @@ import {
 } from "./types.js";
 
 /** Tools this executor actually calls the service for. See the header. */
-const IMPLEMENTED = new Set(["edit-image", "generate-image"]);
+const IMPLEMENTED = new Set([
+  "edit-image",
+  "generate-image",
+  "remove-background",
+  "restyle",
+  "vectorize",
+]);
 
 /**
  * Tools that need a request field /api/ai/generate does not have, with the
@@ -52,8 +58,6 @@ const IMPLEMENTED = new Set(["edit-image", "generate-image"]);
 const BLOCKED_ON_ENDPOINT: Record<string, string> = {
   "replace-area":
     "Painting into part of an image needs the mask to reach the generator, and the image endpoint does not take one yet.",
-  restyle:
-    "Choosing a style needs the model to reach the generator, and the image endpoint does not take one yet.",
 };
 
 /** Matches MAX_PROMPT in api/ai/generate.ts, which truncates silently past it. */
@@ -67,7 +71,12 @@ const MAX_PROMPT = 1200;
  * Getting it backwards is not an error anywhere — it just quietly produces the
  * wrong kind of picture.
  */
-const USES_SOURCE_IMAGE = new Set(["edit-image"]);
+const USES_SOURCE_IMAGE = new Set([
+  "edit-image",
+  "remove-background",
+  "restyle",
+  "vectorize",
+]);
 
 const CANCELLED_MESSAGE = "Cancelled before it finished.";
 
@@ -214,7 +223,10 @@ const run = async (
   }
 
   const prompt = promptFrom(invocation);
-  if (!prompt) {
+  // Only the tools that read words insist on them. Removing a background and
+  // vectorising take a picture and nothing else, and demanding a description
+  // for them meant inventing one to send to a model that ignores it.
+  if (!prompt && tool.needsPrompt) {
     return failed(
       "missing-input",
       `${tool.label} needs a description of what you want.`

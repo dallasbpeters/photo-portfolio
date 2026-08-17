@@ -221,3 +221,47 @@ describe("blockedReason", () => {
     expect(reason).toContain("image");
   });
 });
+
+/**
+ * Which tools claim to be usable.
+ *
+ * `status` is what the picker draws and what the executor checks, so a tool
+ * marked ready that the executor does not implement is offered, chosen, and then
+ * refused as "not built yet" — the worst of the three states, because it looks
+ * like a bug rather than a limit.
+ */
+describe("ready tools", () => {
+  const ready = listTools().filter((tool) => tool.status === "ready");
+
+  it("includes the tools that take a picture and nothing else", () => {
+    const ids = ready.map((tool) => tool.id);
+    expect(ids).toContain("remove-background");
+    expect(ids).toContain("vectorize");
+  });
+
+  it("asks for no prompt where the model reads none", () => {
+    // Their models' input is "image". Demanding words means inventing some to
+    // send to a model that ignores them.
+    for (const id of ["remove-background", "vectorize"]) {
+      expect(toolById(id)?.needsPrompt).toBe(false);
+    }
+  });
+
+  it("pins a model for those two rather than asking", () => {
+    // Which background remover to use is a question about our plumbing, not
+    // about the picture — so it has an answer rather than a control.
+    for (const id of ["remove-background", "vectorize"]) {
+      const setting = toolById(id)?.settings.find((s) => s.kind === "model");
+      expect(setting && "default" in setting ? setting.default : null).not.toBe(
+        "auto"
+      );
+    }
+  });
+
+  it("lets Restyle run now that the endpoint forwards a model", () => {
+    const restyle = toolById("restyle");
+    expect(restyle?.status).toBe("ready");
+    // The style *is* the model: the table's LoRA rows are models to fal.
+    expect(restyle?.settings.some((s) => s.kind === "model")).toBe(true);
+  });
+});

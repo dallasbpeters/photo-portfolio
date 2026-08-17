@@ -38,6 +38,15 @@ import { useTextFont } from "./useTextFont";
  * Recursive because the effect that needs filling may be nested — an empty
  * Group two levels down is exactly the case the canvas button exists for.
  */
+/**
+ * Where a selected item sits while its chrome is open.
+ *
+ * Above any stored `z`, which the API bounds at 9999 (see `parseIncomingItem`),
+ * and below the canvas's own overlays — the guides and the marquee sit at 9999
+ * and should stay visible over a selected item.
+ */
+const CHROME_STACK = 9998;
+
 const fillEmptyEffect = (
   layers: ShaderLayer[],
   layerId: string
@@ -689,6 +698,14 @@ export function BoardItemView({
   // An operation node is never typed into directly — its settings are its own
   // fields, handled inside OpNodeView.
   const isWritable = isNote || isText;
+  /**
+   * True while this item carries chrome that must not be covered.
+   *
+   * A frame is excluded: it is a backdrop by definition, and lifting one over
+   * the items sitting on it would make them unclickable — the exact bug the
+   * negative z-index below exists to prevent.
+   */
+  const chromeOnTop = isSoleSelected && !readOnly && item.kind !== "frame";
 
   // Controls live inside the scaled canvas, so without this they would grow and
   // shrink with the zoom — unusably small when zoomed out to see the whole
@@ -807,7 +824,15 @@ export function BoardItemView({
         // layer and won on DOM order, so a frame drawn over a wire swallowed
         // the clicks meant for it — and a node inside a frame could not have
         // its connections removed at all.
-        zIndex: item.kind === "frame" ? -1 : item.z + 1,
+        //
+        // The one with the chrome comes to the front while it has it. Panels are
+        // children of the item, and a child cannot escape its parent's place in
+        // the stack — so a neighbour with a higher `z` drew straight over the
+        // tool bar and its menu however high their own z-index went. Raising the
+        // *item* is the only thing that works, and it is only for as long as the
+        // chrome is showing: the stored order is untouched, so nothing has been
+        // reordered behind the author's back.
+        zIndex: chromeOnTop ? CHROME_STACK : item.z + 1,
       }}
     >
       <ItemContent

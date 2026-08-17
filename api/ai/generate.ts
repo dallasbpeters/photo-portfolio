@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { isFalModel } from "../../config/nodeTypes.js";
+import { falModelInput, isFalModel } from "../../config/nodeTypes.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
@@ -47,9 +47,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     typeof body.prompt === "string"
       ? sanitizeText(body.prompt).slice(0, MAX_PROMPT)
       : "";
-  if (!prompt) {
-    return res.status(400).json({ error: "A prompt is required" });
-  }
 
   // Validated rather than passed through: this URL is handed to a third party
   // to go and fetch, so it must be an ordinary public http(s) address.
@@ -78,10 +75,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
    * have no model to offer, and the choice is an improvement on the default
    * rather than a requirement of it.
    */
+  const defs = await loadModelDefs(getSql());
   const requested = typeof body.model === "string" ? body.model.trim() : "";
-  let model: string | null = null;
-  if (requested && isFalModel(await loadModelDefs(getSql()), requested)) {
-    model = requested;
+  const model = requested && isFalModel(defs, requested) ? requested : null;
+
+  /*
+   * A prompt is required only by the models that read one.
+   *
+   * Removing a background and vectorising take a picture and nothing else —
+   * their `input` is "image" — so demanding words for them meant inventing some
+   * to get past this check, and whatever was invented was then sent to a model
+   * that ignores it. The shape in the table is the authority, as it is
+   * everywhere else fal's disagreements are recorded.
+   */
+  const shape = falModelInput(defs, model ?? "auto");
+  if (!prompt && shape !== "image") {
+    return res.status(400).json({ error: "A prompt is required" });
   }
 
   try {
