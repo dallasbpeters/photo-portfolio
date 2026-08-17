@@ -31,6 +31,21 @@ const isWebp = (bytes: Uint8Array): boolean =>
   startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
   startsWith(bytes.subarray(8), [0x57, 0x45, 0x42, 0x50]);
 
+/**
+ * ....ftyp — an ISO base-media file, which is what an mp4 is.
+ *
+ * Checked as a family rather than by brand: fal's video endpoints return
+ * `isom`, `mp42` and `avc1` between them, and a clip filed as an unrecognised
+ * blob is served as octet-stream, which no browser will play. The generation
+ * had worked and cost money; only the filing was wrong — the same failure this
+ * module was written for, one media type over.
+ *
+ * AVIF shares the ftyp box, so it is tested first and this only sees what it
+ * has already declined.
+ */
+const isIsoVideo = (bytes: Uint8Array): boolean =>
+  startsWith(bytes.subarray(4), [0x66, 0x74, 0x79, 0x70]);
+
 /** ....ftypavif — the brand sits at offset 4, after the box length. */
 const isAvif = (bytes: Uint8Array): boolean =>
   startsWith(
@@ -61,6 +76,7 @@ const EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/svg+xml": "svg",
   "image/webp": "webp",
+  "video/mp4": "mp4",
 };
 
 /**
@@ -83,6 +99,9 @@ const sniff = (bytes: Uint8Array): string | null => {
   }
   if (isSvg(bytes)) {
     return "image/svg+xml";
+  }
+  if (isIsoVideo(bytes)) {
+    return "video/mp4";
   }
   return null;
 };

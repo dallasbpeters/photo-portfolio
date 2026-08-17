@@ -11,7 +11,13 @@ import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
-import { type Guides, NO_GUIDES, snapToGuides } from "./alignmentGuides";
+import {
+  type Guides,
+  NO_GUIDES,
+  type ResizeHandle,
+  snapResize,
+  snapToGuides,
+} from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import {
@@ -23,6 +29,7 @@ import {
   type Point,
   toUnitSpace,
 } from "./drawing";
+import { contentBounds, topmostAt } from "./hitTest";
 import {
   BOARD_IMAGE_TYPE,
   iteratedTextOf,
@@ -35,9 +42,27 @@ import { LayersPanel } from "./LayersPanel";
 import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
+import { resizeBox } from "./resizeBox";
 import { StrokePreview } from "./StrokePreview";
+import {
+  applyMarquee,
+  EMPTY_SELECTION,
+  press,
+  reconcile,
+  type Selection,
+  select,
+  selectedItems,
+  soleSelected,
+} from "./selectionModel";
+import {
+  buildSnapIndex,
+  type Box as SnapBox,
+  type SnapIndex,
+} from "./snapIndex";
 import { isImageDrop } from "./svgToRaster";
+import { useBoardTools } from "./tools/useBoardTools";
 import { type CanvasViewport, useCanvasViewport } from "./useCanvasViewport";
+import { useSpaceKey } from "./useSpaceKey";
 import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
@@ -206,77 +231,6 @@ const SNAP_PX = 6;
 /** Pointer movement (screen px) that counts as a drag rather than a click. */
 const DRAG_RAISE_PX = 4;
 
-/**
- * The new size of a corner-resized item.
- *
- * Without the lock both dimensions follow the pointer freely. With it, the
- * aspect is preserved: whichever side moved further dominates, and the other
- * follows so the ratio never changes — the standard shift-drag resize.
- */
-const resizedSize = (
-  originW: number,
-  originH: number,
-  dx: number,
-  dy: number,
-  lockAspect: boolean
-): { height: number; width: number } => {
-  const width = Math.max(MIN_ITEM_SIZE, originW + dx);
-  const height = Math.max(MIN_ITEM_SIZE, originH + dy);
-  if (!lockAspect || originW <= 0 || originH <= 0) {
-    return { height, width };
-  }
-  const ratio = originW / originH;
-  return width / originW >= height / originH
-    ? { height: width / ratio, width }
-    : { height, width: height * ratio };
-};
-
-/** True when a canvas point falls inside an item's box. */
-const covers = (item: BoardItem, point: Point): boolean =>
-  point.x >= item.x &&
-  point.x <= item.x + item.width &&
-  point.y >= item.y &&
-  point.y <= item.y + item.height;
-
-/**
- * The topmost item under a point that satisfies `wanted`.
- *
- * Searched from the end because later items sit above earlier ones, so the one
- * drawn last is the one a pointer is aiming at. Module-level and pure: it needs
- * nothing but the list and the point.
- */
-const topmostAt = (
-  items: BoardItem[],
-  point: Point,
-  wanted: (item: BoardItem) => boolean
-): BoardItem | null => {
-  for (let i = items.length - 1; i >= 0; i -= 1) {
-    const item = items[i];
-    if (item && wanted(item) && covers(item, point)) {
-      return item;
-    }
-  }
-  return null;
-};
-
-/**
- * The rectangle the items occupy, or null for an empty board.
- *
- * This is what the view is framed on: the arrangement usually fills a small
- * part of the 4000×3000 canvas, so framing the canvas itself leaves the board
- * off to one side and too small to read.
- */
-const contentBounds = (items: BoardItem[]) => {
-  if (items.length === 0) {
-    return null;
-  }
-  const left = Math.min(...items.map((i) => i.x));
-  const top = Math.min(...items.map((i) => i.y));
-  const right = Math.max(...items.map((i) => i.x + i.width));
-  const bottom = Math.max(...items.map((i) => i.y + i.height));
-  return { height: bottom - top, width: right - left, x: left, y: top };
-};
-
 type Gesture =
   | { kind: "none" }
   | {
@@ -296,8 +250,12 @@ type Gesture =
       kind: "resize";
       startX: number;
       startY: number;
-      originW: number;
-      originH: number;
+      /** The box when the drag began; the pinned corner is derived from it. */
+      origin: SnapBox;
+      /** Which corner was taken. Decides which corner stays still. */
+      handle: ResizeHandle;
+      /** Snap targets, built once when the gesture began. */
+      snap: SnapIndex;
     };
 
 /**
@@ -348,6 +306,9 @@ export function BoardCanvas({
   // The viewport frames itself on the items, and keeps doing so as the
   // container settles, until the board is panned, zoomed or rearranged.
   const view = useCanvasViewport(containerRef, () => contentBounds(items));
+  const space = useSpaceKey();
+  // Held space is what tells a background press to pan instead of sweeping a
+  // selection box, so it is read by the pointerdown handler below.
   /**
    * Which items are selected, by index.
    *
@@ -355,7 +316,7 @@ export function BoardCanvas({
    * shift, and dragging any of them moves the whole set. One selection is just
    * a list of length one, which keeps every read the same shape.
    */
-  const [selection, setSelection] = useState<number[]>([]);
+  const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   /** The marquee being dragged out on the background, in canvas units. */
   const [marquee, setMarquee] = useState<{ from: Point; to: Point } | null>(
     null
@@ -373,6 +334,9 @@ export function BoardCanvas({
   } | null>(null);
   /** The canvas was right-clicked; what is offered depends on where. */
   const [menu, setMenu] = useState<CanvasMenuTarget | null>(null);
+  // Owned here rather than in CanvasMenu so a run outlives the menu that
+  // started it: the menu is dismissed the instant a tool is picked.
+  const tools = useBoardTools({ items, onChange });
 
   useEffect(() => {
     if (autoEditId) {
@@ -381,13 +345,20 @@ export function BoardCanvas({
   }, [autoEditId]);
   const gesture = useRef<Gesture>({ kind: "none" });
 
+  // Ids outlive indices but not deletion: an item removed by an undo, a delete
+  // or a concurrent edit must fall out of the selection rather than linger as
+  // an id nothing answers to. reconcile returns the same set when nothing was
+  // dropped, so this does not invalidate memos on every item change.
+  useEffect(() => {
+    setSelection((current) => reconcile(current, items));
+  }, [items]);
+
   // Reported from an effect rather than at each call site: selection is cleared
   // in half a dozen places — a background press, a delete, a drawing gesture —
   // and every one of them would otherwise have to remember to announce it.
   // The toolbar edits one thing, so it is told about a lone selection only —
   // with several picked there is no single item its controls could mean.
-  const selectedItem =
-    selection.length === 1 ? (items[selection[0] ?? -1] ?? null) : null;
+  const selectedItem = soleSelected(selection, items);
 
   // Open comments per item, for the badges the canvas draws on top of them.
   const openCommentCounts = useMemo(() => {
@@ -418,15 +389,9 @@ export function BoardCanvas({
   }, [selectedId, onSelectionChange]);
 
   /** Picks one item, as a layer-row click would — a lone, deliberate choice. */
-  const selectItem = useCallback(
-    (item: BoardItem) => {
-      const index = items.findIndex((candidate) => candidate.id === item.id);
-      if (index >= 0) {
-        setSelection([index]);
-      }
-    },
-    [items]
-  );
+  const selectItem = useCallback((item: BoardItem) => {
+    setSelection(select(item.id));
+  }, []);
 
   /**
    * The mark being drawn right now, in canvas units.
@@ -778,6 +743,7 @@ export function BoardCanvas({
   }, [items, frameContent]);
 
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
+  /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
     (frame: BoardItem): number[] => {
       const inside = new Set(withinFrame(frame, items).map((item) => item.id));
@@ -819,9 +785,7 @@ export function BoardCanvas({
       // Both targets are gathered and the menu offers whichever apply. Asking
       // "is there a frame here?" first made grouping unreachable on any board
       // with a frame spread under the work — which is most of them.
-      const chosen = selection
-        .map((index) => items[index])
-        .filter((item): item is BoardItem => Boolean(item));
+      const chosen = selectedItems(selection, items);
       const frame = onCopyFrame
         ? frameAt(view.toCanvas(e.clientX, e.clientY))
         : null;
@@ -841,34 +805,17 @@ export function BoardCanvas({
   );
 
   /** Everything the swept rectangle touches, by index. */
+  /**
+   * Everything the swept rectangle touches.
+   *
+   * The rules — overlap rather than enclosure, and a sweep under a few units
+   * counting as a click that clears — live in selectionModel with tests, since
+   * they are the kind of thing that gets quietly changed and quietly regresses.
+   */
   const finishMarquee = useCallback(
     (box: { from: Point; to: Point }, add: boolean) => {
       setMarquee(null);
-      const left = Math.min(box.from.x, box.to.x);
-      const right = Math.max(box.from.x, box.to.x);
-      const top = Math.min(box.from.y, box.to.y);
-      const bottom = Math.max(box.from.y, box.to.y);
-      // A click rather than a sweep: too small to have meant a selection, so it
-      // clears rather than picking whatever happened to be under the pointer.
-      if (right - left < 4 && bottom - top < 4) {
-        return;
-      }
-      // Touched, not enclosed. Requiring an item to be wholly inside means
-      // sweeping around a large photograph rather than across it, which on a
-      // zoomed-in board can be impossible without scrolling.
-      const hit = items
-        .map((item, index) => ({ index, item }))
-        .filter(
-          ({ item }) =>
-            item.x < right &&
-            item.x + item.width > left &&
-            item.y < bottom &&
-            item.y + item.height > top
-        )
-        .map(({ index }) => index);
-      setSelection((current) =>
-        add ? [...new Set([...current, ...hit])] : hit
-      );
+      setSelection((current) => applyMarquee(current, items, box, add));
     },
     [items]
   );
@@ -887,19 +834,25 @@ export function BoardCanvas({
       // Shift or cmd adds to the selection instead of replacing it, and does
       // not begin a drag — picking several one by one should not nudge them.
       if (additive) {
-        setSelection((current) =>
-          current.includes(index)
-            ? current.filter((i) => i !== index)
-            : [...current, index]
-        );
+        setSelection((current) => press(current, item.id, true));
         gesture.current = { kind: "none" };
         return;
       }
       // Pressing something already selected drags the whole selection; pressing
       // something outside it selects that one instead, which is what every
       // canvas does and what stops a stray click scattering a careful set.
-      const inSelection = selection.includes(index);
-      const moving = inSelection ? selection : [index];
+      const inSelection = selection.has(item.id);
+      // The gesture still carries indices: it is in flight for one drag and the
+      // array does not reorder underneath it except by raise-to-top, which it
+      // performs itself. Converting the gesture to ids is a separate change.
+      const moving = inSelection
+        ? items.reduce<number[]>((acc, candidate, i) => {
+            if (selection.has(candidate.id)) {
+              acc.push(i);
+            }
+            return acc;
+          }, [])
+        : [index];
       const alsoCarried = isFrame ? containedIndices(item) : [];
       const carriedIndices = [...new Set([...moving, ...alsoCarried])].filter(
         (i) => i !== index
@@ -925,14 +878,14 @@ export function BoardCanvas({
         startY: p.y,
       };
       if (!inSelection) {
-        setSelection([index]);
+        setSelection(select(item.id));
       }
     },
     [containedIndices, items, selection, view]
   );
 
   const beginResize = useCallback(
-    (index: number, clientX: number, clientY: number) => {
+    (index: number, clientX: number, clientY: number, handle: ResizeHandle) => {
       const item = items[index];
       if (!item) {
         return;
@@ -940,14 +893,27 @@ export function BoardCanvas({
       view.markUserMoved();
       const p = view.toCanvas(clientX, clientY);
       gesture.current = {
+        handle,
         index,
         kind: "resize",
-        originH: item.height,
-        originW: item.width,
+        origin: {
+          height: item.height,
+          width: item.width,
+          x: item.x,
+          y: item.y,
+        },
+        // Built once, here: the one-shot helper rebuilt its coordinate arrays
+        // on every pointermove, which is the per-frame cost the indexed version
+        // exists to remove. The item being resized is excluded so it cannot
+        // snap to itself.
+        snap: buildSnapIndex(items, {
+          exclude: [item.id],
+          includeCanvas: true,
+        }),
         startX: p.x,
         startY: p.y,
       };
-      setSelection([index]);
+      setSelection(select(item.id));
     },
     [items, view]
   );
@@ -1026,10 +992,31 @@ export function BoardCanvas({
         return;
       }
 
-      const size = resizedSize(g.originW, g.originH, dx, dy, e.shiftKey);
+      const dragged = resizeBox({
+        dx,
+        dy,
+        handle: g.handle,
+        lockAspect: e.shiftKey,
+        minSize: MIN_ITEM_SIZE,
+        origin: g.origin,
+      });
+      // Only the dragged edges snap. The pinned corner is the whole meaning of
+      // a resize, so a snap that moved it would be a move in disguise.
+      const sized = snapResize(dragged, g.handle, g.snap, {
+        scale: view.viewport.scale,
+      });
+      setGuides(sized.guides);
       onChange(
         items.map((it, i) =>
-          i === g.index ? { ...it, height: size.height, width: size.width } : it
+          i === g.index
+            ? {
+                ...it,
+                height: sized.height,
+                width: sized.width,
+                x: sized.x,
+                y: sized.y,
+              }
+            : it
         )
       );
     },
@@ -1094,9 +1081,12 @@ export function BoardCanvas({
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same — this element exists to receive pointer gestures and file drops aimed at the board as a whole */}
       <div
         className={`h-full w-full touch-none ${
-          isDrawing
-            ? "cursor-crosshair"
-            : (view.isPanning && "cursor-grabbing") || "cursor-grab"
+          // No native cursor on the canvas: CustomCursor draws the pointer, and
+          // two of them is one too many. A `cursor-*` class here would win over
+          // `cursor: none` on `.board` however that rule were written, since it
+          // sits on the element the pointer is actually over — which is why
+          // hiding it in the stylesheet alone did nothing.
+          "cursor-none"
         }`}
         onContextMenu={openMenu}
         onDragOver={
@@ -1169,27 +1159,27 @@ export function BoardCanvas({
           // finishes here instead of being abandoned mid-line.
           if (isDrawing) {
             e.currentTarget.setPointerCapture(e.pointerId);
-            setSelection([]);
+            setSelection(EMPTY_SELECTION);
             setEditingId(null);
             setStroke([view.toCanvas(e.clientX, e.clientY)]);
             return;
           }
-          // Landing on the background pans, as it always has. Sweeping out a
-          // selection is behind shift: dragging the board is the gesture
-          // reached for constantly, and selecting several is occasional, so
-          // the plain drag belongs to the common one.
+          // Space pans, a plain drag sweeps a selection box. The convention
+          // every canvas tool shares, and worth matching even though it used to
+          // be the other way round here: a hand reaching for the board expects
+          // to hold space, and a drag on empty canvas expects to select.
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
             setEditingId(null);
-            if (!(e.shiftKey || e.altKey)) {
-              setSelection([]);
+            if (space.heldRef.current) {
+              setSelection(EMPTY_SELECTION);
               view.onPointerDown(e);
               return;
             }
             e.currentTarget.setPointerCapture(e.pointerId);
-            // Alt sweeps a fresh selection; shift keeps what is already picked,
-            // matching what shift does on a single item.
+            // Shift keeps what is already picked, matching what shift does on
+            // a single item; a plain sweep starts fresh.
             if (!e.shiftKey) {
-              setSelection([]);
+              setSelection(EMPTY_SELECTION);
             }
             const start = view.toCanvas(e.clientX, e.clientY);
             setMarquee({ from: start, to: start });
@@ -1238,6 +1228,7 @@ export function BoardCanvas({
       >
         <div
           className="relative origin-top-left outline outline-board-ink/5"
+          ref={view.layerRef}
           style={{
             height: CANVAS_HEIGHT,
             transform: `translate(${view.viewport.tx}px, ${view.viewport.ty}px) scale(${view.viewport.scale})`,
@@ -1323,7 +1314,8 @@ export function BoardCanvas({
               imageUrl={wiredImageFor(item.id)}
               index={index}
               isEditing={!readOnly && editingId === item.id}
-              isSelected={!readOnly && selection.includes(index)}
+              isSelected={!readOnly && selection.has(item.id)}
+              isSoleSelected={selectedItem?.id === item.id}
               item={item}
               key={keyOf(item)}
               onBeginEdit={() => {
@@ -1344,9 +1336,9 @@ export function BoardCanvas({
                   items.map((it, i) => (i === index ? { ...it, body } : it))
                 )
               }
-              onFontSize={(fontSize) =>
+              onPatch={(patch) =>
                 onChange(
-                  items.map((it, i) => (i === index ? { ...it, fontSize } : it))
+                  items.map((it, i) => (i === index ? { ...it, ...patch } : it))
                 )
               }
               onRemoveVersion={
@@ -1381,6 +1373,7 @@ export function BoardCanvas({
               previewImages={previewImagesFor(item)}
               readOnly={readOnly}
               scale={view.viewport.scale}
+              tools={readOnly ? undefined : tools}
               wiredPrompt={wiredTextFor(item.id)}
             />
           ))}
@@ -1414,6 +1407,7 @@ export function BoardCanvas({
           onOpenInAffinity?.(itemId);
           setMenu(null);
         }}
+        onRunTool={readOnly ? undefined : tools.run}
         onSaveElement={(chosen) => {
           onSaveElement?.(chosen);
           setMenu(null);

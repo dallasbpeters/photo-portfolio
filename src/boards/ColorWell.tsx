@@ -143,12 +143,12 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                   over everything else. */}
               <button
                 aria-label={`Close ${label}`}
-                className="fixed inset-0 z-[60] cursor-default"
+                className="fixed inset-0 z-60 cursor-default"
                 onClick={() => setAt(null)}
                 type="button"
               />
               <div
-                className="fixed z-[61]"
+                className="fixed z-61"
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{ left: at.left, top: at.top }}
               >
@@ -163,7 +163,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                     than one that is not offered. */}
                 {canSample ? (
                   <button
-                    className="flex w-full items-center justify-center gap-1 rounded-b bg-board-ink py-1.5 text-[10px] text-board-surface/70 uppercase tracking-[0.14em] hover:text-board-surface"
+                    className="flex w-full items-center justify-center gap-1 bg-board-ink py-1.5 text-[10px] text-board-surface/70 uppercase tracking-[0.14em] hover:text-board-surface"
                     onClick={() => void sample()}
                     type="button"
                   >

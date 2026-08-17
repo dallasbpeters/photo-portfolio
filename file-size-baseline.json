@@ -1,17 +1,15 @@
 {
-  "api/_lib/boards.ts": 777,
-  "api/boards/[id]/run.ts": 1681,
-  "config/nodeTypes.ts": 923,
-  "src/boards/BoardCanvas.tsx": 1538,
-  "src/boards/BoardItemView.tsx": 933,
-  "src/boards/CanvasMenu.tsx": 555,
-  "src/boards/OpNodeView.tsx": 793,
+  "api/_lib/boards.ts": 775,
+  "api/boards/[id]/run.ts": 1571,
+  "config/nodeTypes.ts": 921,
+  "src/boards/BoardCanvas.tsx": 1532,
+  "src/boards/BoardItemView.tsx": 897,
+  "src/boards/CanvasMenu.tsx": 575,
   "src/boards/ShaderControls.tsx": 675,
   "src/components/Admin.tsx": 679,
-  "src/components/admin/BoardEditor.tsx": 2115,
-  "src/components/admin/BoardInsertPanel.tsx": 1305,
+  "src/components/admin/BoardEditor.tsx": 2134,
+  "src/components/admin/BoardInsertPanel.tsx": 1200,
   "src/components/admin/DailyChallengePanel.tsx": 743,
-  "src/components/admin/ModelsPanel.tsx": 598,
   "src/editor/presets.ts": 1316,
-  "src/services/portfolioService.ts": 1669
+  "src/services/portfolioService.ts": 1815
 }

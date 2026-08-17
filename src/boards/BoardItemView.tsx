@@ -1,28 +1,24 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Add01Icon,
   Delete02Icon,
-  MinusSignIcon,
-  ResizeFieldIcon,
   Settings01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { type RefObject, useEffect, useRef, useState } from "react";
-import {
-  DEFAULT_NOTE_FONT_SIZE,
-  DEFAULT_TEXT_FONT_SIZE,
-  MAX_FONT_SIZE,
-  MIN_FONT_SIZE,
-  PORT_HIT_PX,
-  PORT_RADIUS_PX,
-} from "../../config/canvas.js";
+import { PORT_HIT_PX, PORT_RADIUS_PX } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
+import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
+import type { ResizeHandle } from "./alignmentGuides";
+import { BoardTextTools } from "./BoardTextTools";
+import { BoardToolBar } from "./BoardToolBar";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
+import { ItemMedia } from "./ItemMedia";
 import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
 import { BatchList, OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
+import { ResizeHandles } from "./ResizeHandles";
 import { ShaderControls } from "./ShaderControls";
 import { ShaderView } from "./ShaderView";
 import {
@@ -33,9 +29,8 @@ import {
   type ShaderConfig,
   type ShaderLayer,
 } from "./shaderConfig";
-
-/** One press changes the size by this much, in canvas units. */
-const FONT_STEP = 4;
+import type { BoardTools } from "./tools/useBoardTools";
+import { useTextFont } from "./useTextFont";
 
 /**
  * Drops a default source into the named empty effect.
@@ -82,6 +77,14 @@ interface BoardItemViewProps {
   /** True while this item's text is being typed into. */
   isEditing: boolean;
   isSelected: boolean;
+  /**
+   * True when this is the *only* thing selected.
+   *
+   * The text panel needs it: one panel per item would be a wall of controls
+   * over a multi-selection, and a single panel editing one of several would be
+   * worse — you would not find out which until later.
+   */
+  isSoleSelected?: boolean;
   item: BoardItem;
   /** Enters text editing — a second click, or a double click. */
   onBeginEdit: () => void;
@@ -92,9 +95,15 @@ interface BoardItemViewProps {
   onConfigChange?: (config: Record<string, unknown>) => void;
   onDelete: () => void;
   onEditBody: (body: string) => void;
-  onFontSize: (fontSize: number) => void;
+  /** Writes any field of this item back — how the text panel saves. */
+  onPatch: (patch: Partial<BoardItem>) => void;
   onRemoveVersion?: (index: number) => void;
-  onResizeStart: (index: number, clientX: number, clientY: number) => void;
+  onResizeStart: (
+    index: number,
+    clientX: number,
+    clientY: number,
+    handle: ResizeHandle
+  ) => void;
   onRun?: (force: boolean) => void;
   onSelect: (
     index: number,
@@ -112,6 +121,8 @@ interface BoardItemViewProps {
   readOnly?: boolean;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
   scale: number;
+  /** Runs tools on this item. One object: the bar needs both halves. */
+  tools?: BoardTools;
   /** The words arriving on this item's prompt input, if any. */
   wiredPrompt?: string | null;
 }
@@ -208,8 +219,10 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
           >
             <span
               aria-hidden
-              className={`block rounded-full border ${
-                isOpen ? "border-emerald-300 bg-emerald-400" : idle
+              className={`block rounded-full border p-2 ${
+                isOpen
+                  ? "border-emerald-300 bg-emerald-400 ring-1 ring-blue-400 -ring-offset-2"
+                  : idle
               }`}
               style={{ height: dot, width: dot }}
             />
@@ -257,7 +270,6 @@ function useEditingCaret(
 
 interface BoardItemBodyProps {
   fieldRef: RefObject<HTMLTextAreaElement | null>;
-  fontSize: number;
   isEditing: boolean;
   item: BoardItem;
   onEditBody: (body: string) => void;
@@ -274,21 +286,27 @@ interface BoardItemBodyProps {
  */
 function BoardItemBody({
   fieldRef,
-  fontSize,
   isEditing,
   item,
   onEditBody,
 }: BoardItemBodyProps) {
   const isNote = item.kind === "note";
+  // Here rather than in the toolbar, so a published board a visitor is only
+  // reading gets the family too.
+  useTextFont(item.textStyle);
 
   if (isNote || item.kind === "text") {
+    // Size, line-height and weight used to be literals here; they live in
+    // textStyleCss now, which resolves a null property back to the value this
+    // component hard-coded — so an unstyled item is set exactly as before.
+    const css = textStyleCss(item);
     return (
       <textarea
         className={
           isNote
             ? "h-full w-full resize-none bg-amber-100/95 p-3 text-neutral-900 outline-none"
             : // Plain text: no card, no background — just words on the board.
-              "h-full w-full resize-none border-0 bg-transparent p-1 font-light text-board-ink outline-none placeholder:text-board-ink/30"
+              "h-full w-full resize-none border-0 bg-transparent p-1 text-board-ink outline-none placeholder:text-board-ink/30"
         }
         onChange={(e) => onEditBody(e.target.value)}
         placeholder={isNote ? "Note…" : "Type…"}
@@ -299,10 +317,7 @@ function BoardItemBody({
         readOnly={!isEditing}
         ref={fieldRef}
         style={{
-          fontSize,
-          // Follows the text rather than the browser default, which would
-          // leave lines overlapping at large sizes.
-          lineHeight: 1.25,
+          ...css,
           pointerEvents: isEditing ? "auto" : "none",
         }}
         value={item.body ?? ""}
@@ -328,16 +343,8 @@ function BoardItemBody({
           a board of a hundred results was decoding all of them at once — which
           is felt as the canvas bogging down rather than as anything to do with
           pictures. */}
-      <img
-        alt=""
-        className={`h-full w-full ${isIcon ? "object-contain" : "object-cover"}`}
-        decoding="async"
-        draggable={false}
-        height={item.height}
-        loading="lazy"
-        src={item.imageUrl ?? ""}
-        width={item.width}
-      />
+      <ItemMedia isIcon={isIcon} item={item} />
+
       {/* The mask, if this picture has one painted on it. Above the image and
           below the credit, because it annotates the picture and the credit
           annotates the item. */}
@@ -353,51 +360,6 @@ function BoardItemBody({
         </figcaption>
       ) : null}
     </figure>
-  );
-}
-
-/**
- * The smaller/larger control for a note or a text item.
- *
- * Its own component only to keep the item's render readable — it is three
- * buttons that belong to one another and to nothing else.
- */
-function FontSizeControl({
-  chromeScale,
-  fontSize,
-  onStep,
-}: {
-  chromeScale: { transform: string };
-  fontSize: number;
-  onStep: (delta: number) => void;
-}) {
-  return (
-    <div
-      className="absolute bottom-full left-0 flex origin-bottom-left items-center gap-1 rounded-full border border-board-ink/20 bg-board-surface/90 p-1"
-      style={chromeScale}
-    >
-      <button
-        aria-label="Smaller text"
-        className="flex size-7 items-center justify-center text-board-ink/70 hover:text-board-ink"
-        onClick={() => onStep(-FONT_STEP)}
-        onPointerDown={(e) => e.stopPropagation()}
-        type="button"
-      >
-        <HugeiconsIcon icon={MinusSignIcon} size={13} />
-      </button>
-      <span className="min-w-6 text-center text-[10px] text-board-ink/50 tabular-nums">
-        {Math.round(fontSize)}
-      </span>
-      <button
-        aria-label="Larger text"
-        className="flex size-7 items-center justify-center text-board-ink/70 hover:text-board-ink"
-        onClick={() => onStep(FONT_STEP)}
-        onPointerDown={(e) => e.stopPropagation()}
-        type="button"
-      >
-        <HugeiconsIcon icon={Add01Icon} size={13} />
-      </button>
-    </div>
   );
 }
 
@@ -418,7 +380,7 @@ function FrameBody({
   readOnly: boolean;
 }) {
   return (
-    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-cyan-500/50 border-dashed bg-board-ink/2">
+    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-blue-500/50 border-dashed bg-board-ink/2">
       <input
         aria-label="Frame name"
         className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-board-ink uppercase tracking-[0.18em] outline-none placeholder:text-board-ink"
@@ -582,7 +544,6 @@ function ShaderItem({
 
 interface ItemContentProps {
   fieldRef: RefObject<HTMLTextAreaElement | null>;
-  fontSize: number;
   hasWiredPrompt: boolean;
   imageUrl?: string | null;
   isEditing: boolean;
@@ -610,7 +571,6 @@ interface ItemContentProps {
  */
 function ItemContent({
   fieldRef,
-  fontSize,
   hasWiredPrompt,
   imageUrl,
   wiredPrompt,
@@ -687,7 +647,6 @@ function ItemContent({
   return (
     <BoardItemBody
       fieldRef={fieldRef}
-      fontSize={fontSize}
       isEditing={isEditing}
       item={item}
       onEditBody={onEditBody}
@@ -708,12 +667,14 @@ export function BoardItemView({
   index,
   isEditing,
   isSelected,
+  isSoleSelected = false,
+  tools,
   onBeginEdit,
   item,
   onConfigChange,
   onDelete,
   onEditBody,
-  onFontSize,
+  onPatch,
   onResizeStart,
   onRun,
   onSelect,
@@ -735,13 +696,10 @@ export function BoardItemView({
   // at every zoom level.
   const chromeScale = { transform: `scale(${1 / scale})` };
 
-  const fontSize =
-    item.fontSize ?? (isNote ? DEFAULT_NOTE_FONT_SIZE : DEFAULT_TEXT_FONT_SIZE);
-
-  const stepFont = (delta: number) =>
-    onFontSize(
-      Math.min(Math.max(fontSize + delta, MIN_FONT_SIZE), MAX_FONT_SIZE)
-    );
+  // Handed to the text panel, which reads this box's position off the DOM to
+  // decide whether it fits above the item. The canvas viewport lives in a ref
+  // so that panning does not re-render, so there is nothing else to ask.
+  const boxRef = useRef<HTMLDivElement>(null);
 
   const fieldRef = useEditingCaret(isEditing);
 
@@ -794,9 +752,9 @@ export function BoardItemView({
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — the click aims a comment at the item, and the drag already uses pointer events the same way
     // biome-ignore lint/a11y/useKeyWithClickEvents: same — an item is a canvas surface, not a button
     <div
-      className={`group absolute ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-cyan-200" : "ring-1 ring-board-ink/10"
-      } ${isText && !isSelected ? "ring-0" : ""}`}
+      className={`group absolute rounded-xs contain-layout ${isText ? "" : "select-none"} ${
+        isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10"
+      } ${isText && !isSelected ? "ring-0 ring-transparent" : "ring-0"}`}
       onClick={
         onCommentTarget
           ? (e) => {
@@ -836,6 +794,7 @@ export function BoardItemView({
       }}
       onPointerLeave={handleDragLeave}
       onPointerMove={handleDragHover}
+      ref={boxRef}
       style={{
         height: item.height,
         left: item.x,
@@ -853,7 +812,6 @@ export function BoardItemView({
     >
       <ItemContent
         fieldRef={fieldRef}
-        fontSize={fontSize}
         hasWiredPrompt={hasWiredPrompt}
         imageUrl={imageUrl}
         isEditing={isEditing}
@@ -895,29 +853,35 @@ export function BoardItemView({
         </button>
       )}
 
-      {isSelected && isWritable && !readOnly ? (
-        <FontSizeControl
+      {/* Text has its own panel, below; everything else gets the tools. */}
+      {isSoleSelected && !(isWritable || readOnly) && tools ? (
+        <BoardToolBar
+          anchor={boxRef}
           chromeScale={chromeScale}
-          fontSize={fontSize}
-          onStep={stepFont}
+          isRunning={tools.isRunning(item.id)}
+          item={item}
+          onRun={(tool, prompt, config) =>
+            tools.run(item, tool, prompt, config)
+          }
+        />
+      ) : null}
+
+      {isSoleSelected && isWritable && !readOnly ? (
+        <BoardTextTools
+          anchor={boxRef}
+          chromeScale={chromeScale}
+          item={item}
+          onPatch={onPatch}
         />
       ) : null}
 
       {isSelected && !readOnly ? (
-        <div
-          className="absolute right-0 bottom-0 grid size-12 origin-bottom-right cursor-nwse-resize place-items-center text-board-ink/90"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            // Primary button only, like the item body above.
-            if (e.button !== 0) {
-              return;
-            }
-            onResizeStart(index, e.clientX, e.clientY);
-          }}
-          style={chromeScale}
-        >
-          <HugeiconsIcon icon={ResizeFieldIcon} size={32} />
-        </div>
+        <ResizeHandles
+          chromeScale={chromeScale}
+          onStart={(handle, clientX, clientY) =>
+            onResizeStart(index, clientX, clientY, handle)
+          }
+        />
       ) : null}
 
       {/* Open comments pinned to this item: the count, so a visitor can see at

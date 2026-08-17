@@ -24,7 +24,7 @@ import { Toaster, toast } from "sonner";
  * Behind the flag it is fetched only where it is actually rendered, and even
  * there it is a decorative backdrop, so arriving late costs nothing.
  */
-const FadedDither = lazy(() => import("@/shaders/faded-dither"));
+const DPDLogoShader = lazy(() => import("@/shaders/dpd-logo"));
 
 import { SiteNav } from "../cms/SiteNav";
 import { Lightbox } from "../components/Lightbox";
@@ -202,7 +202,7 @@ export const HomePage = () => {
                 onClick={() => setHeroIndex(i)}
                 type="button"
               >
-                <span className="font-black text-4xl uppercase leading-[0.85] tracking-tighter md:text-7xl">
+                <span className="font-black text-xl uppercase leading-[0.85] tracking-tighter md:text-6xl">
                   {photo.title}
                 </span>
                 <sup className="mt-3 font-bold text-[10px] opacity-40 md:mt-6 md:text-sm">
@@ -294,7 +294,7 @@ export const HomePage = () => {
                   // identifies it. Anchoring the crop top-left keeps the part
                   // that says what the page is.
                   className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${
-                    photo.showChrome ? "object-left-top" : ""
+                    photo.showChrome ? "object-top-left" : ""
                   }`}
                   height={photo.height ?? undefined}
                   lqip={photo.lqip}
@@ -400,8 +400,9 @@ export const HomePage = () => {
           page while several megabytes of WebGPU downloaded. */}
       {settings.showShader ? (
         <Suspense fallback={null}>
-          <FadedDither
+          <DPDLogoShader
             className="absolute right-0 bottom-0 left-0 z-1 opacity-70"
+            colorA="oklch(2.8% 0.13 160.46)"
             colorB={settings.theme.accent}
           />
         </Suspense>

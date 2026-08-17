@@ -9,6 +9,10 @@ body.custom-cursor-active {
   cursor: none;
 }
 
+.board {
+  cursor: none;
+}
+
 /*
  * The real cursor, back again, wherever aiming precisely is the whole point.
  *
@@ -37,6 +41,30 @@ body.cursor-precise * {
   left: 0;
   width: 20px;
   height: 20px;
+}
+
+/*
+ * The pan hand, shown while space is held.
+ *
+ * Centred on the pointer rather than hung from its top-left like the arrow: an
+ * arrow points with its tip, so the corner IS the hotspot, while a hand grabs
+ * with its middle. Without the offset the board appears to be dragged from a
+ * spot up and to the left of the hand.
+ *
+ * Slightly larger than the arrow because the shape is an outline with a hole in
+ * it, and at 20px the hole closes up and it reads as a blob.
+ */
+.custom-cursor-grab {
+  position: absolute;
+  top: -13px;
+  left: -13px;
+  width: 26px;
+  height: 26px;
+}
+
+/* Closing on the press. Small, because the shape does the talking. */
+.custom-cursor-grab[data-grabbing] {
+  transform: scale(0.86);
 }
 
 .custom-cursor-label {

@@ -107,6 +107,23 @@ export default defineConfig(({ mode }) => {
     config({ override: true, path: path.resolve(cwd, `.env.${site}.local`) });
   }
   return {
+    build: {
+      /**
+       * "hidden" rather than true: the maps are built, but no
+       * `//# sourceMappingURL=` comment is written into the bundles.
+       *
+       * They were not being built at all, which quietly made the PostHog
+       * uploader above a no-op — it had nothing to send, so every production
+       * stack trace stayed minified whether or not the keys were configured.
+       *
+       * Hidden is the pairing that upload wants. The plugin is set to
+       * `deleteAfterUpload`, so a plain `true` would ship bundles pointing at
+       * .map files that had just been deleted: every error in devtools would
+       * come with a 404 for the map beside it. Hidden also keeps the maps off
+       * the public site while still handing PostHog what it needs to de-minify.
+       */
+      sourcemap: "hidden",
+    },
     plugins: [
       react(),
       tailwindcss(),

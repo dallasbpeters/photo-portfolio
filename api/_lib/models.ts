@@ -35,6 +35,7 @@ export interface ModelRow {
   lora_path: string | null;
   lora_scale: number | null;
   lora_trigger: string | null;
+  output?: string;
   sort_order: number;
   updated_at: string;
   vector: boolean;
@@ -55,6 +56,7 @@ export interface ModelDto {
     scale: number | null;
     trigger: string | null;
   } | null;
+  output: "image" | "video";
   sortOrder: number;
   updatedAt: string;
   vector: boolean;
@@ -88,7 +90,7 @@ export const loadModelRows = async (
     ? ((await sql`
         SELECT created_at, enabled, id, image_param, input, label,
           lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-          sort_order, updated_at, vector
+          output, sort_order, updated_at, vector
         FROM models
         WHERE enabled
         ORDER BY sort_order, id
@@ -96,7 +98,7 @@ export const loadModelRows = async (
     : ((await sql`
         SELECT created_at, enabled, id, image_param, input, label,
           lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-          sort_order, updated_at, vector
+          output, sort_order, updated_at, vector
         FROM models
         ORDER BY sort_order, id
       `) as ModelRow[]);
@@ -133,6 +135,12 @@ export const rowToModelDef = (row: ModelRow): FalModelDef => {
     input: isModelInput(row.input) ? row.input : "prompt-or-image",
     label: row.label,
     lora,
+    // Anything that is not exactly "video" is an image, matching the column's
+    // default: a row written before this column existed, or one that somehow
+    // slipped past the check, should behave like every row always has rather
+    // than be dispatched down the queue path and wait for a clip that is
+    // never coming.
+    output: row.output === "video" ? "video" : "image",
     vector: row.vector,
   };
 };
@@ -156,6 +164,7 @@ export const rowToModelDto = (row: ModelRow): ModelDto => {
           trigger: lora.trigger,
         }
       : null,
+    output: def.output,
     sortOrder: row.sort_order,
     updatedAt: row.updated_at,
     vector: row.vector,

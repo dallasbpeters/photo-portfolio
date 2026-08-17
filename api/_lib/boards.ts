@@ -21,6 +21,8 @@ import {
   type RunState,
   type SettingDef,
 } from "../../config/nodeTypes.js";
+import { normalizeTextStyle, type TextStyle } from "../../config/textStyle.js";
+import { clamp, num, text } from "./values.js";
 
 export type BoardItemKind =
   | "photo"
@@ -61,6 +63,8 @@ export interface BoardItemRow {
   result?: unknown;
   run_error?: string | null;
   run_state?: string | null;
+  /** One JSONB blob of type settings; see config/textStyle.ts for why. */
+  text_style?: unknown;
   thumb_url: string | null;
   width: number | string;
   x: number | string;
@@ -115,6 +119,8 @@ export interface BoardItemDto {
   result: Record<string, unknown> | null;
   runError: string | null;
   runState: RunState | null;
+  /** How a text or note item is set; null renders the defaults for its kind. */
+  textStyle: TextStyle | null;
   thumbUrl: string | null;
   width: number;
   x: number;
@@ -143,15 +149,6 @@ const toIso = (value: string | Date): string => {
     ? new Date(0).toISOString()
     : d.toISOString();
 };
-
-/** Coerces anything to a finite number, falling back rather than yielding NaN. */
-const num = (value: unknown, fallback: number): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-export const clamp = (value: number, min: number, max: number): number =>
-  Math.min(Math.max(value, min), max);
 
 /** Postgres hands JSONB back parsed; anything else is not a settings object. */
 const jsonObject = (value: unknown): Record<string, unknown> | null =>
@@ -214,6 +211,10 @@ export const rowToItemDto = (
   result: jsonObject(row.result),
   runError: options.isPublicReader ? null : (row.run_error ?? null),
   runState: readRunState(row.run_state),
+  // Filtered on the way out as well as on the way in: a row written by an
+  // older build, or by hand, must not be able to name a font that is not one
+  // of ours or a line-height that collapses the board.
+  textStyle: normalizeTextStyle(row.text_style),
   thumbUrl: row.thumb_url,
   width: num(row.width, 320),
   x: num(row.x, 0),
@@ -290,6 +291,7 @@ export interface IncomingItem {
   kind: BoardItemKind;
   nodeType: string | null;
   photoId: string | null;
+  textStyle: TextStyle | null;
   thumbUrl: string | null;
   width: number;
   x: number;
@@ -311,14 +313,6 @@ export interface IncomingWire {
   targetItemId: string;
   targetPort: string;
 }
-
-const text = (value: unknown, max: number): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, max) : null;
-};
 
 /**
  * What one setting's stored value is, for the value the canvas sent.
@@ -378,6 +372,9 @@ const OWNED_TEXT_KEYS = [
   { key: "imageUrl", max: 2000 },
   { key: "maskUrl", max: 2000 },
   { key: "name", max: 200 },
+  // Which element wrote this node's prompt; `elementStyleOf` reads it so the
+  // style is not stated twice.
+  { key: "styleFrom", max: 100 },
 ] as const;
 
 /** A bounded copy of a batch's strike-off list, or undefined when absent. */
@@ -409,10 +406,9 @@ const parseNodeConfig = (
   if (!type) {
     return null;
   }
-  const source = (typeof raw === "object" && raw !== null ? raw : {}) as Record<
-    string,
-    unknown
-  >;
+  // A primitive would read as undefined at every key below and be rejected by
+  // the guards there, so this only has to stop a null from throwing.
+  const source = (raw ?? {}) as Record<string, unknown>;
 
   const config: Record<string, unknown> = {};
 
@@ -420,9 +416,7 @@ const parseNodeConfig = (
   // node-type setting — it belongs to the results rather than to the recipe —
   // but it lives in the same object, so it has to survive the filter that keeps
   // unknown keys out.
-  const selected = Number(
-    (raw as Record<string, unknown> | null)?.selectedVersion
-  );
+  const selected = Number(source.selectedVersion);
   if (Number.isFinite(selected) && selected >= 0) {
     config.selectedVersion = Math.trunc(selected);
   }
@@ -765,6 +759,10 @@ export const parseIncomingItem = (raw: unknown): IncomingItem | null => {
     // debounce, so a save in flight when a generation lands would otherwise
     // write back the pre-run copy and destroy a result that cost money.
     photoId,
+    // Allowlisted rather than stored as sent: `text_style` is JSONB, so an
+    // unfiltered payload could put anything of any size in it. normalizeTextStyle
+    // keeps the eight properties it knows, in range, and drops the rest.
+    textStyle: normalizeTextStyle(o.textStyle),
     thumbUrl: text(o.thumbUrl, 2000),
     width,
     // Keeping the top-left inside the canvas is enough: an item may hang off

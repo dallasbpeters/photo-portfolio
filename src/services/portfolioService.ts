@@ -10,6 +10,8 @@ import type {
   BoardSource,
   BoardWire,
   Category,
+  Collection,
+  CollectionItem,
   DailyChallengeHistoryEntry,
   DailyChallengeJournal,
   DailyChallengeResponse,
@@ -1125,6 +1127,41 @@ export const boardsApi = {
   },
 
   /**
+   * Writes an SVG edited in Affinity back onto a node as a new version.
+   *
+   * Its own call because `result` is not written by the board save — see
+   * api/boards/[id]/svg.ts for why that column is left alone.
+   */
+  /**
+   * Keeps a tool's output on the item.
+   *
+   * Its own call because a board save never writes `result` — see
+   * api/boards/[id]/result.ts for why. Without this a tool ran, showed its
+   * work, and lost it on the next reload.
+   */
+  saveToolResult: async (
+    boardId: string,
+    itemId: string,
+    variation: {
+      description?: string | null;
+      height?: number | null;
+      isVector?: boolean;
+      kind?: "image" | "video";
+      url: string;
+      width?: number | null;
+    }
+  ): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/boards/${boardId}/result`, {
+      body: JSON.stringify({ itemId, ...variation }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save the result"));
+    }
+  },
+
+  /**
    * Saves the board. Passing `items` replaces the whole arrangement, so the
    * canvas must send every item it still has — anything omitted is deleted.
    * `wires` works the same way.
@@ -1154,12 +1191,6 @@ export const boardsApi = {
     return (await res.json()) as Board;
   },
 
-  /**
-   * Writes an SVG edited in Affinity back onto a node as a new version.
-   *
-   * Its own call because `result` is not written by the board save — see
-   * api/boards/[id]/svg.ts for why that column is left alone.
-   */
   writebackSvg: async (
     boardId: string,
     itemId: string,
@@ -1411,10 +1442,12 @@ export const aiApi = {
    */
   generate: async (
     prompt: string,
-    sourceImageUrl?: string | null
+    sourceImageUrl?: string | null,
+    /** A fal model id from the models table, or omitted to let it choose. */
+    model?: string | null
   ): Promise<GeneratedImage> => {
     const res = await fetch(`${apiBase()}/api/ai/generate`, {
-      body: JSON.stringify({ prompt, sourceImageUrl }),
+      body: JSON.stringify({ model, prompt, sourceImageUrl }),
       headers: jsonHeaders(),
       method: "POST",
     });
@@ -1537,6 +1570,119 @@ const elementsPath = (): string => `${apiBase()}/api/elements`;
  * on: deleting that board must not take the style with it, and the same element
  * is meant to turn up on the next board and the one after.
  */
+/**
+ * The collections: assets kept for use in both apps.
+ *
+ * Distinct from `photosApi`, which is the portfolio, and from `elementsApi`,
+ * which is a style rather than a set of assets. See api/_lib/collections.ts.
+ */
+export const collectionsApi = {
+  /** Adds one asset. Saving the same url twice is a no-op, not an error. */
+  addItem: async (
+    collectionId: string,
+    item: {
+      alt?: string | null;
+      height?: number | null;
+      kind?: "image" | "video";
+      title?: string | null;
+      url: string;
+      width?: number | null;
+    }
+  ): Promise<CollectionItem> => {
+    const res = await fetch(`${apiBase()}/api/collections/${collectionId}`, {
+      body: JSON.stringify(item),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not save to the collection")
+      );
+    }
+    return (await res.json()) as CollectionItem;
+  },
+
+  create: async (name: string, description?: string): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/api/collections`, {
+      body: JSON.stringify({ description, name }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not create the collection")
+      );
+    }
+    return (await res.json()) as Collection;
+  },
+
+  /** One collection, with its items. */
+  get: async (id: string): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/api/collections/${id}`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not load the collection")
+      );
+    }
+    return (await res.json()) as Collection;
+  },
+
+  /** Every collection, counted rather than filled. */
+  list: async (): Promise<Collection[]> => {
+    const res = await fetch(`${apiBase()}/api/collections`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load collections"));
+    }
+    return (await res.json()) as Collection[];
+  },
+
+  /** Deletes the whole collection. Its items go with it; the blobs do not. */
+  remove: async (id: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/collections/${id}`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not delete the collection")
+      );
+    }
+  },
+
+  /** Takes one asset out, leaving the collection and the blob in place. */
+  removeItem: async (collectionId: string, itemId: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/collections/${collectionId}`, {
+      body: JSON.stringify({ itemId }),
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not remove the asset"));
+    }
+  },
+
+  update: async (
+    id: string,
+    patch: { coverUrl?: string | null; description?: string; name?: string }
+  ): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/api/collections/${id}`, {
+      body: JSON.stringify(patch),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(
+        await readPageError(res, "Could not save the collection")
+      );
+    }
+    return (await res.json()) as Collection;
+  },
+};
+
 export const elementsApi = {
   /**
    * Saves a selection as an element.

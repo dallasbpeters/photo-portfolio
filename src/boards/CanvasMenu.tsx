@@ -11,11 +11,20 @@ import {
   MagicWand01Icon,
   PenTool01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { BoardItem, BoardWire } from "../types";
 import { isSvgUrl } from "./affinity";
+import {
+  CollectionRow,
+  hasTools,
+  NamePanel,
+  ToolsPanel,
+  ToolsRow,
+} from "./CanvasMenuPanels";
+import { CollectionPanel } from "./CollectionPanel";
 import { frameBoardTitle, frameSummary } from "./copyToBoard";
 import { outputImageOf, outputImagesOf } from "./itemOutput";
+import type { Tool } from "./tools/types";
 
 /**
  * What the canvas offers on a right-click.
@@ -56,6 +65,14 @@ interface CanvasMenuProps {
   onGroup: (items: BoardItem[]) => void;
   /** Opens a node's SVG in Affinity, and syncs its edits back. */
   onOpenInAffinity?: (itemId: string) => void;
+  /**
+   * Runs a registry tool on the one selected item.
+   *
+   * Handed up rather than run here: the menu is dismissed the moment a tool is
+   * picked, and a run that lived in this component would be aborted by its own
+   * unmount. Omit it and the Tools row is absent.
+   */
+  onRunTool?: (item: BoardItem, tool: Tool) => void;
   /** Keeps the selection's pictures in the element library. */
   onSaveElement: (items: BoardItem[]) => void;
   /** Sends one item to the very back of the stack, above the frames. */
@@ -65,85 +82,6 @@ interface CanvasMenuProps {
   /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
   onVectorize?: (itemId: string) => void;
   wires: BoardWire[];
-}
-
-interface NamePanelProps {
-  frame: BoardItem;
-  onCancel: () => void;
-  onConfirm: (frame: BoardItem, title: string) => void;
-  onType: (title: string) => void;
-  summary: { count: number; severed: number } | null;
-  title: string;
-}
-
-/** The name a copied frame's board gets, and what the copy will contain. */
-function NamePanel({
-  frame,
-  onCancel,
-  onConfirm,
-  onType,
-  summary,
-  title,
-}: NamePanelProps) {
-  const field = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    // Selected, not merely focused: the suggestion should be typed over.
-    field.current?.select();
-  }, []);
-  const submit = () => onConfirm(frame, title.trim() || frameBoardTitle(frame));
-
-  return (
-    <div className="px-3 pt-2.5 pb-2.5">
-      <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-        New board name
-      </span>
-      <input
-        aria-label="New board name"
-        className="w-full rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
-        onChange={(e) => onType(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            submit();
-          }
-          if (e.key === "Escape") {
-            onCancel();
-          }
-        }}
-        ref={field}
-        value={title}
-      />
-      <p className="mt-1.5 text-[10px] text-board-ink/40 leading-relaxed">
-        {summary?.count === 1
-          ? "The frame alone"
-          : `${summary?.count ?? 0} items`}
-        , copied. This board keeps its own.
-        {summary && summary.severed > 0 ? (
-          <span className="block text-amber-300/70">
-            {summary.severed === 1
-              ? "1 wire leaves the frame and will not come across."
-              : `${summary.severed} wires leave the frame and will not come across.`}
-          </span>
-        ) : null}
-      </p>
-      <div className="mt-2 flex justify-end gap-1.5">
-        <button
-          className="rounded px-2 py-1 text-[11px] text-board-ink/50 hover:text-board-ink"
-          onClick={onCancel}
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          className="rounded bg-board-ink/15 px-2.5 py-1 text-[11px] text-board-ink hover:bg-board-ink/25"
-          onClick={submit}
-          type="button"
-        >
-          Create
-        </button>
-      </div>
-    </div>
-  );
 }
 
 /** How many pictures a node is holding, across every run it remembers. */
@@ -371,6 +309,7 @@ function MenuRows({
   menu,
   onArrange,
   onBringToFront,
+  onCollect,
   onCopy,
   onExport,
   onGroup,
@@ -378,6 +317,7 @@ function MenuRows({
   onOpenInAffinity,
   onSendToCanva,
   onSendToBack,
+  onTools,
   onVectorize,
   wires,
 }: {
@@ -385,6 +325,8 @@ function MenuRows({
   menu: CanvasMenuTarget;
   onArrange: (itemId: string) => void;
   onBringToFront: (itemId: string) => void;
+  /** Opens the collection panel on the pictures the selection can hand over. */
+  onCollect: (urls: string[]) => void;
   onCopy: (frame: BoardItem) => void;
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
@@ -392,6 +334,8 @@ function MenuRows({
   onOpenInAffinity?: (itemId: string) => void;
   onSendToCanva?: (item: BoardItem) => void;
   onSendToBack: (itemId: string) => void;
+  /** Opens the tool picker on the one selected item. Absent, the row is too. */
+  onTools?: (item: BoardItem) => void;
   onVectorize?: (itemId: string) => void;
   wires: BoardWire[];
 }) {
@@ -412,6 +356,12 @@ function MenuRows({
 
   return (
     <>
+      {/* First, because it is the only row that leads anywhere rather than
+          doing something — and because the tools are what the item *is* for. */}
+      {onlyPicked && onTools && hasTools(onlyPicked) ? (
+        <ToolsRow className={rowClass} onOpen={() => onTools(onlyPicked)} />
+      ) : null}
+
       <SingleItemRows
         items={items}
         onBringToFront={onBringToFront}
@@ -446,6 +396,14 @@ function MenuRows({
         </button>
       ) : null}
 
+      {pictures.length > 0 ? (
+        <CollectionRow
+          className={rowClass}
+          count={pictures.length}
+          onOpen={() => onCollect(pictures)}
+        />
+      ) : null}
+
       {frame ? (
         <FrameRows
           canArrange={(summary?.count ?? 0) > 1}
@@ -470,6 +428,7 @@ export function CanvasMenu({
   onExport,
   onGroup,
   onOpenInAffinity,
+  onRunTool,
   onSaveElement,
   onSendToCanva,
   onSendToBack,
@@ -485,10 +444,25 @@ export function CanvasMenu({
    * cheaper than an effect and impossible to forget. The frame rides along so
    * the panel has one without asking the menu again.
    */
+  /** Null until "Save to a collection" is chosen; then what is being saved. */
+  const [collecting, setCollecting] = useState<{
+    for: CanvasMenuTarget;
+    urls: string[];
+  } | null>(null);
+
   const [naming, setNaming] = useState<{
     for: CanvasMenuTarget;
     frame: BoardItem;
     title: string;
+  } | null>(null);
+
+  /**
+   * Null until "Tools…" is chosen; then the item whose tools are on offer.
+   * Tagged with its menu for the same reason the name is.
+   */
+  const [picking, setPicking] = useState<{
+    for: CanvasMenuTarget;
+    item: BoardItem;
   } | null>(null);
 
   if (!menu) {
@@ -496,12 +470,78 @@ export function CanvasMenu({
   }
 
   const typing = naming?.for === menu ? naming : null;
+  const collectingNow = collecting?.for === menu ? collecting : null;
+  const picked = picking?.for === menu ? picking : null;
 
   const { frame, point, selection } = menu;
   const canGroup = selection.length > 0;
   if (!(canGroup || frame)) {
     return null;
   }
+
+  // The picker sits on top of the rows it was opened from: picking a tool is a
+  // step on the way to a run, not a way back to the rest of the menu.
+  /**
+   * What the menu is showing: its rows, or the one panel that replaced them.
+   *
+   * Chosen by name rather than by a chain of ternaries — there are three now,
+   * and a fourth would nest deeper than anyone can read. Each panel sits on top
+   * of the rows it was opened from: choosing is a step towards doing something,
+   * not a way back to the rest of the menu.
+   */
+  const panel = (() => {
+    if (collectingNow) {
+      return (
+        <CollectionPanel
+          assets={collectingNow.urls.map((url) => ({ url }))}
+          onClose={onDismiss}
+        />
+      );
+    }
+    if (picked) {
+      return (
+        <ToolsPanel
+          item={picked.item}
+          onClose={onDismiss}
+          onPick={(item, tool) => {
+            onRunTool?.(item, tool);
+            // Dismissed immediately: the run outlives this menu, and a menu
+            // left open over the item would hide the change it is making.
+            onDismiss();
+          }}
+        />
+      );
+    }
+    return null;
+  })();
+
+  const rows = panel ?? (
+    <MenuRows
+      items={items}
+      menu={menu}
+      onArrange={onArrange}
+      onBringToFront={onBringToFront}
+      onCollect={(urls) => setCollecting({ for: menu, urls })}
+      onCopy={(frameToCopy) =>
+        setNaming({
+          for: menu,
+          frame: frameToCopy,
+          title: frameBoardTitle(frameToCopy),
+        })
+      }
+      onExport={onExport}
+      onGroup={onGroup}
+      onOpenInAffinity={onOpenInAffinity}
+      onSaveElement={onSaveElement}
+      onSendToBack={onSendToBack}
+      onSendToCanva={onSendToCanva}
+      onTools={
+        onRunTool ? (item) => setPicking({ for: menu, item }) : undefined
+      }
+      onVectorize={onVectorize}
+      wires={wires}
+    />
+  );
 
   return (
     <>
@@ -526,27 +566,7 @@ export function CanvasMenu({
             title={typing.title}
           />
         ) : (
-          <MenuRows
-            items={items}
-            menu={menu}
-            onArrange={onArrange}
-            onBringToFront={onBringToFront}
-            onCopy={(picked) =>
-              setNaming({
-                for: menu,
-                frame: picked,
-                title: frameBoardTitle(picked),
-              })
-            }
-            onExport={onExport}
-            onGroup={onGroup}
-            onOpenInAffinity={onOpenInAffinity}
-            onSaveElement={onSaveElement}
-            onSendToBack={onSendToBack}
-            onSendToCanva={onSendToCanva}
-            onVectorize={onVectorize}
-            wires={wires}
-          />
+          rows
         )}
       </div>
     </>

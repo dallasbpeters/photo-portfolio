@@ -4,6 +4,7 @@ import {
   Delete02Icon,
   FrameIcon,
 } from "@hugeicons-pro/core-stroke-standard";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -80,6 +81,11 @@ export function BoardsPanel() {
     }
   };
 
+  const childVariants = {
+    hover: { opacity: 1, scale: 1.1, y: -10 },
+    initial: { opacity: 0.8, scale: 1, y: 0 },
+  };
+
   return (
     <Card className="w-full border-white/10 bg-white/2">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -109,54 +115,64 @@ export function BoardsPanel() {
         ) : null}
 
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {boards.map((board) => (
-            <li key={board.id}>
-              <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
-                <button
-                  className="block w-full text-left"
-                  onClick={() => navigate(`/admin/boards/${board.id}`)}
-                  type="button"
-                >
-                  <div className="flex aspect-4/3 items-center justify-center bg-neutral-900">
-                    {board.coverUrl ? (
-                      <img
-                        alt=""
-                        className="h-full w-full object-cover"
-                        height={300}
-                        src={board.coverUrl}
-                        width={400}
-                      />
-                    ) : (
-                      <HugeiconsIcon
-                        aria-hidden
-                        className="text-white/15"
-                        icon={FrameIcon}
-                        size={32}
-                      />
-                    )}
-                  </div>
-                  <div className="space-y-1 p-3">
-                    <p className="truncate font-light text-[13px] text-white/90">
-                      {board.title}
-                    </p>
-                    <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
-                      {board.itemCount ?? 0}{" "}
-                      {board.itemCount === 1 ? "item" : "items"}
-                    </p>
-                  </div>
-                </button>
+          <AnimatePresence>
+            {boards.map((board) => (
+              <motion.li initial="initial" key={board.id} whileHover="hover">
+                <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                  <motion.button
+                    className="block w-full cursor-pointer text-left"
+                    onTap={() => navigate(`/admin/boards/${board.id}`)}
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <div className="flex aspect-4/3 items-center justify-center bg-neutral-900">
+                      {board.coverUrl ? (
+                        <motion.img
+                          alt=""
+                          className="h-full w-full object-cover"
+                          height={300}
+                          src={board.coverUrl}
+                          transition={{
+                            damping: 20,
+                            stiffness: 300,
+                            type: "spring",
+                          }}
+                          variants={childVariants}
+                          width={400}
+                        />
+                      ) : (
+                        <HugeiconsIcon
+                          aria-hidden
+                          className="text-white/15"
+                          icon={FrameIcon}
+                          size={32}
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-1 p-3">
+                      <p className="truncate font-light text-[13px] text-white/90">
+                        {board.title}
+                      </p>
+                      <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
+                        {board.itemCount ?? 0}{" "}
+                        {board.itemCount === 1 ? "item" : "items"}
+                      </p>
+                    </div>
+                  </motion.button>
 
-                <button
-                  aria-label={`Delete ${board.title}`}
-                  className="absolute top-2 right-2 flex size-9 items-center justify-center rounded-full bg-black/70 text-white/60 opacity-0 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
-                  onClick={() => void remove(board)}
-                  type="button"
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={14} />
-                </button>
-              </div>
-            </li>
-          ))}
+                  <button
+                    aria-label={`Delete ${board.title}`}
+                    className="absolute top-2 right-2 flex size-9 items-center justify-center rounded-full bg-black/70 text-white/60 opacity-0 transition-opacity hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+                    onClick={() => void remove(board)}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  </button>
+                </div>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
       </CardContent>
     </Card>

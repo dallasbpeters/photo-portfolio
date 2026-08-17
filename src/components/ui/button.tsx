@@ -72,6 +72,10 @@ const buttonVariants = cva(
         false: "",
         true: "w-full",
       },
+      fullWidthLeft: {
+        false: "",
+        true: "w-full flex-grow-1 justify-start",
+      },
       size: {
         default: "min-h-11 px-4 text-[10px] uppercase tracking-widest",
         icon: "size-10 min-h-11 min-w-11",
@@ -110,10 +114,12 @@ const buttonVariants = cva(
       },
       variant: {
         default:
-          "bg-[var(--btn-solid-bg)] text-[var(--btn-solid-fg)] hover:bg-[var(--btn-solid-hover-bg)]",
+          "bg-primary text-primary-foreground hover:bg-[var(--btn-solid-hover-bg)]",
         ghost:
           "text-[var(--btn-fg)] hover:bg-[var(--btn-ghost-hover-bg)] hover:text-[var(--btn-fg-strong)] aria-expanded:bg-[var(--btn-ghost-hover-bg)] aria-expanded:text-[var(--btn-fg-strong)]",
         link: "text-[var(--btn-fg)] underline-offset-4 hover:text-[var(--btn-fg-strong)] hover:underline",
+        noborder:
+          "rounded-none text-[var(--btn-fg)] hover:bg-[var(--btn-ghost-hover-bg)] hover:text-[var(--btn-fg-strong)] aria-expanded:bg-[var(--btn-ghost-hover-bg)] aria-expanded:text-[var(--btn-fg-strong)]",
         outline:
           "border-[var(--btn-border)] text-[var(--btn-fg)] hover:bg-[var(--btn-hover-bg)] hover:text-[var(--btn-hover-fg)] aria-expanded:bg-[var(--btn-ghost-hover-bg)] aria-expanded:text-[var(--btn-fg-strong)]",
         // A pressed/selected toggle, e.g. the board's stacked-view switch.
@@ -130,12 +136,20 @@ function Button({
   size,
   tone,
   fullWidth,
+  fullWidthLeft,
   ...props
 }: Omit<ButtonPrimitive.Props, "size"> & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       className={cn(
-        buttonVariants({ className, fullWidth, size, tone, variant })
+        buttonVariants({
+          className,
+          fullWidth,
+          fullWidthLeft,
+          size,
+          tone,
+          variant,
+        })
       )}
       data-slot="button"
       {...props}

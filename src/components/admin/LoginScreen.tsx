@@ -78,13 +78,9 @@ export const LoginScreen = ({
         <HugeiconsIcon icon={Login02Icon} size={16} />
         {login.isSubmitting ? "Signing in…" : "Sign in"}
       </Button>
-      <button
-        className="min-h-11 w-full text-[10px] text-white/90 uppercase tracking-[0.2em] transition-colors hover:text-white"
-        onClick={onForgotPassword}
-        type="button"
-      >
+      <Button fullWidth onClick={onForgotPassword} type="button">
         Forgot password?
-      </button>
+      </Button>
     </form>
     <GoogleSignInButton onSignedIn={onSignedIn} />
   </div>

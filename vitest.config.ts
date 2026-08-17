@@ -29,6 +29,10 @@ export default defineConfig({
       provider: playwright(),
       screenshotFailures: false,
     },
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // api/ is in here for the pure helpers the run endpoint leans on — job
+    // shaping decides what a run costs and whether a wired style is sent at
+    // all, and it fails silently when it is wrong. Those files touch neither
+    // the database nor the network, so they run in this browser like any other.
+    include: ["api/**/*.test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });

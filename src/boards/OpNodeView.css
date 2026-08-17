@@ -1,0 +1,36 @@
+.op-node-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  contain: paint;
+  background-color: var(--color-board-panel);
+  border: none;
+  border-radius: var(--radius-xs);
+}
+
+.op-node-view__header {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.op-node-view__title {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-widest);
+}
+
+.op-node-view__footer {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  padding: var(--spacing);
+  border-top: 1px solid var(--color-border);
+}

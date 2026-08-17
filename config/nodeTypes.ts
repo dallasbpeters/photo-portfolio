@@ -17,14 +17,10 @@
  */
 
 import { ICON_STYLES } from "./iconStyles.js";
-
-/**
- * What can travel down a wire.
- *
- * Two is enough for the nodes that exist. Adding a third is an entry here plus
- * a color on the handle — the wire model itself does not change.
- */
-export type PortType = "image" | "text";
+import { OUTPUT_PORT_KEY } from "./ports.js";
+import { VIDEO } from "./videoNode.js";
+/** What travels down a wire. A new one is an entry here plus a handle colour. */
+export type PortType = "image" | "text" | "video";
 
 export interface Port {
   /**
@@ -74,6 +70,8 @@ export type SettingDef =
       key: string;
       kind: "model";
       label: string;
+      /** Offer only video endpoints; an image one refuses after billing. */
+      video?: boolean;
     }
   | {
       default: number;
@@ -94,6 +92,7 @@ export type NodeCapability =
   | "board.composite"
   | "fal.describe"
   | "fal.image"
+  | "fal.video"
   | "magnific.icon";
 
 export type NodeTypeId =
@@ -106,7 +105,8 @@ export type NodeTypeId =
   | "iterate"
   | "join"
   | "palette"
-  | "prompt";
+  | "prompt"
+  | "video";
 
 export interface NodeType {
   /** Absent on source nodes, which produce their value without spending. */
@@ -117,9 +117,6 @@ export interface NodeType {
   outputs: readonly Port[];
   settings: readonly SettingDef[];
 }
-
-/** Every node has exactly one output, and this is its key. */
-export const OUTPUT_PORT_KEY = "out";
 
 /**
  * Matches MAX_PROMPT in api/ai/generate.ts.
@@ -199,6 +196,14 @@ export interface FalModelDef {
    * and a prompt without it gets the base model. It is prepended for you.
    */
   lora?: FalLora;
+  /**
+   * What the endpoint returns, which is not the same question as `input`.
+   *
+   * A video is reached through fal's queue and polled for minutes where an
+   * image is one synchronous call, so the run path dispatches on this and a
+   * node's picker offers only the endpoints that make what it makes.
+   */
+  output: "image" | "video";
   /**
    * True when this model returns vector art rather than a raster.
    *
@@ -820,19 +825,12 @@ export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   join: JOIN,
   palette: PALETTE,
   prompt: PROMPT,
+  video: VIDEO,
 };
 
+/** Read off the registry: a restated list disagrees the moment one is added. */
 export const isNodeTypeId = (value: unknown): value is NodeTypeId =>
-  value === "batch" ||
-  value === "composite" ||
-  value === "describe" ||
-  value === "element" ||
-  value === "generate" ||
-  value === "icon" ||
-  value === "iterate" ||
-  value === "join" ||
-  value === "palette" ||
-  value === "prompt";
+  typeof value === "string" && Object.hasOwn(NODE_TYPES, value);
 
 export const nodeTypeFor = (value: unknown): NodeType | null =>
   isNodeTypeId(value) ? NODE_TYPES[value] : null;

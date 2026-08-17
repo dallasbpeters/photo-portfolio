@@ -1,4 +1,5 @@
 import type { FalModelInput, RunState } from "../config/nodeTypes.js";
+import type { TextStyle } from "../config/textStyle.js";
 
 export type { RunState } from "../config/nodeTypes.js";
 
@@ -201,6 +202,16 @@ export interface BoardItem {
   /** Why the last run failed, in terms the owner can act on. */
   runError: string | null;
   runState: RunState | null;
+  /**
+   * How a `text` or `note` item's words are set: family, weight, colour and the
+   * rest. Optional rather than required because an item built by a tool, or
+   * returned by an older deploy, simply has none — and null on every property
+   * renders exactly what the board rendered before any of this existed.
+   *
+   * The vocabulary and the property → CSS mapping live in config/textStyle.ts,
+   * which the API shares, so both sides agree on what a stored style means.
+   */
+  textStyle?: TextStyle | null;
   thumbUrl: string | null;
   width: number;
   x: number;
@@ -263,6 +274,42 @@ export interface Board {
  * `description` is the substance rather than a note about it — it travels down
  * the wire into the prompt of whatever the element feeds.
  */
+/**
+ * One asset in a collection.
+ *
+ * Not a `Photo`: it has no category, no EXIF and no published state, because it
+ * is material rather than portfolio. `kind` is carried rather than guessed from
+ * the address — a signed URL may have no extension, and a clip rendered into an
+ * <img> is a broken icon for an asset that works.
+ */
+export interface CollectionItem {
+  alt: string | null;
+  height: number | null;
+  id: string;
+  kind: "image" | "video";
+  title: string | null;
+  url: string;
+  width: number | null;
+}
+
+/**
+ * A named set of assets, shared by the boards and the pages.
+ *
+ * `items` arrives when one collection is read and is absent from the list,
+ * which sends `itemCount` instead — the list draws a card with a number on it,
+ * and fetching every item to reach that number is the whole library.
+ */
+export interface Collection {
+  coverUrl: string | null;
+  createdAt: string;
+  description: string | null;
+  id: string;
+  itemCount?: number;
+  items?: CollectionItem[];
+  name: string;
+  updatedAt: string;
+}
+
 export interface Element {
   /** The key image: what the panel shows, and what a wired element hands over. */
   coverUrl: string | null;
@@ -297,6 +344,8 @@ export interface AiModel {
     scale: number | null;
     trigger: string | null;
   } | null;
+  /** What it returns. A video endpoint is submitted to a queue and polled. */
+  output: "image" | "video";
   sortOrder: number;
   updatedAt: string;
   /** True when the model returns vector art rather than a raster. */

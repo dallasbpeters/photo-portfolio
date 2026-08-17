@@ -53,10 +53,15 @@ ALTER TABLE models
   ADD CONSTRAINT models_input
   CHECK (input IN ('prompt', 'image', 'prompt-and-image', 'prompt-or-image'));
 
+-- Widened here rather than only in a later patch. Every patch re-runs on every
+-- migration, so this is not a one-time delta — it is the current definition, and
+-- an older narrower one here fails against rows a later patch legitimately
+-- wrote. `start_image_url` is Kling v3's name for its source picture; see
+-- db/patches/028_video_model_params.sql for why one family disagrees with itself.
 ALTER TABLE models DROP CONSTRAINT IF EXISTS models_image_param;
 ALTER TABLE models
   ADD CONSTRAINT models_image_param
-  CHECK (image_param IN ('image_url', 'image_urls'));
+  CHECK (image_param IN ('image_url', 'image_urls', 'start_image_url'));
 
 -- The default model's shape is what the API's "auto" behaviour is built on;
 -- letting it be edited would make the fallback mean something different from
