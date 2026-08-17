@@ -7,9 +7,18 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-# Run formatter, capturing the exit code so we can still re-stage and report
+# Run the formatter over the staged files ONLY.
+#
+# `ultracite fix` with no arguments lints the whole tree, which meant an
+# unrelated file that happened to be failing — a hand-edited SVG, a generated
+# artefact — blocked every commit in the repo until it was fixed, however far it
+# sat from the change being made. The staged list was already being gathered
+# here; it just was not being passed on.
+#
+# NUL-delimited so a path containing a space is one argument, not two.
 FORMAT_EXIT_CODE=0
-pnpm dlx ultracite fix || FORMAT_EXIT_CODE=$?
+printf '%s\n' "$STAGED_FILES" | tr '\n' '\0' |
+  xargs -0 pnpm dlx ultracite fix || FORMAT_EXIT_CODE=$?
 
 # Re-stage files that were already staged
 echo "$STAGED_FILES" | while IFS= read -r file; do

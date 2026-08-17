@@ -74,7 +74,6 @@ export function ResultImages({
             // to a dozen others: a clip that plays sound on hover is the
             // wrong kind of surprise. `playsInline` keeps iOS from taking it
             // fullscreen the moment it starts.
-            // biome-ignore lint/a11y/noNoninteractiveElementInteractions: dragstart is the browser's own drag affordance, the same one the image beside it uses
             <video
               className="h-auto w-full cursor-grab rounded border border-board-ink/10 object-contain"
               controls
@@ -170,7 +169,6 @@ export function ResultImages({
                     // zero, several browsers show a blank canvas until the
                     // video is played — which is what a strip of mp4s in an
                     // <img> looked like: broken icons where pictures should be.
-                    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: native drag, as on the image branch; the surrounding button carries the keyboard-reachable action
                     <video
                       className="size-12 cursor-grab object-cover"
                       draggable

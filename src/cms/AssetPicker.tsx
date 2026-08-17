@@ -49,7 +49,7 @@ export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-6">
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: the backdrop is a dismiss target, and Escape above is the keyboard equivalent */}
+      {/* The backdrop dismisses; Escape above is the keyboard equivalent. */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -66,7 +66,6 @@ export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
           <input
             // The field the dialog opens on: this is a search-first list, and
             // reaching for the mouse to type is the wrong first move.
-            // biome-ignore lint/a11y/noAutofocus: a search dialog's whole purpose is the query
             autoFocus
             className="min-w-0 flex-1 rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
             onChange={(e) => setQuery(e.target.value)}

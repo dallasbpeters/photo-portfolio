@@ -361,8 +361,8 @@ export function ToolPicker({
           size={14}
         />
         <input
-          // biome-ignore lint/a11y/noAutofocus: the picker opens in response to
-          // an explicit gesture and typing is how it is meant to be driven.
+          // Autofocused: the picker opens in response to an explicit gesture,
+          // and typing is how it is meant to be driven.
           aria-activedescendant={active >= 0 ? rowId(active) : undefined}
           aria-controls={listId}
           aria-expanded

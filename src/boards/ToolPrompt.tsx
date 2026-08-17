@@ -73,8 +73,8 @@ export function ToolPrompt({
         {tool.label}
       </span>
       <textarea
-        // biome-ignore lint/a11y/noAutofocus: the field is opened by an explicit
-        // pick, and typing is the only reason it appeared.
+        // Autofocused: the field is opened by an explicit pick, and typing is
+        // the only reason it appeared.
         aria-label={`Prompt for ${tool.label}`}
         autoFocus
         className="w-full resize-none rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none placeholder:text-board-ink/35 focus:border-board-ink/45"
