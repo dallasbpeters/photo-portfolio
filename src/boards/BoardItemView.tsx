@@ -10,6 +10,7 @@ import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
 import type { ResizeHandle } from "./alignmentGuides";
 import { BoardTextTools } from "./BoardTextTools";
+import { BoardToolBar } from "./BoardToolBar";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
 import { ItemMedia } from "./ItemMedia";
@@ -28,6 +29,7 @@ import {
   type ShaderConfig,
   type ShaderLayer,
 } from "./shaderConfig";
+import type { BoardTools } from "./tools/useBoardTools";
 import { useTextFont } from "./useTextFont";
 
 /**
@@ -119,6 +121,8 @@ interface BoardItemViewProps {
   readOnly?: boolean;
   /** Current zoom, so chrome can cancel it out and stay a constant size. */
   scale: number;
+  /** Runs tools on this item. One object: the bar needs both halves. */
+  tools?: BoardTools;
   /** The words arriving on this item's prompt input, if any. */
   wiredPrompt?: string | null;
 }
@@ -664,6 +668,7 @@ export function BoardItemView({
   isEditing,
   isSelected,
   isSoleSelected = false,
+  tools,
   onBeginEdit,
   item,
   onConfigChange,
@@ -847,6 +852,17 @@ export function BoardItemView({
           <HugeiconsIcon icon={Delete02Icon} size={14} />
         </button>
       )}
+
+      {/* Text has its own panel, below; everything else gets the tools. */}
+      {isSoleSelected && !(isWritable || readOnly) && tools ? (
+        <BoardToolBar
+          anchor={boxRef}
+          chromeScale={chromeScale}
+          isRunning={tools.isRunning(item.id)}
+          item={item}
+          onRun={(tool, prompt) => tools.run(item, tool, prompt)}
+        />
+      ) : null}
 
       {isSoleSelected && isWritable && !readOnly ? (
         <BoardTextTools

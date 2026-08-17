@@ -1373,6 +1373,7 @@ export function BoardCanvas({
               previewImages={previewImagesFor(item)}
               readOnly={readOnly}
               scale={view.viewport.scale}
+              tools={readOnly ? undefined : tools}
               wiredPrompt={wiredTextFor(item.id)}
             />
           ))}

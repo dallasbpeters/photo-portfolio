@@ -8,13 +8,7 @@ import {
   TextAlignRightIcon,
   TextItalicIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import {
-  type RefObject,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type RefObject, useState } from "react";
 import { MAX_FONT_SIZE, MIN_FONT_SIZE } from "../../config/canvas.js";
 import {
   MAX_LETTER_SPACING,
@@ -50,7 +44,8 @@ import {
 import type { BoardItem } from "../types";
 import { ColorWell } from "./ColorWell";
 import { isTransparent, NO_FILL } from "./drawing";
-import { PANEL_GAP, type PanelPlacement, placePanel } from "./panelPlacement";
+import { PANEL_GAP } from "./panelPlacement";
+import { useAnchoredPanel } from "./useAnchoredPanel";
 import { useTextFont } from "./useTextFont";
 
 /**
@@ -193,42 +188,10 @@ export function BoardTextTools({
   onPatch,
 }: BoardTextToolsProps) {
   const [showMore, setShowMore] = useState(false);
-  const [placement, setPlacement] = useState<PanelPlacement>("above");
-  const panelRef = useRef<HTMLDivElement>(null);
+  const { panelRef, placement } = useAnchoredPanel(anchor);
   const style = item.textStyle ?? null;
 
   useTextFont(style);
-
-  const decide = useCallback(() => {
-    const anchored = anchor.current;
-    const panel = panelRef.current;
-    if (anchored && panel) {
-      setPlacement(
-        placePanel(anchored.getBoundingClientRect().top, panel.offsetHeight)
-      );
-    }
-  }, [anchor]);
-
-  // Every render is a chance the item moved under the top edge — it is dragged,
-  // resized, zoomed, or the panel itself grows when the extra controls open —
-  // and the measurement is read off the DOM, not off any one of those props.
-  useLayoutEffect(() => {
-    decide();
-  });
-
-  useLayoutEffect(() => {
-    // Re-decided on the two gestures that move an item under the top edge
-    // without anything re-rendering: a pan and a wheel zoom both write the
-    // layer transform straight to the DOM, so neither arrives here as a prop.
-    window.addEventListener("pointerup", decide);
-    window.addEventListener("resize", decide);
-    window.addEventListener("wheel", decide, { passive: true });
-    return () => {
-      window.removeEventListener("pointerup", decide);
-      window.removeEventListener("resize", decide);
-      window.removeEventListener("wheel", decide);
-    };
-  }, [decide]);
 
   if (!(item.kind === "text" || item.kind === "note")) {
     return null;
