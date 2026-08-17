@@ -37,6 +37,16 @@ export const MODEL_IMAGE_PARAMS = [
   "video_url",
 ] as const;
 
+/**
+ * What an endpoint hands back.
+ *
+ * Not cosmetic, and not derivable from `input`: it decides which door a run
+ * goes through. An image is fetched synchronously through fal.run, a clip is
+ * submitted to the queue and polled, because a clip takes minutes and neither
+ * the request timeout nor the serverless ceiling will wait.
+ */
+export const MODEL_OUTPUTS = ["image", "video"] as const;
+
 /** A fal model id or a namespaced "lora/..." one — never an essay. */
 export const MAX_MODEL_ID = 120;
 

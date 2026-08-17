@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { MODEL_IMAGE_PARAMS, MODEL_INPUTS } from "../../config/models.js";
-import { isModelImageParam, isModelInput, rowToModelDef } from "./models.js";
+import {
+  MODEL_IMAGE_PARAMS,
+  MODEL_INPUTS,
+  MODEL_OUTPUTS,
+} from "../../config/models.js";
+import {
+  isModelImageParam,
+  isModelInput,
+  readModelFields,
+  rowToModelDef,
+} from "./models.js";
 
 /**
  * What a model row is allowed to say it consumes.
@@ -92,5 +101,41 @@ describe("the vocabulary lists", () => {
       "start_image_url",
       "video_url",
     ]);
+  });
+});
+
+describe("what a model says it returns", () => {
+  /**
+   * The column that decides which door a run goes through, and the one the
+   * admin could not set. `output` defaulted to 'image', nothing wrote it, and
+   * both SQL statements left it out of their RETURNING — so a video endpoint
+   * added by hand was refused by the Video node with "makes pictures, not
+   * video", quoting the row that had just been created for it.
+   */
+  const fields = (body: Record<string, unknown>) =>
+    readModelFields(
+      { id: "fal-ai/x", input: "video", label: "X", ...body },
+      true
+    );
+
+  it("keeps a video endpoint's own answer", () => {
+    const patch = fields({ output: "video" });
+    expect(typeof patch).not.toBe("string");
+    expect(typeof patch === "string" ? null : patch.output).toBe("video");
+  });
+
+  it("defaults a new model to image, as the column always has", () => {
+    const patch = fields({});
+    expect(typeof patch === "string" ? null : patch.output).toBe("image");
+  });
+
+  it("refuses anything that is neither", () => {
+    // The check constraint permits exactly two values; a third would be written
+    // and then rejected by Postgres with a message about a constraint name.
+    expect(typeof fields({ output: "audio" })).toBe("string");
+  });
+
+  it("offers both to the picker", () => {
+    expect([...MODEL_OUTPUTS]).toEqual(["image", "video"]);
   });
 });

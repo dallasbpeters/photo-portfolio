@@ -369,10 +369,12 @@ export interface AiModelLora {
 export interface AiModelInput {
   enabled?: boolean;
   id?: string;
-  imageParam?: "image_url" | "image_urls";
+  imageParam?: "image_url" | "image_urls" | "start_image_url" | "video_url";
   input?: FalModelInput;
   label?: string;
   lora?: AiModelLora | null;
+  /** What the endpoint returns. Decides whether a run goes through the queue. */
+  output?: "image" | "video";
   sortOrder?: number;
   vector?: boolean;
 }

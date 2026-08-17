@@ -14,6 +14,7 @@ import {
   MAX_MODEL_LORA_TRIGGER,
   MODEL_IMAGE_PARAMS,
   MODEL_INPUTS,
+  MODEL_OUTPUTS,
   PROTECTED_MODEL_ID,
 } from "../../../config/models";
 import type { FalModelInput } from "../../../config/nodeTypes";
@@ -62,6 +63,7 @@ export function ModelForm({ editing, onCancel, onSaved }: ModelFormProps) {
   const [input, setInput] = useState<FalModelInput>(
     editing?.input ?? "prompt-or-image"
   );
+  const [output, setOutput] = useState(editing?.output ?? "image");
   const [imageParam, setImageParam] = useState(
     editing?.imageParam ?? "image_url"
   );
@@ -96,6 +98,7 @@ export function ModelForm({ editing, onCancel, onSaved }: ModelFormProps) {
       imageParam,
       input,
       label: label.trim(),
+      output,
       sortOrder: sortOrder.trim() === "" ? undefined : Number(sortOrder),
       vector,
     };
@@ -213,6 +216,38 @@ export function ModelForm({ editing, onCancel, onSaved }: ModelFormProps) {
                   </SelectGroup>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className={labelClass} htmlFor="model-output">
+                Returns
+              </Label>
+              <Select
+                data-size="md"
+                onValueChange={(value) => {
+                  if (value !== null) {
+                    setOutput(value as "image" | "video");
+                  }
+                }}
+                value={output}
+              >
+                <SelectTrigger id="model-output">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {MODEL_OUTPUTS.map((kind) => (
+                      <SelectItem key={kind} value={kind}>
+                        {kind === "video" ? "Video" : "Image"}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <p className={hintClass}>
+                A video endpoint is reached through fal's queue rather than
+                fal.run, because a clip takes minutes. A Video node offers only
+                these; a Generate node offers only the others.
+              </p>
             </div>
             <div className="space-y-1">
               <Label className={labelClass} htmlFor="model-image-param">

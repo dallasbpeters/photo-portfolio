@@ -47,6 +47,7 @@ async function handlePatch(
     UPDATE models
     SET label = COALESCE(${patch.label ?? null}, label),
         input = COALESCE(${patch.input ?? null}, input),
+        output = COALESCE(${patch.output ?? null}, output),
         image_param = COALESCE(${patch.imageParam ?? null}, image_param),
         vector = COALESCE(${patch.vector ?? null}, vector),
         enabled = COALESCE(${patch.enabled ?? null}, enabled),
@@ -73,7 +74,7 @@ async function handlePatch(
         END,
         updated_at = NOW()
     WHERE id = ${id}
-    RETURNING created_at, enabled, id, image_param, input, label,
+    RETURNING created_at, enabled, id, image_param, input, label, output,
       lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
       sort_order, updated_at, vector
   `) as ModelRow[];
