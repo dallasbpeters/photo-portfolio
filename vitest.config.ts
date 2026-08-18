@@ -33,6 +33,16 @@ export default defineConfig({
     // shaping decides what a run costs and whether a wired style is sent at
     // all, and it fails silently when it is wrong. Those files touch neither
     // the database nor the network, so they run in this browser like any other.
-    include: ["api/**/*.test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+    // config/ is here for the same reason api/ is: these modules are the shared
+    // truth both the browser and the functions read, they are dependency-free by
+    // construction, and the arithmetic in them — colour distance deciding what
+    // counts as off-brand — is exactly the kind that fails quietly and in the
+    // direction nobody checks.
+    include: [
+      "api/**/*.test.ts",
+      "config/**/*.test.ts",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+    ],
   },
 });
