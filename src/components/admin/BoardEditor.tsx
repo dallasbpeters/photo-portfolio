@@ -25,7 +25,6 @@ import { useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
 import { useVideoNode } from "../../boards/useVideoNode";
 import type { BoardComment } from "../../services/comments";
-import { authStorage } from "../../services/portfolioService";
 import type {
   Board,
   BoardItem,
@@ -122,12 +121,6 @@ export function BoardEditor({
    * Publishing mints the slug server-side, so the link only exists once the
    * response comes back — there is nothing to show optimistically.
    */
-  // Read once: the signed-in admin cannot change while the board is open.
-  const [displayName] = useState(() => {
-    const user = authStorage.getUser();
-    return user ? user.displayName : "You";
-  });
-
   // A saved item is keyed by its id; an unsaved one by the key it was created
   // with. Both survive the new object that every edit produces.
   const keyOf = useCallback((item: BoardItem) => item.id, []);
@@ -136,6 +129,7 @@ export function BoardEditor({
     attachSource,
     change,
     close,
+    displayName,
     changeConfig,
     changeWires,
     detachSource,
@@ -193,7 +187,8 @@ export function BoardEditor({
   // A video cannot travel the graph runner's one-request path; see useVideoNode.
   const runNode = useVideoNode(boardId, items, wires, change, graphRun.runNode);
 
-  const { placeRecipe, recipes, saveRecipe } = useRecipes({
+  const { placeRecipe, recipes, saveRecipe, uses } = useRecipes({
+    board,
     boardId,
     dropPoint,
     flush: flushBeforeRun,
@@ -382,6 +377,7 @@ export function BoardEditor({
             onSendVersions={sendVersions}
             onVectorize={(itemId) => void vectorizeItem(itemId)}
             onWiresChange={changeWires}
+            recipeUses={uses}
             viewCentreRef={viewCentreRef}
             wires={wires}
           />

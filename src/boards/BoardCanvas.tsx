@@ -20,6 +20,16 @@ import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import { CanvasChrome } from "./canvas/CanvasChrome";
 import {
+  RecipeGroupView,
+  type RecipeGroupViewProps,
+} from "./canvas/RecipeGroupView";
+import {
+  previewImagesFor,
+  previewTextFor,
+  wiredImageFor,
+  wiredTextFor,
+} from "./canvas/wiredPreviews";
+import {
   boundsOf,
   type DrawingConfig,
   type DrawTool,
@@ -29,14 +39,7 @@ import {
   toUnitSpace,
 } from "./drawing";
 import { contentBounds, topmostAt } from "./hitTest";
-import {
-  BOARD_IMAGE_TYPE,
-  iteratedTextOf,
-  outputImageOf,
-  outputImagesOf,
-  outputListOf,
-  outputTextOf,
-} from "./itemOutput";
+import { BOARD_IMAGE_TYPE } from "./itemOutput";
 import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
 import { outputPointFor } from "./portGeometry";
@@ -212,6 +215,8 @@ interface BoardCanvasProps {
    * were made, which is most of the reason to publish one.
    */
   readOnly?: boolean;
+  /** The recipe groups on this board, so their outlines can be drawn. */
+  recipeUses?: RecipeGroupViewProps["uses"];
   /**
    * Filled with a getter for the middle of what is currently on screen.
    *
@@ -294,6 +299,7 @@ export function BoardCanvas({
   onRun,
   onSaveElement,
   onSaveRecipe,
+  recipeUses,
   boardId,
   onDrawTool,
   onEditImage,
@@ -625,84 +631,12 @@ export function BoardCanvas({
   const wiring = useWireGesture({ items, onConnect: connect, wires });
 
   /** Inputs already fed by a wire, so a node can say its prompt is wired in. */
+  /** The graph the preview helpers read. One object, so they share an identity. */
+  const graph = { items, wires };
+
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
   );
-
-  /**
-   * What a node that composes text will send, read before it runs. Combine
-   * answers with one string, Iterate with one per value — seeing "3 prompts"
-   * and what they say is the only way to know a batch is set up right.
-   */
-  /** The pictures a Batch node holds. Only that node: resolving every image
-   * behind every node on every render walks the graph once per node. */
-  const previewImagesFor = (item: BoardItem): string[] | undefined =>
-    item.nodeType === "batch"
-      ? outputImagesOf(item, { items, wires })
-      : undefined;
-
-  const previewTextFor = (item: BoardItem): string | null => {
-    if (item.nodeType === "join" || item.nodeType === "palette") {
-      return outputTextOf(item, { items, wires });
-    }
-    if (item.nodeType !== "iterate") {
-      return null;
-    }
-    const prompts = iteratedTextOf(item, { items, wires });
-    if (prompts.length === 0) {
-      return null;
-    }
-    return prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
-  };
-
-  /**
-   * The words arriving on an item's prompt input, so the node can show them.
-   *
-   * Resolved here because only the canvas holds the wires; the node itself
-   * knows nothing about what feeds it.
-   */
-  const wiredTextFor = (itemId: string): string | null => {
-    // Every wire on the prompt port, kept apart: each contributes a part of
-    // each run, and a wire carrying several values makes several runs. Mirrors
-    // jobsFor, so what the node shows is what the node will send.
-    const perWire = wires
-      .filter((w) => w.targetItemId === itemId && w.targetPort === "prompt")
-      .map((w) => items.find((i) => i.id === w.sourceItemId))
-      .map((source) => outputListOf(source ?? null, { items, wires }))
-      .map((list) => list.filter((text) => text.trim()))
-      .filter((list) => list.length > 0);
-
-    if (perWire.length === 0) {
-      return null;
-    }
-    const rows = Math.max(...perWire.map((list) => list.length));
-    const prompts = Array.from({ length: rows }, (_, row) =>
-      perWire.map((list) => list[row % list.length] ?? "").join(", ")
-    );
-    return rows === 1
-      ? (prompts[0] ?? null)
-      : prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
-  };
-
-  /**
-   * The picture feeding an item's image input, for the kinds that render one
-   * themselves rather than being run on the server.
-   *
-   * A shader restyles its input live in the browser, so the URL has to reach
-   * the component; nothing is written to the item, which keeps the wire the
-   * single source of truth for what is being shown.
-   */
-  const wiredImageFor = (itemId: string): string | null => {
-    const wire = wires.find(
-      (candidate) =>
-        candidate.targetItemId === itemId && candidate.targetPort === "image"
-    );
-    if (!wire) {
-      return null;
-    }
-    const source = items.find((item) => item.id === wire.sourceItemId);
-    return source ? outputImageOf(source, items) : null;
-  };
 
   /**
    * Removes an item and everything attached to it.
@@ -1293,6 +1227,13 @@ export function BoardCanvas({
               image. */}
           <StrokePreview points={stroke} style={drawStyle} tool={drawTool} />
 
+          {/* Behind the items, in canvas units: a group is part of the
+              arrangement rather than chrome, so it zooms and pans with the
+              nodes it describes. */}
+          {recipeUses && recipeUses.length > 0 ? (
+            <RecipeGroupView items={items} uses={recipeUses} />
+          ) : null}
+
           {/* Drawn in canvas units inside the transform, so it stays exactly
               under the pointer at any zoom. */}
           {marquee ? (
@@ -1311,7 +1252,7 @@ export function BoardCanvas({
             <BoardItemView
               commentCount={openCommentCounts.get(item.id) ?? 0}
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
-              imageUrl={wiredImageFor(item.id)}
+              imageUrl={wiredImageFor(item.id, graph)}
               index={index}
               isEditing={!readOnly && editingId === item.id}
               isSelected={!readOnly && selection.has(item.id)}
@@ -1353,7 +1294,7 @@ export function BoardCanvas({
               onSendVersions={
                 onSendVersions ? () => onSendVersions(item.id) : undefined
               }
-              outputText={previewTextFor(item)}
+              outputText={previewTextFor(item, graph)}
               ports={
                 readOnly
                   ? undefined
@@ -1371,11 +1312,11 @@ export function BoardCanvas({
                       onPortLeave: wiring.leavePort,
                     }
               }
-              previewImages={previewImagesFor(item)}
+              previewImages={previewImagesFor(item, graph)}
               readOnly={readOnly}
               scale={view.viewport.scale}
               tools={readOnly ? undefined : tools}
-              wiredPrompt={wiredTextFor(item.id)}
+              wiredPrompt={wiredTextFor(item.id, graph)}
             />
           ))}
         </div>

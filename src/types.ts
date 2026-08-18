@@ -193,6 +193,14 @@ export interface BoardItem {
 
   photoId: string | null;
   /**
+   * Which recipe group this node belongs to, or null for everything else.
+   *
+   * Set once when a recipe is placed and never by the canvas — the board save
+   * deliberately cannot write it, so a debounced autosave can never detach a
+   * node from its group.
+   */
+  recipeUseId?: string | null;
+  /**
    * The last successful run's output.
    *
    * Written only by the run endpoint, never by the board save — a debounced
@@ -256,6 +264,19 @@ export interface Board {
   itemCount?: number;
   /** On detail responses only. */
   items?: BoardItem[];
+  /**
+   * The recipe groups on this board and their versions.
+   *
+   * Admin detail responses only. A visitor sees the nodes, which are ordinary
+   * items; which library entry they came from is the owner's working state.
+   */
+  recipeUses?: {
+    id: string;
+    latestVersion: number | null;
+    pinnedVersion: number;
+    recipeId: string | null;
+    recipeName: string | null;
+  }[];
   slug: string | null;
   /** Admin detail responses only — never sent to a published board's reader. */
   sources?: BoardSource[];

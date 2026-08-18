@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   type Recipe,
   type RecipeUse,
   recipesApi,
 } from "../../../services/recipes";
-import type { BoardItem, BoardWire } from "../../../types";
+import type { Board, BoardItem, BoardWire } from "../../../types";
 
 /**
  * Saving a way of working, and putting it back on a board.
@@ -26,6 +26,8 @@ import type { BoardItem, BoardWire } from "../../../types";
  */
 
 export interface BoardRecipeDeps {
+  /** The loaded board. Its recipeUses are the server's list for this board. */
+  board: Board | null;
   boardId: string;
   /** Where a recipe lands when it is placed from the library. */
   dropPoint: (
@@ -41,9 +43,22 @@ export interface BoardRecipeDeps {
 }
 
 export const useRecipes = (deps: BoardRecipeDeps) => {
-  const { boardId, dropPoint, flush, items, setItems, setWires } = deps;
+  const { board, boardId, dropPoint, flush, items, setItems, setWires } = deps;
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [uses, setUses] = useState<RecipeUse[]>([]);
+  /**
+   * Groups placed in this session, not yet in the board's own list.
+   *
+   * Placing writes rows and returns them; it does not reload the board, because
+   * a reload would discard anything dragged while the request was in flight. So
+   * the outline has to come from both places until the next load.
+   */
+  const [placed, setPlaced] = useState<RecipeUse[]>([]);
+
+  const uses = useMemo(() => {
+    const fromBoard = board?.recipeUses ?? [];
+    const known = new Set(fromBoard.map((use) => use.id));
+    return [...fromBoard, ...placed.filter((use) => !known.has(use.id))];
+  }, [board, placed]);
 
   const refresh = useCallback(async () => {
     try {
@@ -100,19 +115,19 @@ export const useRecipes = (deps: BoardRecipeDeps) => {
       await flush();
       const at = dropPoint(items, 640, 480);
       try {
-        const placed = await recipesApi.place(recipeId, {
+        const result = await recipesApi.place(recipeId, {
           boardId,
           x: at.x,
           y: at.y,
         });
-        setItems((current) => [...current, ...placed.items]);
-        setWires((current) => [...current, ...placed.wires]);
-        setUses((current) => [...current, placed.recipeUse]);
-        const open = placed.declaredInputs.length;
+        setItems((current) => [...current, ...result.items]);
+        setWires((current) => [...current, ...result.wires]);
+        setPlaced((current) => [...current, result.recipeUse]);
+        const open = result.declaredInputs.length;
         toast.success(
           open === 0
-            ? `Placed “${placed.recipeUse.recipeName}” — ready to run`
-            : `Placed “${placed.recipeUse.recipeName}” — wire ${open} input${
+            ? `Placed “${result.recipeUse.recipeName}” — ready to run`
+            : `Placed “${result.recipeUse.recipeName}” — wire ${open} input${
                 open === 1 ? "" : "s"
               } to run it`
         );
@@ -125,5 +140,5 @@ export const useRecipes = (deps: BoardRecipeDeps) => {
     [boardId, dropPoint, flush, items, setItems, setWires]
   );
 
-  return { placeRecipe, recipes, refresh, saveRecipe, setUses, uses };
+  return { placeRecipe, recipes, refresh, saveRecipe, uses };
 };

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { DrawTool } from "../../../boards/drawing";
 import type { useBoardHistory } from "../../../boards/useBoardHistory";
 import type { BoardComment } from "../../../services/comments";
 import { commentsApi } from "../../../services/comments";
 import {
+  authStorage,
   boardsApi,
   portfolioService,
 } from "../../../services/portfolioService";
@@ -337,6 +338,12 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
       ? `${window.location.origin}/board/${board.slug}`
       : null;
 
+  // Read once: the signed-in admin cannot change while the board is open.
+  const [displayName] = useState(() => {
+    const user = authStorage.getUser();
+    return user ? user.displayName : "You";
+  });
+
   /**
    * Leaves the board, but not before its work is safe.
    *
@@ -358,6 +365,7 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
     changeWires,
     close,
     detachSource,
+    displayName,
     pending,
     publicUrl,
     publish,
