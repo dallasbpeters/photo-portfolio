@@ -50,6 +50,7 @@ import { useBoardRun } from "./boardEditor/useBoardRun";
 import { useBoardUploads } from "./boardEditor/useBoardUploads";
 import { useBoardVectorTools } from "./boardEditor/useBoardVectorTools";
 import { useDropPoint } from "./boardEditor/useDropPoint";
+import { useRecipes } from "./boardEditor/useRecipes";
 
 /**
  * Full-screen board editor.
@@ -134,6 +135,7 @@ export function BoardEditor({
   const {
     attachSource,
     change,
+    close,
     changeConfig,
     changeWires,
     detachSource,
@@ -190,6 +192,15 @@ export function BoardEditor({
 
   // A video cannot travel the graph runner's one-request path; see useVideoNode.
   const runNode = useVideoNode(boardId, items, wires, change, graphRun.runNode);
+
+  const { placeRecipe, recipes, saveRecipe } = useRecipes({
+    boardId,
+    dropPoint,
+    flush: flushBeforeRun,
+    items,
+    setItems,
+    setWires,
+  });
 
   const {
     addElement,
@@ -266,13 +277,6 @@ export function BoardEditor({
       setWires,
     });
 
-  const close = async () => {
-    if (isDirty) {
-      await save();
-    }
-    onClose();
-  };
-
   return (
     <ModelsProvider>
       {/* `text-board-ink` establishes the board's own writing color for
@@ -307,7 +311,7 @@ export function BoardEditor({
             isPublishing={isPublishing}
             isRunning={graphRun.isRunning}
             onCancelRun={() => graphRun.cancel()}
-            onClose={() => void close()}
+            onClose={() => void close(onClose)}
             onPublish={() => void publish(!board?.isPublic)}
             onRun={() => void graphRun.runBoard()}
             onToggleComments={() => setShowComments((open) => !open)}
@@ -371,6 +375,7 @@ export function BoardEditor({
             }
             onRun={(itemId, force) => void runNode(itemId, force)}
             onSaveElement={beginElement}
+            onSaveRecipe={(chosen, name) => void saveRecipe(chosen, name)}
             onSelectionChange={setSelectedItem}
             onSendToBack={sendToBack}
             onSendToCanva={openSendToCanva}
@@ -413,6 +418,10 @@ export function BoardEditor({
             <InsertPalette
               onChoose={(action) => {
                 setIsInserting(false);
+                if (action.kind === "recipe") {
+                  void placeRecipe(action.recipeId);
+                  return;
+                }
                 if (action.kind === "writable") {
                   addWritable(action.writable);
                 } else if (action.kind === "frame") {
@@ -428,6 +437,7 @@ export function BoardEditor({
                 }
               }}
               onDismiss={() => setIsInserting(false)}
+              recipes={recipes}
             />
           ) : null}
 

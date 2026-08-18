@@ -36,6 +36,8 @@ export type InsertAction =
   // spelling it again here meant a new node type compiled fine while being
   // impossible to insert.
   | { kind: "node"; nodeType: NodeTypeId }
+  /** A saved way of working, expanded onto the board as real nodes. */
+  | { kind: "recipe"; recipeId: string }
   | { kind: "shader"; name: string }
   | { kind: "writable"; writable: "note" | "text" };
 
@@ -152,12 +154,18 @@ const BASE_ENTRIES: Entry[] = [
 interface InsertPaletteProps {
   onChoose: (action: InsertAction) => void;
   onDismiss: () => void;
+  /** The owner's saved recipes. Empty until any have been kept. */
+  recipes?: { id: string; name: string; nodeCount: number }[];
 }
 
 /** How many shaders to offer before a search narrows them. */
 const SHADER_PREVIEW = 8;
 
-export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
+export function InsertPalette({
+  onChoose,
+  onDismiss,
+  recipes = [],
+}: InsertPaletteProps) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +175,17 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
   }, []);
 
   const entries = useMemo(() => {
+    // Above the shaders and below the built-ins: a recipe is the owner's own
+    // work, so it should be easier to reach than a library of effects, and it
+    // is only ever found by the name they gave it.
+    const saved: Entry[] = recipes.map((recipe) => ({
+      action: { kind: "recipe" as const, recipeId: recipe.id },
+      hint: `recipe saved ${recipe.nodeCount} nodes`,
+      icon: RepeatIcon,
+      label: recipe.name,
+      section: "Recipes",
+    }));
+
     const shaders: Entry[] = ALL_SHADERS.map((shader) => ({
       action: { kind: "shader" as const, name: shader.name },
       hint: `${shader.category} ${shader.description}`,
@@ -179,12 +198,12 @@ export function InsertPalette({ onChoose, onDismiss }: InsertPaletteProps) {
     if (!term) {
       // Unsearched, the full library would bury everything else, so only a
       // taste of it shows until someone types.
-      return [...BASE_ENTRIES, ...shaders.slice(0, SHADER_PREVIEW)];
+      return [...BASE_ENTRIES, ...saved, ...shaders.slice(0, SHADER_PREVIEW)];
     }
-    return [...BASE_ENTRIES, ...shaders].filter((entry) =>
+    return [...BASE_ENTRIES, ...saved, ...shaders].filter((entry) =>
       `${entry.label} ${entry.hint}`.toLowerCase().includes(term)
     );
-  }, [query]);
+  }, [query, recipes]);
 
   // A filtered list is a different list; keeping the old index would leave the
   // highlight on whatever happened to be in that position.

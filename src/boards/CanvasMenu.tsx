@@ -3,6 +3,7 @@ import type { BoardItem, BoardWire } from "../types";
 import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
 import { CollectionPanel } from "./CollectionPanel";
 import { MenuRows } from "./canvasMenu/MenuRows";
+import { RecipeNamePanel } from "./canvasMenu/RecipeNamePanel";
 import { frameBoardTitle, frameSummary } from "./copyToBoard";
 import type { Tool } from "./tools/types";
 
@@ -55,6 +56,8 @@ interface CanvasMenuProps {
   onRunTool?: (item: BoardItem, tool: Tool) => void;
   /** Keeps the selection's pictures in the element library. */
   onSaveElement: (items: BoardItem[]) => void;
+  /** Absent on a board that cannot save one — a visitor, or a read-only view. */
+  onSaveRecipe?: (items: BoardItem[], name: string) => void;
   /** Sends one item to the very back of the stack, above the frames. */
   onSendToBack: (itemId: string) => void;
   /** Sends one item's picture into a Canva design. */
@@ -76,6 +79,7 @@ export function CanvasMenu({
   onOpenInAffinity,
   onRunTool,
   onSaveElement,
+  onSaveRecipe,
   onSendToCanva,
   onSendToBack,
   onVectorize,
@@ -102,6 +106,13 @@ export function CanvasMenu({
     title: string;
   } | null>(null);
 
+  /** Null until "Save as recipe" is chosen; then the selection being named. */
+  const [savingRecipe, setSavingRecipe] = useState<{
+    for: CanvasMenuTarget;
+    items: BoardItem[];
+    name: string;
+  } | null>(null);
+
   /**
    * Null until "Tools…" is chosen; then the item whose tools are on offer.
    * Tagged with its menu for the same reason the name is.
@@ -116,6 +127,7 @@ export function CanvasMenu({
   }
 
   const typing = naming?.for === menu ? naming : null;
+  const namingRecipe = savingRecipe?.for === menu ? savingRecipe : null;
   const collectingNow = collecting?.for === menu ? collecting : null;
   const picked = picking?.for === menu ? picking : null;
 
@@ -136,6 +148,36 @@ export function CanvasMenu({
    * not a way back to the rest of the menu.
    */
   const panel = (() => {
+    if (namingRecipe) {
+      return (
+        <RecipeNamePanel
+          name={namingRecipe.name}
+          nodeCount={
+            namingRecipe.items.filter((item) => item.kind === "op").length
+          }
+          onCancel={onDismiss}
+          onConfirm={(name) => {
+            onSaveRecipe?.(namingRecipe.items, name);
+            // Dismissed immediately: the save outlives this menu, and leaving
+            // it open over the selection hides what was just kept.
+            onDismiss();
+          }}
+          onType={(name) => setSavingRecipe({ ...namingRecipe, name })}
+        />
+      );
+    }
+    if (typing) {
+      return (
+        <NamePanel
+          frame={typing.frame}
+          onCancel={onDismiss}
+          onConfirm={onCopyFrame}
+          onType={(title) => setNaming({ ...typing, title })}
+          summary={frameSummary(typing.frame, items, wires)}
+          title={typing.title}
+        />
+      );
+    }
     if (collectingNow) {
       return (
         <CollectionPanel
@@ -179,6 +221,11 @@ export function CanvasMenu({
       onGroup={onGroup}
       onOpenInAffinity={onOpenInAffinity}
       onSaveElement={onSaveElement}
+      onSaveRecipe={
+        onSaveRecipe
+          ? (chosen) => setSavingRecipe({ for: menu, items: chosen, name: "" })
+          : undefined
+      }
       onSendToBack={onSendToBack}
       onSendToCanva={onSendToCanva}
       onTools={
@@ -202,18 +249,7 @@ export function CanvasMenu({
         className="absolute z-50 w-60 overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
-        {typing ? (
-          <NamePanel
-            frame={typing.frame}
-            onCancel={onDismiss}
-            onConfirm={onCopyFrame}
-            onType={(title) => setNaming({ ...typing, title })}
-            summary={frameSummary(typing.frame, items, wires)}
-            title={typing.title}
-          />
-        ) : (
-          rows
-        )}
+        {rows}
       </div>
     </>
   );

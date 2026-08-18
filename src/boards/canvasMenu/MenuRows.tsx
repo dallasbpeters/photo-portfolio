@@ -10,6 +10,7 @@ import {
   Image01Icon,
   MagicWand01Icon,
   PenTool01Icon,
+  RepeatIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem, BoardWire } from "../../types";
 import { isSvgUrl } from "../affinity";
@@ -263,6 +264,7 @@ export function MenuRows({
   onExport,
   onGroup,
   onSaveElement,
+  onSaveRecipe,
   onOpenInAffinity,
   onSendToCanva,
   onSendToBack,
@@ -280,6 +282,8 @@ export function MenuRows({
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
   onSaveElement: (items: BoardItem[]) => void;
+  /** Absent on a board that cannot save one — a visitor, or a read-only view. */
+  onSaveRecipe?: (items: BoardItem[]) => void;
   onOpenInAffinity?: (itemId: string) => void;
   onSendToCanva?: (item: BoardItem) => void;
   onSendToBack: (itemId: string) => void;
@@ -302,6 +306,11 @@ export function MenuRows({
   const pictures = selection.flatMap((item) =>
     outputImagesOf(item, { items, wires })
   );
+
+  // What a recipe would actually hold. Counted rather than assumed from the
+  // selection length: selecting a node and the reference feeding it is two
+  // things, and only one of them is a step in the way of working.
+  const nodes = selection.filter((item) => item.kind === "op");
 
   return (
     <>
@@ -327,6 +336,23 @@ export function MenuRows({
           count={selection.length}
           onGroup={() => onGroup(selection)}
         />
+      ) : null}
+
+      {/* Offered only when the selection holds something that can run. A
+          recipe is a way of working, so a selection of pinned photographs has
+          no way of working in it to keep. */}
+      {onSaveRecipe && nodes.length > 0 ? (
+        <button
+          className={`${rowClass} border-board-ink/10 border-t`}
+          onClick={() => onSaveRecipe(selection)}
+          type="button"
+        >
+          <HugeiconsIcon aria-hidden icon={RepeatIcon} size={14} />
+          <span>
+            Save {nodes.length === 1 ? "it" : `${nodes.length} nodes`} as a
+            recipe
+          </span>
+        </button>
       ) : null}
 
       {/* Offered only when there is something to keep. An element is its

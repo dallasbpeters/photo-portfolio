@@ -1,5 +1,5 @@
 {
-  "src/boards/BoardCanvas.tsx": 1532,
+  "src/boards/BoardCanvas.tsx": 1460,
   "src/boards/BoardItemView.tsx": 921,
   "src/boards/ShaderControls.tsx": 675,
   "src/components/Admin.tsx": 679,

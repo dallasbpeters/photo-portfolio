@@ -337,11 +337,26 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
       ? `${window.location.origin}/board/${board.slug}`
       : null;
 
+  /**
+   * Leaves the board, but not before its work is safe.
+   *
+   * The debounce means the last second or so has not reached the server, and a
+   * board has its own URL — so coming back to it looks exactly like the work
+   * was saved.
+   */
+  const close = async (onClose: () => void) => {
+    if (isDirty) {
+      await save();
+    }
+    onClose();
+  };
+
   return {
     attachSource,
     change,
     changeConfig,
     changeWires,
+    close,
     detachSource,
     pending,
     publicUrl,
