@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
-import { HEX_COLOUR } from "../../config/nodeTypes.js";
+import { HEX_COLOUR } from "../../config/nodes/palette.js";
 import { ColorWell } from "./ColorWell";
 
 /**

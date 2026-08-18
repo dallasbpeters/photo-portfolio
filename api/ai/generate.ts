@@ -3,7 +3,7 @@ import {
   falModelInput,
   falModelMasks,
   isFalModel,
-} from "../../config/nodeTypes.js";
+} from "../../config/falModels.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";

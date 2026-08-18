@@ -1,5 +1,6 @@
 import { containedBy } from "../../config/graph.js";
-import { DEFAULT_PLACEHOLDER, HEX_COLOUR } from "../../config/nodeTypes.js";
+import { DEFAULT_PLACEHOLDER } from "../../config/nodes/iterate.js";
+import { HEX_COLOUR } from "../../config/nodes/palette.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
 
 /**

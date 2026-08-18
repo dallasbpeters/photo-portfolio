@@ -1,4 +1,5 @@
-import type { FalModelInput, RunState } from "../config/nodeTypes.js";
+import type { FalModelInput } from "../config/falModels.js";
+import type { RunState } from "../config/nodeTypes.js";
 import type { TextStyle } from "../config/textStyle.js";
 
 export type { RunState } from "../config/nodeTypes.js";

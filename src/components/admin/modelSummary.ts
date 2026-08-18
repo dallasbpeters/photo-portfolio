@@ -1,4 +1,4 @@
-import type { FalModelInput } from "../../../config/nodeTypes";
+import type { FalModelInput } from "../../../config/falModels";
 import type { AiModel } from "../../types";
 
 /**

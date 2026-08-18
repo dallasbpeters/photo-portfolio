@@ -8,8 +8,8 @@ import {
   falModelInput,
   falModelLora,
   falModelMasks,
-  HEX_COLOUR,
-} from "../../config/nodeTypes.js";
+} from "../../config/falModels.js";
+import { HEX_COLOUR } from "../../config/nodes/palette.js";
 import { getSql } from "./db.js";
 import { loadModelDefs } from "./models.js";
 import { persistGenerated } from "./persistGenerated.js";

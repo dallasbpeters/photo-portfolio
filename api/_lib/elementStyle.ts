@@ -1,8 +1,6 @@
-import {
-  type FalModelInput,
-  MAX_BATCH_COUNT,
-  type NodeCapability,
-} from "../../config/nodeTypes.js";
+import type { FalModelInput } from "../../config/falModels.js";
+import { MAX_BATCH_COUNT } from "../../config/nodes/limits.js";
+import type { NodeCapability } from "../../config/nodeTypes.js";
 import type { BoardItemRow, BoardWireRow } from "./boards.js";
 
 /**

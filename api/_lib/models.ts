@@ -1,3 +1,8 @@
+import type {
+  FalLora,
+  FalModelDef,
+  FalModelInput,
+} from "../../config/falModels.js";
 import {
   MAX_MODEL_ID,
   MAX_MODEL_LABEL,
@@ -9,11 +14,6 @@ import {
   MODEL_OUTPUTS,
   PROTECTED_MODEL_ID,
 } from "../../config/models.js";
-import type {
-  FalLora,
-  FalModelDef,
-  FalModelInput,
-} from "../../config/nodeTypes.js";
 import { parsePublicHttpUrl, sanitizeText } from "./httpUrl.js";
 
 type Sql = ReturnType<typeof import("./db.js").getSql>;

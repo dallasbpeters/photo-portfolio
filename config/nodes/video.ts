@@ -1,5 +1,5 @@
-import type { NodeType, SettingDef } from "./nodeTypes.js";
-import { OUTPUT_PORT_KEY } from "./ports.js";
+import type { NodeType, SettingDef } from "../nodeTypes.js";
+import { OUTPUT_PORT_KEY } from "../ports.js";
 
 /**
  * Animating a still.

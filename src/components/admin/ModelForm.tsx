@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { FalModelInput } from "../../../config/falModels";
 import {
   MAX_MODEL_LORA_FIELD,
   MAX_MODEL_LORA_SCALE,
@@ -17,7 +18,6 @@ import {
   MODEL_OUTPUTS,
   PROTECTED_MODEL_ID,
 } from "../../../config/models";
-import type { FalModelInput } from "../../../config/nodeTypes";
 import { modelsApi } from "../../services/portfolioService";
 import type { AiModel, AiModelInput } from "../../types";
 import { Button } from "../ui/button";

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getBearerUser } from "../_lib/auth.js";
-import { type BoardRow, rowToBoardDto } from "../_lib/boards.js";
+import { rowToBoardDto } from "../_lib/boardDto.js";
+import type { BoardRow } from "../_lib/boards.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
