@@ -2,24 +2,27 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { MAX_WIRES } from "../../config/canvas.js";
 import { checkWire, type GraphItem, hasCycle } from "../../config/graph.js";
 import { getBearerUser } from "../_lib/auth.js";
+import { rowToBoardDto } from "../_lib/boardDto.js";
 import {
-  type BoardItemRow,
-  type BoardRow,
-  type BoardSourceRow,
-  type BoardWireRow,
   type IncomingItem,
   type IncomingSource,
   type IncomingWire,
   parseIncomingItem,
   parseIncomingSource,
   parseIncomingWire,
-  rowToBoardDto,
+} from "../_lib/boardItemParse.js";
+import type {
+  BoardItemRow,
+  BoardRow,
+  BoardSourceRow,
+  BoardWireRow,
 } from "../_lib/boards.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
 import { slugify } from "../_lib/pages.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
+import { loadRecipeUses, rowToUseDto } from "../_lib/recipeStore.js";
 
 type Sql = ReturnType<typeof getSql>;
 type User = ReturnType<typeof getBearerUser>;
@@ -40,6 +43,7 @@ const loadItems = async (
            i.node_type, i.config, i.result, i.run_state, i.run_error,
            i.text_style,
            i.x, i.y, i.width, i.height, i.z_index, i.created_at,
+           i.recipe_use_id,
            p.url AS photo_url
     FROM board_items i
     LEFT JOIN photos p ON p.id = i.photo_id
@@ -102,13 +106,26 @@ async function handleGet(
   // Wires are the machinery. A visitor gets the results the board arrived at,
   // not the pipeline that produced them.
   const wires = user ? allWires : [];
+  // Admin only, loaded only for an owner: a recipe group's library entry and
+  // whether a newer version exists is working state, not something a published
+  // board owes a visitor. The nodes themselves are ordinary items and travel.
+  const recipeUses = user
+    ? (await loadRecipeUses(sql, board.id)).map(rowToUseDto)
+    : undefined;
   // An anonymous visitor gets the graph but not the upstream error text — see
   // ItemDtoOptions for why the prompt stays and the error does not. Sources are
   // withheld from them entirely by rowToBoardDto.
   return res
     .status(200)
     .json(
-      rowToBoardDto(board, items, wires, { isPublicReader: !user }, sources)
+      rowToBoardDto(
+        board,
+        items,
+        wires,
+        { isPublicReader: !user },
+        sources,
+        recipeUses
+      )
     );
 }
 
