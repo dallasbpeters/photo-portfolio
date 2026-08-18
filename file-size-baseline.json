@@ -4,7 +4,6 @@
   "src/boards/CanvasMenu.tsx": 575,
   "src/boards/ShaderControls.tsx": 675,
   "src/components/Admin.tsx": 679,
-  "src/components/admin/BoardEditor.tsx": 2134,
   "src/components/admin/BoardInsertPanel.tsx": 1200,
   "src/components/admin/DailyChallengePanel.tsx": 743,
   "src/editor/presets.ts": 1316,

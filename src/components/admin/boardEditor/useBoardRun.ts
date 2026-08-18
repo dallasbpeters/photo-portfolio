@@ -1,0 +1,286 @@
+import { useCallback } from "react";
+import { toast } from "sonner";
+import {
+  DEFAULT_FRAME_HEIGHT,
+  DEFAULT_FRAME_WIDTH,
+  DEFAULT_NODE_HEIGHT,
+  DEFAULT_NODE_WIDTH,
+} from "../../../../config/canvas.js";
+import { containedBy } from "../../../../config/graph.js";
+import { FRAME_PAD } from "../../../boards/arrange";
+import { compositeSources, renderComposite } from "../../../boards/composite";
+import { configFromSource } from "../../../boards/elementNode";
+import { maskOf, naturalSizeOf, rasterizeMask } from "../../../boards/mask";
+import { newItemId } from "../../../boards/newItemId";
+import type { PortTarget } from "../../../boards/PortMenu";
+import { portfolioService } from "../../../services/portfolioService";
+import type { BoardItem, BoardWire } from "../../../types";
+import { BLANK_ITEM, PORT_SPAWN_GAP } from "./placement";
+
+/**
+ * What a run needs before it starts, and what it does with what comes back.
+ *
+ * Lifted out of BoardEditor.tsx, which had no room left to grow. Four callbacks
+ * that only make sense together: where a node's results should land, how a
+ * finished run is merged in, how a node created from a port gets wired, and the
+ * flush that has to happen before any of it.
+ *
+ * The flush is the part worth keeping visible. The server runs the *stored*
+ * graph, and the canvas saves on a debounce — so without forcing a save first, a
+ * run reads a board that is up to a second and a bit out of date, and pays for a
+ * picture made from the wrong inputs.
+ *
+ * A finished run is merged into the item rather than reloading the board: the
+ * canvas is the source of truth for everything else while it is open, and a
+ * reload would throw away whatever was dragged during the two minutes the node
+ * was working.
+ */
+export interface BoardRunDeps {
+  items: BoardItem[];
+  /** The latest state, kept in a ref so a callback never reads a stale copy. */
+  pending: React.RefObject<{
+    isDirty: boolean;
+    isLoaded: boolean;
+    items: BoardItem[];
+    wires: BoardWire[];
+  }>;
+  /** `override` lets a caller save items it has only just computed. */
+  save: (override?: {
+    items?: BoardItem[];
+    wires?: BoardWire[];
+  }) => Promise<void>;
+  setIsDirty: (dirty: boolean) => void;
+  setItems: React.Dispatch<React.SetStateAction<BoardItem[]>>;
+  setWires: React.Dispatch<React.SetStateAction<BoardWire[]>>;
+  wires: BoardWire[];
+}
+
+export const useBoardRun = (deps: BoardRunDeps) => {
+  const { items, pending, save, setIsDirty, setItems, setWires, wires } = deps;
+
+  /**
+   * Applies what a run came back with.
+   *
+   * Merged into the item rather than reloading the board: the canvas is the
+   * source of truth for everything else while it is open, and a reload would
+   * throw away whatever was dragged during the two minutes the node was
+   * working. The server stays authoritative — the next load corrects this.
+   */
+  /** The frame, if any, this node has been told to collect its results into. */
+  const collectorFor = useCallback(
+    (itemId: string): string | null =>
+      wires.find(
+        (wire) => wire.sourceItemId === itemId && wire.targetPort === "collect"
+      )?.targetItemId ?? null,
+    [wires]
+  );
+
+  const applyRun = useCallback(
+    (itemId: string, patch: Partial<BoardItem>) => {
+      setItems((current) => {
+        const next = current.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+          const merged = { ...item, ...patch };
+          // Show what was just made. The selection is what a node displays and
+          // what it hands downstream, so leaving it on an older version after a
+          // run means watching a generation finish and seeing nothing change.
+          const versions = merged.result?.history;
+          if (patch.result && Array.isArray(versions) && versions.length > 0) {
+            merged.config = {
+              ...merged.config,
+              selectedVersion: versions.length - 1,
+            };
+          }
+          return merged;
+        });
+
+        // A node wired into a frame has said where its results belong, so a
+        // finished run moves itself there rather than leaving the images piled
+        // on top of whatever produced them.
+        const collector = collectorFor(itemId);
+        if (patch.runState !== "succeeded" || !collector) {
+          return next;
+        }
+        const frame = next.find((item) => item.id === collector);
+        if (!frame) {
+          return next;
+        }
+        // Tiled in arrival order so a batch fills the frame instead of
+        // stacking in one corner. Counted excluding the node being placed, so
+        // it takes the next free slot rather than the one it already holds.
+        const taken = containedBy(frame, next).filter(
+          (item) => item.id !== itemId
+        ).length;
+        return next.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                x: frame.x + FRAME_PAD + (taken % 3) * (item.width + FRAME_PAD),
+                y:
+                  frame.y +
+                  FRAME_PAD +
+                  Math.floor(taken / 3) * (item.height + FRAME_PAD),
+              }
+            : item
+        );
+      });
+    },
+    [collectorFor, setItems]
+  );
+
+  /**
+   * Creates whatever a clicked port should feed, already wired to it.
+   *
+   * Placed to the right of its source rather than at the usual drop point: a
+   * node made from a port belongs beside the thing that feeds it, and a graph
+   * that lays itself out left to right stays readable without being tidied.
+   */
+  const createFromPort = useCallback(
+    (sourceItemId: string, sourcePort: string, target: PortTarget) => {
+      const source = items.find((item) => item.id === sourceItemId);
+      if (!source) {
+        return;
+      }
+      const id = newItemId();
+      const isFrame = target.kind === "frame";
+      const width = isFrame ? DEFAULT_FRAME_WIDTH : DEFAULT_NODE_WIDTH;
+      const height = isFrame ? DEFAULT_FRAME_HEIGHT : DEFAULT_NODE_HEIGHT;
+
+      setItems((current) => [
+        ...current,
+        {
+          ...BLANK_ITEM,
+          ...(isFrame
+            ? { body: "" }
+            : { config: configFromSource(source), runState: "idle" }),
+          height,
+          id,
+          kind: isFrame ? "frame" : "op",
+          nodeType: target.nodeType,
+          width,
+          x: source.x + source.width + PORT_SPAWN_GAP,
+          // Centred on the source, so the wire runs straight rather than
+          // diving to a corner.
+          y: source.y + source.height / 2 - height / 2,
+          z: current.length + 1,
+        } as BoardItem,
+      ]);
+      setWires((current) => [
+        ...current,
+        {
+          id: newItemId(),
+          sourceItemId,
+          sourcePort,
+          targetItemId: id,
+          targetPort: target.inputKey,
+        },
+      ]);
+      setIsDirty(true);
+    },
+    [items, setWires, setIsDirty, setItems]
+  );
+
+  /**
+   * Unsaved work has to reach the server before anything runs.
+   *
+   * The run endpoint resolves a node's inputs from the *stored* graph rather
+   * than from the request, so a wire drawn or a prompt typed in the last second
+   * would otherwise be invisible to it.
+   */
+  const flushBeforeRun = useCallback(async () => {
+    // Masks are rendered here rather than as they are painted. A stroke is one
+    // of many, and uploading a bitmap per stroke would spend a request on every
+    // brush movement — while a run is the first moment the mask has to exist as
+    // a picture. `maskUrl` is cleared whenever the mask changes, so anything
+    // still holding one is already current.
+    const rendered = await Promise.all(
+      pending.current.items.map(async (item) => {
+        const mask = maskOf(item.config);
+        const config = item.config ?? {};
+        if (!(mask && item.imageUrl) || typeof config.maskUrl === "string") {
+          return item;
+        }
+        try {
+          const size = await naturalSizeOf(item.imageUrl);
+          const blob = await rasterizeMask(mask, size);
+          const { url } = await portfolioService.uploadImageFile(
+            new File([blob], "mask.png", { type: "image/png" }),
+            undefined,
+            "boards/masks"
+          );
+          return { ...item, config: { ...config, maskUrl: url } };
+        } catch (err) {
+          // Reported rather than swallowed: without a mask the run would
+          // repaint the whole picture, which looks like the mask being ignored.
+          toast.error(
+            err instanceof Error ? err.message : "Could not prepare the mask"
+          );
+          return item;
+        }
+      })
+    );
+
+    // Composites are rendered here for the same reason masks are: only the
+    // browser knows the arrangement, and a run is the first moment it has to
+    // exist as a file. `compositeUrl` is cleared whenever anything feeding the
+    // node moves — see change() — so one still holding a URL is current.
+    const composed = await Promise.all(
+      rendered.map(async (item) => {
+        if (item.nodeType !== "composite") {
+          return item;
+        }
+        const config = item.config ?? {};
+        if (typeof config.compositeUrl === "string") {
+          return item;
+        }
+        try {
+          const layers = compositeSources(
+            item,
+            pending.current.items,
+            pending.current.wires
+          );
+          const background =
+            typeof config.background === "string"
+              ? config.background
+              : "transparent";
+          const blob = await renderComposite(layers, background);
+          const { url } = await portfolioService.uploadImageFile(
+            new File([blob], "composite.png", { type: "image/png" }),
+            undefined,
+            "boards/composites"
+          );
+          return { ...item, config: { ...config, compositeUrl: url } };
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Could not build the composite"
+          );
+          return item;
+        }
+      })
+    );
+
+    const changed = composed.some(
+      (item, i) => item !== pending.current.items[i]
+    );
+    if (changed) {
+      setItems(composed);
+      // Saved explicitly with these items: the run reads the board from the
+      // database, and React has not re-rendered with them yet.
+      await save({ items: composed });
+      return;
+    }
+    if (pending.current.isDirty) {
+      await save();
+    }
+  }, [
+    save,
+    pending.current.wires,
+    pending.current.items,
+    setItems,
+    pending.current.isDirty,
+  ]);
+
+  return { applyRun, createFromPort, flushBeforeRun };
+};
