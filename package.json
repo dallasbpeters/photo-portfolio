@@ -17,7 +17,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:verify-login": "tsx scripts/verify-login.ts",
-    "dev": "cross-env VITE_SITE=dallas-images node scripts/dev-stack.mjs && node scripts/affinity-bridge.mjs",
+    "dev": "cross-env VITE_SITE=dallas-images node scripts/dev-stack.mjs",
     "dev:addison": "cross-env VITE_SITE=addison node scripts/dev-stack.mjs",
     "dev:cyan": "cross-env VITE_SITE=cyan node scripts/dev-stack.mjs",
     "dev:dallas-images": "cross-env VITE_SITE=dallas-images node scripts/dev-stack.mjs",

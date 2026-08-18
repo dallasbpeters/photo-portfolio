@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { put } from "@vercel/blob";
+import { getDownloadUrl, put } from "@vercel/blob";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { containedBy } from "../../../config/graph.js";
 import { getBearerUser } from "../../_lib/auth.js";
@@ -139,6 +139,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const urls = [...new Set(urlsFor(target, rows))].slice(0, MAX_FILES);
   if (urls.length === 0) {
     return res.status(400).json({ error: "There is nothing here to export" });
+  }
+
+  /*
+   * One file is a file, not an archive.
+   *
+   * Handed back as it stands. The bytes are already ours and already public, so
+   * packing them would mean downloading the image, zipping it, and writing a
+   * second copy to storage — three round trips and a duplicate blob, to deliver
+   * something the browser then has to unpack to get back what it started with.
+   *
+   * getDownloadUrl sets the attachment disposition, which the `download`
+   * attribute cannot do from here: the blob host is a different origin, and a
+   * cross-origin `download` is ignored. Without it "Download it" opens a tab.
+   */
+  if (urls.length === 1 && urls[0]) {
+    return res
+      .status(200)
+      .json({ count: 1, skipped: 0, url: getDownloadUrl(urls[0]) });
   }
 
   try {

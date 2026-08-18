@@ -340,7 +340,7 @@ export const useBoardInserts = (deps: BoardInsertDeps) => {
    * reasonable price for fetching a file.
    */
   const exportItem = async (itemId: string) => {
-    const toastId = toast.loading("Packing the archive…");
+    const toastId = toast.loading("Preparing the download…");
     try {
       const { count, skipped, url } = await boardsApi.exportItem(
         boardId,
