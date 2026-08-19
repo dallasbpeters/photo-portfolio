@@ -101,6 +101,42 @@ export type Produced =
  * Both generators copy their output into blob storage before returning, so a
  * result is durable by the time it reaches here.
  */
+/**
+ * A picture the browser made, read back off the node.
+ *
+ * Two capabilities work this way and neither does anything here: a composite
+ * needs the board's geometry and a shader needs a GPU, so both are rendered in
+ * the browser, uploaded, and the URL left on the node for the run to store. What
+ * this returns is what gives the node a result, a history and a thumbnail — and
+ * what lets anything downstream read it through `result.url`.
+ *
+ * The URL is validated like any other that leaves here. The canvas only ever
+ * writes our own blob storage into it, but the value arrives through a board
+ * save, and a saved board is caller-supplied data.
+ */
+const browserRendered = (
+  config: Record<string, unknown>,
+  key: string,
+  missing: string
+): Produced => {
+  const raw = config[key];
+  const url =
+    typeof raw === "string" && HTTP_SCHEME.test(raw)
+      ? parsePublicHttpUrl(raw)
+      : null;
+  if (!url) {
+    throw new Error(missing);
+  }
+  return {
+    description: null,
+    height: null,
+    isVector: null,
+    kind: "image",
+    url,
+    width: null,
+  };
+};
+
 export const produce = async (
   capability: NodeCapability,
   models: readonly FalModelDef[],
@@ -116,6 +152,20 @@ export const produce = async (
     sourceImageUrls: string[];
   }
 ): Promise<Produced> => {
+  if (capability === "board.composite") {
+    return browserRendered(
+      args.item.config,
+      "compositeUrl",
+      "The composite has not been rendered yet"
+    );
+  }
+  if (capability === "board.shader") {
+    return browserRendered(
+      args.item.config,
+      "renderUrl",
+      "This shader has not been rendered yet"
+    );
+  }
   if (capability === "fal.describe") {
     if (args.sourceImageUrls.length === 0) {
       throw new Error("Analyse needs an image wired into it");
@@ -127,32 +177,6 @@ export const produce = async (
     return {
       kind: "text",
       text: await describeImage(args.sourceImageUrls, focus, args.prompt),
-    };
-  }
-
-  if (capability === "board.composite") {
-    // Rendered in the browser, which is the only place that knows where the
-    // pictures sit — this stores what it produced so the node gets a result,
-    // a history and a thumbnail like every other node. The canvas clears the
-    // URL on any edit, so one that survived to here is current.
-    const raw = args.item.config.compositeUrl;
-    // Checked like any other URL that leaves here, even though the canvas only
-    // ever writes our own blob storage into it: this value arrives through a
-    // board save, and a saved board is caller-supplied data.
-    const url =
-      typeof raw === "string" && HTTP_SCHEME.test(raw)
-        ? parsePublicHttpUrl(raw)
-        : null;
-    if (!url) {
-      throw new Error("The composite has not been rendered yet");
-    }
-    return {
-      description: null,
-      height: null,
-      isVector: null,
-      kind: "image",
-      url,
-      width: null,
     };
   }
 

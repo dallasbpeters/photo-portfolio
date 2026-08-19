@@ -37,6 +37,7 @@ import { ITERATE } from "./nodes/iterate.js";
 import { JOIN } from "./nodes/join.js";
 import { PALETTE } from "./nodes/palette.js";
 import { PROMPT } from "./nodes/prompt.js";
+import { STANDARD } from "./nodes/standard.js";
 import { VIDEO } from "./nodes/video.js";
 import { OUTPUT_PORT_KEY } from "./ports.js";
 
@@ -101,6 +102,13 @@ export type SettingDef =
       label: string;
       max: number;
       min: number;
+    }
+  | {
+      /** A six-digit hex. Rendered as a swatch, not a text field. */
+      default: string;
+      key: string;
+      kind: "color";
+      label: string;
     };
 
 /**
@@ -111,6 +119,7 @@ export type SettingDef =
  */
 export type NodeCapability =
   | "board.composite"
+  | "board.shader"
   | "fal.describe"
   | "fal.image"
   | "fal.video"
@@ -127,6 +136,7 @@ export type NodeTypeId =
   | "join"
   | "palette"
   | "prompt"
+  | "standard"
   | "video";
 
 export interface NodeType {
@@ -150,6 +160,7 @@ export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   join: JOIN,
   palette: PALETTE,
   prompt: PROMPT,
+  standard: STANDARD,
   video: VIDEO,
 };
 

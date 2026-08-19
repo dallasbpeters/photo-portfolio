@@ -67,12 +67,25 @@ export const dropOrigin = (
  * yesterday's layout. Clearing always costs one render and cannot be wrong.
  */
 export const dropComposites = (list: BoardItem[]): BoardItem[] =>
-  list.map((item) =>
-    item.nodeType === "composite" &&
-    typeof item.config?.compositeUrl === "string"
-      ? { ...item, config: { ...item.config, compositeUrl: null } }
-      : item
-  );
+  list.map((item) => {
+    if (
+      item.nodeType === "composite" &&
+      typeof item.config?.compositeUrl === "string"
+    ) {
+      return { ...item, config: { ...item.config, compositeUrl: null } };
+    }
+    // A halftone is a picture of its settings and its wired image, so any edit
+    // can invalidate it for exactly the reason a composite can. Left behind, a
+    // stale render would export yesterday's colours while the node on screen
+    // showed today's.
+    if (
+      item.nodeType === "standard" &&
+      typeof item.config?.renderUrl === "string"
+    ) {
+      return { ...item, config: { ...item.config, renderUrl: null } };
+    }
+    return item;
+  });
 
 /**
  * The fields every item carries whatever its kind, all empty. Spread first and

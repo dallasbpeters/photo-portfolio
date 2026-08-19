@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SettingDef } from "../../config/nodeTypes.js";
+import { ColorWell } from "./ColorWell";
 import { useModels } from "./ModelsContext";
 
 /**
@@ -37,6 +38,19 @@ export function SettingField({
   setting,
   value,
 }: SettingFieldProps) {
+  if (setting.kind === "color") {
+    return (
+      <div className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
+        {setting.label}
+        <ColorWell
+          label={setting.label}
+          onChange={onChange}
+          value={typeof value === "string" ? value : setting.default}
+        />
+      </div>
+    );
+  }
+
   if (setting.kind === "number") {
     return (
       <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">

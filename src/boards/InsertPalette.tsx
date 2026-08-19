@@ -143,6 +143,13 @@ const BASE_ENTRIES: Entry[] = [
     section: "Nodes",
   },
   {
+    action: { kind: "node", nodeType: "standard" },
+    hint: "halftone dither dots brand shader render image",
+    icon: SparklesIcon,
+    label: "Halftone",
+    section: "Nodes",
+  },
+  {
     action: { kind: "node", nodeType: "prompt" },
     hint: "text source shared style",
     icon: TextIcon,

@@ -3,6 +3,14 @@ import { nodeTypeFor, type SettingDef } from "../../config/nodeTypes.js";
 import { clamp, num, text } from "./values.js";
 
 /**
+ * Three, six or eight digits — the forms a colour arrives in.
+ *
+ * Hoisted because this runs per setting, per item, per save, and a regex
+ * rebuilt on every one of those is work for nothing.
+ */
+const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
+
+/**
  * What a node's `config` blob may contain, per node type.
  *
  * The fiddly half of validating an incoming item: every node type declares its
@@ -59,6 +67,13 @@ export const settingStored = (
       value: ok ? value.slice(0, MAX_MODEL_ID) : setting.default,
     };
   }
+  if (setting.kind === "color") {
+    // Coerced to the default rather than refused, like every other continuous
+    // value that arrives from a client: a malformed colour is a swatch nobody
+    // set, not a reason to lose the rest of the save.
+    const ok = typeof value === "string" && HEX_COLOR.test(value.trim());
+    return { keep: true, value: ok ? value.trim() : setting.default };
+  }
   const ok = typeof value === "string" && setting.options.includes(value);
   return { keep: true, value: ok ? value : setting.default };
 };
@@ -69,6 +84,10 @@ export const settingStored = (
  * They survive a save for the same reason `selectedVersion` does. */
 export const OWNED_TEXT_KEYS = [
   { key: "compositeUrl", max: 2000 },
+  // What the browser rendered for a shader node, written the same way and for
+  // the same reason as compositeUrl: only the browser can produce it, and the
+  // run reads it back.
+  { key: "renderUrl", max: 2000 },
   { key: "description", max: 2000 },
   { key: "elementId", max: 100 },
   { key: "imageUrl", max: 2000 },

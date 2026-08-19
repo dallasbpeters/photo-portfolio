@@ -8,6 +8,8 @@ import {
 } from "../../../../config/canvas.js";
 import { containedBy } from "../../../../config/graph.js";
 import { FRAME_PAD } from "../../../boards/arrange";
+import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
+import { wiredImageFor } from "../../../boards/canvas/wiredPreviews";
 import { compositeSources, renderComposite } from "../../../boards/composite";
 import { configFromSource } from "../../../boards/elementNode";
 import { maskOf, naturalSizeOf, rasterizeMask } from "../../../boards/mask";
@@ -222,12 +224,50 @@ export const useBoardRun = (deps: BoardRunDeps) => {
       })
     );
 
+    /* Shaders are rendered here for the same reason composites are: only the
+       browser can run one, and a run is the first moment it has to exist as a
+       file. Rendered offscreen at a fixed size rather than photographed from
+       the board, so an export does not change resolution because someone
+       resized a node. `renderUrl` is cleared on any edit — see change() — so
+       one that survived to here is current. */
+    const shaded = await Promise.all(
+      rendered.map(async (item) => {
+        if (item.nodeType !== "standard") {
+          return item;
+        }
+        const config = item.config ?? {};
+        if (typeof config.renderUrl === "string") {
+          return item;
+        }
+        try {
+          // The same resolution the node's own preview uses, so what is
+          // exported is what the node showed.
+          const source = wiredImageFor(item.id, {
+            items: pending.current.items,
+            wires: pending.current.wires,
+          });
+          const blob = await renderHalftone(config, source);
+          const { url } = await portfolioService.uploadImageFile(
+            new File([blob], "halftone.png", { type: "image/png" }),
+            undefined,
+            "boards/shaders"
+          );
+          return { ...item, config: { ...config, renderUrl: url } };
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Could not render the halftone"
+          );
+          return item;
+        }
+      })
+    );
+
     // Composites are rendered here for the same reason masks are: only the
     // browser knows the arrangement, and a run is the first moment it has to
     // exist as a file. `compositeUrl` is cleared whenever anything feeding the
     // node moves — see change() — so one still holding a URL is current.
     const composed = await Promise.all(
-      rendered.map(async (item) => {
+      shaded.map(async (item) => {
         if (item.nodeType !== "composite") {
           return item;
         }

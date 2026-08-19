@@ -127,6 +127,32 @@ describe("dropComposites", () => {
     expect(out[1]).toBe(list[1]);
   });
 
+  it("clears a halftone's render, for the same reason as a composite", () => {
+    // A halftone is a picture of its settings and its wired image. Left behind,
+    // a stale render exports yesterday's colours while the node shows today's.
+    const node = item({
+      config: { dots: "#27444D", renderUrl: "https://example.test/h.png" },
+      id: "h",
+      kind: "op",
+      nodeType: "standard",
+    });
+    const [out] = dropComposites([node]);
+    expect(out?.config?.renderUrl).toBeNull();
+    // Every other setting survives — only the picture is stale.
+    expect(out?.config?.dots).toBe("#27444D");
+  });
+
+  it("leaves a halftone that has not been rendered alone", () => {
+    const node = item({
+      config: { dots: "#27444D" },
+      id: "h",
+      kind: "op",
+      nodeType: "standard",
+    });
+    const [out] = dropComposites([node]);
+    expect(out).toBe(node);
+  });
+
   it("preserves order and length", () => {
     const list = [
       item({ id: "a" }),
