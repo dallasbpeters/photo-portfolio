@@ -39,6 +39,8 @@ export interface HalftoneSettings {
   fieldStrength?: unknown;
   reversed?: unknown;
   spiralAmount?: unknown;
+  spiralArms?: unknown;
+  spiralTightness?: unknown;
   wordmark?: unknown;
 }
 
@@ -91,6 +93,11 @@ export const renderHalftone = async (
       }
       rotation={0}
       spiralAmount={num(config.spiralAmount, DEFAULT_PROPS.spiralAmount)}
+      spiralArms={num(config.spiralArms, DEFAULT_PROPS.spiralArms)}
+      spiralTightness={num(
+        config.spiralTightness,
+        DEFAULT_PROPS.spiralTightness
+      )}
       width={width}
       wordmark={
         typeof config.wordmark === "string"

@@ -117,6 +117,23 @@ export const STANDARD: NodeType = {
       min: 0,
     },
     {
+      /* How tightly the arms wind. The single biggest lever on the swirl. */
+      default: 18,
+      key: "spiralTightness",
+      kind: "number",
+      label: "Swirl tightness",
+      max: 60,
+      min: 0,
+    },
+    {
+      default: 3,
+      key: "spiralArms",
+      kind: "number",
+      label: "Swirl arms",
+      max: 12,
+      min: 1,
+    },
+    {
       /* How much of the frame the picture fills, before the dots are counted. */
       default: 1,
       key: "fieldSize",

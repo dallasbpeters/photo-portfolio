@@ -30,7 +30,9 @@ export interface Rect {
 export const containRect = (
   sourceWidth: number,
   sourceHeight: number,
-  box: number
+  boxWidth: number,
+  /** Square unless a second edge is given. */
+  boxHeight: number = boxWidth
 ): Rect => {
   const usable =
     Number.isFinite(sourceWidth) &&
@@ -38,9 +40,9 @@ export const containRect = (
     sourceWidth > 0 &&
     sourceHeight > 0;
   if (!usable) {
-    return { height: box, width: box, x: 0, y: 0 };
+    return { height: boxHeight, width: boxWidth, x: 0, y: 0 };
   }
-  const scale = Math.min(box / sourceWidth, box / sourceHeight);
+  const scale = Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
   const width = sourceWidth * scale;
   const height = sourceHeight * scale;
   return {
@@ -48,7 +50,7 @@ export const containRect = (
     width,
     // Centred, so a wide picture sits in the middle of the field rather than
     // along one edge of it.
-    x: (box - width) / 2,
-    y: (box - height) / 2,
+    x: (boxWidth - width) / 2,
+    y: (boxHeight - height) / 2,
   };
 };
