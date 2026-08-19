@@ -72,11 +72,54 @@ export const moveItem = (
 };
 
 /**
- * The rows a wire is offering, for the Replace and Append actions.
+ * The rows a wire is offering.
  *
  * A wired source may hand over one string containing many lines — an Iterate
  * node writes its prompts that way — so each is split before being counted, or
  * "fill from" would add one enormous row instead of fifty.
  */
 export const itemsFromWire = (sent: readonly string[]): string[] =>
-  sent.flatMap((text) => parseItems(text));
+  sent.flatMap((text) => parseItems(text)).slice(0, MAX_LIST_ITEMS);
+
+/**
+ * What a List should do about the wire feeding it.
+ *
+ * Wiring an Iterate node into a List fills the list with the prompts it wrote —
+ * no button, because pressing one is not a decision anybody was making. That
+ * only holds while the rows are still the ones the wire put there. The instant
+ * three of the fifty have been rewritten by hand, refilling would throw those
+ * edits away, and editing them is the entire reason the List node exists.
+ *
+ * So the last fill is written down beside the rows, and the two are compared:
+ * matching means nothing has been touched and the next fill is free, differing
+ * means someone has been working and the refill is offered rather than taken.
+ * Deleting every row counts as working — an emptied list that instantly refilled
+ * itself would be unusable — which falls out of the same comparison rather than
+ * needing a case of its own.
+ */
+export type ListSync =
+  | { items: string[]; kind: "fill" }
+  | { items: string[]; kind: "offer" }
+  | { kind: "none" }
+  | { kind: "synced" };
+
+export const listSync = (
+  stored: unknown,
+  /** What the wire last put here, as written down at the time. */
+  lastFilled: unknown,
+  wired: readonly string[]
+): ListSync => {
+  const items = itemsFromWire(wired);
+  if (items.length === 0) {
+    return { kind: "none" };
+  }
+  const offered = joinItems(items);
+  const current = joinItems(parseItems(stored));
+  if (offered === current) {
+    return { kind: "synced" };
+  }
+  // Normalised through the same pair of functions on both sides, so a stored
+  // value that merely differs in whitespace does not read as a hand edit.
+  const untouched = current === joinItems(parseItems(lastFilled));
+  return untouched ? { items, kind: "fill" } : { items, kind: "offer" };
+};

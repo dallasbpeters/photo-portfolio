@@ -3,6 +3,7 @@ import {
   addItem,
   itemsFromWire,
   joinItems,
+  listSync,
   MAX_LIST_ITEMS,
   moveItem,
   parseItems,
@@ -138,5 +139,89 @@ describe("itemsFromWire", () => {
 
   it("is empty when nothing is wired", () => {
     expect(itemsFromWire([])).toEqual([]);
+  });
+});
+
+describe("listSync", () => {
+  const rows = ["a red chair", "a blue chair", "a green chair"];
+
+  it("does nothing when nothing is wired in", () => {
+    expect(listSync("a\nb", "a\nb", [])).toEqual({ kind: "none" });
+  });
+
+  it("fills an empty list without being asked", () => {
+    // The whole point: wire an Iterate node in and the prompts are there.
+    expect(listSync("", undefined, rows)).toEqual({
+      items: rows,
+      kind: "fill",
+    });
+  });
+
+  it("refills by itself while the rows are still the wire's own", () => {
+    // Editing the template upstream should rewrite untouched rows, the way
+    // Iterate's own output would have.
+    const filled = rows.join("\n");
+    expect(listSync(filled, filled, ["a red stool"])).toEqual({
+      items: ["a red stool"],
+      kind: "fill",
+    });
+  });
+
+  it("only offers once a row has been edited by hand", () => {
+    // Refilling here would throw away the edit, which is the one thing this
+    // node exists to make possible.
+    const edited = ["a red chair", "a blue SOFA", "a green chair"].join("\n");
+    expect(listSync(edited, rows.join("\n"), ["x", "y"])).toEqual({
+      items: ["x", "y"],
+      kind: "offer",
+    });
+  });
+
+  it("only offers once a row has been deleted", () => {
+    const kept = ["a red chair", "a green chair"].join("\n");
+    expect(listSync(kept, rows.join("\n"), rows).kind).toBe("offer");
+  });
+
+  it("does not refill a list that was deliberately emptied", () => {
+    // Empty and never filled is a fresh node; empty after a fill is someone
+    // clearing it out, and instantly writing it back would be unusable.
+    expect(listSync("", rows.join("\n"), rows).kind).toBe("offer");
+  });
+
+  it("is settled when the rows already match the wire", () => {
+    // This is what stops the automatic fill looping: one write, then quiet.
+    expect(listSync(rows.join("\n"), rows.join("\n"), rows)).toEqual({
+      kind: "synced",
+    });
+  });
+
+  it("is settled even if the record of the last fill is missing", () => {
+    // A list saved before this existed still must not fill on every render.
+    expect(listSync(rows.join("\n"), undefined, rows)).toEqual({
+      kind: "synced",
+    });
+  });
+
+  it("ignores whitespace differences rather than reading them as edits", () => {
+    expect(listSync("  a  \n\nb\n", "a\nb", ["a", "b"])).toEqual({
+      kind: "synced",
+    });
+  });
+
+  it("splits a source that sent its rows as one string", () => {
+    // An Iterate node's prompts can arrive as a single multi-line value.
+    expect(listSync("", undefined, ["a\nb\nc"])).toEqual({
+      items: ["a", "b", "c"],
+      kind: "fill",
+    });
+  });
+
+  it("stops at the maximum rather than accepting an unbounded wire", () => {
+    const many = Array.from({ length: MAX_LIST_ITEMS + 40 }, (_, i) => `p${i}`);
+    const result = listSync("", undefined, many);
+    expect(result.kind).toBe("fill");
+    expect(result.kind === "fill" ? result.items : []).toHaveLength(
+      MAX_LIST_ITEMS
+    );
   });
 });

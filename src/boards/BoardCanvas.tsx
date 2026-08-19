@@ -19,6 +19,7 @@ import {
 import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import { CanvasChrome } from "./canvas/CanvasChrome";
+import { markFromStroke } from "./canvas/markFromStroke";
 import {
   RecipeGroupView,
   type RecipeGroupViewProps,
@@ -27,10 +28,10 @@ import {
   previewImagesFor,
   previewTextFor,
   wiredImageFor,
+  wiredItemsFor,
   wiredTextFor,
 } from "./canvas/wiredPreviews";
 import {
-  boundsOf,
   type DrawingConfig,
   type DrawTool,
   isFreehand,
@@ -484,48 +485,10 @@ export function BoardCanvas({
         finishMaskStroke(points, drawStyle.strokeWidth);
         return;
       }
-      const [first] = points;
-      const last = points.at(-1);
-      if (!(first && last && onDraw)) {
-        return;
+      const mark = markFromStroke(points, drawTool, drawStyle);
+      if (mark) {
+        onDraw?.(mark.config, mark.box);
       }
-
-      if (isFreehand(drawTool)) {
-        const box = boundsOf(points, drawStyle.strokeWidth);
-        onDraw(
-          {
-            fill: null,
-            points: toUnitSpace(points, box),
-            stroke: drawStyle.stroke,
-            strokeWidth: drawStyle.strokeWidth,
-            tool: drawTool,
-          },
-          box
-        );
-        return;
-      }
-
-      // A shape is defined by where the drag began and ended, in either
-      // direction — dragging up and left is as natural as down and right.
-      const box = {
-        height: Math.abs(last.y - first.y),
-        width: Math.abs(last.x - first.x),
-        x: Math.min(first.x, last.x),
-        y: Math.min(first.y, last.y),
-      };
-      if (box.width < MIN_ITEM_SIZE || box.height < MIN_ITEM_SIZE) {
-        // A click rather than a drag. Nothing was asked for.
-        return;
-      }
-      onDraw(
-        {
-          fill: drawStyle.fill,
-          stroke: drawStyle.stroke,
-          strokeWidth: drawStyle.strokeWidth,
-          tool: drawTool,
-        },
-        box
-      );
     },
     [drawStyle, drawTool, finishMaskStroke, onDraw]
   );
@@ -1316,6 +1279,11 @@ export function BoardCanvas({
               readOnly={readOnly}
               scale={view.viewport.scale}
               tools={readOnly ? undefined : tools}
+              wiredItems={
+                item.nodeType === "list"
+                  ? wiredItemsFor(item.id, graph)
+                  : undefined
+              }
               wiredPrompt={wiredTextFor(item.id, graph)}
             />
           ))}

@@ -6,6 +6,7 @@ import {
   outputListOf,
   outputTextOf,
 } from "../itemOutput";
+import { itemsFromWire } from "../listItems";
 
 /**
  * What a node is about to send, shown before it is run.
@@ -83,6 +84,28 @@ export const wiredTextFor = (itemId: string, graph: Graph): string | null => {
     ? (prompts[0] ?? null)
     : prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
 };
+
+/**
+ * The rows arriving on a List node's Fill input, in wire order.
+ *
+ * Flattened, because a single wire usually carries the whole list: an Iterate
+ * node hands over fifty prompts as fifty entries, and a Prompt node hands over
+ * one string that may itself be fifty lines. Both mean fifty rows.
+ *
+ * Asked only of List nodes, like previewImagesFor: resolving every upstream
+ * behind every node on every render walks the graph once per node.
+ */
+export const wiredItemsFor = (itemId: string, graph: Graph): string[] =>
+  itemsFromWire(
+    graph.wires
+      .filter((w) => w.targetItemId === itemId && w.targetPort === "text")
+      .flatMap((w) =>
+        outputListOf(
+          graph.items.find((i) => i.id === w.sourceItemId) ?? null,
+          graph
+        )
+      )
+  );
 
 /**
  * The picture feeding an item's image input, for the kinds that render one
