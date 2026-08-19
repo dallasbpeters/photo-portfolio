@@ -1,9 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Delete02Icon,
-  Settings01Icon,
-} from "@hugeicons-pro/core-stroke-standard";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { Delete02Icon } from "@hugeicons-pro/core-stroke-standard";
+import { type RefObject, useEffect, useRef } from "react";
 import { PORT_HIT_PX, PORT_RADIUS_PX } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import { textStyleCss } from "../../config/textStyle.js";
@@ -19,7 +16,6 @@ import { maskOf } from "./mask";
 import { BatchList, OpNodeView } from "./OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
 import { ResizeHandles } from "./ResizeHandles";
-import { ShaderControls } from "./ShaderControls";
 import { ShaderView } from "./ShaderView";
 import {
   DEFAULT_SOURCE,
@@ -46,6 +42,31 @@ import { useTextFont } from "./useTextFont";
  * and should stay visible over a selected item.
  */
 const CHROME_STACK = 9998;
+
+/**
+ * The input port closest to a point, in canvas units.
+ *
+ * Squared distances: the ordering is the same as with real distances and the
+ * square roots would be work done once per pointer move for nothing.
+ */
+const nearestInput = (
+  item: BoardItem,
+  px: number,
+  py: number
+): string | null => {
+  let nearest: string | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const [key, point] of inputPoints(item)) {
+    const dx = point.x - px;
+    const dy = point.y - py;
+    const distance = dx * dx + dy * dy;
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = key;
+    }
+  }
+  return nearest;
+};
 
 const fillEmptyEffect = (
   layers: ShaderLayer[],
@@ -471,29 +492,18 @@ function ElementBody({ item }: { item: BoardItem }) {
  */
 function ShaderItem({
   imageUrl,
-  isSelected,
   item,
   onConfigChange,
   readOnly,
 }: {
   imageUrl?: string | null;
-  isSelected: boolean;
   item: BoardItem;
   onConfigChange?: (config: Record<string, unknown>) => void;
   readOnly: boolean;
 }) {
-  // Selecting a shader is the act of saying "I want to work on this one", so
-  // the controls come with it. The gear stays as a way to fold them away while
-  // keeping the item selected — a shader is a picture, and sometimes the point
-  // is to look at it. Collapsing is remembered only until the selection moves.
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const isEditing = isSelected && !isCollapsed;
-
-  useEffect(() => {
-    if (!isSelected) {
-      setIsCollapsed(false);
-    }
-  }, [isSelected]);
+  // Nothing to fold any more: the controls live in the floating panel beside
+  // the board, so the item is only ever the picture. The collapse state and its
+  // gear went with them.
   // A stack saved before layers carried identity gets one here, so the panel
   // has a stable key to work from without the server having to be involved.
   const config: ShaderConfig = isShaderConfig(item.config)
@@ -525,30 +535,10 @@ function ShaderItem({
         }
       />
 
-      {readOnly || !isSelected ? null : (
-        <button
-          aria-label={isEditing ? "Hide shader settings" : "Shader settings"}
-          className="absolute top-1 right-1 rounded bg-board-surface/60 p-1 text-board-ink/60 backdrop-blur hover:text-board-ink"
-          onClick={() => setIsCollapsed((folded) => !folded)}
-          onPointerDown={(e) => e.stopPropagation()}
-          type="button"
-        >
-          <HugeiconsIcon icon={Settings01Icon} size={13} />
-        </button>
-      )}
-
-      {isEditing && !readOnly ? (
-        // overscroll-contain so reaching the end of the settings does not hand
-        // the wheel back to the canvas and start zooming mid-scroll.
-        <div className="absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto overscroll-contain border-board-ink/10 border-t bg-board-surface/90 p-2 backdrop-blur">
-          <ShaderControls
-            config={config}
-            onChange={(next) =>
-              onConfigChange?.(next as unknown as Record<string, unknown>)
-            }
-          />
-        </div>
-      ) : null}
+      {/* The settings used to render here, pinned to the bottom and up to 85%
+          of the item's height — so adjusting a shader covered the shader. They
+          are in the board's overlay stack now, beside the other
+          selection-owned tools. See ShaderPanel. */}
     </div>
   );
 }
@@ -586,7 +576,6 @@ function ItemContent({
   imageUrl,
   wiredPrompt,
   isEditing,
-  isSelected,
   item,
   onCancel,
   onConfigChange,
@@ -632,7 +621,6 @@ function ItemContent({
     return (
       <ShaderItem
         imageUrl={imageUrl}
-        isSelected={isSelected}
         item={item}
         onConfigChange={onConfigChange}
         readOnly={readOnly}
@@ -663,6 +651,122 @@ function ItemContent({
       onEditBody={onEditBody}
     />
   );
+}
+
+/**
+ * Makes the whole item body a drop target for its nearest input port.
+ *
+ * While a wire is being dragged, landing a connection should not demand a
+ * 14-pixel aim at the port circle — the friction that made rewiring a node
+ * that already had a connection a matter of luck. The exact port buttons still
+ * win when the pointer is over one; this only claims the spaces between them.
+ */
+function useNearestInputDrop(
+  item: BoardItem,
+  scale: number,
+  ports?: PortHandlers
+) {
+  const hoveredInput = useRef<string | null>(null);
+  const handleDragHover = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    // A port button is an exact target; the body only claims the spaces
+    // between them, so an overlapping row of inputs cannot argue with itself.
+    if ((e.target as Element).closest("[data-port]")) {
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = item.x + (e.clientX - rect.left) / scale;
+    const py = item.y + (e.clientY - rect.top) / scale;
+    const nearest = nearestInput(item, px, py);
+    if (nearest && nearest !== hoveredInput.current) {
+      hoveredInput.current = nearest;
+      ports.onPortEnter(item.id, nearest);
+    }
+  };
+  const handleDragLeave = () => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    if (hoveredInput.current !== null) {
+      ports.onPortLeave(item.id, hoveredInput.current);
+      hoveredInput.current = null;
+    }
+  };
+  return { handleDragHover, handleDragLeave };
+}
+
+type PointerDownRules = Pick<
+  BoardItemViewProps,
+  | "index"
+  | "isEditing"
+  | "isSelected"
+  | "onBeginEdit"
+  | "onCommentTarget"
+  | "onSelect"
+> & { isWritable: boolean };
+
+/**
+ * The press that picks an item up — and the several cases where it must not.
+ *
+ * Each refusal has its own reason, spelled out below; together they were long
+ * enough to bury the markup they were written inside.
+ */
+function itemPointerDown({
+  index,
+  isEditing,
+  isSelected,
+  isWritable,
+  onBeginEdit,
+  onCommentTarget,
+  onSelect,
+}: PointerDownRules) {
+  return (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only the primary button picks an item up. A right-click emits
+    // pointerdown too, and letting it begin a drag meant the context menu
+    // opened over a gesture holding everyone's old positions — which were
+    // written back the moment it ended, undoing whatever the menu had just
+    // done. The press still passes through, so the menu sees the selection.
+    if (e.button !== 0) {
+      return;
+    }
+    // Comment targeting: the press belongs to the item, not to a pan —
+    // without stopping it the canvas would read it as panning and the
+    // click that aims the comment would never fire.
+    if (onCommentTarget) {
+      e.stopPropagation();
+      return;
+    }
+    // While editing, the press belongs to the field — placing a caret or
+    // selecting text must not start a drag, and must not reach the
+    // background handler, which would clear the selection and pan.
+    if (isEditing) {
+      e.stopPropagation();
+      return;
+    }
+    onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
+    // Already selected, so this is the second press: start typing.
+    if (isWritable && isSelected) {
+      onBeginEdit();
+    }
+  };
+}
+
+/**
+ * The box's own classes: what it is, and whether it is selected.
+ *
+ * Text and an unselected drawing wear no ring — their content is the whole of
+ * them, and a border there reads as part of the picture rather than as chrome.
+ */
+function itemBoxClassName(item: BoardItem, isSelected: boolean) {
+  const isText = item.kind === "text";
+  const isDrawing = item.kind === "drawing";
+  const selecting = isText ? "" : "select-none";
+  const ring = isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10";
+  const bare =
+    isText || (isDrawing && !isSelected) ? "ring-0 ring-transparent" : "ring-0";
+  return `group absolute rounded-xs contain-layout ${selecting} ${ring} ${bare}`;
 }
 
 /** One item on the board. */
@@ -723,58 +827,18 @@ export function BoardItemView({
 
   const fieldRef = useEditingCaret(isEditing);
 
-  // While a wire is being dragged, the whole item body is a drop target for its
-  // nearest input port, so landing a connection does not demand a 14-pixel aim
-  // at the port circle — the friction that made rewiring a node that already
-  // had a connection a matter of luck. The exact port buttons still win when
-  // the pointer is over one; this only claims the spaces between them.
-  const hoveredInput = useRef<string | null>(null);
-  const handleDragHover = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!ports?.isDragging) {
-      return;
-    }
-    // A port button is an exact target; the body only claims the spaces
-    // between them, so an overlapping row of inputs cannot argue with itself.
-    if ((e.target as Element).closest("[data-port]")) {
-      return;
-    }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = item.x + (e.clientX - rect.left) / scale;
-    const py = item.y + (e.clientY - rect.top) / scale;
-    let nearest: string | null = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    for (const [key, point] of inputPoints(item)) {
-      const dx = point.x - px;
-      const dy = point.y - py;
-      const distance = dx * dx + dy * dy;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearest = key;
-      }
-    }
-    if (nearest && nearest !== hoveredInput.current) {
-      hoveredInput.current = nearest;
-      ports.onPortEnter(item.id, nearest);
-    }
-  };
-  const handleDragLeave = () => {
-    if (!ports?.isDragging) {
-      return;
-    }
-    if (hoveredInput.current !== null) {
-      ports.onPortLeave(item.id, hoveredInput.current);
-      hoveredInput.current = null;
-    }
-  };
+  const { handleDragHover, handleDragLeave } = useNearestInputDrop(
+    item,
+    scale,
+    ports
+  );
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the board is a canvas of individually addressable items; the click only matters in comment mode
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — the click aims a comment at the item, and the drag already uses pointer events the same way
     // biome-ignore lint/a11y/useKeyWithClickEvents: same — an item is a canvas surface, not a button
     <div
-      className={`group absolute rounded-xs contain-layout ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10"
-      } ${isText && !isSelected ? "ring-0 ring-transparent" : "ring-0"}`}
+      className={itemBoxClassName(item, isSelected)}
       onClick={
         onCommentTarget
           ? (e) => {
@@ -783,35 +847,15 @@ export function BoardItemView({
             }
           : undefined
       }
-      onPointerDown={(e) => {
-        // Only the primary button picks an item up. A right-click emits
-        // pointerdown too, and letting it begin a drag meant the context menu
-        // opened over a gesture holding everyone's old positions — which were
-        // written back the moment it ended, undoing whatever the menu had just
-        // done. The press still passes through, so the menu sees the selection.
-        if (e.button !== 0) {
-          return;
-        }
-        // Comment targeting: the press belongs to the item, not to a pan —
-        // without stopping it the canvas would read it as panning and the
-        // click that aims the comment would never fire.
-        if (onCommentTarget) {
-          e.stopPropagation();
-          return;
-        }
-        // While editing, the press belongs to the field — placing a caret or
-        // selecting text must not start a drag, and must not reach the
-        // background handler, which would clear the selection and pan.
-        if (isEditing) {
-          e.stopPropagation();
-          return;
-        }
-        onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
-        // Already selected, so this is the second press: start typing.
-        if (isWritable && isSelected) {
-          onBeginEdit();
-        }
-      }}
+      onPointerDown={itemPointerDown({
+        index,
+        isEditing,
+        isSelected,
+        isWritable,
+        onBeginEdit,
+        onCommentTarget,
+        onSelect,
+      })}
       onPointerLeave={handleDragLeave}
       onPointerMove={handleDragHover}
       ref={boxRef}
