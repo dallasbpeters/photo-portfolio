@@ -28,7 +28,7 @@ import { renderOffscreen } from "./renderOffscreen";
  * composition was laid out for it: squaring the frame moves the lockup and
  * changes where the spiral falls.
  */
-export const RENDER_SCALE = 2;
+export const RENDER_SCALE = 1;
 
 export interface HalftoneSettings {
   [key: string]: unknown;
@@ -61,12 +61,48 @@ const text = (value: unknown, fallback: string): string =>
  * blank — polling for a non-blank capture is the difference between exporting
  * the picture and exporting the moment before it.
  */
+/**
+ * The natural size of a picture, or null if it cannot be read.
+ *
+ * Needed before rendering rather than after: the frame is chosen from it.
+ */
+const measure = (url: string): Promise<{ h: number; w: number } | null> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve({ h: img.naturalHeight, w: img.naturalWidth });
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+
+/** The long edge of an export. */
+const LONG_EDGE = (DEFAULT_PROPS.width ?? 1200) * 2;
+
 export const renderHalftone = async (
   config: HalftoneSettings,
   imageUrl: string | null
 ): Promise<Blob> => {
-  const width = (DEFAULT_PROPS.width ?? 1200) * RENDER_SCALE;
-  const height = (DEFAULT_PROPS.height ?? 700) * RENDER_SCALE;
+  /*
+   * The frame follows the picture when there is one.
+   *
+   * The design's own 1200x700 is right for the lockup, and wrong for anything
+   * else: a portrait photograph rendered into it is contained down to a narrow
+   * column with empty field either side, which reads as the halftone having
+   * missed most of the picture. Taking the picture's aspect means the whole of
+   * it fills the whole of the output, with nothing letterboxed and nothing
+   * cropped.
+   */
+  const natural = imageUrl ? await measure(imageUrl) : null;
+  const aspect =
+    natural && natural.h > 0
+      ? natural.w / natural.h
+      : (DEFAULT_PROPS.width ?? 1200) / (DEFAULT_PROPS.height ?? 700);
+  const width = Math.round(
+    (aspect >= 1 ? LONG_EDGE : LONG_EDGE * aspect) * RENDER_SCALE
+  );
+  const height = Math.round(
+    (aspect >= 1 ? LONG_EDGE / aspect : LONG_EDGE) * RENDER_SCALE
+  );
 
   return await renderOffscreen(
     <StandardShader
