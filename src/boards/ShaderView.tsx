@@ -6,6 +6,7 @@ import {
   normalizeLayers,
   type ShaderConfig,
   type ShaderLayer,
+  withImage,
 } from "./shaderConfig";
 import { useIsOnScreen } from "./useIsOnScreen";
 
@@ -60,75 +61,6 @@ const renderLayers = (layers: ShaderLayer[]): ReactNode =>
       : null;
     return createElement(component as never, { key, ...layer.props }, children);
   });
-
-/** The library's own image source: a shader that draws a picture. */
-const IMAGE_LAYER = "ImageTexture";
-
-const hasImageLayer = (layers: ShaderLayer[]): boolean =>
-  layers.some(
-    (layer) => layer.name === IMAGE_LAYER || hasImageLayer(layer.children ?? [])
-  );
-
-const bindImage = (layers: ShaderLayer[], url: string): ShaderLayer[] =>
-  layers.map((layer) =>
-    layer.name === IMAGE_LAYER
-      ? { ...layer, props: { ...layer.props, url } }
-      : { ...layer, children: bindImage(layer.children ?? [], url) }
-  );
-
-/**
- * Puts the image where an effect will actually reach it: innermost.
- *
- * Following the last layer inwards lands inside every effect wrapping it, which
- * is what someone dragging a picture into a stack of effects means — restyle
- * this, not sit beside it.
- */
-const insertImage = (layers: ShaderLayer[], url: string): ShaderLayer[] => {
-  const last = layers.at(-1);
-  const image = {
-    id: `wired-${IMAGE_LAYER}`,
-    name: IMAGE_LAYER,
-    /*
-     * `contain` rather than the library's default.
-     *
-     * ImageTexture defaults objectFit to "fill", which stretches the picture to
-     * the viewport — so a portrait wired into a square shader came out squashed,
-     * and nothing about the result said the aspect ratio had been thrown away.
-     *
-     * Contained rather than covered: a picture someone deliberately wired in
-     * should arrive whole, and silently cropping a third of it is the worse of
-     * the two failures.
-     */
-    props: { objectFit: "contain", url },
-  };
-  if (!(last && isEffect(last.name))) {
-    return [...layers, image];
-  }
-  return [
-    ...layers.slice(0, -1),
-    { ...last, children: insertImage(last.children ?? [], url) },
-  ];
-};
-
-/**
- * The stack as it should render, with a wired image bound into it.
- *
- * Done here rather than written into the item's config, so the picture stays a
- * property of the wire: unplug it and the stack is exactly what it was, with no
- * stale URL left behind in the saved board. An explicit ImageTexture layer is
- * filled in wherever it sits, which lets the image be placed deliberately.
- */
-const withImage = (
-  layers: ShaderLayer[],
-  imageUrl: string | null | undefined
-): ShaderLayer[] => {
-  if (!imageUrl) {
-    return layers;
-  }
-  return hasImageLayer(layers)
-    ? bindImage(layers, imageUrl)
-    : insertImage(layers, imageUrl);
-};
 
 /** The first effect found with nothing inside it, or null. */
 const emptyEffect = (layers: ShaderLayer[]): ShaderLayer | null => {
