@@ -1,7 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
+import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem } from "../../types";
+import { SettingField } from "../SettingField";
 import { ShaderControls } from "../ShaderControls";
 import { isShaderConfig, type ShaderConfig } from "../shaderConfig";
 
@@ -38,7 +40,14 @@ export function ShaderPanel({
 }: ShaderPanelProps) {
   const [saving, setSaving] = useState(false);
 
-  if (selected?.kind !== "shader") {
+  /* The halftone node comes here too. It is not a shader item, but it has the
+     same problem — far more visual controls than fit on the thing they change —
+     and so the same answer. */
+  const isHalftone =
+    selected?.kind === "op" && selected.nodeType === "standard";
+  const nodeType = isHalftone ? nodeTypeFor(selected?.nodeType) : null;
+
+  if (!selected || (selected.kind !== "shader" && !isHalftone)) {
     return null;
   }
   const config: ShaderConfig = isShaderConfig(selected.config)
@@ -49,7 +58,7 @@ export function ShaderPanel({
     <div className="pointer-events-auto flex max-h-[70vh] w-64 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
       <div className="flex items-center justify-between border-board-ink/10 border-b px-3 py-2">
         <span className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
-          Shader
+          {isHalftone ? "Halftone" : "Shader"}
         </span>
         <button
           className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
@@ -71,17 +80,37 @@ export function ShaderPanel({
       </div>
       {/* overscroll-contain so reaching the end of the settings does not hand
           the wheel back to the canvas and start zooming mid-scroll. */}
-      <div className="overflow-y-auto overscroll-contain p-2">
-        <ShaderControls
-          config={config}
-          imageUrl={imageUrl}
-          onChange={(next) =>
-            onConfigChange(
-              selected.id,
-              next as unknown as Record<string, unknown>
-            )
-          }
-        />
+      <div className="space-y-2 overflow-y-auto overscroll-contain p-2">
+        {isHalftone && nodeType
+          ? nodeType.settings.map((setting) => (
+              <SettingField
+                key={setting.key}
+                onChange={(value) =>
+                  onConfigChange(selected.id, {
+                    ...(selected.config ?? {}),
+                    [setting.key]: value,
+                  })
+                }
+                readOnly={false}
+                setting={setting}
+                // Settings are stored as whatever the field wrote; a number
+                // arrives back as a number, and the field wants a string.
+                value={String(selected.config?.[setting.key] ?? "")}
+              />
+            ))
+          : null}
+        {isHalftone ? null : (
+          <ShaderControls
+            config={config}
+            imageUrl={imageUrl}
+            onChange={(next) =>
+              onConfigChange(
+                selected.id,
+                next as unknown as Record<string, unknown>
+              )
+            }
+          />
+        )}
       </div>
     </div>
   );

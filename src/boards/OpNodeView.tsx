@@ -439,7 +439,11 @@ function NodeBody({
         </p>
       ) : null}
 
-      {type.settings.map((setting) =>
+      {/* A node with thirty-two controls cannot hold them: they render in the
+          floating panel beside the board instead, for the same reason the
+          shader settings moved there. Everything else keeps its settings on the
+          node, where they are one glance from what they change. */}
+      {(item.nodeType === "standard" ? [] : type.settings).map((setting) =>
         // The palette's colours are swatches rather than a text field — see
         // PaletteSwatches, which edits the very same stored string.
         item.nodeType === "palette" && setting.key === "colors" ? (

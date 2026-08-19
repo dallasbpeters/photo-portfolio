@@ -31,17 +31,7 @@ import { renderOffscreen } from "./renderOffscreen";
 export const RENDER_SCALE = 2;
 
 export interface HalftoneSettings {
-  background?: unknown;
-  baseDensity?: unknown;
-  dotSize?: unknown;
-  dots?: unknown;
-  fieldSize?: unknown;
-  fieldStrength?: unknown;
-  reversed?: unknown;
-  spiralAmount?: unknown;
-  spiralArms?: unknown;
-  spiralTightness?: unknown;
-  wordmark?: unknown;
+  [key: string]: unknown;
 }
 
 const num = (value: unknown, fallback: number): number => {
@@ -55,6 +45,13 @@ const hex = (value: unknown, fallback: string): string =>
   typeof value === "string" && HEX_COLOR.test(value.trim())
     ? value.trim()
     : fallback;
+
+/** Stored as a select, because SettingDef has no boolean kind. */
+const bool = (value: unknown, fallback: boolean): boolean =>
+  value === undefined || value === null ? fallback : value === "yes";
+
+const text = (value: unknown, fallback: string): string =>
+  typeof value === "string" ? value : fallback;
 
 /**
  * A PNG of this node, at export resolution.
@@ -74,36 +71,59 @@ export const renderHalftone = async (
   return await renderOffscreen(
     <StandardShader
       {...DEFAULT_PROPS}
+      // A still: the four properties that only mean something over time are
+      // stopped rather than captured at an arbitrary phase.
       animate={false}
       background={hex(config.background, DEFAULT_PROPS.background)}
       baseDensity={num(config.baseDensity, DEFAULT_PROPS.baseDensity)}
-      // A still, so the two things that only mean something over time are
-      // stopped rather than captured at an arbitrary phase.
+      blue={hex(config.blue, DEFAULT_PROPS.blue)}
       breathing={0}
+      clearFeather={num(config.clearFeather, DEFAULT_PROPS.clearFeather)}
+      clearSize={num(config.clearSize, DEFAULT_PROPS.clearSize)}
+      cornerRadius={num(config.cornerRadius, DEFAULT_PROPS.cornerRadius)}
+      description={text(config.description, DEFAULT_PROPS.description)}
+      descriptionSize={num(
+        config.descriptionSize,
+        DEFAULT_PROPS.descriptionSize
+      )}
       dotSize={num(config.dotSize, DEFAULT_PROPS.dotSize)}
       dots={hex(config.dots, DEFAULT_PROPS.dots)}
       fieldSize={num(config.fieldSize, DEFAULT_PROPS.fieldSize)}
       fieldStrength={num(config.fieldStrength, DEFAULT_PROPS.fieldStrength)}
       height={height}
+      iconOnly={bool(config.iconOnly, DEFAULT_PROPS.iconOnly)}
+      iconSize={num(config.iconSize, DEFAULT_PROPS.iconSize)}
       imageUrl={imageUrl}
-      reversed={
-        config.reversed === undefined
-          ? DEFAULT_PROPS.reversed
-          : config.reversed === "yes"
-      }
+      ink={hex(config.ink, DEFAULT_PROPS.ink)}
+      lockupGap={num(config.lockupGap, DEFAULT_PROPS.lockupGap)}
+      markSize={num(config.markSize, DEFAULT_PROPS.markSize)}
+      padding={num(config.padding, DEFAULT_PROPS.padding)}
+      reverseBackground={hex(
+        config.reverseBackground,
+        DEFAULT_PROPS.reverseBackground
+      )}
+      reverseDots={hex(config.reverseDots, DEFAULT_PROPS.reverseDots)}
+      reversed={bool(config.reversed, DEFAULT_PROPS.reversed)}
+      reverseInk={hex(config.reverseInk, DEFAULT_PROPS.reverseInk)}
       rotation={0}
+      showDescription={bool(
+        config.showDescription,
+        DEFAULT_PROPS.showDescription
+      )}
+      speed={0}
       spiralAmount={num(config.spiralAmount, DEFAULT_PROPS.spiralAmount)}
       spiralArms={num(config.spiralArms, DEFAULT_PROPS.spiralArms)}
+      spiralOverlap={num(config.spiralOverlap, DEFAULT_PROPS.spiralOverlap)}
       spiralTightness={num(
         config.spiralTightness,
         DEFAULT_PROPS.spiralTightness
       )}
+      tracking={num(config.tracking, DEFAULT_PROPS.tracking)}
+      typeSize={num(config.typeSize, DEFAULT_PROPS.typeSize)}
+      typeWeight={num(config.typeWeight, DEFAULT_PROPS.typeWeight)}
+      verticalGap={num(config.verticalGap, DEFAULT_PROPS.verticalGap)}
       width={width}
-      wordmark={
-        typeof config.wordmark === "string"
-          ? config.wordmark
-          : DEFAULT_PROPS.wordmark
-      }
+      wordmark={text(config.wordmark, DEFAULT_PROPS.wordmark)}
     />,
     { height, width }
   );

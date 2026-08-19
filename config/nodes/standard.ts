@@ -26,9 +26,16 @@ import { OUTPUT_PORT_KEY } from "../ports.js";
  * node can consume — so `t` is frozen and breathing and rotation fall out of
  * the picture rather than being options that quietly do nothing to the export.
  *
- * Every other property comes from the shader's own DEFAULT_PROPS. The settings
- * below say what is tweakable; they do not restate the design, which is how the
- * first version of this ended up rendering a different picture entirely.
+ * Every property of the shader is here except the four that cannot mean
+ * anything on a still — animate, speed, breathing and rotation — the two that
+ * are the export frame rather than the design, and the picture itself, which
+ * arrives down a wire. Each default is read from the shader's own DEFAULT_PROPS
+ * rather than restated, which is how the first version of this ended up
+ * rendering a different picture entirely.
+ *
+ * Thirty-two controls is more than a node can hold, so they render in the
+ * floating panel beside the board rather than inside the node — the same reason
+ * the shader settings moved there, and the same argument MaskControls makes.
  */
 export const STANDARD: NodeType = {
   capability: "board.shader",
@@ -49,10 +56,6 @@ export const STANDARD: NodeType = {
   outputs: [{ key: OUTPUT_PORT_KEY, label: "Image", type: "image" }],
   settings: [
     {
-      /*
-       * The halftone cell, in pixels. The single most visible control: at 2 it
-       * reads as a photograph, at 12 as a pattern that happens to be a picture.
-       */
       default: 4.5,
       key: "dotSize",
       kind: "number",
@@ -67,17 +70,9 @@ export const STANDARD: NodeType = {
       kind: "color",
       label: "Background",
     },
+    { default: "#131415", key: "ink", kind: "color", label: "Ink" },
+    { default: "#3A70B3", key: "blue", kind: "color", label: "Mark" },
     {
-      /* The lockup's own text. Blank renders the mark alone. */
-      key: "wordmark",
-      kind: "text",
-      label: "Wordmark",
-      maxLength: 60,
-      placeholder: "Standard",
-    },
-    {
-      /* The design's own default is the reversed pair, so this starts there
-         rather than at the light one the first draft assumed. */
       default: "yes",
       key: "reversed",
       kind: "select",
@@ -85,10 +80,24 @@ export const STANDARD: NodeType = {
       options: ["yes", "no"],
     },
     {
-      /*
-       * How strongly the picture drives the dots. Low leaves an even field with
-       * the image faintly in it; high makes the image the only thing there.
-       */
+      default: "#EEF3F4",
+      key: "reverseDots",
+      kind: "color",
+      label: "Dots (reversed)",
+    },
+    {
+      default: "#27444D",
+      key: "reverseBackground",
+      kind: "color",
+      label: "Background (reversed)",
+    },
+    {
+      default: "#FFFFFF",
+      key: "reverseInk",
+      kind: "color",
+      label: "Ink (reversed)",
+    },
+    {
       default: 1,
       key: "fieldStrength",
       kind: "number",
@@ -97,8 +106,6 @@ export const STANDARD: NodeType = {
       min: 0,
     },
     {
-      /* Dots in the parts of the picture that have nothing in them. Zero is a
-         clean cut-out; raised, the mark sits in a field rather than on blank. */
       default: 0.012,
       key: "baseDensity",
       kind: "number",
@@ -107,17 +114,22 @@ export const STANDARD: NodeType = {
       min: 0,
     },
     {
-      /* The trailing arms — the part that reads as the brand rather than as a
-         generic halftone. Zero is a plain dithered picture. */
+      default: 1,
+      key: "fieldSize",
+      kind: "number",
+      label: "Zoom",
+      max: 4,
+      min: 0.1,
+    },
+    {
       default: 0.35,
       key: "spiralAmount",
       kind: "number",
-      label: "Spiral",
+      label: "Swirl",
       max: 3,
       min: 0,
     },
     {
-      /* How tightly the arms wind. The single biggest lever on the swirl. */
       default: 18,
       key: "spiralTightness",
       kind: "number",
@@ -134,13 +146,136 @@ export const STANDARD: NodeType = {
       min: 1,
     },
     {
-      /* How much of the frame the picture fills, before the dots are counted. */
-      default: 1,
-      key: "fieldSize",
+      default: 0.58,
+      key: "spiralOverlap",
       kind: "number",
-      label: "Zoom",
-      max: 4,
-      min: 0.1,
+      label: "Swirl overlap",
+      max: 1,
+      min: 0,
+    },
+    {
+      default: 0.27,
+      key: "clearSize",
+      kind: "number",
+      label: "Centre clear",
+      max: 1,
+      min: 0,
+    },
+    {
+      default: 0.12,
+      key: "clearFeather",
+      kind: "number",
+      label: "Clear softness",
+      max: 1,
+      min: 0,
+    },
+    {
+      key: "wordmark",
+      kind: "text",
+      label: "Wordmark",
+      maxLength: 120,
+      placeholder: "Standard",
+    },
+    {
+      key: "description",
+      kind: "text",
+      label: "Description",
+      maxLength: 120,
+      placeholder: "Standard",
+    },
+    {
+      default: "yes",
+      key: "showDescription",
+      kind: "select",
+      label: "Show description",
+      options: ["yes", "no"],
+    },
+    {
+      default: 17,
+      key: "descriptionSize",
+      kind: "number",
+      label: "Description size",
+      max: 120,
+      min: 6,
+    },
+    {
+      default: 92,
+      key: "typeSize",
+      kind: "number",
+      label: "Type size",
+      max: 300,
+      min: 8,
+    },
+    {
+      default: 700,
+      key: "typeWeight",
+      kind: "number",
+      label: "Type weight",
+      max: 900,
+      min: 100,
+    },
+    {
+      default: -0.035,
+      key: "tracking",
+      kind: "number",
+      label: "Tracking",
+      max: 0.5,
+      min: -0.2,
+    },
+    {
+      default: "no",
+      key: "iconOnly",
+      kind: "select",
+      label: "Mark only",
+      options: ["yes", "no"],
+    },
+    {
+      default: 180,
+      key: "iconSize",
+      kind: "number",
+      label: "Mark size (icon)",
+      max: 600,
+      min: 20,
+    },
+    {
+      default: 104,
+      key: "markSize",
+      kind: "number",
+      label: "Mark size",
+      max: 400,
+      min: 20,
+    },
+    {
+      default: 10,
+      key: "lockupGap",
+      kind: "number",
+      label: "Lockup gap",
+      max: 120,
+      min: 0,
+    },
+    {
+      default: 20,
+      key: "verticalGap",
+      kind: "number",
+      label: "Vertical gap",
+      max: 120,
+      min: 0,
+    },
+    {
+      default: 8,
+      key: "padding",
+      kind: "number",
+      label: "Padding",
+      max: 120,
+      min: 0,
+    },
+    {
+      default: 16,
+      key: "cornerRadius",
+      kind: "number",
+      label: "Corner radius",
+      max: 120,
+      min: 0,
     },
   ],
 };
