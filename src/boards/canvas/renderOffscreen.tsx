@@ -69,7 +69,16 @@ export const renderOffscreen = async (
   // Off screen rather than hidden: `display: none` gives the canvas no size and
   // nothing to draw into, and `visibility: hidden` still reserves layout on
   // whatever page it is borrowing.
-  host.style.cssText = `position:fixed;left:-99999px;top:0;width:${size.width}px;height:${size.height}px;pointer-events:none;`;
+  /*
+   * On screen, but behind the page.
+   *
+   * Not at -99999px, which is the obvious way to hide it and the one that does
+   * not work: the shader library watches with an IntersectionObserver and stops
+   * rendering anything that is not in the viewport, so a host parked off the
+   * left edge polls until it times out and captures a blank. Behind everything
+   * at zero opacity is still "in view" as far as the observer is concerned.
+   */
+  host.style.cssText = `position:fixed;left:0;top:0;width:${size.width}px;height:${size.height}px;opacity:0.01;pointer-events:none;z-index:-2147483647;`;
   document.body.append(host);
   const root = createRoot(host);
 
