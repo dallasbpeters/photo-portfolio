@@ -2,6 +2,7 @@ import { containedBy } from "../../config/graph.js";
 import { DEFAULT_PLACEHOLDER } from "../../config/nodes/iterate.js";
 import { HEX_COLOUR } from "../../config/nodes/palette.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
+import { parseItems } from "./listItems";
 
 /**
  * Drag-and-drop type for an image pulled off a node.
@@ -150,6 +151,9 @@ export const outputListOf = (
   }
   if (item.nodeType === "iterate") {
     return iteratedTextOf(item, graph, depth);
+  }
+  if (item.nodeType === "list") {
+    return parseItems(item.config?.items);
   }
   if (item.nodeType === "palette") {
     return paletteOutputsOf(item.config ?? {});

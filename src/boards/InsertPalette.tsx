@@ -122,6 +122,13 @@ const BASE_ENTRIES: Entry[] = [
     section: "Nodes",
   },
   {
+    action: { kind: "node", nodeType: "list" },
+    hint: "list prompts rows editable items collection",
+    icon: NotebookIcon,
+    label: "List",
+    section: "Nodes",
+  },
+  {
     action: { kind: "node", nodeType: "batch" },
     hint: "batch list queue images many each one at a time frame",
     icon: FileStackIcon,

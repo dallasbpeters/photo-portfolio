@@ -55,7 +55,7 @@ export function ShaderPanel({
     : { layers: [] };
 
   return (
-    <div className="pointer-events-auto flex max-h-[70vh] w-64 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
+    <div className="pointer-events-auto flex h-full w-full flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
       <div className="flex items-center justify-between border-board-ink/10 border-b px-3 py-2">
         <span className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
           {isHalftone ? "Halftone" : "Shader"}

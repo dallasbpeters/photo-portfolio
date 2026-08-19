@@ -35,6 +35,7 @@ import { GENERATE } from "./nodes/generate.js";
 import { ICON } from "./nodes/icon.js";
 import { ITERATE } from "./nodes/iterate.js";
 import { JOIN } from "./nodes/join.js";
+import { LIST } from "./nodes/list.js";
 import { PALETTE } from "./nodes/palette.js";
 import { PROMPT } from "./nodes/prompt.js";
 import { STANDARD } from "./nodes/standard.js";
@@ -134,6 +135,7 @@ export type NodeTypeId =
   | "icon"
   | "iterate"
   | "join"
+  | "list"
   | "palette"
   | "prompt"
   | "standard"
@@ -158,6 +160,7 @@ export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   icon: ICON,
   iterate: ITERATE,
   join: JOIN,
+  list: LIST,
   palette: PALETTE,
   prompt: PROMPT,
   standard: STANDARD,

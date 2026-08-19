@@ -16,6 +16,14 @@ import { wiredImageFor } from "./wiredPreviews";
  * MaskControls says so directly — "chrome on top of the very thing the mask has
  * to be judged against" — and the shader settings used to prove it, rendering
  * inside the item and covering up to 85% of the shader they were adjusting.
+ *
+ * Two placements, because two shapes. The brush and mask controls are a strip
+ * of buttons and sit along the bottom. The shader panel is a panel: fifteen to
+ * twenty controls across several groups, and anchored to the bottom it ran out
+ * of room before reaching the last of them — the ink colours rendered correctly
+ * and simply could not be scrolled to. It gets a full-height column down the
+ * right, which has space for all of them and leaves the picture visible beside
+ * it.
  */
 
 export interface FloatingToolsProps {
@@ -44,30 +52,32 @@ export function FloatingTools({
   wires,
 }: FloatingToolsProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex items-end justify-center gap-3">
-      <div className="pointer-events-auto">
-        <AutoplayToggle items={items} />
-        <MaskControls onChange={onMaskChange} selected={selected} />
-        <BoardDrawTools
+    <>
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+        <div className="pointer-events-auto">
+          <AutoplayToggle items={items} />
+          <MaskControls onChange={onMaskChange} selected={selected} />
+          <BoardDrawTools
+            onConfigChange={onConfigChange}
+            onStyle={onStyle}
+            onTool={onTool}
+            selected={selected}
+            style={drawStyle}
+            tool={drawTool}
+          />
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute top-4 right-4 bottom-4 z-20 flex w-72 justify-end">
+        <ShaderPanel
+          imageUrl={
+            selected ? wiredImageFor(selected.id, { items, wires }) : null
+          }
           onConfigChange={onConfigChange}
-          onStyle={onStyle}
-          onTool={onTool}
+          onExport={onExportShader}
           selected={selected}
-          style={drawStyle}
-          tool={drawTool}
         />
       </div>
-      {/* Beside the rest rather than in the same stack: it is a panel, not a
-          strip of buttons, and it has to stay readable while the shader behind
-          it is being judged. */}
-      <ShaderPanel
-        imageUrl={
-          selected ? wiredImageFor(selected.id, { items, wires }) : null
-        }
-        onConfigChange={onConfigChange}
-        onExport={onExportShader}
-        selected={selected}
-      />
-    </div>
+    </>
   );
 }

@@ -11,6 +11,7 @@ import {
 import { nodeTypeFor } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
 import { excludedFrom, pickImages, selectedIndex } from "./itemOutput";
+import { ListRows } from "./ListRows";
 import { PaletteSwatches } from "./PaletteSwatches";
 import { ResultImages } from "./ResultImages";
 import { SettingField } from "./SettingField";
@@ -443,28 +444,48 @@ function NodeBody({
           floating panel beside the board instead, for the same reason the
           shader settings moved there. Everything else keeps its settings on the
           node, where they are one glance from what they change. */}
-      {(item.nodeType === "standard" ? [] : type.settings).map((setting) =>
-        // The palette's colours are swatches rather than a text field — see
-        // PaletteSwatches, which edits the very same stored string.
-        item.nodeType === "palette" && setting.key === "colors" ? (
-          <PaletteSwatches
-            key={setting.key}
-            onChange={(colors) => set("colors", colors)}
-            value={typeof config.colors === "string" ? config.colors : ""}
-          />
-        ) : (
-          <SettingField
-            key={setting.key}
-            onChange={(value) => set(setting.key, value)}
-            // Only the prompt is superseded by a wire. Disabling every
-            // setting locked the model and variation count too, which have
-            // nothing to do with where the prompt came from.
-            readOnly={readOnly || (hasWiredPrompt && setting.key === "prompt")}
-            setting={setting}
-            value={fieldValue(setting.key, config, wiredPrompt)}
-          />
-        )
-      )}
+      {(item.nodeType === "standard" ? [] : type.settings).map((setting) => {
+        // Chosen by name rather than by a chain of ternaries: there are three
+        // now, and the linter is right that a fourth would nest deeper than
+        // anyone can read. The same move CanvasMenu made for its panels.
+        const custom = () => {
+          // A List's rows are the node, not a field on it: one prompt each,
+          // editable and removable where they are.
+          if (item.nodeType === "list" && setting.key === "items") {
+            return (
+              <ListRows
+                onChange={(items) => set("items", items)}
+                readOnly={readOnly}
+                value={config.items}
+              />
+            );
+          }
+          // The palette's colours are swatches rather than a text field — see
+          // PaletteSwatches, which edits the very same stored string.
+          if (item.nodeType === "palette" && setting.key === "colors") {
+            return (
+              <PaletteSwatches
+                onChange={(colors) => set("colors", colors)}
+                value={typeof config.colors === "string" ? config.colors : ""}
+              />
+            );
+          }
+          return (
+            <SettingField
+              onChange={(value) => set(setting.key, value)}
+              // Only the prompt is superseded by a wire. Disabling every
+              // setting locked the model and variation count too, which have
+              // nothing to do with where the prompt came from.
+              readOnly={
+                readOnly || (hasWiredPrompt && setting.key === "prompt")
+              }
+              setting={setting}
+              value={fieldValue(setting.key, config, wiredPrompt)}
+            />
+          );
+        };
+        return <div key={setting.key}>{custom()}</div>;
+      })}
 
       {/* A run that reported success but drew nothing would otherwise look
               identical to one that never ran. Saying so is what keeps a broken
