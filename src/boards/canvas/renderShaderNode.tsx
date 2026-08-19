@@ -1,21 +1,33 @@
-import { Halftone, ImageTexture, Shader } from "shaders/react";
+import { Halftone, ImageTexture, Shader, SolidColor } from "shaders/react";
 import { renderOffscreen } from "./renderOffscreen";
 
 /**
  * Rendering a Halftone node to a file, away from the board.
  *
- * The stack is the library's own — the same three components anyone would write
- * by hand from shaders.com:
+ * The stack is the one from shaders.com, copied rather than reinvented:
  *
- *   <Shader><Halftone …><ImageTexture … /></Halftone></Shader>
+ *   <Shader>
+ *     <SolidColor color=… id=… />
+ *     <Halftone angle=… frequency=…>
+ *       <ImageTexture maskSource=… url=… />
+ *     </Halftone>
+ *   </Shader>
  *
- * That matters more than it looks. This previously drove a bespoke WebGL
- * renderer built to dither the brand mark, and every complaint about it came
- * from one root: it was a mark renderer taught to accept a photograph. It
- * sampled a window instead of the whole picture, punched the lockup's clear
- * space out of the middle, and its spiral only read as a spiral over a sparse
- * shape. Handing the job to the component that exists for it removes the
- * translation layer where all of that lived.
+ * **The SolidColor is the whole trick, and it is the ink rather than the
+ * paper.** Halftone's classic shader returns `childColor * dotPattern` with the
+ * alpha multiplied too, so the dots are a hole punched through the picture: dot
+ * coverage rises with brightness, and what shows through the gaps is whatever
+ * sibling sits behind. Behind nothing, the dark half of a photograph resolves
+ * to the page and the export comes out pale and inverted — a black subject
+ * rendering as blank was this node's defining bug. Behind a dark SolidColor,
+ * the same shader is a duotone halftone: shadows become ink, highlights keep
+ * the picture's own light tones.
+ *
+ * Everything else that was blamed for it turned out not to matter. Rendered
+ * side by side, `maskSource` and `boundingBox` changed nothing at all — the
+ * ground is full-frame, so masking to it is a no-op — and an earlier attempt
+ * that did add a SolidColor still looked washed out only because the colour
+ * chosen was cream: light ink on light paper.
  *
  * Mounted offscreen rather than captured from the node on the canvas — see
  * renderOffscreen. The frame takes the picture's own aspect, so the whole of it
@@ -25,19 +37,16 @@ import { renderOffscreen } from "./renderOffscreen";
 /**
  * The long edge of an export, and the ceiling the library actually honours.
  *
- * Asking for 2400 does not get 2400. The engine runs every render through
+ * Asking for 2400 does not get 2400. Every render goes through the engine's
  * `clampToTextureCap`, which is
  *
  *   const capW = Math.min(w, env.viewportWidth, gpuCssCap)
  *
- * — so the drawing is clamped to the *browser window's* inner size no matter
- * how large the element it is mounted in. A 2400px request in a 1440px window
- * renders 1440 real pixels and the rest is upscale. Measured here rather than
- * assumed: a 600x400 host in a 414px-wide window produced a 414x276 canvas.
- *
- * So the request is clamped honestly instead. An export is as large as the
- * window allows, which is the true limit, and the file says so rather than
- * carrying a size it never had.
+ * — the drawing is clamped to the *browser window's* inner size however large
+ * the element it is mounted in. A 2400px request in a 1440px window draws 1440
+ * real pixels and upscales the rest. Measured rather than assumed: a 600x400
+ * host in a 414px-wide window produced a 414x276 canvas. So the request is
+ * clamped honestly instead of carrying a size the file never had.
  */
 const LONG_EDGE = 2400;
 
@@ -50,6 +59,9 @@ const longEdge = (): number =>
       window.innerHeight || LONG_EDGE
     )
   );
+
+/** The ground's handle, so the texture above it can name it. */
+const GROUND_ID = "halftone-ground";
 
 const num = (value: unknown, fallback: number): number => {
   const n = Number(value);
@@ -86,6 +98,49 @@ const measure = (url: string): Promise<{ h: number; w: number } | null> =>
     img.src = url;
   });
 
+/**
+ * The halftone stack, shared by the export and by anything that wants to show
+ * one. One definition, so what is on screen and what lands in the file cannot
+ * drift apart — which they did, repeatedly.
+ */
+export const halftoneStack = (
+  config: HalftoneSettings,
+  imageUrl: string
+): React.ReactElement => (
+  <Shader style={{ height: "100%", width: "100%" }}>
+    {/* Behind the halftone, and read through its dots. See above. */}
+    <SolidColor color={hex(config.inkColor, "#041045")} id={GROUND_ID} />
+    <Halftone
+      angle={num(config.angle, 102)}
+      blackAngle={num(config.blackAngle, 45)}
+      blackColor={hex(config.blackColor, "#000000")}
+      cyanAngle={num(config.cyanAngle, 15)}
+      cyanColor={hex(config.cyanColor, "#00ffff")}
+      frequency={num(config.frequency, 148)}
+      magentaAngle={num(config.magentaAngle, 75)}
+      magentaColor={hex(config.magentaColor, "#ff00ff")}
+      misprint={num(config.misprint, 0)}
+      misprintAngle={num(config.misprintAngle, 0)}
+      paperColor={hex(config.paperColor, "#ffffff")}
+      style={pick(config.style, ["classic", "cmyk"], "classic")}
+      yellowAngle={num(config.yellowAngle, 0)}
+      yellowColor={hex(config.yellowColor, "#ffff00")}
+    >
+      <ImageTexture
+        maskSource={GROUND_ID}
+        // `cover` rather than the library's `fill`, which stretches — on a
+        // halftone that reads as a squeezed subject rather than as a choice.
+        objectFit={pick(
+          config.objectFit,
+          ["cover", "contain", "fill"],
+          "cover"
+        )}
+        url={imageUrl}
+      />
+    </Halftone>
+  </Shader>
+);
+
 export const renderHalftone = async (
   config: HalftoneSettings,
   imageUrl: string | null
@@ -99,42 +154,8 @@ export const renderHalftone = async (
   const width = Math.round(aspect >= 1 ? edge : edge * aspect);
   const height = Math.round(aspect >= 1 ? edge / aspect : edge);
 
-  return await renderOffscreen(
-    // Sized explicitly. Left to itself the wrapper takes a 2:1 box rather than
-    // the host's — a 600x400 host rendered into 600x300 — so the picture was
-    // fitted into a frame the wrong shape and the rest came out blank. That is
-    // the "not grabbing all of the image" everyone kept seeing.
-    <Shader style={{ height: "100%", width: "100%" }}>
-      <Halftone
-        angle={num(config.angle, 45)}
-        blackAngle={num(config.blackAngle, 45)}
-        blackColor={hex(config.blackColor, "#000000")}
-        cyanAngle={num(config.cyanAngle, 15)}
-        cyanColor={hex(config.cyanColor, "#00ffff")}
-        frequency={num(config.frequency, 100)}
-        magentaAngle={num(config.magentaAngle, 75)}
-        magentaColor={hex(config.magentaColor, "#ff00ff")}
-        misprint={num(config.misprint, 0)}
-        misprintAngle={num(config.misprintAngle, 0)}
-        paperColor={hex(config.paperColor, "#ffffff")}
-        // `cmyk` by default: `classic` is not a printed halftone and every
-        // ink below is switched off in it. See config/nodes/standard.ts.
-        style={pick(config.style, ["cmyk", "classic"], "cmyk")}
-        yellowAngle={num(config.yellowAngle, 0)}
-        yellowColor={hex(config.yellowColor, "#ffff00")}
-      >
-        <ImageTexture
-          // `cover` rather than the library's `fill`, which stretches — on a
-          // halftone that reads as a squeezed subject rather than as a choice.
-          objectFit={pick(
-            config.objectFit,
-            ["cover", "contain", "fill"],
-            "cover"
-          )}
-          url={imageUrl}
-        />
-      </Halftone>
-    </Shader>,
-    { height, width }
-  );
+  return await renderOffscreen(halftoneStack(config, imageUrl), {
+    height,
+    width,
+  });
 };

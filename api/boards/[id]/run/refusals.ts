@@ -86,11 +86,20 @@ export const unmetRequirement = (
   capability: NodeCapability,
   models: readonly FalModelDef[]
 ): Refusal | null => {
-  // A composite has no model and no prompt — its inputs are pictures, and the
-  // required image port has already been checked by resolveInputs. Running it
-  // through the model rules below would refuse it for lacking a prompt that it
-  // has no field to type one into.
-  if (capability === "board.composite") {
+  /*
+   * The browser-rendered nodes have no model and no prompt.
+   *
+   * Their inputs are pictures, and the required image port has already been
+   * checked by resolveInputs. Running them through the model rules below
+   * refuses them for lacking a prompt they have no field to type one into —
+   * which is precisely what happened to Halftone, listed here late: it asked
+   * for an image, was given one, and was then turned away wanting words.
+   *
+   * Read off the capability rather than the node type, so the next node that
+   * renders in the browser is covered by having a capability rather than by
+   * somebody remembering this function exists.
+   */
+  if (capability === "board.composite" || capability === "board.shader") {
     return null;
   }
   const mask = maskRefusal(model, masked, models);

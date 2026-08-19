@@ -110,11 +110,117 @@ export const captureCanvas = async (
   return blob;
 };
 
+/** Long enough for a frame to arrive; past this nothing is coming. */
+const FRAME_TIMEOUT_MS = 2500;
+
+/**
+ * What a blank capture means, said once.
+ *
+ * Both roads to the pixels end here: a direct read that came back empty and a
+ * compositor that never published a frame are the same finding — nothing was
+ * drawn — and naming the usual cause is more use than either failure alone.
+ */
+const BLANK = () =>
+  new CaptureError(
+    "This rendered blank. Nothing was drawn, or a WebGL canvas needs preserveDrawingBuffer to be captured after the frame that drew it."
+  );
+
+/**
+ * A picture of a canvas that refuses to be read.
+ *
+ * The shader library draws through WebGPU, and its canvas hands back nothing:
+ * `toBlob`, `toDataURL`, `drawImage` and `createImageBitmap` all return a fully
+ * transparent image — measured, every one of 120,000 pixels at alpha zero —
+ * while the very same canvas is plainly showing the picture on screen. It is
+ * not a timing problem and `preserveDrawingBuffer` has no WebGPU equivalent;
+ * the drawing buffer is simply not readable from the page.
+ *
+ * This is why the Halftone node produced nothing. The render was correct, the
+ * capture came back blank, the run reported "this shader has not been rendered
+ * yet", and the node sat there doing nothing at all.
+ *
+ * `captureStream` takes a different road to the same pixels: frames come off
+ * the compositor, which is the half that works, rather than out of the buffer.
+ * The same canvas that reads as empty yields a full opaque frame this way.
+ */
+const captureComposited = async (
+  canvas: HTMLCanvasElement,
+  options: CaptureOptions
+): Promise<Blob> => {
+  const source = canvas as HTMLCanvasElement & {
+    captureStream?: (fps?: number) => MediaStream;
+  };
+  if (typeof source.captureStream !== "function") {
+    throw new CaptureError(
+      "This browser cannot capture what the shader drew. Chrome and Edge can."
+    );
+  }
+  // Zero frames a second: nothing is published until it is asked for, so the
+  // frame captured is the current one rather than whichever the clock landed on.
+  const stream = source.captureStream(0);
+  const track = stream.getVideoTracks()[0] as
+    | (MediaStreamTrack & { requestFrame?: () => void })
+    | undefined;
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+
+  try {
+    track?.requestFrame?.();
+    // Deliberately not awaited. A stream that never publishes a frame — which
+    // is what a canvas with nothing on it produces — leaves `play()` pending
+    // for good, and awaiting it hung the capture until the test runner gave up
+    // rather than failing with a reason.
+    video.play().catch(() => undefined);
+    await new Promise<void>((resolve, reject) => {
+      // A stream that publishes nothing is a canvas with nothing on it.
+      const timer = setTimeout(() => reject(BLANK()), FRAME_TIMEOUT_MS);
+      const ready = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      if (video.videoWidth > 0) {
+        ready();
+        return;
+      }
+      video.onloadeddata = ready;
+    });
+
+    const flat = document.createElement("canvas");
+    flat.width = canvas.width;
+    flat.height = canvas.height;
+    const context = flat.getContext("2d");
+    if (!context) {
+      throw new CaptureError("There is nothing rendered here to capture.");
+    }
+    context.drawImage(video, 0, 0, flat.width, flat.height);
+    // Still nothing. The compositor is the last road to these pixels, so a
+    // blank frame here means the shader really did draw nothing — and a blank
+    // file stored as a node's result looks exactly like a working run.
+    if (isBlank(flat)) {
+      throw BLANK();
+    }
+    return await captureCanvas(flat, options);
+  } finally {
+    video.pause();
+    video.srcObject = null;
+    for (const each of stream.getTracks()) {
+      each.stop();
+    }
+  }
+};
+
 /**
  * The whole capture, from a container to a file.
  *
  * Kept together because every step has a failure worth naming, and a caller
  * that assembled these by hand would report "could not export" for all of them.
+ *
+ * Read directly where that works, and off the compositor where it does not. Two
+ * renderers are in play — a plain 2D canvas reads back perfectly, a WebGPU one
+ * not at all — and which is in front of us is not knowable in advance, so it is
+ * settled by trying rather than by guessing from the element.
  */
 export const captureShader = async (
   host: Element | null,
@@ -125,9 +231,7 @@ export const captureShader = async (
     throw new CaptureError("There is nothing rendered here to capture.");
   }
   if (isBlank(canvas)) {
-    throw new CaptureError(
-      "This rendered blank. A WebGL canvas needs preserveDrawingBuffer to be captured after the frame that drew it."
-    );
+    return await captureComposited(canvas, options);
   }
   return await captureCanvas(canvas, options);
 };

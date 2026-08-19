@@ -26,6 +26,7 @@
     "lora:upload": "tsx scripts/upload-lora.ts",
     "openapi": "tsx scripts/generate-openapi.ts",
     "preview": "vite preview",
+    "shots": "vitest run --config vitest.shader.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "ultracite": "npx ultracite fix",

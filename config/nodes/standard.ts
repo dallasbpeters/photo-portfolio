@@ -42,33 +42,42 @@ export const STANDARD: NodeType = {
   settings: [
     {
       /*
-       * `cmyk` by default, and the difference is not a matter of taste.
+       * `classic` over a solid ground, which is the stack from shaders.com.
        *
-       * `cmyk` is a printed halftone: paper, four screens at four angles, and
-       * ink laid down in proportion to how dark the picture is. `classic` is
-       * not a halftone at all — read the library's shader and it returns
-       * `childColor * dotPattern` with the alpha multiplied too, so a *bright*
-       * pixel keeps a big dot and a dark one disappears. Over white paper that
-       * comes out inverted and washed out: a black subject renders as nothing.
+       * Classic's shader returns `childColor * dotPattern` — the dots are a
+       * hole punched through the picture, and what shows through is the ink
+       * laid behind it. That is why this looked broken for so long: behind
+       * nothing, the dark half of a photograph resolves to the page and a black
+       * subject renders as blank.
        *
-       * Every ink and plate control below is also declared
-       * `condition: { style: "cmyk" }` in the library, so in `classic` eleven of
-       * the settings on this node quietly do nothing. Defaulting to it made the
-       * colour controls look broken when they were merely switched off.
-       *
-       * `classic` is kept because a single-ink screen over a dark ground is a
-       * real look, and is what it is good for.
+       * `cmyk` is the other real answer — paper and four screens at four
+       * angles — and it is the one where the ink and plate settings below do
+       * anything at all, since the library declares every one of them
+       * `condition: { style: "cmyk" }`.
        */
-      default: "cmyk",
+      default: "classic",
       key: "style",
       kind: "select",
       label: "Style",
-      options: ["cmyk", "classic"],
+      options: ["classic", "cmyk"],
+    },
+    {
+      /*
+       * The ink, and the single most important control on this node.
+       *
+       * Rendered as a solid layer behind the halftone and read through its
+       * dots, so it is what the shadows of the picture become. A light colour
+       * here is light ink on light paper and looks like nothing happened.
+       */
+      default: "#041045",
+      key: "inkColor",
+      kind: "color",
+      label: "Ink",
     },
     {
       /* Dots across the frame. The most visible control by far: low reads as a
          pattern that happens to be a picture, high as a photograph. */
-      default: 100,
+      default: 148,
       key: "frequency",
       kind: "number",
       label: "Frequency",
@@ -76,7 +85,7 @@ export const STANDARD: NodeType = {
       min: 4,
     },
     {
-      default: 45,
+      default: 102,
       key: "angle",
       kind: "number",
       label: "Angle",
@@ -98,8 +107,19 @@ export const STANDARD: NodeType = {
       label: "Fit",
       options: ["cover", "contain", "fill"],
     },
-    { default: "#ffffff", key: "paperColor", kind: "color", label: "Paper" },
-    { default: "#000000", key: "blackColor", kind: "color", label: "Ink" },
+    {
+      /* cmyk only — classic has no paper of its own. */
+      default: "#ffffff",
+      key: "paperColor",
+      kind: "color",
+      label: "Paper (cmyk)",
+    },
+    {
+      default: "#000000",
+      key: "blackColor",
+      kind: "color",
+      label: "Key (cmyk)",
+    },
     {
       /* Nudges the screens out of register, the way a real press does. */
       default: 0,

@@ -42,3 +42,6 @@ loras/
 bruno/*/*.bru
 !bruno/environments/*.bru
 bruno/**/*.results.json
+
+# Shader screenshots, written by `pnpm shots` for looking at.
+.shots/
