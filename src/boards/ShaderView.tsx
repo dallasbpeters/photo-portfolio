@@ -88,7 +88,18 @@ const insertImage = (layers: ShaderLayer[], url: string): ShaderLayer[] => {
   const image = {
     id: `wired-${IMAGE_LAYER}`,
     name: IMAGE_LAYER,
-    props: { url },
+    /*
+     * `contain` rather than the library's default.
+     *
+     * ImageTexture defaults objectFit to "fill", which stretches the picture to
+     * the viewport — so a portrait wired into a square shader came out squashed,
+     * and nothing about the result said the aspect ratio had been thrown away.
+     *
+     * Contained rather than covered: a picture someone deliberately wired in
+     * should arrive whole, and silently cropping a third of it is the worse of
+     * the two failures.
+     */
+    props: { objectFit: "contain", url },
   };
   if (!(last && isEffect(last.name))) {
     return [...layers, image];
