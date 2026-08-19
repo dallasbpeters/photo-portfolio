@@ -6,6 +6,16 @@ import type { BoardItemRow } from "../../../_lib/boards.js";
 import { columnsOf, expandTemplate, LINES, splitValues } from "./expand.js";
 import { asObject, toBox } from "./rows.js";
 
+/** One row per line, blanks dropped. Mirrors parseItems in src/boards. */
+const LIST_LINES = /\r?\n/;
+const listRowsOf = (stored: unknown): string[] =>
+  typeof stored === "string"
+    ? stored
+        .split(LIST_LINES)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
+
 /**
  * What every item on a board hands to whatever it feeds.
  *
@@ -306,6 +316,13 @@ export const outputsOf = (
   // The two nodes whose output is plural by design.
   if (row.node_type === "iterate") {
     return iteratedOutputsOf(row, rows, wires, depth);
+  }
+  // A List hands over exactly what is written on it, one row at a time. The
+  // rows are the node's whole value, so nothing is computed and nothing is
+  // read from upstream — filling it from a wire is an edit, made once, not a
+  // resolution performed on every read.
+  if (row.node_type === "list") {
+    return listRowsOf(asObject(row.config).items);
   }
   if (row.node_type === "palette") {
     return paletteOutputsOf(asObject(row.config));
