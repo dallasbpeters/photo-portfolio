@@ -182,6 +182,14 @@ interface LayerRowProps {
   onMove: (id: string, delta: number) => void;
   onRemove: (id: string) => void;
   onSetProp: (id: string, key: string, value: unknown) => void;
+  /**
+   * True when a picture is wired into this item.
+   *
+   * An effect fed by a wire is not empty, even though the saved stack under it
+   * is: withImage injects the picture at render time on purpose, so unplugging
+   * leaves no stale URL behind.
+   */
+  wiredSource?: boolean;
 }
 
 /**
@@ -192,6 +200,7 @@ interface LayerRowProps {
  * order of a flat list.
  */
 function LayerRow({
+  wiredSource,
   canMoveDown,
   canMoveUp,
   layer,
@@ -267,9 +276,14 @@ function LayerRow({
           <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
             Applies to
           </p>
-          {children.length === 0 ? (
+          {children.length === 0 && !wiredSource ? (
             <p className="text-[10px] text-amber-300/60">
               Empty — this effect has nothing to change.
+            </p>
+          ) : null}
+          {children.length === 0 && wiredSource ? (
+            <p className="text-[10px] text-board-ink/45">
+              The picture wired into this item. Unplug it to change that.
             </p>
           ) : null}
           {children.map((child, index) => (
@@ -351,10 +365,24 @@ function LayerRow({
 
 interface ShaderControlsProps {
   config: ShaderConfig;
+  /**
+   * The picture wired into this item, if any.
+   *
+   * Only needed so an effect fed by a wire stops calling itself empty. The
+   * image is injected at render time and deliberately never saved — see
+   * withImage — so the stored stack, which is all this panel could otherwise
+   * see, genuinely has nothing under the effect while the canvas behind it is
+   * plainly rendering the picture.
+   */
+  imageUrl?: string | null;
   onChange: (config: ShaderConfig) => void;
 }
 
-export function ShaderControls({ config, onChange }: ShaderControlsProps) {
+export function ShaderControls({
+  config,
+  imageUrl,
+  onChange,
+}: ShaderControlsProps) {
   const [adding, setAdding] = useState<"source" | "effect" | null>(null);
   // Read through the migration on every edit, so a stack saved in the old flat
   // shape is rewritten the first time it is touched rather than half-converted.
@@ -382,6 +410,7 @@ export function ShaderControls({ config, onChange }: ShaderControlsProps) {
               }))
             )
           }
+          wiredSource={Boolean(imageUrl)}
         />
       ))}
 

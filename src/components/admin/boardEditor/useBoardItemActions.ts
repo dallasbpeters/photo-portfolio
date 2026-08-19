@@ -6,10 +6,14 @@ import {
   DEFAULT_IMAGE_WIDTH,
 } from "../../../../config/canvas.js";
 import { nodeTypeFor } from "../../../../config/nodeTypes.js";
+import { renderShaderStack } from "../../../boards/canvas/renderShaderStack";
+import { wiredImageFor } from "../../../boards/canvas/wiredPreviews";
 import { outputImageOf } from "../../../boards/itemOutput";
 import { newItemId } from "../../../boards/newItemId";
+import { isShaderConfig } from "../../../boards/shaderConfig";
 import { type BoardComment, commentsApi } from "../../../services/comments";
-import type { BoardItem } from "../../../types";
+import { portfolioService } from "../../../services/portfolioService";
+import type { BoardItem, BoardWire } from "../../../types";
 import { BLANK_ITEM } from "./placement";
 
 /**
@@ -21,6 +25,14 @@ import { BLANK_ITEM } from "./placement";
  * two-thousand-line component.
  */
 export interface BoardItemActionDeps {
+  /** Places a finished picture on the board, as any other external image. */
+  addExternal: (image: {
+    altText: string | null;
+    creditName: string | null;
+    creditUrl: string | null;
+    imageUrl: string;
+    thumbUrl: string | null;
+  }) => void;
   boardId: string;
   change: (next: BoardItem[]) => void;
   /** Somewhere free for a new item, near where you are looking. */
@@ -31,10 +43,12 @@ export interface BoardItemActionDeps {
   ) => { x: number; y: number };
   items: BoardItem[];
   setComments: React.Dispatch<React.SetStateAction<BoardComment[]>>;
+  wires: BoardWire[];
 }
 
 export const useBoardItemActions = (deps: BoardItemActionDeps) => {
-  const { boardId, change, dropPoint, items, setComments } = deps;
+  const { addExternal, boardId, change, dropPoint, items, setComments, wires } =
+    deps;
 
   /**
    * Moves one item to the very top of the stack.
@@ -131,9 +145,48 @@ export const useBoardItemActions = (deps: BoardItemActionDeps) => {
     );
   };
 
+  /**
+   * Renders the selected shader and puts the picture on the board.
+   *
+   * A shader is drawn live and has never been a file, so there is nothing to
+   * copy — the stack is drawn again offscreen at export size, uploaded, and
+   * placed as a picture. Landing it on the canvas rather than downloading it is
+   * the point: what the shader made becomes something the rest of the graph can
+   * wire out of, which is exactly the limitation config/nodeTypes.ts describes.
+   */
+  const exportShader = async (item: BoardItem) => {
+    const toastId = toast.loading("Rendering the shader…");
+    try {
+      const blob = await renderShaderStack(
+        isShaderConfig(item.config) ? item.config : { layers: [] },
+        wiredImageFor(item.id, { items, wires })
+      );
+      const { url } = await portfolioService.uploadImageFile(
+        new File([blob], "shader.png", { type: "image/png" }),
+        undefined,
+        "boards/shaders"
+      );
+      addExternal({
+        altText: null,
+        creditName: null,
+        creditUrl: null,
+        imageUrl: url,
+        thumbUrl: url,
+      });
+      toast.dismiss(toastId);
+      toast.success("Shader added to the board");
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(
+        err instanceof Error ? err.message : "Could not render the shader"
+      );
+    }
+  };
+
   return {
     bringToFront,
     canvaTarget,
+    exportShader,
     openSendToCanva,
     resolveComment,
     sendToBack,

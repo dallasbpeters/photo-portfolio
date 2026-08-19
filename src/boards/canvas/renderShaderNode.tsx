@@ -1,6 +1,5 @@
-import { createRoot } from "react-dom/client";
 import { DEFAULT_PROPS, StandardShader } from "../../components/StandarShader";
-import { CaptureError, captureShader } from "./captureCanvas";
+import { renderOffscreen } from "./renderOffscreen";
 
 /**
  * Rendering a Halftone node to a file, away from the board.
@@ -31,13 +30,6 @@ import { CaptureError, captureShader } from "./captureCanvas";
  */
 export const RENDER_SCALE = 2;
 
-/** A draw is one image load away; past this something is wrong. */
-const READY_TIMEOUT_MS = 8000;
-const POLL_MS = 60;
-
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
 export interface HalftoneSettings {
   background?: unknown;
   baseDensity?: unknown;
@@ -63,32 +55,6 @@ const hex = (value: unknown, fallback: string): string =>
     : fallback;
 
 /**
- * Capture once the shader has drawn something, retrying until the deadline.
- *
- * Each attempt has to wait for the one before it to fail, so this recurses on
- * the last error rather than looping: the polling is sequential by nature and
- * there is nothing here to run in parallel.
- */
-const captureWhenDrawn = async (
-  host: HTMLElement,
-  deadline: number,
-  lastError: unknown
-): Promise<Blob> => {
-  if (Date.now() >= deadline) {
-    throw lastError instanceof CaptureError
-      ? lastError
-      : new CaptureError("The halftone did not finish drawing in time.");
-  }
-  await wait(POLL_MS);
-  try {
-    return await captureShader(host);
-  } catch (err) {
-    // Blank is expected until the texture loads and the first frame lands.
-    return captureWhenDrawn(host, deadline, err);
-  }
-};
-
-/**
  * A PNG of this node, at export resolution.
  *
  * Resolves only once something has been drawn. The renderer draws on the
@@ -103,52 +69,35 @@ export const renderHalftone = async (
   const width = (DEFAULT_PROPS.width ?? 1200) * RENDER_SCALE;
   const height = (DEFAULT_PROPS.height ?? 700) * RENDER_SCALE;
 
-  const host = document.createElement("div");
-  // Off screen rather than hidden: `display: none` gives the canvas no size and
-  // WebGL nothing to draw into, and `visibility: hidden` still reserves layout.
-  host.style.cssText = `position:fixed;left:-99999px;top:0;width:${width}px;height:${height}px;pointer-events:none;`;
-  document.body.append(host);
-  const root = createRoot(host);
-
-  try {
-    root.render(
-      <StandardShader
-        {...DEFAULT_PROPS}
-        // A still, so the two things that only mean something over time are
-        // stopped rather than left to be captured at an arbitrary phase.
-        animate={false}
-        background={hex(config.background, DEFAULT_PROPS.background)}
-        baseDensity={num(config.baseDensity, DEFAULT_PROPS.baseDensity)}
-        breathing={0}
-        dotSize={num(config.dotSize, DEFAULT_PROPS.dotSize)}
-        dots={hex(config.dots, DEFAULT_PROPS.dots)}
-        fieldSize={num(config.fieldSize, DEFAULT_PROPS.fieldSize)}
-        fieldStrength={num(config.fieldStrength, DEFAULT_PROPS.fieldStrength)}
-        height={height}
-        imageUrl={imageUrl}
-        reversed={
-          config.reversed === undefined
-            ? DEFAULT_PROPS.reversed
-            : config.reversed === "yes"
-        }
-        rotation={0}
-        spiralAmount={num(config.spiralAmount, DEFAULT_PROPS.spiralAmount)}
-        width={width}
-        wordmark={
-          typeof config.wordmark === "string"
-            ? config.wordmark
-            : DEFAULT_PROPS.wordmark
-        }
-      />
-    );
-
-    return await captureWhenDrawn(host, Date.now() + READY_TIMEOUT_MS, null);
-  } finally {
-    // Unmounted on a later task: React refuses to unmount a root while it is
-    // still rendering, and the capture above can land inside that window.
-    setTimeout(() => {
-      root.unmount();
-      host.remove();
-    }, 0);
-  }
+  return await renderOffscreen(
+    <StandardShader
+      {...DEFAULT_PROPS}
+      animate={false}
+      background={hex(config.background, DEFAULT_PROPS.background)}
+      baseDensity={num(config.baseDensity, DEFAULT_PROPS.baseDensity)}
+      // A still, so the two things that only mean something over time are
+      // stopped rather than captured at an arbitrary phase.
+      breathing={0}
+      dotSize={num(config.dotSize, DEFAULT_PROPS.dotSize)}
+      dots={hex(config.dots, DEFAULT_PROPS.dots)}
+      fieldSize={num(config.fieldSize, DEFAULT_PROPS.fieldSize)}
+      fieldStrength={num(config.fieldStrength, DEFAULT_PROPS.fieldStrength)}
+      height={height}
+      imageUrl={imageUrl}
+      reversed={
+        config.reversed === undefined
+          ? DEFAULT_PROPS.reversed
+          : config.reversed === "yes"
+      }
+      rotation={0}
+      spiralAmount={num(config.spiralAmount, DEFAULT_PROPS.spiralAmount)}
+      width={width}
+      wordmark={
+        typeof config.wordmark === "string"
+          ? config.wordmark
+          : DEFAULT_PROPS.wordmark
+      }
+    />,
+    { height, width }
+  );
 };

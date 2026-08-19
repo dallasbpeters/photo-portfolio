@@ -6,10 +6,9 @@ import {
   DEFAULT_IMAGE_HEIGHT,
   DEFAULT_IMAGE_WIDTH,
 } from "../../../config/canvas.js";
-import { AutoplayToggle } from "../../boards/AutoplayToggle";
 import { BoardCanvas } from "../../boards/BoardCanvas";
-import { BoardDrawTools } from "../../boards/BoardDrawTools";
 import { CommentsPanel } from "../../boards/CommentsPanel";
+import { FloatingTools } from "../../boards/canvas/FloatingTools";
 import type { DrawStyle } from "../../boards/DrawToolbar";
 import {
   DEFAULT_STROKE,
@@ -19,7 +18,6 @@ import {
 } from "../../boards/drawing";
 import { ElementModal } from "../../boards/ElementModal";
 import { InsertPalette } from "../../boards/InsertPalette";
-import { MaskControls } from "../../boards/MaskControls";
 import { ModelsProvider } from "../../boards/ModelsContext";
 import { useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
@@ -246,6 +244,7 @@ export function BoardEditor({
 
   const {
     bringToFront,
+    exportShader,
     canvaTarget,
     openSendToCanva,
     resolveComment,
@@ -253,11 +252,13 @@ export function BoardEditor({
     sendVersions,
     setCanvaTarget,
   } = useBoardItemActions({
+    addExternal,
     boardId,
     change,
     dropPoint,
     items,
     setComments,
+    wires,
   });
 
   const { editorNode, openEditor, openItemInAffinity, vectorizeItem } =
@@ -318,21 +319,18 @@ export function BoardEditor({
         {/* The layer every board overlay belongs in. Named so a panel escaping
             its own transform has somewhere to escape to — see ElementsTab. */}
         <div className="relative z-100 min-h-0 flex-1" data-board-overlays>
-          {/* Floating over the canvas: a tool wants to be near its subject. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
-            <div className="pointer-events-auto">
-              <AutoplayToggle items={items} />
-              <MaskControls onChange={changeMask} selected={selectedItem} />
-              <BoardDrawTools
-                onConfigChange={changeConfig}
-                onStyle={setDrawStyle}
-                onTool={setDrawTool}
-                selected={selectedItem}
-                style={drawStyle}
-                tool={drawTool}
-              />
-            </div>
-          </div>
+          <FloatingTools
+            drawStyle={drawStyle}
+            drawTool={drawTool}
+            items={items}
+            onConfigChange={changeConfig}
+            onExportShader={exportShader}
+            onMaskChange={changeMask}
+            onStyle={setDrawStyle}
+            onTool={setDrawTool}
+            selected={selectedItem}
+            wires={wires}
+          />
 
           <BoardToolPanel
             onAddFrame={addFrame}
