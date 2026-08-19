@@ -9,6 +9,7 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import { nodeTypeFor } from "../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../types";
+import { HalftonePreview } from "./canvas/HalftonePreview";
 import { pickImages, selectedIndex } from "./itemOutput";
 import { ListRows } from "./ListRows";
 import { PaletteSwatches } from "./PaletteSwatches";
@@ -20,6 +21,8 @@ import { Button } from "@/components/ui/button";
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
   hasWiredPrompt: boolean;
+  /** The picture wired in, for the node that draws one rather than making one. */
+  imageUrl?: string | null;
   item: BoardItem;
   /** Stops a run in flight. */
   onCancel?: () => void;
@@ -49,7 +52,7 @@ const STATE_LABEL: Record<string, string> = {
 const STATE_CLASS: Record<string, string> = {
   failed: "text-red-300",
   idle: "text-board-ink/40",
-  running: "text-sky-300",
+  running: "text-sky-600",
   skipped: "text-board-ink/40",
   succeeded: "text-emerald-300",
 };
@@ -122,6 +125,7 @@ function PublishedResult({
 export function OpNodeView({
   hasWiredPrompt,
   wiredPrompt,
+  imageUrl,
   item,
   onCancel,
   onConfigChange,
@@ -200,6 +204,7 @@ export function OpNodeView({
           config={config}
           hasWiredPrompt={hasWiredPrompt}
           images={images}
+          imageUrl={imageUrl}
           item={item}
           onConfigChange={onConfigChange}
           onRemoveVersion={onRemoveVersion}
@@ -283,6 +288,7 @@ interface NodeBodyProps {
   config: Record<string, unknown>;
   hasWiredPrompt: boolean;
   images: BoardItemVariation[];
+  imageUrl?: string | null;
   item: BoardItem;
   onConfigChange: (config: Record<string, unknown>) => void;
   onRemoveVersion?: (index: number) => void;
@@ -306,6 +312,7 @@ function NodeBody({
   analysed,
   config,
   hasWiredPrompt,
+  imageUrl,
   images,
   item,
   onConfigChange,
@@ -325,13 +332,20 @@ function NodeBody({
       {/* What an Analyse node produced. Selectable, because the usual next
               move is to take part of it into a prompt by hand. */}
       {analysed ? (
-        <p className="select-text whitespace-pre-wrap rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink/80 leading-relaxed">
+        <p className="max-h-300 select-text whitespace-pre-wrap rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink/80 leading-relaxed">
           {analysed}
         </p>
       ) : null}
 
       {/* A batch lays its variations out as a grid so they can be compared
               at a glance, which is the entire reason for asking for several. */}
+      {/* Drawn live rather than waiting to be run. See HalftonePreview: this
+          node generates nothing and costs nothing, so wiring a picture in is
+          the whole act. */}
+      {item.nodeType === "standard" ? (
+        <HalftonePreview config={config} imageUrl={imageUrl} />
+      ) : null}
+
       <ResultImages
         images={images}
         onRemove={onRemoveVersion}
@@ -345,7 +359,7 @@ function NodeBody({
       {/* A prompt arriving down a wire wins over one typed here, so saying
               so is better than leaving a field that looks live but is ignored. */}
       {hasWiredPrompt ? (
-        <p className="text-[10px] text-sky-300/70">
+        <p className="text-[10px] text-sky-600">
           Prompt is wired in; the text below is not used.
         </p>
       ) : null}

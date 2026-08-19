@@ -12,7 +12,12 @@ import { BoardToolBar } from "./BoardToolBar";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
 import { ItemMedia } from "./ItemMedia";
-import { ElementBody, FrameBody, ShaderItem } from "./itemBodies";
+import {
+  ElementBody,
+  FrameBody,
+  itemBoxClassName,
+  ShaderItem,
+} from "./itemBodies";
 import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
 import { OpNodeView } from "./OpNodeView";
@@ -464,6 +469,7 @@ function ItemContent({
     return (
       <OpNodeView
         hasWiredPrompt={hasWiredPrompt}
+        imageUrl={imageUrl}
         item={item}
         onCancel={onCancel}
         onConfigChange={onConfigChange ?? (() => undefined)}
@@ -585,22 +591,6 @@ function itemPointerDown({
       onBeginEdit();
     }
   };
-}
-
-/**
- * The box's own classes: what it is, and whether it is selected.
- *
- * Text and an unselected drawing wear no ring — their content is the whole of
- * them, and a border there reads as part of the picture rather than as chrome.
- */
-function itemBoxClassName(item: BoardItem, isSelected: boolean) {
-  const isText = item.kind === "text";
-  const isDrawing = item.kind === "drawing";
-  const selecting = isText ? "" : "select-none";
-  const ring = isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10";
-  const bare =
-    isText || (isDrawing && !isSelected) ? "ring-0 ring-transparent" : "ring-0";
-  return `group absolute rounded-xs contain-layout ${selecting} ${ring} ${bare}`;
 }
 
 /** One item on the board. */

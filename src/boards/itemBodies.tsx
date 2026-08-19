@@ -181,3 +181,20 @@ export function ShaderItem({
     </div>
   );
 }
+
+/**
+ * The box's own classes: what it is, and whether it is selected.
+ *
+ * Text and an unselected drawing wear no ring — their content is the whole of
+ * them, and a border there reads as part of the picture rather than as chrome.
+ * Appearance rather than behaviour, which is why it sits with the bodies.
+ */
+export function itemBoxClassName(item: BoardItem, isSelected: boolean) {
+  const isText = item.kind === "text";
+  const isDrawing = item.kind === "drawing";
+  const selecting = isText ? "" : "select-none";
+  const ring = isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10";
+  const bare =
+    isText || (isDrawing && !isSelected) ? "ring-0 ring-transparent" : "ring-0";
+  return `group absolute rounded-xs contain-layout ${selecting} ${ring} ${bare}`;
+}
