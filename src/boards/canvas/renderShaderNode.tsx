@@ -1,23 +1,35 @@
 import { createRoot } from "react-dom/client";
-import { StandardShader } from "../../components/StandarShader";
+import { DEFAULT_PROPS, StandardShader } from "../../components/StandarShader";
 import { CaptureError, captureShader } from "./captureCanvas";
 
 /**
- * Rendering a halftone node to a file, away from the board.
+ * Rendering a Halftone node to a file, away from the board.
  *
- * Mounted offscreen rather than captured from the node on the canvas, for three
- * reasons. The node on screen is sized to however it was dragged, and an export
- * should not change resolution because someone resized a box. A node scrolled
- * out of view may not be rendering at all. And a node that is mid-animation, or
- * mid-resize, would be captured in whatever state it happened to be in.
+ * **Built on the shader's own defaults.** The first version of this restated
+ * three dozen props by hand and got twenty-two of them wrong — spiralTightness
+ * 18 became 2, spiralArms 3 became 4, `reversed` was flipped, the wordmark was
+ * stripped and a 1200×700 composition was squared off. The result was a
+ * halftone, but not *this* halftone. Spreading DEFAULT_PROPS means the node
+ * renders the shader as designed and the settings change it from there; a prop
+ * nobody has thought about keeps its intended value instead of an invented one.
+ *
+ * Mounted offscreen rather than captured from the node on the canvas. The node
+ * on screen is sized to however it was dragged, and an export should not change
+ * resolution because someone resized a box; a node scrolled out of view may not
+ * be rendering at all; and one mid-resize would be caught mid-resize.
  *
  * The same reasoning composite already applies: only the browser can produce
- * this, so it produces it deliberately at a known size rather than
- * photographing whatever is currently on screen.
+ * this, so it produces it deliberately at a known size.
  */
 
-/** Square, and large enough to print from without being a burden to store. */
-export const RENDER_SIZE = 1600;
+/**
+ * How much larger than the design to export.
+ *
+ * The aspect is the shader's own — 1200×700 — rather than a square, because the
+ * composition was laid out for it: squaring the frame moves the lockup and
+ * changes where the spiral falls.
+ */
+export const RENDER_SCALE = 2;
 
 /** A draw is one image load away; past this something is wrong. */
 const READY_TIMEOUT_MS = 8000;
@@ -33,7 +45,9 @@ export interface HalftoneSettings {
   dots?: unknown;
   fieldSize?: unknown;
   fieldStrength?: unknown;
+  reversed?: unknown;
   spiralAmount?: unknown;
+  wordmark?: unknown;
 }
 
 const num = (value: unknown, fallback: number): number => {
@@ -49,10 +63,11 @@ const hex = (value: unknown, fallback: string): string =>
     : fallback;
 
 /**
- * The first capture that isn't blank, or the last complaint about why not.
+ * Capture once the shader has drawn something, retrying until the deadline.
  *
- * Recursive rather than a poll loop: each attempt has to wait for the one
- * before it, so the tries are sequential by nature.
+ * Each attempt has to wait for the one before it to fail, so this recurses on
+ * the last error rather than looping: the polling is sequential by nature and
+ * there is nothing here to run in parallel.
  */
 const captureWhenDrawn = async (
   host: HTMLElement,
@@ -69,15 +84,15 @@ const captureWhenDrawn = async (
     return await captureShader(host);
   } catch (err) {
     // Blank is expected until the texture loads and the first frame lands.
-    return await captureWhenDrawn(host, deadline, err);
+    return captureWhenDrawn(host, deadline, err);
   }
 };
 
 /**
- * A PNG of this node's settings, at export resolution.
+ * A PNG of this node, at export resolution.
  *
- * Resolves only once something has actually been drawn. The renderer draws on
- * the texture's load event, so the first frames after mounting are legitimately
+ * Resolves only once something has been drawn. The renderer draws on the
+ * texture's load event, so the first frames after mounting are legitimately
  * blank — polling for a non-blank capture is the difference between exporting
  * the picture and exporting the moment before it.
  */
@@ -85,56 +100,45 @@ export const renderHalftone = async (
   config: HalftoneSettings,
   imageUrl: string | null
 ): Promise<Blob> => {
+  const width = (DEFAULT_PROPS.width ?? 1200) * RENDER_SCALE;
+  const height = (DEFAULT_PROPS.height ?? 700) * RENDER_SCALE;
+
   const host = document.createElement("div");
   // Off screen rather than hidden: `display: none` gives the canvas no size and
-  // WebGL nothing to draw into, and `visibility: hidden` still reserves layout
-  // on the page it is borrowing.
-  host.style.cssText = `position:fixed;left:-99999px;top:0;width:${RENDER_SIZE}px;height:${RENDER_SIZE}px;pointer-events:none;`;
+  // WebGL nothing to draw into, and `visibility: hidden` still reserves layout.
+  host.style.cssText = `position:fixed;left:-99999px;top:0;width:${width}px;height:${height}px;pointer-events:none;`;
   document.body.append(host);
   const root = createRoot(host);
 
   try {
     root.render(
       <StandardShader
+        {...DEFAULT_PROPS}
+        // A still, so the two things that only mean something over time are
+        // stopped rather than left to be captured at an arbitrary phase.
         animate={false}
-        background={hex(config.background, "#FFFFFF")}
-        baseDensity={num(config.baseDensity, 0.012)}
-        blue="#3A70B3"
+        background={hex(config.background, DEFAULT_PROPS.background)}
+        baseDensity={num(config.baseDensity, DEFAULT_PROPS.baseDensity)}
         breathing={0}
-        clearFeather={0.12}
-        clearSize={imageUrl ? 0 : 0.27}
-        cornerRadius={0}
-        description=""
-        descriptionSize={17}
-        dotSize={num(config.dotSize, 4.5)}
-        dots={hex(config.dots, "#27444D")}
-        fieldSize={num(config.fieldSize, 1)}
-        fieldStrength={num(config.fieldStrength, 1)}
-        height={RENDER_SIZE}
-        iconOnly
-        iconSize={180}
+        dotSize={num(config.dotSize, DEFAULT_PROPS.dotSize)}
+        dots={hex(config.dots, DEFAULT_PROPS.dots)}
+        fieldSize={num(config.fieldSize, DEFAULT_PROPS.fieldSize)}
+        fieldStrength={num(config.fieldStrength, DEFAULT_PROPS.fieldStrength)}
+        height={height}
         imageUrl={imageUrl}
-        ink="#131415"
-        lockupGap={10}
-        markSize={104}
-        padding={0}
-        reverseBackground="#27444D"
-        reverseDots="#FAF8F0"
-        reversed={false}
-        reverseInk="#FAF8F0"
+        reversed={
+          config.reversed === undefined
+            ? DEFAULT_PROPS.reversed
+            : config.reversed === "yes"
+        }
         rotation={0}
-        showDescription={false}
-        speed={0}
-        spiralAmount={num(config.spiralAmount, 1)}
-        spiralArms={4}
-        spiralOverlap={0.5}
-        spiralTightness={2}
-        tracking={0}
-        typeSize={24}
-        typeWeight={500}
-        verticalGap={12}
-        width={RENDER_SIZE}
-        wordmark=""
+        spiralAmount={num(config.spiralAmount, DEFAULT_PROPS.spiralAmount)}
+        width={width}
+        wordmark={
+          typeof config.wordmark === "string"
+            ? config.wordmark
+            : DEFAULT_PROPS.wordmark
+        }
       />
     );
 

@@ -25,6 +25,10 @@ import { OUTPUT_PORT_KEY } from "../ports.js";
  * Nothing here animates. The renderer can, and a still is what a downstream
  * node can consume — so `t` is frozen and breathing and rotation fall out of
  * the picture rather than being options that quietly do nothing to the export.
+ *
+ * Every other property comes from the shader's own DEFAULT_PROPS. The settings
+ * below say what is tweakable; they do not restate the design, which is how the
+ * first version of this ended up rendering a different picture entirely.
  */
 export const STANDARD: NodeType = {
   capability: "board.shader",
@@ -64,6 +68,23 @@ export const STANDARD: NodeType = {
       label: "Background",
     },
     {
+      /* The lockup's own text. Blank renders the mark alone. */
+      key: "wordmark",
+      kind: "text",
+      label: "Wordmark",
+      maxLength: 60,
+      placeholder: "Standard",
+    },
+    {
+      /* The design's own default is the reversed pair, so this starts there
+         rather than at the light one the first draft assumed. */
+      default: "yes",
+      key: "reversed",
+      kind: "select",
+      label: "Reversed",
+      options: ["yes", "no"],
+    },
+    {
       /*
        * How strongly the picture drives the dots. Low leaves an even field with
        * the image faintly in it; high makes the image the only thing there.
@@ -88,7 +109,7 @@ export const STANDARD: NodeType = {
     {
       /* The trailing arms — the part that reads as the brand rather than as a
          generic halftone. Zero is a plain dithered picture. */
-      default: 1,
+      default: 0.35,
       key: "spiralAmount",
       kind: "number",
       label: "Spiral",
