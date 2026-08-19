@@ -41,13 +41,29 @@ export const STANDARD: NodeType = {
   outputs: [{ key: OUTPUT_PORT_KEY, label: "Image", type: "image" }],
   settings: [
     {
-      /* Classic is one ink on paper; cmyk separates into four screens at four
-         angles, which is what a printed halftone actually is. */
-      default: "classic",
+      /*
+       * `cmyk` by default, and the difference is not a matter of taste.
+       *
+       * `cmyk` is a printed halftone: paper, four screens at four angles, and
+       * ink laid down in proportion to how dark the picture is. `classic` is
+       * not a halftone at all — read the library's shader and it returns
+       * `childColor * dotPattern` with the alpha multiplied too, so a *bright*
+       * pixel keeps a big dot and a dark one disappears. Over white paper that
+       * comes out inverted and washed out: a black subject renders as nothing.
+       *
+       * Every ink and plate control below is also declared
+       * `condition: { style: "cmyk" }` in the library, so in `classic` eleven of
+       * the settings on this node quietly do nothing. Defaulting to it made the
+       * colour controls look broken when they were merely switched off.
+       *
+       * `classic` is kept because a single-ink screen over a dark ground is a
+       * real look, and is what it is good for.
+       */
+      default: "cmyk",
       key: "style",
       kind: "select",
       label: "Style",
-      options: ["classic", "cmyk"],
+      options: ["cmyk", "classic"],
     },
     {
       /* Dots across the frame. The most visible control by far: low reads as a

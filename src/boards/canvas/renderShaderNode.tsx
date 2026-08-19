@@ -22,8 +22,34 @@ import { renderOffscreen } from "./renderOffscreen";
  * fills the whole of the output rather than being contained into a column.
  */
 
-/** The long edge of an export. Large enough to print from. */
+/**
+ * The long edge of an export, and the ceiling the library actually honours.
+ *
+ * Asking for 2400 does not get 2400. The engine runs every render through
+ * `clampToTextureCap`, which is
+ *
+ *   const capW = Math.min(w, env.viewportWidth, gpuCssCap)
+ *
+ * — so the drawing is clamped to the *browser window's* inner size no matter
+ * how large the element it is mounted in. A 2400px request in a 1440px window
+ * renders 1440 real pixels and the rest is upscale. Measured here rather than
+ * assumed: a 600x400 host in a 414px-wide window produced a 414x276 canvas.
+ *
+ * So the request is clamped honestly instead. An export is as large as the
+ * window allows, which is the true limit, and the file says so rather than
+ * carrying a size it never had.
+ */
 const LONG_EDGE = 2400;
+
+const longEdge = (): number =>
+  Math.max(
+    600,
+    Math.min(
+      LONG_EDGE,
+      window.innerWidth || LONG_EDGE,
+      window.innerHeight || LONG_EDGE
+    )
+  );
 
 const num = (value: unknown, fallback: number): number => {
   const n = Number(value);
@@ -69,11 +95,16 @@ export const renderHalftone = async (
   }
   const natural = await measure(imageUrl);
   const aspect = natural && natural.h > 0 ? natural.w / natural.h : 1;
-  const width = Math.round(aspect >= 1 ? LONG_EDGE : LONG_EDGE * aspect);
-  const height = Math.round(aspect >= 1 ? LONG_EDGE / aspect : LONG_EDGE);
+  const edge = longEdge();
+  const width = Math.round(aspect >= 1 ? edge : edge * aspect);
+  const height = Math.round(aspect >= 1 ? edge / aspect : edge);
 
   return await renderOffscreen(
-    <Shader>
+    // Sized explicitly. Left to itself the wrapper takes a 2:1 box rather than
+    // the host's — a 600x400 host rendered into 600x300 — so the picture was
+    // fitted into a frame the wrong shape and the rest came out blank. That is
+    // the "not grabbing all of the image" everyone kept seeing.
+    <Shader style={{ height: "100%", width: "100%" }}>
       <Halftone
         angle={num(config.angle, 45)}
         blackAngle={num(config.blackAngle, 45)}
@@ -86,7 +117,9 @@ export const renderHalftone = async (
         misprint={num(config.misprint, 0)}
         misprintAngle={num(config.misprintAngle, 0)}
         paperColor={hex(config.paperColor, "#ffffff")}
-        style={pick(config.style, ["classic", "cmyk"], "classic")}
+        // `cmyk` by default: `classic` is not a printed halftone and every
+        // ink below is switched off in it. See config/nodes/standard.ts.
+        style={pick(config.style, ["cmyk", "classic"], "cmyk")}
         yellowAngle={num(config.yellowAngle, 0)}
         yellowColor={hex(config.yellowColor, "#ffff00")}
       >

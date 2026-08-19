@@ -29,6 +29,22 @@ export default defineConfig({
       provider: playwright(),
       screenshotFailures: false,
     },
+    /*
+     * Anything that renders a shader cannot be checked here as things stand.
+     *
+     * The library draws through WebGPU, and Playwright's bundled Chromium has
+     * no adapter: `navigator.gpu` exists and `requestAdapter()` resolves null,
+     * so every capture comes back blank. Google Chrome does have one — headless
+     * included — reached with
+     *
+     *   provider: playwright({ launchOptions: { channel: "chrome" } })
+     *
+     * and it needs a secure context, which the localhost origin Vitest already
+     * serves from provides and `about:blank` does not. That is not the default
+     * because CI installs Chromium rather than Chrome, and because a headless
+     * CI machine has no GPU to find either. Switch it on locally to look at a
+     * shader; put it back before committing.
+     */
     // api/ is in here for the pure helpers the run endpoint leans on — job
     // shaping decides what a run costs and whether a wired style is sent at
     // all, and it fails silently when it is wrong. Those files touch neither
