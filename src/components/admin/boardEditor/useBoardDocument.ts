@@ -310,10 +310,28 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
     [setSources, setIsDirty]
   );
 
+  /**
+   * One node's settings, changed.
+   *
+   * Through dropComposites like every other edit, which it was not: a halftone
+   * is a picture of its settings, and changing them left the render it had
+   * already made sitting in `renderUrl`. The run short-circuits on that URL, so
+   * the node came back with the picture it drew before the change and the
+   * settings appeared to do nothing at all — the colour picker most visibly,
+   * because a colour is the change you expect to see immediately.
+   *
+   * Safe against the run's own write-back, which stores `renderUrl` through
+   * setItems directly rather than through here, so nothing wipes the URL in the
+   * same breath as recording it.
+   */
   const changeConfig = useCallback(
     (itemId: string, config: Record<string, unknown>) => {
       setItems((current) =>
-        current.map((item) => (item.id === itemId ? { ...item, config } : item))
+        dropComposites(
+          current.map((item) =>
+            item.id === itemId ? { ...item, config } : item
+          )
+        )
       );
       setIsDirty(true);
     },

@@ -38,15 +38,27 @@ export function SettingField({
   setting,
   value,
 }: SettingFieldProps) {
+  /*
+   * What the field shows when the node has never been told.
+   *
+   * A stored config only carries the keys somebody has touched, so a freshly
+   * inserted node has none of them and every caller resolves a missing setting
+   * to "". That is a string, so a `typeof value === "string"` guard passes it
+   * straight through and the declared default is never reached: the halftone's
+   * ink swatch rendered the "no fill" chequerboard and its picker opened on
+   * white, neither of which was the colour the node was actually using.
+   *
+   * Only for settings that declare a default. A text setting has none, and an
+   * empty one is a field somebody cleared rather than a field never set.
+   */
+  const shown =
+    value === "" && "default" in setting ? String(setting.default) : value;
+
   if (setting.kind === "color") {
     return (
       <div className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
         {setting.label}
-        <ColorWell
-          label={setting.label}
-          onChange={onChange}
-          value={typeof value === "string" ? value : setting.default}
-        />
+        <ColorWell label={setting.label} onChange={onChange} value={shown} />
       </div>
     );
   }
@@ -63,7 +75,7 @@ export function SettingField({
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           type="number"
-          value={Number(value) || setting.default}
+          value={Number(shown) || setting.default}
         />
       </label>
     );
@@ -86,7 +98,7 @@ export function SettingField({
                 onChange(option);
               }
             }}
-            value={value}
+            value={shown}
           >
             <SelectTrigger>
               <SelectValue />
