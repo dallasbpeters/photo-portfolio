@@ -119,18 +119,22 @@ export const wiredItemsFor = (
 /**
  * Every picture arriving on an item's image input, in wire order.
  *
- * Mirrors what resolveInputs does on the server, deliberately: the browser
- * renders a shader and the server then hands the results on, so if the two
- * disagree about how many pictures are wired in, the run asks for a variation
- * the browser never drew. One wire is enough to carry many — a Batch node or a
- * frame resolves to everything it holds — which is why this reads through
- * outputListOf rather than taking one URL per wire.
+ * Through outputImagesOf, which is the *only* client-side resolver that expands
+ * a Batch node and a frame the way the server's outputsOf does. outputListOf,
+ * which this reached for first, knows about Iterate, List and Palette and
+ * nothing about pictures: a Batch of twenty-two wired into a halftone resolved
+ * to one image here while the server resolved twenty-two and asked for
+ * twenty-two variations. Twenty-one of them had nothing to hand back and the
+ * whole run came home empty.
+ *
+ * The two sides must agree on the count or the run asks for a picture the
+ * browser never drew. That is the invariant; this function exists to hold it.
  */
 export const wiredImagesFor = (itemId: string, graph: Graph): string[] =>
   graph.wires
     .filter((w) => w.targetItemId === itemId && w.targetPort === "image")
     .flatMap((w) =>
-      outputListOf(
+      outputImagesOf(
         graph.items.find((i) => i.id === w.sourceItemId) ?? null,
         graph
       )

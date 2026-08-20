@@ -58,32 +58,57 @@ export interface BoardRunDeps {
   wires: BoardWire[];
 }
 
+/** One retry, because a blob store refusing once is usually a blip. */
+const uploadRender = async (blob: Blob): Promise<string> => {
+  const send = async () =>
+    (
+      await portfolioService.uploadImageFile(
+        new File([blob], "halftone.png", { type: "image/png" }),
+        undefined,
+        "boards/shaders"
+      )
+    ).url;
+  try {
+    return await send();
+  } catch {
+    return await send();
+  }
+};
+
 /**
  * One rendered, uploaded file per wired picture, in order.
  *
- * Strictly one at a time. Each render mounts a WebGPU canvas and holds it until
- * it has a frame; a dozen at once contend for the same device and the whole
- * batch times out together rather than any of them finishing.
+ * Strictly one render at a time. Each mounts a WebGPU canvas and holds it until
+ * it has a frame, and a dozen at once contend for the same device and time out
+ * together rather than any of them finishing.
+ *
+ * **A failure keeps its place rather than collapsing the list.** The run asks
+ * for variation N and gets entry N, so a dropped entry would hand every
+ * later variation the wrong picture — and a single failed upload used to throw
+ * away all twenty-two renders, because one exception abandoned the whole batch.
+ * A blank stands in, which the server reads as "not rendered" and refuses for
+ * that variation alone.
  *
  * An empty list still renders once, with no source, so the node's own error —
- * "wire a picture into this node" — is the one that reaches the toast.
+ * "wire a picture into this node" — is what reaches the toast.
  */
 const renderEach = async (
   config: Record<string, unknown>,
   sources: string[]
-): Promise<string[]> => {
+): Promise<{ failures: string[]; urls: string[] }> => {
   const urls: string[] = [];
+  const failures: string[] = [];
   for (const source of sources.length > 0 ? sources : [null]) {
-    // biome-ignore lint/performance/noAwaitInLoops: one GPU, one canvas at a time
-    const blob = await renderHalftone(config, source);
-    const { url } = await portfolioService.uploadImageFile(
-      new File([blob], "halftone.png", { type: "image/png" }),
-      undefined,
-      "boards/shaders"
-    );
-    urls.push(url);
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: one GPU, one canvas at a time
+      const blob = await renderHalftone(config, source);
+      urls.push(await uploadRender(blob));
+    } catch (err) {
+      urls.push("");
+      failures.push(err instanceof Error ? err.message : String(err));
+    }
   }
-  return urls;
+  return { failures, urls };
 };
 
 export const useBoardRun = (deps: BoardRunDeps) => {
@@ -277,20 +302,24 @@ export const useBoardRun = (deps: BoardRunDeps) => {
           items: pending.current.items,
           wires: pending.current.wires,
         }).slice(0, MAX_SHADER_RENDERS);
-        try {
-          const urls = await renderEach(config, sources);
-          return {
-            ...item,
-            // renderUrl kept alongside: it is what a board saved before batches
-            // carries, and what the server falls back to for variation 0.
-            config: { ...config, renderUrl: urls[0], renderUrls: urls },
-          };
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : "Could not render the halftone"
-          );
+        const { failures, urls } = await renderEach(config, sources);
+        if (urls.every((url) => !url)) {
+          // Nothing at all. Left unstored so the node still reads as never
+          // rendered rather than as rendered blank.
+          toast.error(failures[0] ?? "Could not render the halftone");
           return item;
         }
+        if (failures.length > 0) {
+          toast.warning(
+            `${failures.length} of ${urls.length} could not be rendered: ${failures[0]}`
+          );
+        }
+        return {
+          ...item,
+          // renderUrl kept alongside: it is what a board saved before batches
+          // carries, and what the server falls back to for variation 0.
+          config: { ...config, renderUrl: urls[0], renderUrls: urls },
+        };
       })
     );
 

@@ -53,6 +53,29 @@ describe("a shader run picks its own variation", () => {
     ).toThrow(NOT_RENDERED);
   });
 
+  it("refuses only the entry that failed, not the ones beside it", () => {
+    /*
+     * A blank holds the place of a render that failed, so variation N still
+     * means picture N. Collapsing the list instead would hand every later
+     * variation the picture belonging to the one before it — silently, and
+     * looking exactly like a run that worked.
+     */
+    const config = {
+      renderUrls: [
+        "https://example.test/a.png",
+        "",
+        "https://example.test/c.png",
+      ],
+    };
+    expect(shader(config, 0)).toMatchObject({
+      url: "https://example.test/a.png",
+    });
+    expect(() => shader(config, 1)).toThrow(NOT_RENDERED);
+    expect(shader(config, 2)).toMatchObject({
+      url: "https://example.test/c.png",
+    });
+  });
+
   it("refuses when nothing has been rendered at all", () => {
     expect(() => shader({}, 0)).toThrow(NOT_RENDERED);
   });
