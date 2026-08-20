@@ -216,3 +216,25 @@ describe("BoardToolBar's manual editor button", () => {
     ).toBeNull();
   });
 });
+
+describe("saving the picture", () => {
+  /** Every button label currently on screen. */
+  const labels = (): string[] =>
+    [...document.body.querySelectorAll("button")].map(
+      (b) => b.textContent ?? ""
+    );
+
+  it("offers Save for an item that has one", async () => {
+    // There was no way to get an ordinary image off a board at all: a node's
+    // own result had a download button and nothing else did, so a photograph
+    // could be looked at and worked on and never taken away. The way out was a
+    // right-click, which the canvas overrides.
+    await bar(item({ imageUrl: "https://example.test/a.png" }));
+    expect(labels().some((text) => text.includes("Save"))).toBe(true);
+  });
+
+  it("does not offer it for an item with no picture", async () => {
+    await bar(item({ body: "a note", kind: "note" }));
+    expect(labels().some((text) => text.includes("Save"))).toBe(false);
+  });
+});

@@ -1,5 +1,6 @@
 import type { BoardItem } from "../../types.js";
 import { maskOf } from "../drawing/mask.js";
+import { currentImageUrl } from "../itemOutput";
 
 /**
  * What a board item can offer a tool, in the three terms `blockedReason` asks in.
@@ -44,8 +45,15 @@ export const promptOf = (item: Readonly<BoardItem>): string | null => {
  * The picture a tool would work from: the newest run's output, else the placed
  * image. The same order the executors resolve in — see `sourceUrlOf` in both.
  */
-export const imageOf = (item: Readonly<BoardItem>): string | null =>
-  item.result?.url ?? item.imageUrl ?? null;
+/**
+ * The picture an item currently is.
+ *
+ * Re-exported rather than restated. This was a fourth copy of the same rule, and
+ * copies of it disagreeing is the shape of most of what has gone wrong here: the
+ * canvas drew the edit while the wires sent the original, twice over. One
+ * definition, in itemOutput.
+ */
+export const imageOf = currentImageUrl;
 
 export const toolContextOf = (item: Readonly<BoardItem>): ToolContext => ({
   hasImage: imageOf(item) !== null,
