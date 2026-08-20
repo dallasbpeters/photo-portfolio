@@ -80,3 +80,27 @@ describe("a shader run picks its own variation", () => {
     expect(() => shader({}, 0)).toThrow(NOT_RENDERED);
   });
 });
+
+describe("what a refusal says", () => {
+  it("names the picture wanted and how many were drawn", () => {
+    // The three faults that used to share one message — nothing drawn, fewer
+    // drawn than the run expects, and a save that dropped them — are told apart
+    // by these two numbers and nothing else.
+    try {
+      shader({ renderUrls: ["https://example.test/a.png"] }, 5);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("picture 6");
+      expect((err as Error).message).toContain("1 of 1");
+    }
+  });
+
+  it("says so plainly when the browser drew nothing at all", () => {
+    try {
+      shader({}, 0);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("none were drawn");
+    }
+  });
+});

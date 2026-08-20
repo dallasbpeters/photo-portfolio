@@ -53,6 +53,7 @@ export const browserRendered = (
   listKey?: string
 ): RenderedImage => {
   const list = listKey ? config[listKey] : undefined;
+  const drawn = Array.isArray(list) ? list.filter(Boolean).length : 0;
   const nth = Array.isArray(list) ? list[variation] : undefined;
   // The single key is the fallback, for a board saved before batches and for
   // the first variation of one.
@@ -62,7 +63,22 @@ export const browserRendered = (
       ? parsePublicHttpUrl(raw)
       : null;
   if (!url) {
-    throw new Error(missing);
+    /*
+     * Say what was actually found.
+     *
+     * This half of the run is performed by the browser and this half checks it,
+     * so when the two disagree the only useful thing to report is the shape of
+     * the disagreement: which picture was wanted and how many were drawn. "Not
+     * rendered yet" on its own is true of a browser that drew nothing, a
+     * browser that drew fewer than the run expected, and a save that dropped
+     * them on the way — three different faults wearing one message, which is
+     * how a batch of twenty-two came back with nothing useful to go on.
+     */
+    throw new Error(
+      Array.isArray(list)
+        ? `${missing}: the run wants picture ${variation + 1} and ${drawn} of ${list.length} were drawn.`
+        : `${missing}: the run wants picture ${variation + 1} and none were drawn.`
+    );
   }
   return {
     description: null,
