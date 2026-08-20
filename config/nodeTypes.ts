@@ -103,6 +103,15 @@ export type SettingDef =
       label: string;
       max: number;
       min: number;
+      /**
+       * The smallest change worth making. Absent means whole numbers.
+       *
+       * Load-bearing on the way in as well as in the field: a value is rounded
+       * to a whole number when this is absent, and a setting that lives between
+       * 0 and 1 — a tint, a misprint — was being rounded to 0 or 1 and could
+       * not be set to anything in between.
+       */
+      step?: number;
     }
   | {
       /** A six-digit hex. Rendered as a swatch, not a text field. */

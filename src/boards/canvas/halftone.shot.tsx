@@ -78,31 +78,37 @@ const defaults = (): Record<string, unknown> =>
   );
 
 describe("halftone", () => {
-  it("renders a new node's defaults, through the real stack", async () => {
-    await shoot("node-defaults", halftoneStack(defaults(), card()));
+  it("a new node's defaults", async () => {
+    await shoot("1-defaults", halftoneStack(defaults(), card()));
     expect(true).toBe(true);
   });
 
-  it("follows the ink colour", async () => {
+  it("inverted: the two inks swapped", async () => {
     await shoot(
-      "node-ink",
-      halftoneStack({ ...defaults(), inkColor: "#7a1020" }, card())
+      "2-inverted",
+      halftoneStack(
+        { ...defaults(), inkColor: "#ffffff", paperColor: "#041045" },
+        card()
+      )
     );
     expect(true).toBe(true);
   });
 
-  it("follows the frequency", async () => {
+  it("a different ink", async () => {
     await shoot(
-      "node-coarse",
-      halftoneStack({ ...defaults(), frequency: 40 }, card())
+      "3-red-ink",
+      halftoneStack(
+        { ...defaults(), inkColor: "#7a1020", paperColor: "#f5efe2" },
+        card()
+      )
     );
     expect(true).toBe(true);
   });
 
-  it("still offers cmyk", async () => {
+  it("tint pulled back, keeping the photograph's own colour", async () => {
     await shoot(
-      "node-cmyk",
-      halftoneStack({ ...defaults(), style: "cmyk" }, card())
+      "4-tint-half",
+      halftoneStack({ ...defaults(), tint: 0.35 }, card())
     );
     expect(true).toBe(true);
   });

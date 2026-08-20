@@ -21,3 +21,13 @@ export const GENERATE_PROMPT_MAX = 1200;
 
 /** How many variations one node may be asked for in a single run. */
 export const MAX_BATCH_COUNT = 8;
+
+/**
+ * How many pictures one shader run will draw.
+ *
+ * Each is a WebGPU render plus an upload, done one at a time in the browser
+ * that asked for it, so a batch of hundreds is a tab locked up for minutes
+ * rather than a bill — but it is still a wait nobody chose. Well past a
+ * contact sheet, short of a whole library.
+ */
+export const MAX_SHADER_RENDERS = 40;

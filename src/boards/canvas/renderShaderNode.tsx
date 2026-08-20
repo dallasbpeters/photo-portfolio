@@ -23,6 +23,14 @@ import { renderOffscreen } from "./renderOffscreen";
  * the same shader is a duotone halftone: shadows become ink, highlights keep
  * the picture's own light tones.
  *
+ * The light end is not a setting, and two attempts to make it one both failed
+ * in the same way. Classic sizes every dot from the brightness of what it is
+ * given, so mapping the picture to two chosen colours *before* the screen
+ * flattens the dots along with the tones — a full ramp came out a solid block —
+ * and mapping it afterwards crushes it just as hard, because by then coverage
+ * is the only signal left. Both were rendered and looked at rather than
+ * reasoned about, and both are worse than the picture's own highlights.
+ *
  * Everything else that was blamed for it turned out not to matter. Rendered
  * side by side, `maskSource` and `boundingBox` changed nothing at all — the
  * ground is full-frame, so masking to it is a no-op — and an earlier attempt

@@ -245,6 +245,7 @@ export function BoardEditor({
 
   const {
     bringToFront,
+    downloadShader,
     exportShader,
     canvaTarget,
     openSendToCanva,
@@ -325,6 +326,7 @@ export function BoardEditor({
             drawTool={drawTool}
             items={items}
             onConfigChange={changeConfig}
+            onDownloadShader={downloadShader}
             onExportShader={exportShader}
             onMaskChange={changeMask}
             onStyle={setDrawStyle}

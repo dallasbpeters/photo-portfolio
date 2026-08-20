@@ -84,6 +84,7 @@ export function SettingField({
           min={setting.min}
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
+          step={setting.step ?? 1}
           type="number"
           // The raw string, so a half-typed or momentarily empty field stays
           // as typed. The API clamps whatever lands, so nothing downstream

@@ -108,11 +108,19 @@ export const STANDARD: NodeType = {
       options: ["cover", "contain", "fill"],
     },
     {
-      /* cmyk only — classic has no paper of its own. */
+      /*
+       * The light end, and the other half of an invertible halftone.
+       *
+       * Classic has no paper of its own — it reads the picture's own tones — so
+       * the picture is mapped between this and the ink before it is screened.
+       * That makes both ends a choice, and swapping the two is what inverting a
+       * halftone means. In cmyk it is the library's own paper, which is the
+       * same idea arrived at from the other direction.
+       */
       default: "#ffffff",
       key: "paperColor",
       kind: "color",
-      label: "Paper (cmyk)",
+      label: "Paper",
     },
     {
       default: "#000000",
@@ -128,6 +136,7 @@ export const STANDARD: NodeType = {
       label: "Misprint",
       max: 1,
       min: 0,
+      step: 0.05,
     },
     {
       default: 0,

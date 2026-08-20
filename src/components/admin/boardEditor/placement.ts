@@ -80,9 +80,16 @@ export const dropComposites = (list: BoardItem[]): BoardItem[] =>
     // showed today's.
     if (
       item.nodeType === "standard" &&
-      typeof item.config?.renderUrl === "string"
+      (typeof item.config?.renderUrl === "string" ||
+        Array.isArray(item.config?.renderUrls))
     ) {
-      return { ...item, config: { ...item.config, renderUrl: null } };
+      // Both, and always together: a stale list left beside a cleared single
+      // URL is the one the run actually reads, so clearing half of it would
+      // keep exactly the pictures this is trying to throw away.
+      return {
+        ...item,
+        config: { ...item.config, renderUrl: null, renderUrls: null },
+      };
     }
     return item;
   });

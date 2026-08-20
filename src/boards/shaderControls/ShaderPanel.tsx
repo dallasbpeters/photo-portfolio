@@ -1,5 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Download01Icon } from "@hugeicons-pro/core-stroke-standard";
+import {
+  Download01Icon,
+  FileExportIcon,
+} from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem } from "../../types";
@@ -27,6 +30,8 @@ export interface ShaderPanelProps {
   /** The picture wired in, so an effect fed by one stops calling itself empty. */
   imageUrl?: string | null;
   onConfigChange: (itemId: string, config: Record<string, unknown>) => void;
+  /** Renders it and saves it to the machine, without touching the board. */
+  onDownload?: (item: BoardItem) => Promise<void>;
   /** Renders the stack to a file and puts it on the board. */
   onExport: (item: BoardItem) => Promise<void>;
   selected: BoardItem | null;
@@ -35,6 +40,7 @@ export interface ShaderPanelProps {
 export function ShaderPanel({
   imageUrl,
   onConfigChange,
+  onDownload,
   onExport,
   selected,
 }: ShaderPanelProps) {
@@ -60,23 +66,48 @@ export function ShaderPanel({
         <span className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
           {isHalftone ? "Halftone" : "Shader"}
         </span>
-        <button
-          className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await onExport(selected);
-            } finally {
-              setSaving(false);
-            }
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          type="button"
-        >
-          <HugeiconsIcon icon={Download01Icon} size={13} />
-          {saving ? "Rendering…" : "Export"}
-        </button>
+        <span className="flex items-center gap-1">
+          {/* Two destinations, because they are different jobs. Export puts the
+              picture on the board so the rest of the graph can wire out of it;
+              Save puts it on the machine, which is what you want when the board
+              is not where it is going next. */}
+          {onDownload ? (
+            <button
+              className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await onDownload(selected);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              type="button"
+            >
+              <HugeiconsIcon icon={Download01Icon} size={13} />
+              Save
+            </button>
+          ) : null}
+          <button
+            className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onExport(selected);
+              } finally {
+                setSaving(false);
+              }
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            <HugeiconsIcon icon={FileExportIcon} size={13} />
+            {saving ? "Rendering…" : "Export"}
+          </button>
+        </span>
       </div>
       {/* overscroll-contain so reaching the end of the settings does not hand
           the wheel back to the canvas and start zooming mid-scroll. */}

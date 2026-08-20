@@ -360,6 +360,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sourceImageUrl: jobs[variation]?.image ?? null,
         sourceImageUrls,
         sourceMaskUrl: jobs[variation]?.mask ?? null,
+        variation,
       });
 
       const previous = asObject(item.result);

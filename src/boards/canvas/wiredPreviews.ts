@@ -117,6 +117,27 @@ export const wiredItemsFor = (
 };
 
 /**
+ * Every picture arriving on an item's image input, in wire order.
+ *
+ * Mirrors what resolveInputs does on the server, deliberately: the browser
+ * renders a shader and the server then hands the results on, so if the two
+ * disagree about how many pictures are wired in, the run asks for a variation
+ * the browser never drew. One wire is enough to carry many — a Batch node or a
+ * frame resolves to everything it holds — which is why this reads through
+ * outputListOf rather than taking one URL per wire.
+ */
+export const wiredImagesFor = (itemId: string, graph: Graph): string[] =>
+  graph.wires
+    .filter((w) => w.targetItemId === itemId && w.targetPort === "image")
+    .flatMap((w) =>
+      outputListOf(
+        graph.items.find((i) => i.id === w.sourceItemId) ?? null,
+        graph
+      )
+    )
+    .filter((url) => Boolean(url?.trim()));
+
+/**
  * The picture feeding an item's image input, for the kinds that render one
  * themselves rather than being run on the server.
  *

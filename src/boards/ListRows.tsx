@@ -100,7 +100,7 @@ export function ListRows({
           the trade is visible before it is made. */}
       {sync.kind === "offer" && !readOnly && pending ? (
         <button
-          className="flex items-center gap-1 rounded border border-amber-300/30 bg-amber-300/5 px-1.5 py-1 text-[10px] text-amber-200/90 hover:bg-amber-300/10"
+          className="flex items-center gap-1 rounded border border-amber-300/30 bg-amber-300/5 px-1.5 py-1 text-[10px] text-amber-700/90 hover:bg-amber-600/10"
           onClick={() => onFill(pending)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -132,7 +132,8 @@ export function ListRows({
               {index + 1}
             </span>
             <textarea
-              className="min-h-6 flex-1 resize-y bg-transparent text-[11px] text-board-ink outline-none"
+              className="min-h-20 flex-1 resize-y bg-transparent text-[11px] text-board-ink outline-none"
+              id={index.toString()}
               onChange={(e) => put(replaceItem(items, index, e.target.value))}
               onPointerDown={(e) => e.stopPropagation()}
               readOnly={readOnly}

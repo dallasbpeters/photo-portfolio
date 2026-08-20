@@ -6,8 +6,10 @@ import {
   DEFAULT_IMAGE_WIDTH,
 } from "../../../../config/canvas.js";
 import { nodeTypeFor } from "../../../../config/nodeTypes.js";
+import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
 import { renderShaderStack } from "../../../boards/canvas/renderShaderStack";
 import { wiredImageFor } from "../../../boards/canvas/wiredPreviews";
+import { downloadBlob } from "../../../boards/downloadImage";
 import { outputImageOf } from "../../../boards/itemOutput";
 import { newItemId } from "../../../boards/newItemId";
 import { isShaderConfig } from "../../../boards/shaderConfig";
@@ -154,13 +156,44 @@ export const useBoardItemActions = (deps: BoardItemActionDeps) => {
    * the point: what the shader made becomes something the rest of the graph can
    * wire out of, which is exactly the limitation config/nodeTypes.ts describes.
    */
+  /**
+   * The picture this item is drawing, whichever of the two kinds it is.
+   *
+   * A Halftone node is not a shader item and its config is not a shader stack,
+   * so asking renderShaderStack for one handed back `{ layers: [] }` — an empty
+   * stack, which renders nothing. Exporting a halftone produced a blank file.
+   */
+  const renderSelected = async (item: BoardItem): Promise<Blob> => {
+    const source = wiredImageFor(item.id, { items, wires });
+    if (item.nodeType === "standard") {
+      return await renderHalftone(item.config ?? {}, source);
+    }
+    return await renderShaderStack(
+      isShaderConfig(item.config) ? item.config : { layers: [] },
+      source
+    );
+  };
+
+  /** The same picture, saved to the machine rather than put on the board. */
+  const downloadShader = async (item: BoardItem) => {
+    const toastId = toast.loading("Rendering…");
+    try {
+      downloadBlob(
+        await renderSelected(item),
+        item.nodeType === "standard" ? "halftone" : "shader"
+      );
+      toast.dismiss(toastId);
+      toast.success("Saved");
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err instanceof Error ? err.message : "Could not render it");
+    }
+  };
+
   const exportShader = async (item: BoardItem) => {
     const toastId = toast.loading("Rendering the shader…");
     try {
-      const blob = await renderShaderStack(
-        isShaderConfig(item.config) ? item.config : { layers: [] },
-        wiredImageFor(item.id, { items, wires })
-      );
+      const blob = await renderSelected(item);
       const { url } = await portfolioService.uploadImageFile(
         new File([blob], "shader.png", { type: "image/png" }),
         undefined,
@@ -186,6 +219,7 @@ export const useBoardItemActions = (deps: BoardItemActionDeps) => {
   return {
     bringToFront,
     canvaTarget,
+    downloadShader,
     exportShader,
     openSendToCanva,
     resolveComment,

@@ -49,10 +49,14 @@ export const settingStored = (
     // This one bounds *spending* — it is how many paid generations a single
     // run will make — so an absurd value must not survive the trip.
     const n = Number(value);
+    // Rounded only when the setting counts in whole numbers. A tint between 0
+    // and 1 was being truncated to 0 or 1 on the way in, so every value in
+    // between was thrown away by the save rather than by the control.
+    const whole = (setting.step ?? 1) >= 1;
     return {
       keep: true,
       value: Number.isFinite(n)
-        ? clamp(Math.trunc(n), setting.min, setting.max)
+        ? clamp(whole ? Math.trunc(n) : n, setting.min, setting.max)
         : setting.default,
     };
   }
@@ -158,6 +162,13 @@ export const parseNodeConfig = (
   const excluded = ownedList(source.excluded);
   if (excluded) {
     config.excluded = excluded;
+  }
+  // One rendered file per wired picture, in the order the run will ask for
+  // them. Bounded like the strike-off list and for the same reason: it arrives
+  // from a client and an unbounded array of addresses is an unbounded row.
+  const renders = ownedList(source.renderUrls);
+  if (renders) {
+    config.renderUrls = renders;
   }
 
   for (const setting of type.settings) {

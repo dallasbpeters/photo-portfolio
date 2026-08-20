@@ -7,9 +7,10 @@ import {
   DEFAULT_NODE_WIDTH,
 } from "../../../../config/canvas.js";
 import { containedBy } from "../../../../config/graph.js";
+import { MAX_SHADER_RENDERS } from "../../../../config/nodes/limits.js";
 import { FRAME_PAD } from "../../../boards/arrange";
 import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
-import { wiredImageFor } from "../../../boards/canvas/wiredPreviews";
+import { wiredImagesFor } from "../../../boards/canvas/wiredPreviews";
 import { compositeSources, renderComposite } from "../../../boards/composite";
 import { configFromSource } from "../../../boards/elementNode";
 import { maskOf, naturalSizeOf, rasterizeMask } from "../../../boards/mask";
@@ -56,6 +57,34 @@ export interface BoardRunDeps {
   setWires: React.Dispatch<React.SetStateAction<BoardWire[]>>;
   wires: BoardWire[];
 }
+
+/**
+ * One rendered, uploaded file per wired picture, in order.
+ *
+ * Strictly one at a time. Each render mounts a WebGPU canvas and holds it until
+ * it has a frame; a dozen at once contend for the same device and the whole
+ * batch times out together rather than any of them finishing.
+ *
+ * An empty list still renders once, with no source, so the node's own error —
+ * "wire a picture into this node" — is the one that reaches the toast.
+ */
+const renderEach = async (
+  config: Record<string, unknown>,
+  sources: string[]
+): Promise<string[]> => {
+  const urls: string[] = [];
+  for (const source of sources.length > 0 ? sources : [null]) {
+    // biome-ignore lint/performance/noAwaitInLoops: one GPU, one canvas at a time
+    const blob = await renderHalftone(config, source);
+    const { url } = await portfolioService.uploadImageFile(
+      new File([blob], "halftone.png", { type: "image/png" }),
+      undefined,
+      "boards/shaders"
+    );
+    urls.push(url);
+  }
+  return urls;
+};
 
 export const useBoardRun = (deps: BoardRunDeps) => {
   const { items, pending, save, setIsDirty, setItems, setWires, wires } = deps;
@@ -228,31 +257,34 @@ export const useBoardRun = (deps: BoardRunDeps) => {
        browser can run one, and a run is the first moment it has to exist as a
        file. Rendered offscreen at a fixed size rather than photographed from
        the board, so an export does not change resolution because someone
-       resized a node. `renderUrl` is cleared on any edit — see change() — so
-       one that survived to here is current. */
+       resized a node. `renderUrls` is cleared on any edit — see dropComposites
+       — so a list that survived to here is current.
+
+       One render per wired picture, because a wire can carry many: a Batch node
+       or a frame hands over everything it holds, and the server already fans a
+       shader run out into one variation per source image. Rendering only the
+       first meant every variation of a batch came back as the same picture. */
     const shaded = await Promise.all(
       rendered.map(async (item) => {
         if (item.nodeType !== "standard") {
           return item;
         }
         const config = item.config ?? {};
-        if (typeof config.renderUrl === "string") {
+        if (Array.isArray(config.renderUrls) && config.renderUrls.length > 0) {
           return item;
         }
+        const sources = wiredImagesFor(item.id, {
+          items: pending.current.items,
+          wires: pending.current.wires,
+        }).slice(0, MAX_SHADER_RENDERS);
         try {
-          // The same resolution the node's own preview uses, so what is
-          // exported is what the node showed.
-          const source = wiredImageFor(item.id, {
-            items: pending.current.items,
-            wires: pending.current.wires,
-          });
-          const blob = await renderHalftone(config, source);
-          const { url } = await portfolioService.uploadImageFile(
-            new File([blob], "halftone.png", { type: "image/png" }),
-            undefined,
-            "boards/shaders"
-          );
-          return { ...item, config: { ...config, renderUrl: url } };
+          const urls = await renderEach(config, sources);
+          return {
+            ...item,
+            // renderUrl kept alongside: it is what a board saved before batches
+            // carries, and what the server falls back to for variation 0.
+            config: { ...config, renderUrl: urls[0], renderUrls: urls },
+          };
         } catch (err) {
           toast.error(
             err instanceof Error ? err.message : "Could not render the halftone"

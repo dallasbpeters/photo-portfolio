@@ -40,6 +40,19 @@ const saveObjectUrl = (objectUrl: string, fileName: string): void => {
   anchor.remove();
 };
 
+/**
+ * Saves bytes the browser already holds.
+ *
+ * For anything drawn here rather than fetched — a shader, a halftone — which
+ * has no URL to fetch from and does not need one. Uploading it first to get an
+ * address, only to download it straight back, is a round trip for nothing.
+ */
+export const downloadBlob = (blob: Blob, label: string): void => {
+  const objectUrl = URL.createObjectURL(blob);
+  saveObjectUrl(objectUrl, fileNameFor(".png", label));
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+};
+
 export const downloadImage = async (
   url: string,
   label: string

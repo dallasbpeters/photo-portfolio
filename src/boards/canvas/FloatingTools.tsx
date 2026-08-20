@@ -31,6 +31,7 @@ export interface FloatingToolsProps {
   drawTool: DrawTool | null;
   items: BoardItem[];
   onConfigChange: (itemId: string, config: Record<string, unknown>) => void;
+  onDownloadShader?: (item: BoardItem) => Promise<void>;
   onExportShader: (item: BoardItem) => Promise<void>;
   onMaskChange: (itemId: string, next: MaskConfig | null) => void;
   onStyle: (style: DrawStyle) => void;
@@ -44,6 +45,7 @@ export function FloatingTools({
   drawTool,
   items,
   onConfigChange,
+  onDownloadShader,
   onExportShader,
   onMaskChange,
   onStyle,
@@ -68,12 +70,13 @@ export function FloatingTools({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute top-4 right-4 bottom-4 z-20 flex w-72 justify-end">
+      <div className="pointer-events-none absolute top-24 right-4 bottom-4 z-20 flex w-72 justify-end">
         <ShaderPanel
           imageUrl={
             selected ? wiredImageFor(selected.id, { items, wires }) : null
           }
           onConfigChange={onConfigChange}
+          onDownload={onDownloadShader}
           onExport={onExportShader}
           selected={selected}
         />
