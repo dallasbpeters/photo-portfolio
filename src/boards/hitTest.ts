@@ -1,3 +1,4 @@
+import { withinFrame } from "../../config/graph.js";
 import type { BoardItem } from "../types";
 import type { Point } from "./drawing";
 
@@ -53,4 +54,25 @@ export const contentBounds = (items: BoardItem[]) => {
   const right = Math.max(...items.map((i) => i.x + i.width));
   const bottom = Math.max(...items.map((i) => i.y + i.height));
   return { height: bottom - top, width: right - left, x: left, y: top };
+};
+
+/**
+ * Where a frame's contents sit in the item list.
+ *
+ * Indices rather than items because the callers reorder and rewrite by
+ * position: dragging a frame moves everything on it, and an id would have to be
+ * looked up again for each. Membership is computed from geometry, never stored —
+ * see withinFrame for why.
+ */
+export const containedIndices = (
+  frame: BoardItem,
+  items: BoardItem[]
+): number[] => {
+  const inside = new Set(withinFrame(frame, items).map((item) => item.id));
+  return items.reduce<number[]>((acc, item, index) => {
+    if (inside.has(item.id)) {
+      acc.push(index);
+    }
+    return acc;
+  }, []);
 };

@@ -22,7 +22,18 @@ interface SettingFieldProps {
   onChange: (value: string) => void;
   readOnly: boolean;
   setting: SettingDef;
-  value: string;
+  /**
+   * The stored value, or undefined when the node has never carried this key.
+   *
+   * The distinction is the whole point. "" means somebody cleared the field and
+   * is mid-way through typing the next value; undefined means the node has
+   * never been told. Collapsing the two — which every caller used to do —
+   * makes a number field impossible to edit: backspacing to empty reads as
+   * "never set", the declared default is substituted, and the field jumps back
+   * to 148 the instant it is cleared. There is no way to type 60 except to
+   * select the whole field first, which reads as the control being broken.
+   */
+  value: string | undefined;
 }
 
 /**
@@ -51,8 +62,7 @@ export function SettingField({
    * Only for settings that declare a default. A text setting has none, and an
    * empty one is a field somebody cleared rather than a field never set.
    */
-  const shown =
-    value === "" && "default" in setting ? String(setting.default) : value;
+  const shown = value ?? ("default" in setting ? String(setting.default) : "");
 
   if (setting.kind === "color") {
     return (
@@ -75,7 +85,10 @@ export function SettingField({
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           type="number"
-          value={Number(shown) || setting.default}
+          // The raw string, so a half-typed or momentarily empty field stays
+          // as typed. The API clamps whatever lands, so nothing downstream
+          // depends on this being a finished number.
+          value={shown}
         />
       </label>
     );

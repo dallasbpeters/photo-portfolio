@@ -92,13 +92,21 @@ export const wiredTextFor = (itemId: string, graph: Graph): string | null => {
  * node hands over fifty prompts as fifty entries, and a Prompt node hands over
  * one string that may itself be fifty lines. Both mean fifty rows.
  *
- * Asked only of List nodes, like previewImagesFor: resolving every upstream
- * behind every node on every render walks the graph once per node.
+ * Answers only for a List node, guarding inside like previewImagesFor rather
+ * than at the call site: resolving every upstream behind every node on every
+ * render walks the graph once per node, and the guard belongs with the reason
+ * for it.
  */
-export const wiredItemsFor = (itemId: string, graph: Graph): string[] =>
-  itemsFromWire(
+export const wiredItemsFor = (
+  item: BoardItem,
+  graph: Graph
+): string[] | undefined => {
+  if (item.nodeType !== "list") {
+    return;
+  }
+  return itemsFromWire(
     graph.wires
-      .filter((w) => w.targetItemId === itemId && w.targetPort === "text")
+      .filter((w) => w.targetItemId === item.id && w.targetPort === "text")
       .flatMap((w) =>
         outputListOf(
           graph.items.find((i) => i.id === w.sourceItemId) ?? null,
@@ -106,6 +114,7 @@ export const wiredItemsFor = (itemId: string, graph: Graph): string[] =>
         )
       )
   );
+};
 
 /**
  * The picture feeding an item's image input, for the kinds that render one

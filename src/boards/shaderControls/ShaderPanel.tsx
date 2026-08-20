@@ -93,9 +93,14 @@ export function ShaderPanel({
                 }
                 readOnly={false}
                 setting={setting}
-                // Settings are stored as whatever the field wrote; a number
-                // arrives back as a number, and the field wants a string.
-                value={String(selected.config?.[setting.key] ?? "")}
+                // Absent stays absent: a key the node has never carried is
+                // undefined so the field can show the declared default, while
+                // "" is a field somebody has just cleared and is typing into.
+                value={
+                  selected.config?.[setting.key] === undefined
+                    ? undefined
+                    : String(selected.config[setting.key])
+                }
               />
             ))
           : null}

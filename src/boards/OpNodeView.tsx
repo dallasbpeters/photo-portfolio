@@ -273,11 +273,16 @@ const fieldValue = (
   key: string,
   config: Record<string, unknown>,
   wiredPrompt?: string | null
-): string => {
+): string | undefined => {
   if (key === "prompt" && wiredPrompt) {
     return wiredPrompt;
   }
   const stored = config[key];
+  // Undefined rather than "" for a key the node has never carried, so the field
+  // can tell "never set" from "just cleared". See SettingFieldProps.value.
+  if (stored === undefined || stored === null) {
+    return;
+  }
   return typeof stored === "string" || typeof stored === "number"
     ? String(stored)
     : "";

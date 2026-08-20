@@ -5,7 +5,7 @@ import {
   CANVAS_WIDTH,
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
-import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
+import { findOutputPort, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
@@ -20,6 +20,8 @@ import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import { CanvasChrome } from "./canvas/CanvasChrome";
 import { markFromStroke } from "./canvas/markFromStroke";
+import { maskStrokeIn } from "./canvas/maskStroke";
+import { portHandlersFor } from "./canvas/portHandlers";
 import {
   RecipeGroupView,
   type RecipeGroupViewProps,
@@ -37,13 +39,15 @@ import {
   isFreehand,
   isMaskTool,
   type Point,
-  toUnitSpace,
 } from "./drawing";
-import { contentBounds, topmostAt } from "./hitTest";
+import {
+  contentBounds,
+  containedIndices as indicesWithin,
+  topmostAt,
+} from "./hitTest";
 import { BOARD_IMAGE_TYPE } from "./itemOutput";
 import type { MaskStroke } from "./mask";
 import { PortMenu, type PortTarget } from "./PortMenu";
-import { outputPointFor } from "./portGeometry";
 import { resizeBox } from "./resizeBox";
 import { StrokePreview } from "./StrokePreview";
 import {
@@ -64,6 +68,7 @@ import {
 import { isImageDrop } from "./svgToRaster";
 import { useBoardTools } from "./tools/useBoardTools";
 import { useCanvasViewport } from "./useCanvasViewport";
+import { useDeleteKey } from "./useDeleteKey";
 import { useSpaceKey } from "./useSpaceKey";
 import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
@@ -458,17 +463,7 @@ export function BoardCanvas({
       if (!(target && onMaskStroke)) {
         return;
       }
-      onMaskStroke(target.id, {
-        points: toUnitSpace(points, {
-          height: target.height,
-          width: target.width,
-          x: target.x,
-          y: target.y,
-        }),
-        // Stored relative to the item's width so the mask scales with the
-        // node, exactly as the points do.
-        width: strokeWidth / target.width,
-      });
+      onMaskStroke(target.id, maskStrokeIn(points, target, strokeWidth));
     },
     [imageAt, onMaskStroke]
   );
@@ -607,21 +602,38 @@ export function BoardCanvas({
    * One action, not two: a board must never be left holding a wire that points
    * at nothing. The schema cascades on the server for the same reason.
    */
-  const removeItem = useCallback(
-    (index: number) => {
-      const item = items[index];
-      if (!item) {
+  /**
+   * Items gone, with every wire that touched any of them.
+   *
+   * One removal rather than one per way of asking. The cross on an item's
+   * chrome and the Delete key were separate code doing the same thing, and only
+   * the first of them remembered to take the wires — a node deleted by keyboard
+   * would have left wires pointing at nothing.
+   */
+  const removeIds = useCallback(
+    (doomed: Set<string>) => {
+      if (doomed.size === 0) {
         return;
       }
-      onChange(items.filter((_, i) => i !== index));
+      onChange(items.filter((item) => !doomed.has(item.id)));
       onWiresChange?.(
         wires.filter(
           (wire) =>
-            wire.sourceItemId !== item.id && wire.targetItemId !== item.id
+            !(doomed.has(wire.sourceItemId) || doomed.has(wire.targetItemId))
         )
       );
     },
     [items, onChange, onWiresChange, wires]
+  );
+
+  const removeItem = useCallback(
+    (index: number) => {
+      const item = items[index];
+      if (item) {
+        removeIds(new Set([item.id]));
+      }
+    },
+    [items, removeIds]
   );
 
   // Frames the arrangement the first time the board has one. A published board
@@ -631,6 +643,15 @@ export function BoardCanvas({
   // Pulled out of `view`, whose identity changes every render; `frameContent`
   // itself is stable, so this runs only when the items change, and it declines
   // to do anything once the board has been framed or taken hold of.
+  const removeSelected = useCallback(() => {
+    removeIds(new Set(selectedItems(selection, items).map((i) => i.id)));
+    setSelection(EMPTY_SELECTION);
+  }, [items, removeIds, selection]);
+
+  // Not while a visitor is looking at a published board, and not while a node
+  // is being edited — the node's own fields handle their own keys.
+  useDeleteKey(removeSelected, !(readOnly || editingId));
+
   const { frameContent } = view;
   useEffect(() => {
     // An empty board has nothing to frame, and the viewport already centres the
@@ -643,15 +664,7 @@ export function BoardCanvas({
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
-    (frame: BoardItem): number[] => {
-      const inside = new Set(withinFrame(frame, items).map((item) => item.id));
-      return items.reduce<number[]>((acc, item, index) => {
-        if (inside.has(item.id)) {
-          acc.push(index);
-        }
-        return acc;
-      }, []);
-    },
+    (frame: BoardItem): number[] => indicesWithin(frame, items),
     [items]
   );
 
@@ -1261,29 +1274,13 @@ export function BoardCanvas({
               ports={
                 readOnly
                   ? undefined
-                  : {
-                      canDropOn: wiring.canDropOn,
-                      isDragging: wiring.isDragging,
-                      onPortDown: (itemId, portKey, screen) => {
-                        const point = outputPointFor(item, portKey);
-                        if (point) {
-                          view.markUserMoved();
-                          wiring.begin(itemId, portKey, point, screen);
-                        }
-                      },
-                      onPortEnter: wiring.enterPort,
-                      onPortLeave: wiring.leavePort,
-                    }
+                  : portHandlersFor(item, wiring, view.markUserMoved)
               }
               previewImages={previewImagesFor(item, graph)}
               readOnly={readOnly}
               scale={view.viewport.scale}
               tools={readOnly ? undefined : tools}
-              wiredItems={
-                item.nodeType === "list"
-                  ? wiredItemsFor(item.id, graph)
-                  : undefined
-              }
+              wiredItems={wiredItemsFor(item, graph)}
               wiredPrompt={wiredTextFor(item.id, graph)}
             />
           ))}

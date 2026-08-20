@@ -62,16 +62,39 @@ const mount = async (
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  root.render(
-    <ShaderPanel
-      onConfigChange={(_id, next) => writes.push(next)}
-      onExport={() => Promise.resolve()}
-      selected={halftone(config)}
-    />
-  );
+  // Re-rendered with each stored config, as the board does: a field that reads
+  // its own value back is only honest if the value actually round-trips.
+  let current = halftone(config);
+  const draw = () => {
+    root?.render(
+      <ShaderPanel
+        onConfigChange={(_id, next) => {
+          writes.push(next);
+          current = { ...current, config: next };
+          draw();
+        }}
+        onExport={() => Promise.resolve()}
+        selected={current}
+      />
+    );
+  };
+  draw();
   await flush();
   return writes;
 };
+
+/** Types into a field the way a person does, through the native setter. */
+const typeInto = (field: HTMLInputElement, text: string): void => {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value"
+  )?.set;
+  setter?.call(field, text);
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+const numberFields = (): HTMLInputElement[] =>
+  Array.from(host?.querySelectorAll('input[type="number"]') ?? []);
 
 const wellFor = (label: string): HTMLButtonElement | undefined =>
   Array.from(document.querySelectorAll("button")).find(
@@ -125,5 +148,48 @@ describe("the halftone's settings before anyone touches them", () => {
     );
     expect(fields).toContain(declared("frequency"));
     expect(fields).toContain(declared("angle"));
+  });
+});
+
+describe("a number setting can be retyped", () => {
+  it("stays empty when it is cleared", async () => {
+    /*
+     * The failure this replaces: clearing the field wrote "", "" was read back
+     * as "never set", the declared default was substituted, and the box jumped
+     * straight back to 148. There was no way to type 60 except to select the
+     * whole field first — which reads, correctly, as a control that does not
+     * work.
+     */
+    await mount({});
+    const freq = numberFields().find((f) => f.value === "148");
+    expect(freq).toBeDefined();
+    if (freq) {
+      typeInto(freq, "");
+    }
+    await flush();
+    expect(numberFields().at(0)?.value).toBe("");
+  });
+
+  it("takes the number typed after it is cleared", async () => {
+    const writes = await mount({});
+    const freq = numberFields().find((f) => f.value === "148");
+    if (freq) {
+      typeInto(freq, "");
+    }
+    await flush();
+    const empty = numberFields().at(0);
+    if (empty) {
+      typeInto(empty, "60");
+    }
+    await flush();
+    expect(writes.at(-1)).toMatchObject({ frequency: "60" });
+    expect(numberFields().at(0)?.value).toBe("60");
+  });
+
+  it("still shows the declared default for a node that has none stored", async () => {
+    // The fallback must survive the fix: undefined is "never set" and still
+    // means the default, which is what the render is actually using.
+    await mount({});
+    expect(numberFields().at(0)?.value).toBe(declared("frequency"));
   });
 });

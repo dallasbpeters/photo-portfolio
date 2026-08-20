@@ -119,7 +119,7 @@ describe("what an Iterate node hands a List", () => {
     });
     const list = item({ id: "ls" });
     expect(
-      wiredItemsFor("ls", { items: [iterate, list], wires: [wire("it", "ls")] })
+      wiredItemsFor(list, { items: [iterate, list], wires: [wire("it", "ls")] })
     ).toEqual(["a oak chair, studio lit", "a steel chair, studio lit"]);
   });
 
@@ -132,7 +132,7 @@ describe("what an Iterate node hands a List", () => {
     const b = item({ config: { text: "three" }, id: "b", nodeType: "prompt" });
     const list = item({ id: "ls" });
     expect(
-      wiredItemsFor("ls", {
+      wiredItemsFor(list, {
         items: [a, b, list],
         wires: [wire("a", "ls"), wire("b", "ls")],
       })

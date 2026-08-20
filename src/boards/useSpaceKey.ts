@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { isTyping } from "./isTyping";
 
 /**
  * Whether space is being held, for the pan-versus-select gesture.
@@ -19,27 +20,6 @@ import {
  * render to change from grab to arrow; one value cannot do both without either
  * a stale read or a re-render per key event.
  */
-
-/**
- * Whether a keystroke belongs to something being typed into.
- *
- * Space is a character before it is a modifier. Arming a pan while someone is
- * typing a prompt, naming an element, or editing a text node would eat the
- * space out of their sentence — and `preventDefault` on the keydown, which the
- * page needs to stop space scrolling, is what would eat it.
- */
-const isTyping = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tag = target.tagName;
-  return (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    tag === "SELECT" ||
-    target.isContentEditable
-  );
-};
 
 export interface SpaceKey {
   /** Rendered, so the cursor can say the canvas is about to be dragged. */
