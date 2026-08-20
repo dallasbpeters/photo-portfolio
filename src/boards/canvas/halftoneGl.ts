@@ -118,21 +118,40 @@ const compile = (
 
 export class HalftoneError extends Error {}
 
+interface Prepared {
+  buffer: WebGLBuffer | null;
+  gl: WebGLRenderingContext;
+  program: WebGLProgram;
+  texture: WebGLTexture | null;
+  /** The picture currently uploaded, so it is not uploaded again. */
+  uploaded: HTMLImageElement | null;
+}
+
 /**
- * Draws `image` into `canvas`, at whatever size the canvas already is.
+ * The compiled shader for a canvas, kept.
  *
- * `preserveDrawingBuffer`, because the point of drawing it is to read it back:
- * without it a WebGL canvas is emptied as soon as it is composited, and every
- * capture after the frame that drew it comes back blank.
+ * Compiling and linking is tens of milliseconds and it blocks the main thread.
+ * Doing it inside every paint cost 22ms a repaint and 44ms per node on mount —
+ * measured, so ten halftone nodes froze the board for the better part of half a
+ * second, and dragging the dot size never got above about 45fps.
+ *
+ * Weak, so a node that goes away takes its program with it. A canvas can only
+ * hold one WebGL context anyway, so keying on the canvas is keying on the
+ * context.
  */
-export const paintHalftone = (
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
-  options: HalftoneOptions
-): void => {
+const prepared = new WeakMap<HTMLCanvasElement, Prepared>();
+
+const prepare = (canvas: HTMLCanvasElement): Prepared => {
+  const already = prepared.get(canvas);
+  if (already) {
+    return already;
+  }
   const gl = canvas.getContext("webgl", {
     alpha: false,
     antialias: false,
+    // The point of drawing it is to read it back. Without this a WebGL canvas
+    // is emptied as soon as it is composited, and every capture after the frame
+    // that drew it comes back blank.
     preserveDrawingBuffer: true,
   });
   if (!gl) {
@@ -154,6 +173,8 @@ export const paintHalftone = (
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     throw new HalftoneError("The halftone shader would not link.");
   }
+  // WebGL's useProgram, not a React hook — the linter matches on the name.
+  // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is a GL call
   gl.useProgram(program);
 
   const buffer = gl.createBuffer();
@@ -175,19 +196,55 @@ export const paintHalftone = (
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-  try {
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-  } catch (error) {
-    // A cross-origin picture without CORS headers cannot become a texture, and
-    // the browser will not say which one — so name the cause here.
-    throw new HalftoneError(
-      "That picture could not be read. It came from another origin without permission.",
-      { cause: error }
-    );
+  gl.uniform1i(gl.getUniformLocation(program, "photoTex"), 0);
+
+  const ready: Prepared = { buffer, gl, program, texture, uploaded: null };
+  prepared.set(canvas, ready);
+  return ready;
+};
+
+/**
+ * Draws `image` into `canvas`, at whatever size the canvas already is.
+ *
+ * The shader is compiled once per canvas and the picture uploaded once per
+ * canvas — changing a colour or the dot pitch sets four uniforms and redraws,
+ * which is the whole cost of dragging a slider.
+ */
+export const paintHalftone = (
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  options: HalftoneOptions
+): void => {
+  const { gl, program, texture, uploaded } = prepare(canvas);
+  gl.useProgram(program);
+
+  if (uploaded !== image) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    try {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        image
+      );
+    } catch (err) {
+      // A cross-origin picture without CORS headers cannot become a texture,
+      // and the browser will not say which one — so name the cause here.
+      throw new HalftoneError(
+        "That picture could not be read. It came from another origin without permission.",
+        { cause: err }
+      );
+    }
+    const entry = prepared.get(canvas);
+    if (entry) {
+      entry.uploaded = image;
+    }
   }
 
   const uniform = (name: string) => gl.getUniformLocation(program, name);
-  gl.uniform1i(uniform("photoTex"), 0);
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.uniform2f(uniform("r"), canvas.width, canvas.height);
   gl.uniform1f(uniform("d"), Math.max(1, options.dot));
@@ -222,9 +279,22 @@ export const halftoneOptionsFrom = (
   paper: text(config.paper, HALFTONE_DEFAULTS.paper),
 });
 
-/** The picture, loaded and ready to be a texture. */
-export const loadImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
+/**
+ * The picture, loaded once per address and kept.
+ *
+ * `crossOrigin` makes this a different cache entry from the plain <img> the
+ * board draws elsewhere, so without this the same photograph is fetched twice —
+ * and every repaint fetched it again. A batch of twenty on one board was twenty
+ * downloads per redraw.
+ */
+const decoded = new Map<string, Promise<HTMLImageElement>>();
+
+export const loadImage = (url: string): Promise<HTMLImageElement> => {
+  const already = decoded.get(url);
+  if (already) {
+    return already;
+  }
+  const loading = new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
@@ -232,3 +302,9 @@ export const loadImage = (url: string): Promise<HTMLImageElement> =>
       reject(new HalftoneError("That picture could not be loaded."));
     image.src = url;
   });
+  decoded.set(url, loading);
+  // A failure is not worth remembering: the address may simply not have been
+  // reachable yet, and caching the rejection would make that permanent.
+  loading.catch(() => decoded.delete(url));
+  return loading;
+};
