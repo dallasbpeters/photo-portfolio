@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BoardItem, BoardWire } from "../../types";
-import { wiredImagesFor } from "./wiredPreviews";
+import { wiredImageFor, wiredImagesFor } from "./wiredPreviews";
 
 /**
  * How many pictures the browser thinks are wired into a shader.
@@ -105,5 +105,51 @@ describe("wiredImagesFor", () => {
   it("is empty when nothing is wired in", () => {
     const shader = item({ id: "s", kind: "op", nodeType: "standard" });
     expect(wiredImagesFor("s", { items: [shader], wires: [] })).toEqual([]);
+  });
+});
+
+describe("wiredImageFor — the one picture a preview shows", () => {
+  it("sees through a Batch node", () => {
+    /*
+     * The node said "wire a picture into this node" with a wire plainly
+     * attached. outputImageOf is handed the items and not the wires, so it
+     * cannot see what feeds a Batch — and a Batch holds nothing of its own,
+     * having no capability and never running, so reading its result answers
+     * null.
+     */
+    const photos = Array.from({ length: 3 }, (_, i) => photo(`p${i}`));
+    const batch = item({ id: "b", kind: "op", nodeType: "batch" });
+    const shader = item({ id: "s", kind: "op", nodeType: "standard" });
+    const wires = [...photos.map((p) => wire(p.id, "b")), wire("b", "s")];
+    expect(
+      wiredImageFor("s", { items: [...photos, batch, shader], wires })
+    ).toBe("https://example.test/p0.png");
+  });
+
+  it("agrees with what the render loop will draw", () => {
+    // The preview and the render must never disagree about what feeds a node.
+    const photos = Array.from({ length: 3 }, (_, i) => photo(`p${i}`));
+    const batch = item({ id: "b", kind: "op", nodeType: "batch" });
+    const shader = item({ id: "s", kind: "op", nodeType: "standard" });
+    const graph = {
+      items: [...photos, batch, shader],
+      wires: [...photos.map((p) => wire(p.id, "b")), wire("b", "s")],
+    };
+    expect(wiredImageFor("s", graph)).toBe(wiredImagesFor("s", graph)[0]);
+  });
+
+  it("still reads a picture wired straight in", () => {
+    const shader = item({ id: "s", kind: "op", nodeType: "standard" });
+    expect(
+      wiredImageFor("s", {
+        items: [photo("p0"), shader],
+        wires: [wire("p0", "s")],
+      })
+    ).toBe("https://example.test/p0.png");
+  });
+
+  it("is null when nothing is wired in", () => {
+    const shader = item({ id: "s", kind: "op", nodeType: "standard" });
+    expect(wiredImageFor("s", { items: [shader], wires: [] })).toBeNull();
   });
 });

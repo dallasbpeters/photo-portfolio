@@ -1,7 +1,6 @@
 import type { BoardItem, BoardWire } from "../../types";
 import {
   iteratedTextOf,
-  outputImageOf,
   outputImagesOf,
   outputListOf,
   outputTextOf,
@@ -149,14 +148,19 @@ export const wiredImagesFor = (itemId: string, graph: Graph): string[] =>
  * the component; nothing is written to the item, which keeps the wire the
  * single source of truth for what is being shown.
  */
-export const wiredImageFor = (itemId: string, graph: Graph): string | null => {
-  const wire = graph.wires.find(
-    (candidate) =>
-      candidate.targetItemId === itemId && candidate.targetPort === "image"
-  );
-  if (!wire) {
-    return null;
-  }
-  const source = graph.items.find((item) => item.id === wire.sourceItemId);
-  return source ? outputImageOf(source, graph.items) : null;
-};
+export const wiredImageFor = (itemId: string, graph: Graph): string | null =>
+  /*
+   * The first of everything wired in, through the resolver that knows about
+   * batches.
+   *
+   * It used to read outputImageOf directly, which is given the items and not
+   * the wires — so it cannot see what feeds a Batch node, and a Batch holds
+   * nothing of its own to fall back on. It has no capability and never runs, so
+   * reading its `result` answers null. A halftone fed by a batch therefore drew
+   * nothing and said "wire a picture into this node" with a wire plainly
+   * attached to it.
+   *
+   * The same resolver wiredImagesFor uses, taking one instead of all, so the
+   * preview and the render can never disagree about what is feeding a node.
+   */
+  wiredImagesFor(itemId, graph)[0] ?? null;
