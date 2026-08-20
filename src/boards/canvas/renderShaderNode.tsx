@@ -71,6 +71,38 @@ const longEdge = (): number =>
 /** The ground's handle, so the texture above it can name it. */
 const GROUND_ID = "halftone-ground";
 
+/**
+ * The narrowest a dot cell may be drawn, in pixels.
+ *
+ * Below about this the screen stops being a screen. The library's frequency is
+ * measured in cells across the *frame*, not in pixels, so the same number means
+ * a different thing at every size: 148 across an export is a fine even screen
+ * and 148 across a 300px node preview is two pixels a cell, which aliases into
+ * a smeared, crooked mess that looks like a broken shader rather than a screen
+ * too fine to draw. Rendered side by side at 300px and 1200px from identical
+ * settings, which is how this was found.
+ *
+ * Four is where the dot still has an inside and an outside after the library's
+ * own smoothing.
+ */
+const MIN_CELL_PX = 4;
+
+/**
+ * The screen this frame can actually carry.
+ *
+ * Never finer than the pixels allow, and never coarser than asked for. Where
+ * both the preview and the export can resolve the chosen frequency they draw
+ * exactly the same thing, so this only ever bites when the alternative is a
+ * picture nobody would want.
+ */
+export const resolvableFrequency = (
+  asked: number,
+  frameWidth?: number
+): number =>
+  frameWidth && frameWidth > 0
+    ? Math.max(4, Math.min(asked, frameWidth / MIN_CELL_PX))
+    : asked;
+
 const num = (value: unknown, fallback: number): number => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -113,7 +145,9 @@ const measure = (url: string): Promise<{ h: number; w: number } | null> =>
  */
 export const halftoneStack = (
   config: HalftoneSettings,
-  imageUrl: string
+  imageUrl: string,
+  /** How wide this will actually be drawn, so the screen can be kept legible. */
+  frameWidth?: number
 ): React.ReactElement => (
   <Shader style={{ height: "100%", width: "100%" }}>
     {/* Behind the halftone, and read through its dots. See above. */}
@@ -124,7 +158,7 @@ export const halftoneStack = (
       blackColor={hex(config.blackColor, "#000000")}
       cyanAngle={num(config.cyanAngle, 15)}
       cyanColor={hex(config.cyanColor, "#00ffff")}
-      frequency={num(config.frequency, 148)}
+      frequency={resolvableFrequency(num(config.frequency, 148), frameWidth)}
       magentaAngle={num(config.magentaAngle, 75)}
       magentaColor={hex(config.magentaColor, "#ff00ff")}
       misprint={num(config.misprint, 0)}
@@ -162,7 +196,7 @@ export const renderHalftone = async (
   const width = Math.round(aspect >= 1 ? edge : edge * aspect);
   const height = Math.round(aspect >= 1 ? edge / aspect : edge);
 
-  return await renderOffscreen(halftoneStack(config, imageUrl), {
+  return await renderOffscreen(halftoneStack(config, imageUrl, width), {
     height,
     width,
   });

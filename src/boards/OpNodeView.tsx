@@ -348,7 +348,11 @@ function NodeBody({
           node generates nothing and costs nothing, so wiring a picture in is
           the whole act. */}
       {item.nodeType === "standard" ? (
-        <HalftonePreview config={config} imageUrl={imageUrl} />
+        <HalftonePreview
+          config={config}
+          frameWidth={item.width}
+          imageUrl={imageUrl}
+        />
       ) : null}
 
       <ResultImages

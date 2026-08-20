@@ -23,11 +23,17 @@ import { halftoneStack } from "./renderShaderNode";
 
 export interface HalftonePreviewProps {
   config: Record<string, unknown>;
+  /** How wide the node is, so the screen is not drawn finer than it can be. */
+  frameWidth?: number;
   /** The picture on the node's image input, or null while nothing is wired. */
   imageUrl?: string | null;
 }
 
-export function HalftonePreview({ config, imageUrl }: HalftonePreviewProps) {
+export function HalftonePreview({
+  config,
+  frameWidth,
+  imageUrl,
+}: HalftonePreviewProps) {
   if (!imageUrl) {
     return (
       <p className="px-1 py-3 text-[10px] text-board-ink/35 leading-relaxed">
@@ -40,7 +46,7 @@ export function HalftonePreview({ config, imageUrl }: HalftonePreviewProps) {
     // A fixed aspect rather than the node's full height: the node body scrolls,
     // and a child sized to a scrolling parent has no height to render into.
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded bg-board-surface/40">
-      {halftoneStack(config, imageUrl)}
+      {halftoneStack(config, imageUrl, frameWidth)}
     </div>
   );
 }

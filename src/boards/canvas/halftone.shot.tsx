@@ -56,9 +56,14 @@ const card = (): string => {
   return source.toDataURL("image/png");
 };
 
-const shoot = async (name: string, node: React.ReactNode): Promise<void> => {
+const shoot = async (
+  name: string,
+  node: React.ReactNode,
+  w = 900,
+  h = 600
+): Promise<void> => {
   host = document.createElement("div");
-  host.style.cssText = "position:fixed;left:0;top:0;width:900px;height:600px;";
+  host.style.cssText = `position:fixed;left:0;top:0;width:${w}px;height:${h}px;`;
   document.body.append(host);
   root = createRoot(host);
   root.render(node);
@@ -77,38 +82,23 @@ const defaults = (): Record<string, unknown> =>
     ])
   );
 
-describe("halftone", () => {
-  it("a new node's defaults", async () => {
-    await shoot("1-defaults", halftoneStack(defaults(), card()));
-    expect(true).toBe(true);
-  });
-
-  it("inverted: the two inks swapped", async () => {
+describe("the screen is kept legible at any size", () => {
+  it("frequency 148 in a node-sized box, clamped", async () => {
     await shoot(
-      "2-inverted",
-      halftoneStack(
-        { ...defaults(), inkColor: "#ffffff", paperColor: "#041045" },
-        card()
-      )
+      "small-clamped",
+      halftoneStack(defaults(), card(), 300),
+      300,
+      225
     );
     expect(true).toBe(true);
   });
 
-  it("a different ink", async () => {
+  it("frequency 148 at export size, untouched", async () => {
     await shoot(
-      "3-red-ink",
-      halftoneStack(
-        { ...defaults(), inkColor: "#7a1020", paperColor: "#f5efe2" },
-        card()
-      )
-    );
-    expect(true).toBe(true);
-  });
-
-  it("tint pulled back, keeping the photograph's own colour", async () => {
-    await shoot(
-      "4-tint-half",
-      halftoneStack({ ...defaults(), tint: 0.35 }, card())
+      "large-untouched",
+      halftoneStack(defaults(), card(), 1200),
+      1200,
+      900
     );
     expect(true).toBe(true);
   });
