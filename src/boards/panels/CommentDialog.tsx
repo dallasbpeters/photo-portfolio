@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MAX_COMMENT_BODY, MAX_COMMENT_NAME } from "../../config/comments";
+import { MAX_COMMENT_BODY, MAX_COMMENT_NAME } from "../../../config/comments";
 
 interface CommentDialogProps {
   /** What the item being commented on is called, for the heading. */

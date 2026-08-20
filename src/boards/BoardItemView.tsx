@@ -7,8 +7,10 @@ import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
 import { BoardTextTools } from "./BoardTextTools";
 import { BoardToolBar } from "./BoardToolBar";
-import { DrawingView } from "./DrawingView";
-import { isDrawingConfig } from "./drawing";
+import { DrawingView } from "./drawing/DrawingView";
+import { isDrawingConfig } from "./drawing/drawing";
+import { MaskOverlay } from "./drawing/MaskOverlay";
+import { maskOf } from "./drawing/mask";
 import type { ResizeHandle } from "./geometry/alignmentGuides";
 import { inputPoints, outputPoints } from "./geometry/portGeometry";
 import { ItemMedia } from "./ItemMedia";
@@ -18,8 +20,6 @@ import {
   itemBoxClassName,
   ShaderItem,
 } from "./itemBodies";
-import { MaskOverlay } from "./MaskOverlay";
-import { maskOf } from "./mask";
 import { BatchList } from "./nodes/BatchList";
 import { OpNodeView } from "./nodes/OpNodeView";
 import { ResizeHandles } from "./ResizeHandles";

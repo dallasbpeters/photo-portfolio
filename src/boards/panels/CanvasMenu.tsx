@@ -1,11 +1,11 @@
 import { useState } from "react";
-import type { BoardItem, BoardWire } from "../types";
+import type { BoardItem, BoardWire } from "../../types";
+import { frameBoardTitle, frameSummary } from "../copyToBoard";
+import type { Tool } from "../tools/types";
 import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
 import { CollectionPanel } from "./CollectionPanel";
-import { MenuRows } from "./canvasMenu/MenuRows";
-import { RecipeNamePanel } from "./canvasMenu/RecipeNamePanel";
-import { frameBoardTitle, frameSummary } from "./copyToBoard";
-import type { Tool } from "./tools/types";
+import { MenuRows } from "./MenuRows";
+import { RecipeNamePanel } from "./RecipeNamePanel";
 
 /**
  * What the canvas offers on a right-click.

@@ -1,4 +1,4 @@
-import type { BoardItem } from "../types";
+import type { BoardItem } from "../../types";
 import { type DrawStyle, DrawToolbar } from "./DrawToolbar";
 import { type DrawTool, isDrawingConfig, NO_FILL } from "./drawing";
 

@@ -43,9 +43,9 @@ import {
 } from "../components/ui/select";
 import type { BoardItem } from "../types";
 import { ColorWell } from "./ColorWell";
-import { isTransparent, NO_FILL } from "./drawing";
+import { isTransparent, NO_FILL } from "./drawing/drawing";
 import { PANEL_GAP } from "./geometry/panelPlacement";
-import { useAnchoredPanel } from "./useAnchoredPanel";
+import { useAnchoredPanel } from "./panels/useAnchoredPanel";
 import { useTextFont } from "./useTextFont";
 
 /**

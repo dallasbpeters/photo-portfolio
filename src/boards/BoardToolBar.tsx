@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import type { BoardItem } from "../types";
 import { PANEL_GAP } from "./geometry/panelPlacement";
 import { isVideoUrl } from "./isVideo";
-import { ToolPicker } from "./ToolPicker";
-import { ToolPrompt } from "./ToolPrompt";
+import { ToolPicker } from "./panels/ToolPicker";
+import { ToolPrompt } from "./panels/ToolPrompt";
+import { useAnchoredPanel } from "./panels/useAnchoredPanel";
 import { imageOf, toolContextOf } from "./tools/itemContext";
 import { blockedReason, toolsForKind } from "./tools/registry";
 import type { Tool } from "./tools/types";
-import { useAnchoredPanel } from "./useAnchoredPanel";
 
 /**
  * The tools for the item you have selected, on the item.

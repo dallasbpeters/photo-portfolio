@@ -14,10 +14,10 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem, BoardWire } from "../../types";
 import { isSvgUrl } from "../affinity";
-import type { CanvasMenuTarget } from "../CanvasMenu";
-import { CollectionRow, hasTools, ToolsRow } from "../CanvasMenuPanels";
 import { frameSummary } from "../copyToBoard";
 import { outputImageOf, outputImagesOf } from "../itemOutput";
+import type { CanvasMenuTarget } from "./CanvasMenu";
+import { CollectionRow, hasTools, ToolsRow } from "./CanvasMenuPanels";
 
 /**
  * Every row the canvas menu can offer, and the rules for which apply.

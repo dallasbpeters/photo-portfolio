@@ -3,7 +3,7 @@ import {
   Delete02Icon,
   ExchangeIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import type { BoardItem } from "../types";
+import type { BoardItem } from "../../types";
 import { type MaskConfig, maskOf } from "./mask";
 
 /**

@@ -1,5 +1,5 @@
-import { type Point, toUnitSpace } from "../drawing";
-import type { MaskStroke } from "../mask";
+import { type Point, toUnitSpace } from "../drawing/drawing";
+import type { MaskStroke } from "../drawing/mask";
 
 /**
  * A brush stroke, written in the target picture's own coordinates.

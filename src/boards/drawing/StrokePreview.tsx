@@ -1,4 +1,4 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../config/canvas.js";
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../../config/canvas.js";
 import {
   CORNER_RADIUS,
   type DrawTool,

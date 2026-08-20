@@ -2,9 +2,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Album02Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCollections } from "../hooks/useCollections";
-import { collectionsApi } from "../services/portfolioService";
-import { isVideoUrl } from "./isVideo";
+import { useCollections } from "../../hooks/useCollections";
+import { collectionsApi } from "../../services/portfolioService";
+import { isVideoUrl } from "../isVideo";
 
 /**
  * Choosing where a selection is kept.

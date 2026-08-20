@@ -1,8 +1,8 @@
-import "../index.css";
+import "../../index.css";
 import type { ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BoardItemKind } from "../types";
+import type { BoardItemKind } from "../../types";
 import { ToolPicker, type ToolPickerProps } from "./ToolPicker";
 
 /**

@@ -6,8 +6,15 @@ import {
 } from "../../../../config/canvas.js";
 import type { Box } from "../../../boards/BoardCanvas";
 import { copyOfFrame } from "../../../boards/copyToBoard";
-import { type DrawingConfig, isFreehand } from "../../../boards/drawing";
-import { type MaskConfig, type MaskStroke, maskOf } from "../../../boards/mask";
+import {
+  type DrawingConfig,
+  isFreehand,
+} from "../../../boards/drawing/drawing";
+import {
+  type MaskConfig,
+  type MaskStroke,
+  maskOf,
+} from "../../../boards/drawing/mask";
 import { newItemId } from "../../../boards/newItemId";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";

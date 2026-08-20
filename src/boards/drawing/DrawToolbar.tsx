@@ -7,7 +7,7 @@ import {
   PenTool01Icon,
   SquareIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { ColorWell } from "./ColorWell";
+import { ColorWell } from "../ColorWell";
 import {
   DEFAULT_STROKE_WIDTH,
   type DrawTool,

@@ -11,9 +11,9 @@ import {
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useRef, useState } from "react";
-import { nodeTypeFor } from "../../config/nodeTypes.js";
-import type { BoardItem } from "../types";
-import { outputImageOf } from "./itemOutput";
+import { nodeTypeFor } from "../../../config/nodeTypes.js";
+import type { BoardItem } from "../../types";
+import { outputImageOf } from "../itemOutput";
 
 /**
  * The board's stack, as a list you can reorder.

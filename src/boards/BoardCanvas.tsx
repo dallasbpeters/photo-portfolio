@@ -10,7 +10,6 @@ import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
 import { BoardItemView } from "./BoardItemView";
-import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import { CanvasChrome } from "./canvas/CanvasChrome";
 import { markFromStroke } from "./canvas/markFromStroke";
 import { maskStrokeIn } from "./canvas/maskStroke";
@@ -33,7 +32,10 @@ import {
   isFreehand,
   isMaskTool,
   type Point,
-} from "./drawing";
+} from "./drawing/drawing";
+import type { MaskStroke } from "./drawing/mask";
+import { StrokePreview } from "./drawing/StrokePreview";
+import { isImageDrop } from "./drawing/svgToRaster";
 import {
   type Guides,
   NO_GUIDES,
@@ -63,10 +65,8 @@ import {
   type SnapIndex,
 } from "./geometry/snapIndex";
 import { BOARD_IMAGE_TYPE } from "./itemOutput";
-import type { MaskStroke } from "./mask";
-import { PortMenu, type PortTarget } from "./PortMenu";
-import { StrokePreview } from "./StrokePreview";
-import { isImageDrop } from "./svgToRaster";
+import { CanvasMenu, type CanvasMenuTarget } from "./panels/CanvasMenu";
+import { PortMenu, type PortTarget } from "./panels/PortMenu";
 import { useBoardTools } from "./tools/useBoardTools";
 import { useCanvasViewport } from "./useCanvasViewport";
 import { useDeleteKey } from "./useDeleteKey";

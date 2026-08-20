@@ -11,12 +11,12 @@ import {
   SparklesIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { inputPortsFor } from "../../config/graph.js";
+import { inputPortsFor } from "../../../config/graph.js";
 import {
   NODE_TYPES,
   type NodeTypeId,
   type PortType,
-} from "../../config/nodeTypes.js";
+} from "../../../config/nodeTypes.js";
 
 /** What clicking a port can create, and what to wire it into. */
 export interface PortTarget {

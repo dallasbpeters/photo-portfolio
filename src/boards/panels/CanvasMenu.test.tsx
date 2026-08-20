@@ -1,9 +1,9 @@
-import "../index.css";
+import "../../index.css";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BoardItem } from "../types";
+import type { BoardItem } from "../../types";
+import type { Tool } from "../tools/types";
 import { CanvasMenu } from "./CanvasMenu";
-import type { Tool } from "./tools/types";
 
 /**
  * The menu's half of the tool wiring: that the picker is reachable at all, and

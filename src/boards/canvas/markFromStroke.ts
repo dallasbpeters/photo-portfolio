@@ -1,5 +1,5 @@
 import { MIN_ITEM_SIZE } from "../../../config/canvas.js";
-import type { DrawStyle } from "../DrawToolbar";
+import type { DrawStyle } from "../drawing/DrawToolbar";
 import {
   boundsOf,
   type DrawingConfig,
@@ -7,7 +7,7 @@ import {
   isFreehand,
   type Point,
   toUnitSpace,
-} from "../drawing";
+} from "../drawing/drawing";
 
 /**
  * The mark a drag just described: what to draw, and the box it occupies.

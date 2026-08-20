@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { DrawTool } from "../../../boards/drawing";
+import type { DrawTool } from "../../../boards/drawing/drawing";
 import { restore, type useBoardHistory } from "../../../boards/useBoardHistory";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";

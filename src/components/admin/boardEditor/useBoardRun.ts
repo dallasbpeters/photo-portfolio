@@ -11,11 +11,15 @@ import { MAX_SHADER_RENDERS } from "../../../../config/nodes/limits.js";
 import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
 import { wiredImagesFor } from "../../../boards/canvas/wiredPreviews";
 import { compositeSources, renderComposite } from "../../../boards/composite";
+import {
+  maskOf,
+  naturalSizeOf,
+  rasterizeMask,
+} from "../../../boards/drawing/mask";
 import { configFromSource } from "../../../boards/elementNode";
 import { FRAME_PAD } from "../../../boards/geometry/arrange";
-import { maskOf, naturalSizeOf, rasterizeMask } from "../../../boards/mask";
 import { newItemId } from "../../../boards/newItemId";
-import type { PortTarget } from "../../../boards/PortMenu";
+import type { PortTarget } from "../../../boards/panels/PortMenu";
 import { portfolioService } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";
 import { BLANK_ITEM, PORT_SPAWN_GAP } from "./placement";

@@ -1,5 +1,5 @@
 import type { BoardItem } from "../../types.js";
-import { maskOf } from "../mask.js";
+import { maskOf } from "../drawing/mask.js";
 
 /**
  * What a board item can offer a tool, in the three terms `blockedReason` asks in.

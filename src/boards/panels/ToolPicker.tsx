@@ -13,13 +13,13 @@ import {
   Search01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useId, useMemo, useState } from "react";
-import { Button } from "../components/ui/button";
-import { cn } from "../lib/utils";
-import type { BoardItemKind } from "../types";
+import { Button } from "../../components/ui/button";
+import { cn } from "../../lib/utils";
+import type { BoardItemKind } from "../../types";
+import type { ToolContext } from "../tools/itemContext";
+import { blockedReason, searchTools, toolsForKind } from "../tools/registry";
+import { TOOL_GROUPS, type Tool, type ToolGroup } from "../tools/types";
 import { ToolPrompt } from "./ToolPrompt";
-import type { ToolContext } from "./tools/itemContext";
-import { blockedReason, searchTools, toolsForKind } from "./tools/registry";
-import { TOOL_GROUPS, type Tool, type ToolGroup } from "./tools/types";
 
 /**
  * Picking a tool: search, tabs, a list, and nothing else.

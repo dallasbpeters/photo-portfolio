@@ -7,18 +7,18 @@ import {
   DEFAULT_IMAGE_WIDTH,
 } from "../../../config/canvas.js";
 import { BoardCanvas } from "../../boards/BoardCanvas";
-import { CommentsPanel } from "../../boards/CommentsPanel";
 import { FloatingTools } from "../../boards/canvas/FloatingTools";
-import type { DrawStyle } from "../../boards/DrawToolbar";
+import type { DrawStyle } from "../../boards/drawing/DrawToolbar";
 import {
   DEFAULT_STROKE,
   DEFAULT_STROKE_WIDTH,
   type DrawTool,
   NO_FILL,
-} from "../../boards/drawing";
-import { ElementModal } from "../../boards/ElementModal";
-import { InsertPalette } from "../../boards/InsertPalette";
+} from "../../boards/drawing/drawing";
 import { ModelsProvider } from "../../boards/ModelsContext";
+import { CommentsPanel } from "../../boards/panels/CommentsPanel";
+import { ElementModal } from "../../boards/panels/ElementModal";
+import { InsertPalette } from "../../boards/panels/InsertPalette";
 import { useBoardHistory } from "../../boards/useBoardHistory";
 import { useGraphRun } from "../../boards/useGraphRun";
 import { useVideoNode } from "../../boards/useVideoNode";

@@ -1,10 +1,10 @@
 import type { BoardItem, BoardWire } from "../../types";
 import { AutoplayToggle } from "../AutoplayToggle";
-import { BoardDrawTools } from "../BoardDrawTools";
-import type { DrawStyle } from "../DrawToolbar";
-import type { DrawTool } from "../drawing";
-import { MaskControls } from "../MaskControls";
-import type { MaskConfig } from "../mask";
+import { BoardDrawTools } from "../drawing/BoardDrawTools";
+import type { DrawStyle } from "../drawing/DrawToolbar";
+import type { DrawTool } from "../drawing/drawing";
+import { MaskControls } from "../drawing/MaskControls";
+import type { MaskConfig } from "../drawing/mask";
 import { ShaderPanel } from "../shaderControls/ShaderPanel";
 import { wiredImageFor } from "./wiredPreviews";
 

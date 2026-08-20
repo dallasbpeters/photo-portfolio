@@ -2,10 +2,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MAX_ELEMENT_IMAGES } from "../../config/elements.js";
-import { Button } from "../components/ui/button";
-import { elementsApi } from "../services/portfolioService";
-import type { Element } from "../types";
+import { MAX_ELEMENT_IMAGES } from "../../../config/elements.js";
+import { Button } from "../../components/ui/button";
+import { elementsApi } from "../../services/portfolioService";
+import type { Element } from "../../types";
 
 /** Saving a new element out of what is selected on the board. */
 interface ElementDraftProps {

@@ -1,6 +1,6 @@
 import { withinFrame } from "../../../config/graph.js";
 import type { BoardItem } from "../../types";
-import type { Point } from "../drawing";
+import type { Point } from "../drawing/drawing";
 
 /**
  * What is under a point, and how big the board is.

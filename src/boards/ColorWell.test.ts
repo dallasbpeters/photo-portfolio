@@ -1,7 +1,7 @@
 import type { ColorResult } from "react-color";
 import { describe, expect, it } from "vitest";
 import { pickerSeed, toHex } from "./ColorWell";
-import { isTransparent, NO_FILL } from "./drawing";
+import { isTransparent, NO_FILL } from "./drawing/drawing";
 
 /**
  * Why a fill colour could be picked and never appear.

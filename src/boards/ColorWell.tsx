@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 const PICKER_WIDTH = 220;
 const PICKER_HEIGHT = 300;
 
-import { isTransparent } from "./drawing";
+import { isTransparent } from "./drawing/drawing";
 
 /**
  * A color swatch that opens the project's SketchPicker.

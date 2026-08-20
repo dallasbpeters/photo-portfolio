@@ -3,9 +3,9 @@ import {
   Cancel01Icon,
   Message02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { nodeTypeFor } from "../../config/nodeTypes.js";
-import type { BoardComment } from "../services/comments";
-import type { BoardItem } from "../types";
+import { nodeTypeFor } from "../../../config/nodeTypes.js";
+import type { BoardComment } from "../../services/comments";
+import type { BoardItem } from "../../types";
 
 interface CommentsPanelProps {
   comments: BoardComment[];

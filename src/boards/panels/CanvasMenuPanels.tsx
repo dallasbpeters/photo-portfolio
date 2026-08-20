@@ -4,12 +4,12 @@ import {
   MagicWand01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef } from "react";
-import type { BoardItem } from "../types";
-import { frameBoardTitle } from "./copyToBoard";
+import type { BoardItem } from "../../types";
+import { frameBoardTitle } from "../copyToBoard";
+import { toolContextOf } from "../tools/itemContext";
+import { toolsForKind } from "../tools/registry";
+import type { Tool } from "../tools/types";
 import { ToolPicker } from "./ToolPicker";
-import { toolContextOf } from "./tools/itemContext";
-import { toolsForKind } from "./tools/registry";
-import type { Tool } from "./tools/types";
 
 /**
  * The two things the canvas menu turns itself into.

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ModelSetting } from "./nodes/SettingField";
-import type { Tool } from "./tools/types";
+import { ModelSetting } from "../nodes/SettingField";
+import type { Tool } from "../tools/types";
 
 /**
  * The words a prompt-needing tool is run with, collected as it is picked.

@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { type PanelPlacement, placePanel } from "./geometry/panelPlacement";
+import { type PanelPlacement, placePanel } from "../geometry/panelPlacement";
 
 /**
  * A panel that rides an item and flips when it runs out of room above it.

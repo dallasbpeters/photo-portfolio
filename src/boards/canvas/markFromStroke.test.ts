@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DrawStyle } from "../DrawToolbar";
+import type { DrawStyle } from "../drawing/DrawToolbar";
 import { markFromStroke } from "./markFromStroke";
 
 /**
