@@ -5,12 +5,12 @@ import {
   DEFAULT_NODE_WIDTH,
 } from "../../../../config/canvas.js";
 import { OUTPUT_PORT_KEY } from "../../../../config/ports.js";
-import type { AffinityWriteback } from "../../../boards/affinity";
-import { isSvgUrl } from "../../../boards/affinity";
+import { useAffinityBridge } from "../../../boards/hooks/useAffinityBridge";
+import { useBoardImageEditor } from "../../../boards/hooks/useBoardImageEditor";
+import type { AffinityWriteback } from "../../../boards/io/affinity";
+import { isSvgUrl } from "../../../boards/io/affinity";
+import { newItemId } from "../../../boards/io/newItemId";
 import { outputImageOf } from "../../../boards/itemOutput";
-import { newItemId } from "../../../boards/newItemId";
-import { useAffinityBridge } from "../../../boards/useAffinityBridge";
-import { useBoardImageEditor } from "../../../boards/useBoardImageEditor";
 import type { BoardItem, BoardItemResult, BoardWire } from "../../../types";
 import { BLANK_ITEM, PORT_SPAWN_GAP } from "./placement";
 

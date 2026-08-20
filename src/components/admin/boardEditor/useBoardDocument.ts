@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { DrawTool } from "../../../boards/drawing/drawing";
-import type { useBoardHistory } from "../../../boards/useBoardHistory";
+import type { useBoardHistory } from "../../../boards/hooks/useBoardHistory";
 import type { BoardComment } from "../../../services/comments";
 import { commentsApi } from "../../../services/comments";
 import {

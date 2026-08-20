@@ -1,4 +1,4 @@
-import type { BoardItemVariation } from "../types";
+import type { BoardItemVariation } from "../../types";
 
 /**
  * Telling a clip from a picture.

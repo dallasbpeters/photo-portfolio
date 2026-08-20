@@ -2,8 +2,8 @@ import { useState } from "react";
 import { optimizedImageSrc } from "../components/OptimizedImage";
 import type { BoardItem } from "../types";
 import { useAutoplay } from "./autoplayPref";
-import { grownBucket, wantedWidth } from "./imageBucket";
-import { isVideoUrl } from "./isVideo";
+import { grownBucket, wantedWidth } from "./io/imageBucket";
+import { isVideoUrl } from "./io/isVideo";
 import { currentImageUrl } from "./itemOutput";
 
 /**

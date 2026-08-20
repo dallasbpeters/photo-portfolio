@@ -1,6 +1,6 @@
 import type { IconStyle } from "../../config/iconStyles";
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
-import type { AffinityWriteback } from "../boards/affinity";
+import type { AffinityWriteback } from "../boards/io/affinity";
 import type {
   AiModel,
   AiModelInput,

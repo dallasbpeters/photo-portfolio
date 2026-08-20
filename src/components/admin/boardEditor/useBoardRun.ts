@@ -10,7 +10,6 @@ import { containedBy } from "../../../../config/graph.js";
 import { MAX_SHADER_RENDERS } from "../../../../config/nodes/limits.js";
 import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
 import { wiredImagesFor } from "../../../boards/canvas/wiredPreviews";
-import { compositeSources, renderComposite } from "../../../boards/composite";
 import {
   maskOf,
   naturalSizeOf,
@@ -18,7 +17,11 @@ import {
 } from "../../../boards/drawing/mask";
 import { configFromSource } from "../../../boards/elementNode";
 import { FRAME_PAD } from "../../../boards/geometry/arrange";
-import { newItemId } from "../../../boards/newItemId";
+import {
+  compositeSources,
+  renderComposite,
+} from "../../../boards/io/composite";
+import { newItemId } from "../../../boards/io/newItemId";
 import type { PortTarget } from "../../../boards/panels/PortMenu";
 import { portfolioService } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";

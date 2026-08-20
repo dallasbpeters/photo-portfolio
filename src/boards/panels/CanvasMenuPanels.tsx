@@ -5,7 +5,7 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useRef } from "react";
 import type { BoardItem } from "../../types";
-import { frameBoardTitle } from "../copyToBoard";
+import { frameBoardTitle } from "../io/copyToBoard";
 import { toolContextOf } from "../tools/itemContext";
 import { toolsForKind } from "../tools/registry";
 import type { Tool } from "../tools/types";

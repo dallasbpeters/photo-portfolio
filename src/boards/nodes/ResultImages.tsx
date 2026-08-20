@@ -4,9 +4,9 @@ import {
   Download01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItemVariation } from "../../types";
-import { downloadImage } from "../downloadImage";
+import { downloadImage } from "../io/downloadImage";
 import "./ResultImages.css";
-import { isVideo } from "../isVideo";
+import { isVideo } from "../io/isVideo";
 import { BOARD_IMAGE_TYPE } from "../itemOutput";
 
 /**

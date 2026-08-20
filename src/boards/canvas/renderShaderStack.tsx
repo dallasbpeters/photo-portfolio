@@ -1,5 +1,5 @@
-import { ShaderView } from "../ShaderView";
-import type { ShaderConfig } from "../shaderConfig";
+import { ShaderView } from "../shaders/ShaderView";
+import type { ShaderConfig } from "../shaders/shaderConfig";
 import { renderOffscreen } from "./renderOffscreen";
 
 /**

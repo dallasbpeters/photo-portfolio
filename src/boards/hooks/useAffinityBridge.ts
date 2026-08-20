@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { boardsApi } from "../services/portfolioService";
+import { boardsApi } from "../../services/portfolioService";
 import {
   type AffinityWriteback,
   affinityOpen,
   affinityReadSvg,
   affinityStatus,
-} from "./affinity";
+} from "../io/affinity";
 
 /**
  * The "Open in Affinity" loop for a board.

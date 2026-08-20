@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { ControlType, ShaderProp } from "../shaderConfig";
+import type { ControlType, ShaderProp } from "./shaderConfig";
 
 /**
  * One editable property of a shader layer.

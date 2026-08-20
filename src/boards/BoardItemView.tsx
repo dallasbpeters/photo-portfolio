@@ -13,6 +13,7 @@ import { MaskOverlay } from "./drawing/MaskOverlay";
 import { maskOf } from "./drawing/mask";
 import type { ResizeHandle } from "./geometry/alignmentGuides";
 import { inputPoints, outputPoints } from "./geometry/portGeometry";
+import { useTextFont } from "./hooks/useTextFont";
 import { ItemMedia } from "./ItemMedia";
 import {
   ElementBody,
@@ -24,7 +25,6 @@ import { BatchList } from "./nodes/BatchList";
 import { OpNodeView } from "./nodes/OpNodeView";
 import { ResizeHandles } from "./ResizeHandles";
 import type { BoardTools } from "./tools/useBoardTools";
-import { useTextFont } from "./useTextFont";
 
 /**
  * Where a selected item sits while its chrome is open.

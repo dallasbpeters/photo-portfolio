@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSpaceKey } from "../../boards/useSpaceKey";
+import { useSpaceKey } from "../../boards/hooks/useSpaceKey";
 import "./CustomCursor.css";
 
 interface CustomCursorProps {

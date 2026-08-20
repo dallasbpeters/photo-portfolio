@@ -6,6 +6,7 @@ import {
   Delete02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
+import { Control } from "./Control";
 import {
   EFFECT_CATEGORIES,
   EFFECT_SHADERS,
@@ -19,7 +20,6 @@ import {
   SOURCE_SHADERS,
   shaderMeta,
 } from "./shaderConfig";
-import { Control } from "./shaderControls/Control";
 
 /**
  * The parameter panel for a shader, generated from the registry.

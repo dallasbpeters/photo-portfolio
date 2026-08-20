@@ -1,6 +1,7 @@
 import { createElement, type ReactNode, useMemo, useRef } from "react";
 // biome-ignore lint/performance/noNamespaceImport: layers name their effect at runtime, and there are 189 of them — a named-import list would be a second registry to keep in step with the real one
 import * as ShaderComponents from "shaders/react";
+import { useIsOnScreen } from "../hooks/useIsOnScreen";
 import {
   isEffect,
   normalizeLayers,
@@ -8,7 +9,6 @@ import {
   type ShaderLayer,
   withImage,
 } from "./shaderConfig";
-import { useIsOnScreen } from "./useIsOnScreen";
 
 /**
  * A stack of shaders, rendered live on the canvas.

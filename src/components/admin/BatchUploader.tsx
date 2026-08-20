@@ -7,7 +7,7 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { pickDriveImages } from "../../boards/googleDrive";
+import { pickDriveImages } from "../../boards/io/googleDrive";
 import {
   extractPhotoMetadata,
   type PhotoMetadata,

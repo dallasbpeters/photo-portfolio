@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import type { TextStyle } from "../../config/textStyle";
-import { loadFont } from "../theme/fonts";
+import type { TextStyle } from "../../../config/textStyle";
+import { loadFont } from "../../theme/fonts";
 
 /**
  * Fetches the stylesheet for whichever family a text item is set in.

@@ -15,13 +15,13 @@ import {
   type DrawTool,
   NO_FILL,
 } from "../../boards/drawing/drawing";
+import { useBoardHistory } from "../../boards/hooks/useBoardHistory";
+import { useGraphRun } from "../../boards/hooks/useGraphRun";
+import { useVideoNode } from "../../boards/hooks/useVideoNode";
 import { ModelsProvider } from "../../boards/ModelsContext";
 import { CommentsPanel } from "../../boards/panels/CommentsPanel";
 import { ElementModal } from "../../boards/panels/ElementModal";
 import { InsertPalette } from "../../boards/panels/InsertPalette";
-import { useBoardHistory } from "../../boards/useBoardHistory";
-import { useGraphRun } from "../../boards/useGraphRun";
-import { useVideoNode } from "../../boards/useVideoNode";
 import type { BoardComment } from "../../services/comments";
 import type {
   Board,

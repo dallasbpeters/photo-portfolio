@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MAX_SCALE, MIN_SCALE } from "../../config/canvas.js";
+import { MAX_SCALE, MIN_SCALE } from "../../../config/canvas.js";
 import {
   frameBounds,
   frameCanvas,
@@ -8,7 +8,7 @@ import {
   zoomAt as zoomAtPoint,
   zoomByAtCentre,
   zoomByWheel,
-} from "./geometry/viewportModel";
+} from "../geometry/viewportModel";
 
 export interface Viewport {
   /** Canvas units per CSS pixel. */

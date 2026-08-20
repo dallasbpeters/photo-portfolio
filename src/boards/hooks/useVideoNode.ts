@@ -1,8 +1,8 @@
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
-import type { BoardItem } from "../types";
-import { outputImageOf } from "./itemOutput";
-import { runVideo } from "./videoRun";
+import type { BoardItem } from "../../types";
+import { runVideo } from "../io/videoRun";
+import { outputImageOf } from "../itemOutput";
 
 /**
  * Running a Video node, which the graph runner cannot do.

@@ -5,7 +5,6 @@ import {
   DEFAULT_IMAGE_WIDTH,
 } from "../../../../config/canvas.js";
 import type { Box } from "../../../boards/BoardCanvas";
-import { copyOfFrame } from "../../../boards/copyToBoard";
 import {
   type DrawingConfig,
   isFreehand,
@@ -15,7 +14,8 @@ import {
   type MaskStroke,
   maskOf,
 } from "../../../boards/drawing/mask";
-import { newItemId } from "../../../boards/newItemId";
+import { copyOfFrame } from "../../../boards/io/copyToBoard";
+import { newItemId } from "../../../boards/io/newItemId";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";
 import { BLANK_ITEM } from "./placement";

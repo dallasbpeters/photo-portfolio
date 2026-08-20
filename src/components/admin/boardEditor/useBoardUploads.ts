@@ -5,7 +5,7 @@ import {
   DEFAULT_IMAGE_WIDTH,
 } from "../../../../config/canvas.js";
 import { isSvgFile, svgToPng } from "../../../boards/drawing/svgToRaster";
-import { newItemId } from "../../../boards/newItemId";
+import { newItemId } from "../../../boards/io/newItemId";
 import { portfolioService } from "../../../services/portfolioService";
 import type { BoardItem } from "../../../types";
 import { BLANK_ITEM, DROP_FAN } from "./placement";

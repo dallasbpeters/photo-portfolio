@@ -1,5 +1,5 @@
 import type { BoardItem } from "../types";
-import { ShaderView } from "./ShaderView";
+import { ShaderView } from "./shaders/ShaderView";
 import {
   DEFAULT_SOURCE,
   isShaderConfig,
@@ -7,7 +7,7 @@ import {
   normalizeLayers,
   type ShaderConfig,
   type ShaderLayer,
-} from "./shaderConfig";
+} from "./shaders/shaderConfig";
 
 /**
  * What the kinds of item that are not nodes look like on the board.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { isVideoUrl } from "../boards/isVideo";
+import { isVideoUrl } from "../boards/io/isVideo";
 import { useCollections } from "../hooks/useCollections";
 import { usePhotos } from "../hooks/usePhotos";
 import { collectionsApi } from "../services/portfolioService";

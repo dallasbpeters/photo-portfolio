@@ -13,8 +13,8 @@ import {
   RepeatIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem, BoardWire } from "../../types";
-import { isSvgUrl } from "../affinity";
-import { frameSummary } from "../copyToBoard";
+import { isSvgUrl } from "../io/affinity";
+import { frameSummary } from "../io/copyToBoard";
 import { outputImageOf, outputImagesOf } from "../itemOutput";
 import type { CanvasMenuTarget } from "./CanvasMenu";
 import { CollectionRow, hasTools, ToolsRow } from "./CanvasMenuPanels";

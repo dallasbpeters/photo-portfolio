@@ -7,8 +7,8 @@ import { useState } from "react";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem } from "../../types";
 import { SettingField } from "../nodes/SettingField";
-import { ShaderControls } from "../ShaderControls";
-import { isShaderConfig, type ShaderConfig } from "../shaderConfig";
+import { ShaderControls } from "./ShaderControls";
+import { isShaderConfig, type ShaderConfig } from "./shaderConfig";
 
 /**
  * The settings for the selected shader, beside it rather than on it.

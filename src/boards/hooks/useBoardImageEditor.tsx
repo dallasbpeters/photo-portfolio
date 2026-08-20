@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import type { BoardItem, BoardItemResult } from "../types";
-import { BoardImageEditor } from "./BoardImageEditor";
+import type { BoardItem, BoardItemResult } from "../../types";
+import { BoardImageEditor } from "../BoardImageEditor";
 
 /**
  * Holding the manual editor open over a board.

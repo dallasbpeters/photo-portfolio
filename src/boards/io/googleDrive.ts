@@ -20,7 +20,7 @@
  * broken images to anyone else — and to you, once the file moved.
  */
 
-import { googleApi } from "../services/portfolioService";
+import { googleApi } from "../../services/portfolioService";
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 const GAPI_SRC = "https://apis.google.com/js/api.js";

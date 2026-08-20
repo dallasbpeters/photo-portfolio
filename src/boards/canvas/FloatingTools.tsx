@@ -5,7 +5,7 @@ import type { DrawStyle } from "../drawing/DrawToolbar";
 import type { DrawTool } from "../drawing/drawing";
 import { MaskControls } from "../drawing/MaskControls";
 import type { MaskConfig } from "../drawing/mask";
-import { ShaderPanel } from "../shaderControls/ShaderPanel";
+import { ShaderPanel } from "../shaders/ShaderPanel";
 import { wiredImageFor } from "./wiredPreviews";
 
 /**

@@ -5,14 +5,14 @@ import {
   type GraphItem,
   type GraphWire,
   topologicalOrder,
-} from "../../config/graph.js";
-import { isRunnableNodeType } from "../../config/nodeTypes.js";
+} from "../../../config/graph.js";
+import { isRunnableNodeType } from "../../../config/nodeTypes.js";
 import {
   boardsApi,
   type RunNodeFailure,
   type RunNodeResponse,
-} from "../services/portfolioService";
-import type { BoardItem, BoardWire } from "../types";
+} from "../../services/portfolioService";
+import type { BoardItem, BoardWire } from "../../types";
 
 interface UseGraphRunArgs {
   /** Flushes unsaved work first — the server runs the *stored* graph. */

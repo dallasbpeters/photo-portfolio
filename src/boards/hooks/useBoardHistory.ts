@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import type { BoardItem, BoardWire } from "../types";
+import type { BoardItem, BoardWire } from "../../types";
 
 /**
  * Undo and redo for a board.

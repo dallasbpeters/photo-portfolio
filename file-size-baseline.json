@@ -1,9 +1,9 @@
 {
-  "src/boards/BoardCanvas.tsx": 1369,
-  "src/boards/BoardItemView.tsx": 801,
+  "src/boards/BoardCanvas.tsx": 1368,
+  "src/boards/BoardItemView.tsx": 798,
   "src/components/Admin.tsx": 679,
   "src/components/StandarShader.tsx": 600,
-  "src/components/admin/BoardInsertPanel.tsx": 1200,
+  "src/components/admin/BoardInsertPanel.tsx": 1203,
   "src/components/admin/DailyChallengePanel.tsx": 743,
   "src/editor/presets.ts": 1316,
   "src/services/portfolioService.ts": 1815

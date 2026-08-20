@@ -1,5 +1,5 @@
-import { containedBy } from "../../config/graph.js";
-import type { BoardItem, BoardWire } from "../types";
+import { containedBy } from "../../../config/graph.js";
+import type { BoardItem, BoardWire } from "../../types";
 import { newItemId } from "./newItemId";
 
 /**

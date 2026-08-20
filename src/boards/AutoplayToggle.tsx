@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PauseIcon, PlayIcon } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem } from "../types";
 import { setAutoplay, useAutoplay } from "./autoplayPref";
-import { isVideoUrl } from "./isVideo";
+import { isVideoUrl } from "./io/isVideo";
 
 /**
  * Whether clips on this canvas play by themselves.

@@ -2,8 +2,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Layers01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import type { BoardItem } from "../../types";
+import type { CanvasViewport } from "../hooks/useCanvasViewport";
 import { LayersPanel } from "../panels/LayersPanel";
-import type { CanvasViewport } from "../useCanvasViewport";
 
 /**
  * The bottom-right chrome: zoom controls, and the layers panel's toggle.

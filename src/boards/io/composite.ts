@@ -1,6 +1,6 @@
-import { containedBy } from "../../config/graph.js";
-import { boardsApi } from "../services/portfolioService";
-import type { BoardItem, BoardWire } from "../types";
+import { containedBy } from "../../../config/graph.js";
+import { boardsApi } from "../../services/portfolioService";
+import type { BoardItem, BoardWire } from "../../types";
 
 /**
  * Several pictures on the board, flattened into one.

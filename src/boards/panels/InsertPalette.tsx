@@ -16,7 +16,7 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
-import { ALL_SHADERS } from "../shaderConfig";
+import { ALL_SHADERS } from "../shaders/shaderConfig";
 
 /**
  * Everything that can be inserted, in one keyboard-reachable list.

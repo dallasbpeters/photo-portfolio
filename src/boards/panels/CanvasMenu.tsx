@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BoardItem, BoardWire } from "../../types";
-import { frameBoardTitle, frameSummary } from "../copyToBoard";
+import { frameBoardTitle, frameSummary } from "../io/copyToBoard";
 import type { Tool } from "../tools/types";
 import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
 import { CollectionPanel } from "./CollectionPanel";

@@ -64,14 +64,14 @@ import {
   type Box as SnapBox,
   type SnapIndex,
 } from "./geometry/snapIndex";
+import { useCanvasViewport } from "./hooks/useCanvasViewport";
+import { useDeleteKey } from "./hooks/useDeleteKey";
+import { useSpaceKey } from "./hooks/useSpaceKey";
+import { useWireGesture } from "./hooks/useWireGesture";
 import { BOARD_IMAGE_TYPE } from "./itemOutput";
 import { CanvasMenu, type CanvasMenuTarget } from "./panels/CanvasMenu";
 import { PortMenu, type PortTarget } from "./panels/PortMenu";
 import { useBoardTools } from "./tools/useBoardTools";
-import { useCanvasViewport } from "./useCanvasViewport";
-import { useDeleteKey } from "./useDeleteKey";
-import { useSpaceKey } from "./useSpaceKey";
-import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
 const NO_WIRES: BoardWire[] = [];
