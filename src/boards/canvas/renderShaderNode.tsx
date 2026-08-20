@@ -1,207 +1,85 @@
-import { Halftone, ImageTexture, Shader, SolidColor } from "shaders/react";
-import { renderOffscreen } from "./renderOffscreen";
+import {
+  HalftoneError,
+  type HalftoneOptions,
+  halftoneOptionsFrom,
+  loadImage,
+  paintHalftone,
+} from "./halftoneGl";
 
 /**
- * Rendering a Halftone node to a file, away from the board.
+ * Rendering a Halftone node to a file.
  *
- * The stack is the one from shaders.com, copied rather than reinvented:
+ * Draws the same shader the brand site's `<halftone-image>` draws — see
+ * halftoneGl — into an offscreen canvas at export size, and reads it back.
+ * Reading it back is the whole reason this is WebGL: the shader library draws
+ * through WebGPU, whose canvas returns a fully transparent image to `toBlob`,
+ * `drawImage` and `createImageBitmap` alike.
  *
- *   <Shader>
- *     <SolidColor color=… id=… />
- *     <Halftone angle=… frequency=…>
- *       <ImageTexture maskSource=… url=… />
- *     </Halftone>
- *   </Shader>
- *
- * **The SolidColor is the whole trick, and it is the ink rather than the
- * paper.** Halftone's classic shader returns `childColor * dotPattern` with the
- * alpha multiplied too, so the dots are a hole punched through the picture: dot
- * coverage rises with brightness, and what shows through the gaps is whatever
- * sibling sits behind. Behind nothing, the dark half of a photograph resolves
- * to the page and the export comes out pale and inverted — a black subject
- * rendering as blank was this node's defining bug. Behind a dark SolidColor,
- * the same shader is a duotone halftone: shadows become ink, highlights keep
- * the picture's own light tones.
- *
- * The light end is not a setting, and two attempts to make it one both failed
- * in the same way. Classic sizes every dot from the brightness of what it is
- * given, so mapping the picture to two chosen colours *before* the screen
- * flattens the dots along with the tones — a full ramp came out a solid block —
- * and mapping it afterwards crushes it just as hard, because by then coverage
- * is the only signal left. Both were rendered and looked at rather than
- * reasoned about, and both are worse than the picture's own highlights.
- *
- * Everything else that was blamed for it turned out not to matter. Rendered
- * side by side, `maskSource` and `boundingBox` changed nothing at all — the
- * ground is full-frame, so masking to it is a no-op — and an earlier attempt
- * that did add a SolidColor still looked washed out only because the colour
- * chosen was cream: light ink on light paper.
- *
- * Mounted offscreen rather than captured from the node on the canvas — see
- * renderOffscreen. The frame takes the picture's own aspect, so the whole of it
- * fills the whole of the output rather than being contained into a column.
+ * The frame takes the picture's own aspect, so the whole of it fills the whole
+ * of the output rather than being letterboxed into a column. The shader
+ * cover-fits inside that anyway, so a mismatch crops rather than squashes.
  */
 
-/**
- * The long edge of an export, and the ceiling the library actually honours.
- *
- * Asking for 2400 does not get 2400. Every render goes through the engine's
- * `clampToTextureCap`, which is
- *
- *   const capW = Math.min(w, env.viewportWidth, gpuCssCap)
- *
- * — the drawing is clamped to the *browser window's* inner size however large
- * the element it is mounted in. A 2400px request in a 1440px window draws 1440
- * real pixels and upscales the rest. Measured rather than assumed: a 600x400
- * host in a 414px-wide window produced a 414x276 canvas. So the request is
- * clamped honestly instead of carrying a size the file never had.
- */
+/** The long edge of an export. Large enough to print from. */
 const LONG_EDGE = 2400;
 
-const longEdge = (): number =>
-  Math.max(
-    600,
-    Math.min(
-      LONG_EDGE,
-      window.innerWidth || LONG_EDGE,
-      window.innerHeight || LONG_EDGE
-    )
-  );
+export type HalftoneSettings = Record<string, unknown>;
 
-/** The ground's handle, so the texture above it can name it. */
-const GROUND_ID = "halftone-ground";
-
-/**
- * The narrowest a dot cell may be drawn, in pixels.
- *
- * Below about this the screen stops being a screen. The library's frequency is
- * measured in cells across the *frame*, not in pixels, so the same number means
- * a different thing at every size: 148 across an export is a fine even screen
- * and 148 across a 300px node preview is two pixels a cell, which aliases into
- * a smeared, crooked mess that looks like a broken shader rather than a screen
- * too fine to draw. Rendered side by side at 300px and 1200px from identical
- * settings, which is how this was found.
- *
- * Ten, chosen by rendering the same picture at three, four, six, eight, ten and
- * twelve pixels a cell and looking at all six. Four is a muddy even texture
- * with no dots in it at all; eight still bands across a gradient; ten is round,
- * separate dots. The library antialiases in dot-space rather than pixel-space —
- * SMOOTHNESS is a constant 0.1 of a cell — so below this there is simply not
- * enough room for an edge, and no setting here can conjure one.
- */
-const MIN_CELL_PX = 10;
-
-/**
- * The screen this frame can actually carry.
- *
- * Never finer than the pixels allow, and never coarser than asked for. Where
- * both the preview and the export can resolve the chosen frequency they draw
- * exactly the same thing, so this only ever bites when the alternative is a
- * picture nobody would want.
- */
-export const resolvableFrequency = (
-  asked: number,
-  frameWidth?: number
-): number =>
-  frameWidth && frameWidth > 0
-    ? Math.max(4, Math.min(asked, frameWidth / MIN_CELL_PX))
-    : asked;
-
-const num = (value: unknown, fallback: number): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
-
-const hex = (value: unknown, fallback: string): string =>
-  typeof value === "string" && HEX_COLOR.test(value.trim())
-    ? value.trim()
-    : fallback;
-
-const pick = (value: unknown, allowed: string[], fallback: string): string =>
-  typeof value === "string" && allowed.includes(value) ? value : fallback;
-
-export interface HalftoneSettings {
-  [key: string]: unknown;
+export interface HalftoneFrame {
+  height: number;
+  width: number;
 }
 
 /**
- * The natural size of a picture, or null if it cannot be read.
+ * The frame a picture of this shape should be rendered into.
  *
- * Read before rendering rather than after, because the frame is chosen from it:
- * a portrait photograph rendered into a landscape frame is contained down to a
- * narrow column, which reads as the halftone having missed most of the picture.
+ * Landscape fills the width, portrait the height, so the long edge is the long
+ * edge either way and no orientation is quietly given fewer pixels.
  */
-const measure = (url: string): Promise<{ h: number; w: number } | null> =>
-  new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve({ h: img.naturalHeight, w: img.naturalWidth });
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+export const halftoneFrame = (
+  naturalWidth: number,
+  naturalHeight: number,
+  longEdge = LONG_EDGE
+): HalftoneFrame => {
+  const aspect =
+    naturalHeight > 0 && naturalWidth > 0 ? naturalWidth / naturalHeight : 1;
+  return aspect >= 1
+    ? { height: Math.round(longEdge / aspect), width: longEdge }
+    : { height: longEdge, width: Math.round(longEdge * aspect) };
+};
 
 /**
- * The halftone stack, shared by the export and by anything that wants to show
- * one. One definition, so what is on screen and what lands in the file cannot
- * drift apart — which they did, repeatedly.
+ * A PNG of the picture, halftoned.
+ *
+ * No polling and no timeout. The draw is synchronous once the picture has
+ * loaded, so there is nothing to wait for and no window in which a capture can
+ * land early and come back blank.
  */
-export const halftoneStack = (
-  config: HalftoneSettings,
-  imageUrl: string,
-  /** How wide this will actually be drawn, so the screen can be kept legible. */
-  frameWidth?: number
-): React.ReactElement => (
-  <Shader style={{ height: "100%", width: "100%" }}>
-    {/* Behind the halftone, and read through its dots. See above. */}
-    <SolidColor color={hex(config.inkColor, "#041045")} id={GROUND_ID} />
-    <Halftone
-      angle={num(config.angle, 102)}
-      blackAngle={num(config.blackAngle, 45)}
-      blackColor={hex(config.blackColor, "#000000")}
-      cyanAngle={num(config.cyanAngle, 15)}
-      cyanColor={hex(config.cyanColor, "#00ffff")}
-      frequency={resolvableFrequency(num(config.frequency, 148), frameWidth)}
-      magentaAngle={num(config.magentaAngle, 75)}
-      magentaColor={hex(config.magentaColor, "#ff00ff")}
-      misprint={num(config.misprint, 0)}
-      misprintAngle={num(config.misprintAngle, 0)}
-      paperColor={hex(config.paperColor, "#ffffff")}
-      style={pick(config.style, ["classic", "cmyk"], "classic")}
-      yellowAngle={num(config.yellowAngle, 0)}
-      yellowColor={hex(config.yellowColor, "#ffff00")}
-    >
-      <ImageTexture
-        maskSource={GROUND_ID}
-        // `cover` rather than the library's `fill`, which stretches — on a
-        // halftone that reads as a squeezed subject rather than as a choice.
-        objectFit={pick(
-          config.objectFit,
-          ["cover", "contain", "fill"],
-          "cover"
-        )}
-        url={imageUrl}
-      />
-    </Halftone>
-  </Shader>
-);
-
 export const renderHalftone = async (
   config: HalftoneSettings,
-  imageUrl: string | null
+  imageUrl: string | null,
+  longEdge = LONG_EDGE
 ): Promise<Blob> => {
   if (!imageUrl) {
-    throw new Error("Wire a picture into this node to halftone it.");
+    throw new HalftoneError("Wire a picture into this node to halftone it.");
   }
-  const natural = await measure(imageUrl);
-  const aspect = natural && natural.h > 0 ? natural.w / natural.h : 1;
-  const edge = longEdge();
-  const width = Math.round(aspect >= 1 ? edge : edge * aspect);
-  const height = Math.round(aspect >= 1 ? edge / aspect : edge);
+  const image = await loadImage(imageUrl);
+  const frame = halftoneFrame(
+    image.naturalWidth,
+    image.naturalHeight,
+    longEdge
+  );
 
-  return await renderOffscreen(halftoneStack(config, imageUrl, width), {
-    height,
-    width,
+  const canvas = document.createElement("canvas");
+  canvas.width = frame.width;
+  canvas.height = frame.height;
+  paintHalftone(canvas, image, halftoneOptionsFrom(config) as HalftoneOptions);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png");
   });
+  if (!blob) {
+    throw new HalftoneError("The halftone could not be saved as a picture.");
+  }
+  return blob;
 };

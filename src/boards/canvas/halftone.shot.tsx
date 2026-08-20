@@ -1,8 +1,8 @@
-import { createRoot, type Root } from "react-dom/client";
+import type { Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { NODE_TYPES } from "../../../config/nodeTypes.js";
-import { halftoneStack } from "./renderShaderNode";
+import { renderHalftone } from "./renderShaderNode";
 
 /**
  * Pictures of the halftone, for looking at.
@@ -26,9 +26,6 @@ afterEach(() => {
   host = null;
   root = null;
 });
-
-const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
 
 /** A photograph-like card: dark subject, light ground, a full tonal ramp. */
 const card = (): string => {
@@ -56,24 +53,7 @@ const card = (): string => {
   return source.toDataURL("image/png");
 };
 
-const shoot = async (
-  name: string,
-  node: React.ReactNode,
-  w = 900,
-  h = 600
-): Promise<void> => {
-  host = document.createElement("div");
-  host.style.cssText = `position:fixed;left:0;top:0;width:${w}px;height:${h}px;`;
-  document.body.append(host);
-  root = createRoot(host);
-  root.render(node);
-  // The library draws on the image's load, so the first frames are legitimately
-  // empty. Generous rather than clever: this runs by hand, not in CI.
-  await wait(3000);
-  await page.screenshot({ element: host, path: `.shots/${name}.png` });
-};
-
-/** Exactly the settings a freshly inserted node carries. */
+/** A node's settings, as a fresh one carries them. */
 const defaults = (): Record<string, unknown> =>
   Object.fromEntries(
     NODE_TYPES.standard.settings.map((setting) => [
@@ -82,20 +62,47 @@ const defaults = (): Record<string, unknown> =>
     ])
   );
 
-/** Frequency that yields exactly `px` pixels per cell in a 600-wide frame. */
-const atCell = (px: number) => Math.round(600 / px);
+/** Renders through the real export path and shows the file it produced. */
+const shootHalftone = async (
+  name: string,
+  config: Record<string, unknown>
+): Promise<void> => {
+  const blob = await renderHalftone(config, card(), 900);
+  const shown = document.createElement("img");
+  shown.src = URL.createObjectURL(blob);
+  await new Promise((done) => {
+    shown.onload = done;
+  });
+  host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:0;top:0;width:900px;height:600px;";
+  shown.style.cssText = "width:100%;height:100%;object-fit:contain;";
+  host.append(shown);
+  document.body.append(host);
+  await page.screenshot({ element: host, path: `.shots/${name}.png` });
+};
 
-describe("how many pixels a dot needs to look like a dot", () => {
-  for (const px of [9, 10, 11]) {
-    it(`${px} pixels a cell`, async () => {
-      await shoot(
-        `cell-${px}px`,
-        // No clamp: this is measuring what the clamp should be set to.
-        halftoneStack({ ...defaults(), frequency: atCell(px) }, card()),
-        600,
-        450
-      );
-      expect(true).toBe(true);
+describe("halftone", () => {
+  it("a new node's defaults", async () => {
+    await shootHalftone("1-defaults", defaults());
+    expect(true).toBe(true);
+  });
+
+  it("inverted: the two inks swapped", async () => {
+    await shootHalftone("2-inverted", {
+      ...defaults(),
+      ink: "#FAFAFA",
+      paper: "#27444D",
     });
-  }
+    expect(true).toBe(true);
+  });
+
+  it("a coarser screen", async () => {
+    await shootHalftone("3-coarse", { ...defaults(), dot: 8 });
+    expect(true).toBe(true);
+  });
+
+  it("tone pushed dark", async () => {
+    await shootHalftone("4-dark", { ...defaults(), gamma: 0.6 });
+    expect(true).toBe(true);
+  });
 });

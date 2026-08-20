@@ -42,149 +42,51 @@ export const STANDARD: NodeType = {
   settings: [
     {
       /*
-       * `classic` over a solid ground, which is the stack from shaders.com.
-       *
-       * Classic's shader returns `childColor * dotPattern` — the dots are a
-       * hole punched through the picture, and what shows through is the ink
-       * laid behind it. That is why this looked broken for so long: behind
-       * nothing, the dark half of a photograph resolves to the page and a black
-       * subject renders as blank.
-       *
-       * `cmyk` is the other real answer — paper and four screens at four
-       * angles — and it is the one where the ink and plate settings below do
-       * anything at all, since the library declares every one of them
-       * `condition: { style: "cmyk" }`.
+       * The dark end. Both ends are chosen here, which is what makes the
+       * halftone invertible: swap the two and the picture turns over.
        */
-      default: "classic",
-      key: "style",
-      kind: "select",
-      label: "Style",
-      options: ["classic", "cmyk"],
-    },
-    {
-      /*
-       * The ink, and the single most important control on this node.
-       *
-       * Rendered as a solid layer behind the halftone and read through its
-       * dots, so it is what the shadows of the picture become. A light colour
-       * here is light ink on light paper and looks like nothing happened.
-       */
-      default: "#041045",
-      key: "inkColor",
+      default: "#27444D",
+      key: "ink",
       kind: "color",
       label: "Ink",
     },
     {
-      /* Dots across the frame. The most visible control by far: low reads as a
-         pattern that happens to be a picture, high as a photograph. */
-      default: 148,
-      key: "frequency",
-      kind: "number",
-      label: "Frequency",
-      max: 600,
-      min: 4,
-    },
-    {
-      default: 102,
-      key: "angle",
-      kind: "number",
-      label: "Angle",
-      max: 360,
-      min: 0,
-    },
-    {
-      /*
-       * How the picture sits in the frame.
-       *
-       * `cover` rather than the library's own `fill`. Fill stretches, which on
-       * a halftone reads as a squeezed subject rather than as a choice — and
-       * cover fills the frame, which is what "use my whole picture" means to
-       * anyone who has not read the shader.
-       */
-      default: "cover",
-      key: "objectFit",
-      kind: "select",
-      label: "Fit",
-      options: ["cover", "contain", "fill"],
-    },
-    {
-      /*
-       * The light end, and the other half of an invertible halftone.
-       *
-       * Classic has no paper of its own — it reads the picture's own tones — so
-       * the picture is mapped between this and the ink before it is screened.
-       * That makes both ends a choice, and swapping the two is what inverting a
-       * halftone means. In cmyk it is the library's own paper, which is the
-       * same idea arrived at from the other direction.
-       */
-      default: "#ffffff",
-      key: "paperColor",
+      /* The ground the ink is printed on. */
+      default: "#FAFAFA",
+      key: "paper",
       kind: "color",
       label: "Paper",
     },
     {
-      default: "#000000",
-      key: "blackColor",
-      kind: "color",
-      label: "Key (cmyk)",
+      /*
+       * Dot pitch, in pixels of the picture being drawn.
+       *
+       * A screen ruling rather than a count: the pitch is fixed, so a larger
+       * sheet carries more dots rather than bigger ones, and the same setting
+       * means the same thing at every size. Measured in cells-across-the-frame
+       * — which is what the shader library did — the same number aliased into
+       * a moiré on a small node and read as a fine screen on a large one.
+       */
+      default: 3,
+      key: "dot",
+      kind: "number",
+      label: "Dot size",
+      max: 40,
+      min: 1,
     },
     {
-      /* Nudges the screens out of register, the way a real press does. */
-      default: 0,
-      key: "misprint",
+      /*
+       * The tone curve. Above 1 lightens the midtones, below 1 darkens them —
+       * the difference between a photograph that reads as grey and one that
+       * reads as ink.
+       */
+      default: 1.25,
+      key: "gamma",
       kind: "number",
-      label: "Misprint",
-      max: 1,
-      min: 0,
+      label: "Tone",
+      max: 3,
+      min: 0.2,
       step: 0.05,
-    },
-    {
-      default: 0,
-      key: "misprintAngle",
-      kind: "number",
-      label: "Misprint angle",
-      max: 360,
-      min: 0,
-    },
-    { default: "#00ffff", key: "cyanColor", kind: "color", label: "Cyan" },
-    {
-      default: "#ff00ff",
-      key: "magentaColor",
-      kind: "color",
-      label: "Magenta",
-    },
-    { default: "#ffff00", key: "yellowColor", kind: "color", label: "Yellow" },
-    {
-      default: 15,
-      key: "cyanAngle",
-      kind: "number",
-      label: "Cyan angle",
-      max: 360,
-      min: 0,
-    },
-    {
-      default: 75,
-      key: "magentaAngle",
-      kind: "number",
-      label: "Magenta angle",
-      max: 360,
-      min: 0,
-    },
-    {
-      default: 0,
-      key: "yellowAngle",
-      kind: "number",
-      label: "Yellow angle",
-      max: 360,
-      min: 0,
-    },
-    {
-      default: 45,
-      key: "blackAngle",
-      kind: "number",
-      label: "Black angle",
-      max: 360,
-      min: 0,
     },
   ],
 };

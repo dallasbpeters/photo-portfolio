@@ -339,7 +339,6 @@ function NodeBody({
       {item.nodeType === "standard" ? (
         <HalftonePreview
           config={config}
-          frameWidth={item.width}
           imageCount={imageCount}
           imageUrl={imageUrl}
         />

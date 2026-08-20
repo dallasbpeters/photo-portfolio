@@ -111,10 +111,10 @@ describe("the halftone's settings before anyone touches them", () => {
   it("shows the ink the node actually renders with", async () => {
     await mount({});
     const swatch = wellFor("Ink")?.querySelector("span");
-    // #041045 is rgb(4, 16, 69). Not a chequerboard, which is what "no fill"
-    // draws and what this showed for every untouched node.
-    expect(swatch?.getAttribute("style")).toContain("rgb(4, 16, 69)");
-    expect(declared("inkColor")).toBe("#041045");
+    // #27444D is rgb(39, 68, 77). Not a chequerboard, which is what "no
+    // fill" draws and what this showed for every untouched node.
+    expect(swatch?.getAttribute("style")).toContain("rgb(39, 68, 77)");
+    expect(declared("ink")).toBe("#27444D");
   });
 
   it("draws no chequerboard, which is the shape the bug took", async () => {
@@ -125,7 +125,7 @@ describe("the halftone's settings before anyone touches them", () => {
 
   it("still shows a colour that has been chosen", async () => {
     // The fallback must not outrank a real stored value.
-    await mount({ inkColor: "#ff0000" });
+    await mount({ ink: "#ff0000" });
     const swatch = wellFor("Ink")?.querySelector("span");
     expect(swatch?.getAttribute("style")).toContain("rgb(255, 0, 0)");
   });
@@ -137,7 +137,7 @@ describe("the halftone's settings before anyone touches them", () => {
     const fields = Array.from(document.querySelectorAll("input")).map(
       (field) => field.value
     );
-    expect(fields).toContain("041045");
+    expect(fields).toContain("27444D");
   });
 
   it("fills every setting that declares a default", async () => {
@@ -146,8 +146,8 @@ describe("the halftone's settings before anyone touches them", () => {
     const fields = Array.from(document.querySelectorAll("input")).map(
       (field) => field.value
     );
-    expect(fields).toContain(declared("frequency"));
-    expect(fields).toContain(declared("angle"));
+    expect(fields).toContain(declared("dot"));
+    expect(fields).toContain(declared("gamma"));
   });
 });
 
@@ -161,7 +161,7 @@ describe("a number setting can be retyped", () => {
      * work.
      */
     await mount({});
-    const freq = numberFields().find((f) => f.value === "148");
+    const freq = numberFields().find((f) => f.value === declared("dot"));
     expect(freq).toBeDefined();
     if (freq) {
       typeInto(freq, "");
@@ -172,25 +172,25 @@ describe("a number setting can be retyped", () => {
 
   it("takes the number typed after it is cleared", async () => {
     const writes = await mount({});
-    const freq = numberFields().find((f) => f.value === "148");
+    const freq = numberFields().find((f) => f.value === declared("dot"));
     if (freq) {
       typeInto(freq, "");
     }
     await flush();
     const empty = numberFields().at(0);
     if (empty) {
-      typeInto(empty, "60");
+      typeInto(empty, "8");
     }
     await flush();
-    expect(writes.at(-1)).toMatchObject({ frequency: "60" });
-    expect(numberFields().at(0)?.value).toBe("60");
+    expect(writes.at(-1)).toMatchObject({ dot: "8" });
+    expect(numberFields().at(0)?.value).toBe("8");
   });
 
   it("still shows the declared default for a node that has none stored", async () => {
     // The fallback must survive the fix: undefined is "never set" and still
     // means the default, which is what the render is actually using.
     await mount({});
-    expect(numberFields().at(0)?.value).toBe(declared("frequency"));
+    expect(numberFields().at(0)?.value).toBe(declared("dot"));
   });
 });
 
@@ -231,31 +231,31 @@ describe("the panel edits the item it is showing", () => {
     return () => items[0]?.config ?? {};
   };
 
-  it("keeps a change to the frequency", async () => {
+  it("keeps a change to the dot size", async () => {
     const configNow = await mountByLookup();
-    const freq = numberFields().find((f) => f.value === declared("frequency"));
+    const freq = numberFields().find((f) => f.value === declared("dot"));
     if (freq) {
-      typeInto(freq, "60");
+      typeInto(freq, "8");
     }
     await flush();
-    expect(configNow().frequency).toBe("60");
-    expect(numberFields().at(0)?.value).toBe("60");
+    expect(configNow().dot).toBe("8");
+    expect(numberFields().at(0)?.value).toBe("8");
   });
 
   it("keeps both when two settings are changed in turn", async () => {
     // The stale snapshot lost this: the second write spread a config captured
-    // before the first, so changing the angle put the frequency back.
+    // before the first, so changing the tone put the dot size back.
     const configNow = await mountByLookup();
-    const freq = numberFields().find((f) => f.value === declared("frequency"));
+    const freq = numberFields().find((f) => f.value === declared("dot"));
     if (freq) {
-      typeInto(freq, "60");
+      typeInto(freq, "8");
     }
     await flush();
-    const angle = numberFields().find((f) => f.value === declared("angle"));
+    const angle = numberFields().find((f) => f.value === declared("gamma"));
     if (angle) {
-      typeInto(angle, "30");
+      typeInto(angle, "2");
     }
     await flush();
-    expect(configNow()).toMatchObject({ angle: "30", frequency: "60" });
+    expect(configNow()).toMatchObject({ dot: "8", gamma: "2" });
   });
 });
