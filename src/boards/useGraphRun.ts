@@ -138,15 +138,37 @@ const runBatch = async (
  * looks like it worked, when a node with two of its four pictures is not a
  * success.
  */
-const reportBatchFailures = (failed: string[]): void => {
+/**
+ * What to say about the jobs that did not survive.
+ *
+ * The count alone is not actionable, and that is all this used to say: "one
+ * image in the batch failed" names a number and withholds the only part worth
+ * knowing. The reasons were sitting in the array being counted. A batch mostly
+ * fails for one reason, so the distinct ones are listed rather than the
+ * occurrences — five copies of the same sentence is not five pieces of
+ * information — and the first two are enough to act on.
+ */
+export const batchFailureMessage = (
+  failed: string[]
+): { description: string; title: string } | null => {
   if (failed.length === 0) {
-    return;
+    return null;
   }
-  toast.warning(
-    failed.length === 1
-      ? "One image in the batch failed — the rest came back."
-      : `${failed.length} images in the batch failed — the rest came back.`
-  );
+  const reasons = [...new Set(failed.map((f) => f.trim()).filter(Boolean))];
+  return {
+    description: reasons.slice(0, 2).join(" · ") || "No reason was given.",
+    title:
+      failed.length === 1
+        ? "One image in the batch failed — the rest came back."
+        : `${failed.length} images in the batch failed — the rest came back.`,
+  };
+};
+
+const reportBatchFailures = (failed: string[]): void => {
+  const said = batchFailureMessage(failed);
+  if (said) {
+    toast.warning(said.title, { description: said.description });
+  }
 };
 
 interface StepArgs {
