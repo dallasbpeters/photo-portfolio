@@ -48,6 +48,7 @@ import { useBoardUploads } from "./boardEditor/useBoardUploads";
 import { useBoardVectorTools } from "./boardEditor/useBoardVectorTools";
 import { useDropPoint } from "./boardEditor/useDropPoint";
 import { useRecipes } from "./boardEditor/useRecipes";
+import { useSelectedItem } from "./boardEditor/useSelectedItem";
 
 /**
  * Full-screen board editor.
@@ -108,25 +109,7 @@ export function BoardEditor({
   const [pickAt, setPickAt] = useState<"elements" | undefined>();
   const history = useBoardHistory();
   const [drawTool, setDrawTool] = useState<DrawTool | null>(null);
-  /**
-   * Which item is selected, held as an id rather than as the item.
-   *
-   * It used to be the item, captured when the canvas reported the selection —
-   * and an item captured once is an item frozen once. Editing a setting rewrote
-   * `items` and left this holding the version from before the edit, so the
-   * panel re-rendered the old config and every field snapped back the moment it
-   * was changed. Worse, each write spread that stale config, so changing the
-   * frequency also reverted whatever had been changed before it.
-   *
-   * Looked up on every render instead: the panel edits the item it is showing,
-   * which is the only arrangement in which what it shows can be trusted.
-   */
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  /** The selected item as it is now, not as it was when it was clicked. */
-  const selectedItem = selectedId
-    ? (items.find((item) => item.id === selectedId) ?? null)
-    : null;
+  const selection = useSelectedItem(items);
   const [drawStyle, setDrawStyle] = useState<DrawStyle>({
     fill: NO_FILL,
     stroke: DEFAULT_STROKE,
@@ -346,7 +329,7 @@ export function BoardEditor({
             onMaskChange={changeMask}
             onStyle={setDrawStyle}
             onTool={setDrawTool}
-            selected={selectedItem}
+            selected={selection.item}
             wires={wires}
           />
 
@@ -387,7 +370,7 @@ export function BoardEditor({
             onRun={(itemId, force) => void runNode(itemId, force)}
             onSaveElement={beginElement}
             onSaveRecipe={(chosen, name) => void saveRecipe(chosen, name)}
-            onSelectionChange={(item) => setSelectedId(item?.id ?? null)}
+            onSelectionChange={selection.select}
             onSendToBack={sendToBack}
             onSendToCanva={openSendToCanva}
             onSendVersions={sendVersions}
