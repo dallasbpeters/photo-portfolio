@@ -233,6 +233,12 @@ const joinedOutputOf = (
   return parts.join(typeof separator === "string" ? separator : ", ");
 };
 
+/** The newest picture a run or an edit stored on a row, if there is one. */
+const storedImageOf = (row: BoardItemRow): string | null => {
+  const result = asObject(row.result);
+  return typeof result.url === "string" && result.url ? result.url : null;
+};
+
 /**
  * What an item hands to whatever it feeds.
  *
@@ -252,11 +258,20 @@ export const singleOutputOf = (
   if (row.node_type === "palette") {
     return paletteTextOf(asObject(row.config));
   }
+  /*
+   * A picture that has been worked on hands over the work, not the original.
+   *
+   * An edit — by hand, by a tool, or through Affinity — is written back as a
+   * new version on `result`, exactly as a generation is. Reading `photo_url`
+   * first meant a photograph that had been rotated, retouched or masked sent
+   * its untouched original down every wire, while the canvas beside it drew the
+   * edit. The same precedence ItemMedia uses, and it has to be the same.
+   */
   if (row.kind === "photo") {
-    return row.photo_url ?? null;
+    return storedImageOf(row) ?? row.photo_url ?? null;
   }
   if (row.kind === "reference") {
-    return row.image_url;
+    return storedImageOf(row) ?? row.image_url;
   }
   if (row.kind === "note" || row.kind === "text") {
     return row.body;

@@ -4,6 +4,7 @@ import type { BoardItem } from "../types";
 import { useAutoplay } from "./autoplayPref";
 import { grownBucket, wantedWidth } from "./imageBucket";
 import { isVideoUrl } from "./isVideo";
+import { currentImageUrl } from "./itemOutput";
 
 /**
  * The picture — or the clip — a canvas item shows.
@@ -15,14 +16,11 @@ import { isVideoUrl } from "./isVideo";
 /**
  * What the item currently shows: what a tool made of it, or its own picture.
  *
- * The same precedence `transformExecutor.sourceUrlOf` uses, and it has to be:
- * a tool reads the newest version as its input and writes the next one to
- * `result`, so a renderer that only ever read `imageUrl` showed the original
- * for ever. Rotate and Edit both ran, both stored a new picture, and both
- * looked like they had done nothing at all.
+ * Imported rather than restated. The wires had their own copy of this rule that
+ * had never been corrected, so an edited photograph drew correctly here and
+ * handed its untouched original to whatever it fed.
  */
-const shownUrl = (item: BoardItem): string | null =>
-  item.result?.url ?? item.imageUrl ?? null;
+const shownUrl = currentImageUrl;
 
 /**
  * The width to request for an item currently this wide.
