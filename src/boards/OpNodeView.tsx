@@ -51,12 +51,19 @@ const STATE_LABEL: Record<string, string> = {
   succeeded: "Done",
 };
 
+/*
+ * The modifier each run state wears.
+ *
+ * Idle and skipped have none: the base class already means "nothing is
+ * happening", and a modifier that restates the default is one that can drift
+ * from it.
+ */
 const STATE_CLASS: Record<string, string> = {
-  failed: "text-red-300",
-  idle: "text-board-ink/40",
-  running: "text-sky-600",
-  skipped: "text-board-ink/40",
-  succeeded: "text-emerald-300",
+  failed: "op-node-view__state--failed",
+  idle: "",
+  running: "op-node-view__state--running",
+  skipped: "",
+  succeeded: "op-node-view__state--succeeded",
 };
 
 /**
@@ -68,17 +75,7 @@ const STATE_CLASS: Record<string, string> = {
  * running node is obvious even zoomed out far enough that its text is not.
  */
 function RunningGlow() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute -inset-1 animate-gradient-spin rounded-lg"
-      style={{
-        background:
-          "conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(69.01% 0.16 243.17) 30deg, oklch(81.41% 0.17 111.22) 60deg, transparent 100deg, transparent 360deg)",
-        filter: "blur(10px)",
-      }}
-    />
-  );
+  return <div aria-hidden className="op-node-view__glow" />;
 }
 
 /**
@@ -102,11 +99,7 @@ function PublishedResult({
   text?: string | null;
 }) {
   if (text) {
-    return (
-      <p className="whitespace-pre-wrap text-[12px] text-board-ink/80 leading-relaxed">
-        {text}
-      </p>
-    );
+    return <p className="op-node-view__published-text">{text}</p>;
   }
   const shown = images[Math.min(selected, images.length - 1)];
   if (!shown) {
@@ -115,7 +108,7 @@ function PublishedResult({
   return (
     <img
       alt={shown.description ?? ""}
-      className="h-full w-full object-contain"
+      className="op-node-view__published-image"
       decoding="async"
       height={shown.height ?? undefined}
       loading="lazy"
@@ -168,11 +161,7 @@ export function OpNodeView({
   }
 
   if (!type) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-board-panel p-3 text-[11px] text-red-300">
-        Unknown node type
-      </div>
-    );
+    return <div className="op-node-view__unknown">Unknown node type</div>;
   }
 
   // A source node holds a value instead of producing one, so it never runs and
@@ -194,9 +183,7 @@ export function OpNodeView({
             {type.label}
           </span>
           {isSource ? null : (
-            <span
-              className={`text-[10px] uppercase tracking-widest ${STATE_CLASS[state]}`}
-            >
+            <span className={`op-node-view__state ${STATE_CLASS[state]}`}>
               {STATE_LABEL[state]}
             </span>
           )}
@@ -339,14 +326,10 @@ function NodeBody({
     onConfigChange({ ...config, [key]: value });
 
   return (
-    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">
+    <div className="op-node-view__body">
       {/* What an Analyse node produced. Selectable, because the usual next
               move is to take part of it into a prompt by hand. */}
-      {analysed ? (
-        <p className="max-h-300 select-text whitespace-pre-wrap rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink/80 leading-relaxed">
-          {analysed}
-        </p>
-      ) : null}
+      {analysed ? <p className="op-node-view__text">{analysed}</p> : null}
 
       {/* A batch lays its variations out as a grid so they can be compared
               at a glance, which is the entire reason for asking for several. */}
@@ -375,7 +358,7 @@ function NodeBody({
       {/* A prompt arriving down a wire wins over one typed here, so saying
               so is better than leaving a field that looks live but is ignored. */}
       {hasWiredPrompt ? (
-        <p className="text-[10px] text-sky-600">
+        <p className="op-node-view__notice op-node-view__notice--wired">
           Prompt is wired in; the text below is not used.
         </p>
       ) : null}
@@ -440,13 +423,13 @@ function NodeBody({
               identical to one that never ran. Saying so is what keeps a broken
               result visible instead of silently blank. */}
       {state === "succeeded" && images.length === 0 ? (
-        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+        <p className="op-node-view__notice op-node-view__notice--warn">
           Ran, but returned no image. Try again, or check the model.
         </p>
       ) : null}
 
       {item.runError ? (
-        <p className="flex items-start gap-1 text-[10px] text-red-300/90 leading-relaxed">
+        <p className="op-node-view__notice op-node-view__notice--error">
           <HugeiconsIcon aria-hidden icon={Alert02Icon} size={11} />
           {item.runError}
         </p>
@@ -456,7 +439,7 @@ function NodeBody({
               in: a raster glyph turns to mush at 300% and there is nothing on
               the board to say why. */}
       {item.result?.isVector === false ? (
-        <p className="text-[10px] text-amber-300/70 leading-relaxed">
+        <p className="op-node-view__notice op-node-view__notice--warn">
           Came back as a raster, not vector. It will not stay sharp zoomed in.
         </p>
       ) : null}
