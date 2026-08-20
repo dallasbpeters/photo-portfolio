@@ -193,3 +193,69 @@ describe("a number setting can be retyped", () => {
     expect(numberFields().at(0)?.value).toBe(declared("frequency"));
   });
 });
+
+describe("the panel edits the item it is showing", () => {
+  /**
+   * The arrangement BoardEditor uses: a list of items and the *id* of the one
+   * selected, looked up on every render.
+   *
+   * It used to hold the item itself, captured when the canvas reported the
+   * selection — and an item captured once is an item frozen once. The panel
+   * re-rendered the config from before the edit, so every field snapped back
+   * the moment it changed, and each write spread that stale config, so changing
+   * one setting reverted the one changed before it.
+   */
+  const mountByLookup = async (): Promise<() => Record<string, unknown>> => {
+    let items = [halftone({})];
+    const id = "h1";
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    const draw = () => {
+      const selected = items.find((item) => item.id === id) ?? null;
+      root?.render(
+        <ShaderPanel
+          onConfigChange={(itemId, next) => {
+            items = items.map((item) =>
+              item.id === itemId ? { ...item, config: next } : item
+            );
+            draw();
+          }}
+          onExport={() => Promise.resolve()}
+          selected={selected}
+        />
+      );
+    };
+    draw();
+    await flush();
+    return () => items[0]?.config ?? {};
+  };
+
+  it("keeps a change to the frequency", async () => {
+    const configNow = await mountByLookup();
+    const freq = numberFields().find((f) => f.value === declared("frequency"));
+    if (freq) {
+      typeInto(freq, "60");
+    }
+    await flush();
+    expect(configNow().frequency).toBe("60");
+    expect(numberFields().at(0)?.value).toBe("60");
+  });
+
+  it("keeps both when two settings are changed in turn", async () => {
+    // The stale snapshot lost this: the second write spread a config captured
+    // before the first, so changing the angle put the frequency back.
+    const configNow = await mountByLookup();
+    const freq = numberFields().find((f) => f.value === declared("frequency"));
+    if (freq) {
+      typeInto(freq, "60");
+    }
+    await flush();
+    const angle = numberFields().find((f) => f.value === declared("angle"));
+    if (angle) {
+      typeInto(angle, "30");
+    }
+    await flush();
+    expect(configNow()).toMatchObject({ angle: "30", frequency: "60" });
+  });
+});
