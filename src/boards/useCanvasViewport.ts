@@ -8,7 +8,7 @@ import {
   zoomAt as zoomAtPoint,
   zoomByAtCentre,
   zoomByWheel,
-} from "./viewportModel";
+} from "./geometry/viewportModel";
 
 export interface Viewport {
   /** Canvas units per CSS pixel. */

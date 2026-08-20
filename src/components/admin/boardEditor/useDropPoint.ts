@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { findFreeSpot } from "../../../boards/placement";
+import { findFreeSpot } from "../../../boards/geometry/placement";
 import type { BoardItem } from "../../../types";
 import { dropOrigin } from "./placement";
 

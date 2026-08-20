@@ -1,4 +1,4 @@
-import type { BoardItem } from "../types";
+import type { BoardItem } from "../../types";
 
 /**
  * Laying pictures out in a frame.

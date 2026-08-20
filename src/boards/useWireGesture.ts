@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import { checkWire, type GraphItem } from "../../config/graph.js";
 import type { BoardItem, BoardWire } from "../types";
+import type { Point } from "./geometry/portGeometry";
 import { newItemId } from "./newItemId";
-import type { Point } from "./portGeometry";
 
 /**
  * How far the pointer may travel and still count as a click.

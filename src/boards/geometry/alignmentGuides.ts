@@ -1,5 +1,5 @@
-import { MIN_ITEM_SIZE } from "../../config/canvas.js";
-import type { BoardItem } from "../types";
+import { MIN_ITEM_SIZE } from "../../../config/canvas.js";
+import type { BoardItem } from "../../types";
 import {
   AXIS_X,
   AXIS_Y,

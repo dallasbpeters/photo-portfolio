@@ -5,11 +5,12 @@ import { PORT_HIT_PX, PORT_RADIUS_PX } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
-import type { ResizeHandle } from "./alignmentGuides";
 import { BoardTextTools } from "./BoardTextTools";
 import { BoardToolBar } from "./BoardToolBar";
 import { DrawingView } from "./DrawingView";
 import { isDrawingConfig } from "./drawing";
+import type { ResizeHandle } from "./geometry/alignmentGuides";
+import { inputPoints, outputPoints } from "./geometry/portGeometry";
 import { ItemMedia } from "./ItemMedia";
 import {
   ElementBody,
@@ -21,7 +22,6 @@ import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
 import { BatchList } from "./nodes/BatchList";
 import { OpNodeView } from "./nodes/OpNodeView";
-import { inputPoints, outputPoints } from "./portGeometry";
 import { ResizeHandles } from "./ResizeHandles";
 import type { BoardTools } from "./tools/useBoardTools";
 import { useTextFont } from "./useTextFont";

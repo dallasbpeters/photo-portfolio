@@ -1,5 +1,5 @@
-import type { Bounds, Viewport, ViewRect } from "./viewportModel";
-import { boundsToScreen } from "./viewportModel";
+import type { Bounds, Viewport, ViewRect } from "./geometry/viewportModel";
+import { boundsToScreen } from "./geometry/viewportModel";
 
 /**
  * Where the contextual bar sits, in screen pixels.

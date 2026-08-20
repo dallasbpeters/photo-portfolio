@@ -6,7 +6,7 @@ import {
   MIN_SCALE,
   START_VIEW_HEIGHT,
   START_VIEW_WIDTH,
-} from "../../config/canvas.js";
+} from "../../../config/canvas.js";
 import type { Viewport, ViewRect } from "./viewportModel";
 import {
   boundsToScreen,

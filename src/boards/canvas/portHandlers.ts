@@ -1,6 +1,6 @@
 import type { BoardItem } from "../../types";
 import type { PortHandlers } from "../BoardItemView";
-import { outputPointFor } from "../portGeometry";
+import { outputPointFor } from "../geometry/portGeometry";
 
 /**
  * What an item needs to take part in a wire drag.

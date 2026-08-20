@@ -1,5 +1,5 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../config/canvas.js";
-import type { BoardItem } from "../types";
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../../config/canvas.js";
+import type { BoardItem } from "../../types";
 
 /**
  * The set of things a drag can snap to, arranged so a frame of dragging does

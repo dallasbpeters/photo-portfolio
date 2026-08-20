@@ -12,8 +12,8 @@
  * float off its handle.
  */
 
-import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
-import type { BoardItem } from "../types";
+import { inputPortsFor, outputPortsFor } from "../../../config/graph.js";
+import type { BoardItem } from "../../types";
 
 export interface Point {
   x: number;

@@ -30,7 +30,7 @@ import {
   clampScale,
   START_VIEW_HEIGHT,
   START_VIEW_WIDTH,
-} from "../../config/canvas.js";
+} from "../../../config/canvas.js";
 
 /** Canvas units per CSS pixel, plus the screen offset of the canvas origin. */
 export interface Viewport {

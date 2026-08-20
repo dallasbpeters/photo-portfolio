@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CANVAS_WIDTH, MIN_ITEM_SIZE } from "../../config/canvas.js";
-import type { BoardItem, BoardItemKind } from "../types";
+import { CANVAS_WIDTH, MIN_ITEM_SIZE } from "../../../config/canvas.js";
+import type { BoardItem, BoardItemKind } from "../../types";
 import {
   DEFAULT_SNAP_PX,
   type ResizeHandle,

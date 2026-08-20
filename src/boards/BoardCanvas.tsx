@@ -9,13 +9,6 @@ import { findOutputPort, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
-import {
-  type Guides,
-  NO_GUIDES,
-  type ResizeHandle,
-  snapResize,
-  snapToGuides,
-} from "./alignmentGuides";
 import { BoardItemView } from "./BoardItemView";
 import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
 import { CanvasChrome } from "./canvas/CanvasChrome";
@@ -42,15 +35,18 @@ import {
   type Point,
 } from "./drawing";
 import {
+  type Guides,
+  NO_GUIDES,
+  type ResizeHandle,
+  snapResize,
+  snapToGuides,
+} from "./geometry/alignmentGuides";
+import {
   contentBounds,
   containedIndices as indicesWithin,
   topmostAt,
-} from "./hitTest";
-import { BOARD_IMAGE_TYPE } from "./itemOutput";
-import type { MaskStroke } from "./mask";
-import { PortMenu, type PortTarget } from "./PortMenu";
-import { resizeBox } from "./resizeBox";
-import { StrokePreview } from "./StrokePreview";
+} from "./geometry/hitTest";
+import { resizeBox } from "./geometry/resizeBox";
 import {
   applyMarquee,
   EMPTY_SELECTION,
@@ -60,12 +56,16 @@ import {
   select,
   selectedItems,
   soleSelected,
-} from "./selectionModel";
+} from "./geometry/selectionModel";
 import {
   buildSnapIndex,
   type Box as SnapBox,
   type SnapIndex,
-} from "./snapIndex";
+} from "./geometry/snapIndex";
+import { BOARD_IMAGE_TYPE } from "./itemOutput";
+import type { MaskStroke } from "./mask";
+import { PortMenu, type PortTarget } from "./PortMenu";
+import { StrokePreview } from "./StrokePreview";
 import { isImageDrop } from "./svgToRaster";
 import { useBoardTools } from "./tools/useBoardTools";
 import { useCanvasViewport } from "./useCanvasViewport";

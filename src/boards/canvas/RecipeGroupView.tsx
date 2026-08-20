@@ -5,7 +5,7 @@ import {
   hasNewerVersion,
   type UseVersions,
   versionLabel,
-} from "../recipeGroup";
+} from "../geometry/recipeGroup";
 
 /**
  * The outline around the nodes a recipe put on the board.

@@ -12,7 +12,7 @@ import {
   outputPointFor,
   type Point,
   wirePath,
-} from "./portGeometry";
+} from "./geometry/portGeometry";
 
 /** The wire currently being dragged out of a port, before it lands. */
 export interface DraftWire {

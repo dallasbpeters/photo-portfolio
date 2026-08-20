@@ -1,5 +1,5 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../config/canvas.js";
-import type { BoardItem } from "../types";
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from "../../../config/canvas.js";
+import type { BoardItem } from "../../types";
 
 /**
  * Where to put something new.

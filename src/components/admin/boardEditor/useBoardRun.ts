@@ -8,11 +8,11 @@ import {
 } from "../../../../config/canvas.js";
 import { containedBy } from "../../../../config/graph.js";
 import { MAX_SHADER_RENDERS } from "../../../../config/nodes/limits.js";
-import { FRAME_PAD } from "../../../boards/arrange";
 import { renderHalftone } from "../../../boards/canvas/renderShaderNode";
 import { wiredImagesFor } from "../../../boards/canvas/wiredPreviews";
 import { compositeSources, renderComposite } from "../../../boards/composite";
 import { configFromSource } from "../../../boards/elementNode";
+import { FRAME_PAD } from "../../../boards/geometry/arrange";
 import { maskOf, naturalSizeOf, rasterizeMask } from "../../../boards/mask";
 import { newItemId } from "../../../boards/newItemId";
 import type { PortTarget } from "../../../boards/PortMenu";

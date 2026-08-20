@@ -15,11 +15,11 @@ import {
 } from "../../../../config/canvas.js";
 import { containedBy } from "../../../../config/graph.js";
 import type { NodeTypeId } from "../../../../config/nodeTypes.js";
-import { gridLayout, readingOrder } from "../../../boards/arrange";
 import { elementConfig } from "../../../boards/elementNode";
+import { gridLayout, readingOrder } from "../../../boards/geometry/arrange";
+import { findFreeSpot } from "../../../boards/geometry/placement";
 import { outputImagesOf, outputTextOf } from "../../../boards/itemOutput";
 import { newItemId } from "../../../boards/newItemId";
-import { findFreeSpot } from "../../../boards/placement";
 import { newShaderConfig } from "../../../boards/shaderConfig";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire, Element, Photo } from "../../../types";
