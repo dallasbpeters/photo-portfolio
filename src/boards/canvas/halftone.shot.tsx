@@ -82,24 +82,20 @@ const defaults = (): Record<string, unknown> =>
     ])
   );
 
-describe("the screen is kept legible at any size", () => {
-  it("frequency 148 in a node-sized box, clamped", async () => {
-    await shoot(
-      "small-clamped",
-      halftoneStack(defaults(), card(), 300),
-      300,
-      225
-    );
-    expect(true).toBe(true);
-  });
+/** Frequency that yields exactly `px` pixels per cell in a 600-wide frame. */
+const atCell = (px: number) => Math.round(600 / px);
 
-  it("frequency 148 at export size, untouched", async () => {
-    await shoot(
-      "large-untouched",
-      halftoneStack(defaults(), card(), 1200),
-      1200,
-      900
-    );
-    expect(true).toBe(true);
-  });
+describe("how many pixels a dot needs to look like a dot", () => {
+  for (const px of [9, 10, 11]) {
+    it(`${px} pixels a cell`, async () => {
+      await shoot(
+        `cell-${px}px`,
+        // No clamp: this is measuring what the clamp should be set to.
+        halftoneStack({ ...defaults(), frequency: atCell(px) }, card()),
+        600,
+        450
+      );
+      expect(true).toBe(true);
+    });
+  }
 });

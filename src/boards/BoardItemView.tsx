@@ -83,6 +83,8 @@ interface BoardItemViewProps {
   commentCount?: number;
   /** True when an operation node's prompt arrives down a wire. */
   hasWiredPrompt?: boolean;
+  /** How many pictures are wired into this item's image input. */
+  imageCount?: number;
   /** A picture wired into this item's image input, if it has one. */
   imageUrl?: string | null;
   index: number;
@@ -382,6 +384,7 @@ function BoardItemBody({
 interface ItemContentProps {
   fieldRef: RefObject<HTMLTextAreaElement | null>;
   hasWiredPrompt: boolean;
+  imageCount?: number;
   imageUrl?: string | null;
   isEditing: boolean;
   isSelected: boolean;
@@ -410,6 +413,7 @@ interface ItemContentProps {
 function ItemContent({
   fieldRef,
   hasWiredPrompt,
+  imageCount,
   imageUrl,
   wiredPrompt,
   isEditing,
@@ -469,6 +473,7 @@ function ItemContent({
     return (
       <OpNodeView
         hasWiredPrompt={hasWiredPrompt}
+        imageCount={imageCount}
         imageUrl={imageUrl}
         item={item}
         onCancel={onCancel}
@@ -596,6 +601,7 @@ function itemPointerDown({
 /** One item on the board. */
 export function BoardItemView({
   hasWiredPrompt = false,
+  imageCount,
   imageUrl,
   onCancel,
   onRemoveVersion,
@@ -705,6 +711,7 @@ export function BoardItemView({
       <ItemContent
         fieldRef={fieldRef}
         hasWiredPrompt={hasWiredPrompt}
+        imageCount={imageCount}
         imageUrl={imageUrl}
         isEditing={isEditing}
         isSelected={isSelected}

@@ -29,6 +29,7 @@ import {
 import {
   previewImagesFor,
   previewTextFor,
+  wiredImageCountFor,
   wiredImageFor,
   wiredItemsFor,
   wiredTextFor,
@@ -1228,6 +1229,7 @@ export function BoardCanvas({
             <BoardItemView
               commentCount={openCommentCounts.get(item.id) ?? 0}
               hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
+              imageCount={wiredImageCountFor(item, graph)}
               imageUrl={wiredImageFor(item.id, graph)}
               index={index}
               isEditing={!readOnly && editingId === item.id}

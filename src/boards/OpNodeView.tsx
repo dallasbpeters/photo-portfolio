@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 interface OpNodeViewProps {
   /** True when this node's prompt is satisfied by a wire rather than typed. */
   hasWiredPrompt: boolean;
+  /** How many pictures are wired in, for the node that draws them itself. */
+  imageCount?: number;
   /** The picture wired in, for the node that draws one rather than making one. */
   imageUrl?: string | null;
   item: BoardItem;
@@ -125,6 +127,7 @@ function PublishedResult({
 export function OpNodeView({
   hasWiredPrompt,
   wiredPrompt,
+  imageCount,
   imageUrl,
   item,
   onCancel,
@@ -203,6 +206,7 @@ export function OpNodeView({
           analysed={analysed}
           config={config}
           hasWiredPrompt={hasWiredPrompt}
+          imageCount={imageCount}
           images={images}
           imageUrl={imageUrl}
           item={item}
@@ -292,6 +296,7 @@ interface NodeBodyProps {
   analysed: string | null;
   config: Record<string, unknown>;
   hasWiredPrompt: boolean;
+  imageCount?: number;
   images: BoardItemVariation[];
   imageUrl?: string | null;
   item: BoardItem;
@@ -317,6 +322,7 @@ function NodeBody({
   analysed,
   config,
   hasWiredPrompt,
+  imageCount,
   imageUrl,
   images,
   item,
@@ -351,6 +357,7 @@ function NodeBody({
         <HalftonePreview
           config={config}
           frameWidth={item.width}
+          imageCount={imageCount}
           imageUrl={imageUrl}
         />
       ) : null}

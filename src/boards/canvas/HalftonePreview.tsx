@@ -25,6 +25,16 @@ export interface HalftonePreviewProps {
   config: Record<string, unknown>;
   /** How wide the node is, so the screen is not drawn finer than it can be. */
   frameWidth?: number;
+  /**
+   * How many pictures are wired in, counted the way the run counts them.
+   *
+   * Stated on the node because a batch is invisible otherwise: one wire looks
+   * identical whether it carries one picture or twenty-two, and the only way to
+   * find out used to be to run it and read the result. Seeing "22 pictures"
+   * before pressing Run is also the fastest way to know the node and the run
+   * agree about what is feeding it, which is where most of this has gone wrong.
+   */
+  imageCount?: number;
   /** The picture on the node's image input, or null while nothing is wired. */
   imageUrl?: string | null;
 }
@@ -32,6 +42,7 @@ export interface HalftonePreviewProps {
 export function HalftonePreview({
   config,
   frameWidth,
+  imageCount,
   imageUrl,
 }: HalftonePreviewProps) {
   if (!imageUrl) {
@@ -42,11 +53,21 @@ export function HalftonePreview({
     );
   }
 
+  const many = (imageCount ?? 1) > 1;
+
   return (
-    // A fixed aspect rather than the node's full height: the node body scrolls,
-    // and a child sized to a scrolling parent has no height to render into.
-    <div className="relative aspect-[4/3] w-full overflow-hidden rounded bg-board-surface/40">
-      {halftoneStack(config, imageUrl, frameWidth)}
+    <div className="flex flex-col gap-1">
+      {/* A fixed aspect rather than the node's full height: the node body
+          scrolls, and a child sized to a scrolling parent has no height to
+          render into. */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded bg-board-surface/40">
+        {halftoneStack(config, imageUrl, frameWidth)}
+      </div>
+      {many ? (
+        <p className="px-0.5 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
+          {imageCount} pictures · showing the first
+        </p>
+      ) : null}
     </div>
   );
 }

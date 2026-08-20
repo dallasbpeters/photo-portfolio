@@ -82,10 +82,14 @@ const GROUND_ID = "halftone-ground";
  * too fine to draw. Rendered side by side at 300px and 1200px from identical
  * settings, which is how this was found.
  *
- * Four is where the dot still has an inside and an outside after the library's
- * own smoothing.
+ * Ten, chosen by rendering the same picture at three, four, six, eight, ten and
+ * twelve pixels a cell and looking at all six. Four is a muddy even texture
+ * with no dots in it at all; eight still bands across a gradient; ten is round,
+ * separate dots. The library antialiases in dot-space rather than pixel-space —
+ * SMOOTHNESS is a constant 0.1 of a cell — so below this there is simply not
+ * enough room for an edge, and no setting here can conjure one.
  */
-const MIN_CELL_PX = 4;
+const MIN_CELL_PX = 10;
 
 /**
  * The screen this frame can actually carry.

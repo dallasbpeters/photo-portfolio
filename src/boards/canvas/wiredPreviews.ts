@@ -129,6 +129,21 @@ export const wiredItemsFor = (
  * The two sides must agree on the count or the run asks for a picture the
  * browser never drew. That is the invariant; this function exists to hold it.
  */
+/**
+ * How many pictures a node is about to work through.
+ *
+ * Asked only of the node that draws them itself, the same guard-inside shape
+ * previewImagesFor and wiredItemsFor use: resolving every upstream behind every
+ * node on every render walks the graph once per node.
+ */
+export const wiredImageCountFor = (
+  item: BoardItem,
+  graph: Graph
+): number | undefined =>
+  item.nodeType === "standard"
+    ? wiredImagesFor(item.id, graph).length
+    : undefined;
+
 export const wiredImagesFor = (itemId: string, graph: Graph): string[] =>
   graph.wires
     .filter((w) => w.targetItemId === itemId && w.targetPort === "image")
