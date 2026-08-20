@@ -14,7 +14,8 @@ import {
   parseItems,
   removeItem,
   replaceItem,
-} from "./listItems";
+} from "../listItems";
+import "./ListRows.css";
 
 /**
  * The rows of a List node: one prompt each, editable and removable.
@@ -75,15 +76,15 @@ export function ListRows({
   }, [auto, onFill, readOnly]);
 
   return (
-    <div className="flex min-h-0 flex-col gap-1">
-      <div className="flex items-center justify-between px-0.5">
-        <span className="text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
+    <div className="list-rows">
+      <div className="list-rows__header">
+        <span className="list-rows__count">
           {items.length === 1 ? "1 item" : `${items.length} items`}
         </span>
         {readOnly ? null : (
           <button
             aria-label="Add an item"
-            className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-board-ink/55 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-30"
+            className="list-rows__add"
             disabled={items.length >= MAX_LIST_ITEMS}
             onClick={() => put(addItem(items, "New item"))}
             onPointerDown={(e) => e.stopPropagation()}
@@ -100,7 +101,7 @@ export function ListRows({
           the trade is visible before it is made. */}
       {sync.kind === "offer" && !readOnly && pending ? (
         <button
-          className="flex items-center gap-1 rounded border border-amber-300/30 bg-amber-300/5 px-1.5 py-1 text-[10px] text-amber-700/90 hover:bg-amber-600/10"
+          className="list-rows__refill"
           onClick={() => onFill(pending)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -111,16 +112,16 @@ export function ListRows({
       ) : null}
 
       {items.length === 0 ? (
-        <p className="px-1 py-2 text-[10px] text-board-ink/35">
+        <p className="list-rows__empty">
           Empty. Add a row, or wire an Iterate node into Fill and it writes
           itself.
         </p>
       ) : null}
 
-      <div className="flex min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain">
+      <div className="list-rows__items">
         {items.map((item, index) => (
           <div
-            className="group/row flex items-start gap-1 rounded border border-board-ink/10 bg-board-surface/40 px-1.5 py-1"
+            className="list-rows__row"
             // Position is the identity of a row here. Two rows may legitimately
             // hold the same text, and keying by content would make them the
             // same row — the failure this rule exists to prevent, arrived at
@@ -128,11 +129,9 @@ export function ListRows({
             // biome-ignore lint/suspicious/noArrayIndexKey: explained above
             key={index}
           >
-            <span className="w-5 shrink-0 pt-1 text-[9px] text-board-ink/30 tabular-nums">
-              {index + 1}
-            </span>
+            <span className="list-rows__number">{index + 1}</span>
             <textarea
-              className="min-h-20 flex-1 resize-y bg-transparent text-[11px] text-board-ink outline-none"
+              className="list-rows__text"
               id={index.toString()}
               onChange={(e) => put(replaceItem(items, index, e.target.value))}
               onPointerDown={(e) => e.stopPropagation()}
@@ -141,10 +140,10 @@ export function ListRows({
               value={item}
             />
             {readOnly ? null : (
-              <span className="flex shrink-0 flex-col opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
+              <span className="list-rows__move">
                 <button
                   aria-label={`Move item ${index + 1} up`}
-                  className="px-0.5 text-[9px] text-board-ink/40 hover:text-board-ink disabled:opacity-20"
+                  className="list-rows__nudge"
                   disabled={index === 0}
                   onClick={() => put(moveItem(items, index, -1))}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -154,7 +153,7 @@ export function ListRows({
                 </button>
                 <button
                   aria-label={`Move item ${index + 1} down`}
-                  className="px-0.5 text-[9px] text-board-ink/40 hover:text-board-ink disabled:opacity-20"
+                  className="list-rows__nudge"
                   disabled={index === items.length - 1}
                   onClick={() => put(moveItem(items, index, 1))}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -167,7 +166,7 @@ export function ListRows({
             {readOnly ? null : (
               <button
                 aria-label={`Delete item ${index + 1}`}
-                className="shrink-0 pt-1 text-board-ink/30 opacity-0 transition-opacity hover:text-red-400 focus-visible:opacity-100 group-hover/row:opacity-100"
+                className="list-rows__delete"
                 onClick={() => put(removeItem(items, index))}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"

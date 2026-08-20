@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ModelSetting } from "./SettingField";
+import { ModelSetting } from "./nodes/SettingField";
 import type { Tool } from "./tools/types";
 
 /**

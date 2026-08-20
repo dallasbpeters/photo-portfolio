@@ -1,0 +1,96 @@
+/*
+ * A palette's colours, as swatches rather than a field of hex codes.
+ *
+ * The text field stays below them and edits the very same stored string: a
+ * palette is often pasted in from somewhere else, and a swatch grid with no way
+ * to paste is a swatch grid you fight.
+ */
+
+.palette-swatches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+.palette-swatches__label {
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.palette-swatches__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+.palette-swatches__swatch {
+  position: relative;
+}
+
+.palette-swatches__remove {
+  position: absolute;
+  top: calc(var(--spacing) * -1);
+  right: calc(var(--spacing) * -1);
+  display: grid;
+  place-items: center;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  background-color: var(--color-board-surface);
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.palette-swatches__swatch:hover .palette-swatches__remove,
+.palette-swatches__remove:focus-visible {
+  opacity: 1;
+}
+
+.palette-swatches__remove:hover {
+  color: var(--color-red-600);
+}
+
+.palette-swatches__add {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  border: 1px dashed
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.palette-swatches__add:hover {
+  color: var(--color-board-ink);
+  border-color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+/*
+ * The same colours as text. Tabular figures so a column of hex codes lines up,
+ * which is the only reason this is not the body face.
+ */
+.palette-swatches__field {
+  width: 100%;
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  outline: none;
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.palette-swatches__field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}

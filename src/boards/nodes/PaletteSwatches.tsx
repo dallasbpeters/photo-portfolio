@@ -1,7 +1,8 @@
+import "./PaletteSwatches.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
-import { HEX_COLOUR } from "../../config/nodes/palette.js";
-import { ColorWell } from "./ColorWell";
+import { HEX_COLOUR } from "../../../config/nodes/palette.js";
+import { ColorWell } from "../ColorWell";
 
 /**
  * A palette as swatches rather than as typed hex codes.
@@ -31,15 +32,13 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
   const write = (next: string[]) => onChange(next.join(", "));
 
   return (
-    <div className="space-y-1">
-      <span className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-        Colors
-      </span>
+    <div className="palette-swatches">
+      <span className="palette-swatches__label">Colors</span>
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="palette-swatches__row">
         {colors.map((color, index) => (
           <div
-            className="group/sw relative"
+            className="palette-swatches__swatch"
             // Position is the identity here: two swatches may hold the same
             // color, and keying on the value would collapse them into one.
             // biome-ignore lint/suspicious/noArrayIndexKey: a swatch has no identity but its place in the palette
@@ -54,7 +53,7 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
             />
             <button
               aria-label={`Remove color ${index + 1}`}
-              className="absolute -top-1 -right-1 grid size-3.5 place-items-center rounded-full border border-board-ink/20 bg-board-surface text-board-ink/60 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/sw:opacity-100"
+              className="palette-swatches__remove"
               onClick={() => write(colors.filter((_, i) => i !== index))}
               onPointerDown={(e) => e.stopPropagation()}
               type="button"
@@ -67,7 +66,7 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
         {colors.length < MAX_COLOURS ? (
           <button
             aria-label="Add a color"
-            className="grid size-6 place-items-center rounded border border-board-ink/20 border-dashed text-board-ink/40 hover:border-board-ink/50 hover:text-board-ink"
+            className="palette-swatches__add"
             onClick={() => write([...colors, NEW_COLOUR])}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -82,7 +81,7 @@ export function PaletteSwatches({ onChange, value }: PaletteSwatchesProps) {
           actually sends. */}
       <input
         aria-label="Colors as hex"
-        className="w-full rounded border border-board-ink/10 bg-board-surface/40 px-2 py-1 font-mono text-[11px] text-board-ink/70 outline-none focus:border-board-ink/40"
+        className="palette-swatches__field"
         onChange={(e) => onChange(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         placeholder="#0a2540, #f5f0e8, #c8102e"

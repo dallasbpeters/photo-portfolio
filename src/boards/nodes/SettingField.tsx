@@ -6,9 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SettingDef } from "../../config/nodeTypes.js";
-import { ColorWell } from "./ColorWell";
-import { useModels } from "./ModelsContext";
+import type { SettingDef } from "../../../config/nodeTypes.js";
+import { ColorWell } from "../ColorWell";
+import { useModels } from "../ModelsContext";
+import "./SettingField.css";
 
 /**
  * A node's settings, rendered from their definitions.
@@ -66,8 +67,8 @@ export function SettingField({
 
   if (setting.kind === "color") {
     return (
-      <div className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
-        {setting.label}
+      <div className="setting-field setting-field--inline">
+        <span className="setting-field__label">{setting.label}</span>
         <ColorWell label={setting.label} onChange={onChange} value={shown} />
       </div>
     );
@@ -75,10 +76,10 @@ export function SettingField({
 
   if (setting.kind === "number") {
     return (
-      <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/50 uppercase tracking-[0.14em]">
-        {setting.label}
+      <label className="setting-field setting-field--inline">
+        <span className="setting-field__label">{setting.label}</span>
         <input
-          className="w-16 rounded border border-board-ink/10 bg-board-surface/40 px-2 py-1 text-right text-[12px] text-board-ink tabular-nums outline-none focus:border-board-ink/40 disabled:opacity-60"
+          className="setting-field__number"
           disabled={readOnly}
           max={setting.max}
           min={setting.min}
@@ -101,11 +102,9 @@ export function SettingField({
 
   if (setting.kind === "select") {
     return (
-      <div className="space-y-1">
-        <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-          {setting.label}
-        </p>
-        <div className="flex flex-wrap gap-1">
+      <div className="setting-field">
+        <p className="setting-field__caption">{setting.label}</p>
+        <div className="setting-field__options">
           <Select
             onValueChange={(option) => {
               if (option !== null) {
@@ -141,12 +140,10 @@ export function SettingField({
     // could get away with an aria-label; the Iterate node has three, and three
     // unlabelled boxes are a guessing game — which is exactly how a list ended
     // up in the template field.
-    <label className="block space-y-1">
-      <span className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-        {setting.label}
-      </span>
+    <label className="setting-field">
+      <span className="setting-field__caption">{setting.label}</span>
       <textarea
-        className="max-h-96 min-h-16 w-full resize-y rounded border border-board-ink/10 bg-board-surface/40 p-2 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/40 disabled:opacity-60"
+        className="setting-field__text"
         disabled={readOnly}
         maxLength={setting.maxLength}
         onChange={(e) => onChange(e.target.value)}
@@ -185,10 +182,8 @@ export function ModelSetting({
       ? models
       : [{ id: value || setting.default, label: value || setting.default }];
   return (
-    <div className="space-y-1">
-      <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.14em]">
-        {setting.label}
-      </p>
+    <div className="setting-field">
+      <p className="setting-field__caption">{setting.label}</p>
       <Select
         onValueChange={(newValue) => {
           if (newValue !== null) {
@@ -197,7 +192,7 @@ export function ModelSetting({
         }}
         value={value}
       >
-        <SelectTrigger className="w-full" data-size="lg">
+        <SelectTrigger className="setting-field__trigger" data-size="lg">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

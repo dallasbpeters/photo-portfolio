@@ -3,10 +3,11 @@ import {
   Cancel01Icon,
   Download01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import type { BoardItemVariation } from "../types";
-import { downloadImage } from "./downloadImage";
-import { isVideo } from "./isVideo";
-import { BOARD_IMAGE_TYPE } from "./itemOutput";
+import type { BoardItemVariation } from "../../types";
+import { downloadImage } from "../downloadImage";
+import "./ResultImages.css";
+import { isVideo } from "../isVideo";
+import { BOARD_IMAGE_TYPE } from "../itemOutput";
 
 /**
  * What a node produced, and the gallery of everything it has produced before.
@@ -66,16 +67,16 @@ export function ResultImages({
   const hero = images[Math.min(selected, images.length - 1)] ?? images[0];
 
   return (
-    <div className="space-y-1">
+    <div className="result-images">
       {hero ? (
-        <div className="group relative">
+        <div className="result-images__hero">
           {isVideo(hero) ? (
             // Muted and looping, because a node's result sits on a board next
             // to a dozen others: a clip that plays sound on hover is the
             // wrong kind of surprise. `playsInline` keeps iOS from taking it
             // fullscreen the moment it starts.
             <video
-              className="h-auto w-full cursor-grab rounded border border-board-ink/10 object-contain"
+              className="result-images__media"
               controls
               draggable
               loop
@@ -92,7 +93,7 @@ export function ResultImages({
             // biome-ignore lint/a11y/noNoninteractiveElementInteractions: dragstart is the browser's own drag affordance on an image, not a bespoke click handler — the picture is also reachable via the download button beside it
             <img
               alt={hero.description ?? "Result"}
-              className="h-auto w-full cursor-grab rounded border border-board-ink/10 object-contain"
+              className="result-images__media"
               decoding="async"
               draggable
               height={hero.height ?? undefined}
@@ -108,7 +109,7 @@ export function ResultImages({
               version being looked at. */}
           <button
             aria-label="Download this version"
-            className="absolute top-1 right-1 rounded bg-board-surface/70 p-1.5 text-board-ink/70 opacity-0 backdrop-blur transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100"
+            className="result-images__save"
             onClick={() => {
               void downloadImage(hero.url, hero.description ?? "generated");
             }}
@@ -125,9 +126,9 @@ export function ResultImages({
           the place versions collect instead of appearing only once there
           happen to be two. */}
       {images.length > 0 ? (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
+        <div className="result-images__gallery">
+          <div className="result-images__bar">
+            <p className="result-images__count">
               {images.length === 1 ? "1 version" : `${images.length} versions`}
             </p>
             {/* Getting the whole set onto the board at once: a node's gallery
@@ -135,7 +136,7 @@ export function ResultImages({
                 want them out where they can be arranged. */}
             {onSendAll ? (
               <button
-                className="text-[9px] text-board-ink/40 uppercase tracking-[0.14em] hover:text-board-ink"
+                className="result-images__send"
                 onClick={onSendAll}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -144,16 +145,14 @@ export function ResultImages({
               </button>
             ) : null}
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1">
+          <div className="result-images__strip">
             {images.map((variation, index) => (
-              <div className="group/v relative shrink-0" key={variation.url}>
+              <div className="result-images__version" key={variation.url}>
                 <button
                   aria-label={`Version ${index + 1}`}
                   aria-pressed={index === selected}
-                  className={`block overflow-hidden rounded border transition-colors ${
-                    index === selected
-                      ? "border-sky-300"
-                      : "border-board-ink/10 hover:border-board-ink/40"
+                  className={`result-images__pick ${
+                    index === selected ? "result-images__pick--chosen" : ""
                   }`}
                   onClick={() => onSelect(index)}
                   onPointerDown={(e) => e.stopPropagation()}
@@ -170,7 +169,7 @@ export function ResultImages({
                     // video is played — which is what a strip of mp4s in an
                     // <img> looked like: broken icons where pictures should be.
                     <video
-                      className="size-12 cursor-grab object-cover"
+                      className="result-images__thumb"
                       draggable
                       muted
                       onDragStart={(e) => beginImageDrag(e, variation)}
@@ -183,7 +182,7 @@ export function ResultImages({
                     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — native image drag, and the surrounding button already carries the keyboard-reachable action
                     <img
                       alt={variation.description ?? `Version ${index + 1}`}
-                      className="size-12 cursor-grab object-cover"
+                      className="result-images__thumb"
                       draggable
                       height={48}
                       loading="lazy"
@@ -196,7 +195,7 @@ export function ResultImages({
                 {onRemove ? (
                   <button
                     aria-label={`Remove version ${index + 1}`}
-                    className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-board-surface/90 text-board-ink/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/v:opacity-100"
+                    className="result-images__remove"
                     onClick={() => onRemove(index)}
                     onPointerDown={(e) => e.stopPropagation()}
                     type="button"

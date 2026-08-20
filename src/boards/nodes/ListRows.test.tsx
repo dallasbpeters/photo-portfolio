@@ -1,8 +1,8 @@
-import "../index.css";
+import "../../index.css";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BoardItem, BoardWire } from "../types";
-import { wiredItemsFor } from "./canvas/wiredPreviews";
+import type { BoardItem, BoardWire } from "../../types";
+import { wiredItemsFor } from "../canvas/wiredPreviews";
 import { OpNodeView } from "./OpNodeView";
 
 /**

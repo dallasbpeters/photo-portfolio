@@ -1,0 +1,108 @@
+/*
+ * A node's settings, rendered from their definitions.
+ *
+ * Driven by the registry, so a node type that gains an option gains its control
+ * with no change in the markup — which is why these are named for what the
+ * control *is* rather than for the node it happens to sit on.
+ */
+
+.setting-field {
+  display: block;
+}
+
+/*
+ * A label and its control on one line.
+ *
+ * For the controls that are small and self-explaining — a swatch, a number —
+ * where a label above would cost a whole row for two words.
+ */
+.setting-field--inline {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting-field__label {
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+/*
+ * Labelled visibly, not only for screen readers. A node with one text field
+ * could get away with an aria-label; the Iterate node has three, and three
+ * unlabelled boxes are a guessing game — which is exactly how a list ended up
+ * in the template field.
+ */
+.setting-field__caption {
+  display: block;
+  margin-block-end: var(--spacing);
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.setting-field__number {
+  width: 4rem;
+  padding: var(--spacing) calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-board-ink);
+  text-align: right;
+  outline: none;
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.setting-field__text {
+  width: 100%;
+  min-height: 4rem;
+  max-height: 24rem;
+  padding: calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-board-ink);
+  resize: vertical;
+  outline: none;
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.setting-field__number:focus,
+.setting-field__text:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.setting-field__number:disabled,
+.setting-field__text:disabled {
+  opacity: 0.6;
+}
+
+/*
+ * The row a select sits in.
+ *
+ * Wraps, because a model id can be long and a trigger that overflows its node
+ * is worse than one that takes two lines.
+ */
+.setting-field__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+}
+
+.setting-field__trigger {
+  width: 100%;
+}

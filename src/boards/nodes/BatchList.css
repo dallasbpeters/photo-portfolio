@@ -1,0 +1,135 @@
+/*
+ * The pictures a Batch node is about to hand on.
+ *
+ * Thumbnails rather than a number, because "42 images" is not checkable and a
+ * contact sheet is: a batch that quietly resolved to the wrong forty looked
+ * exactly like one that worked, and there was no way to tell but to run it.
+ */
+
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 1.5);
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--spacing) * 2.5);
+  background-color: var(--color-board-panel);
+}
+
+.batch-list__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 calc(var(--spacing) * 1.5);
+  align-items: baseline;
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+.batch-list__count {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-board-ink);
+}
+
+.batch-list__limit {
+  color: var(--color-amber-600);
+}
+
+/*
+ * Restoring what was struck off. A button rather than a note, because the
+ * count is only actionable if the action is next to it.
+ */
+.batch-list__restore {
+  color: var(--color-sky-600);
+  text-underline-offset: 2px;
+}
+
+.batch-list__restore:hover {
+  text-decoration: underline;
+}
+
+.batch-list__empty {
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+.batch-list__sheet {
+  display: grid;
+  flex-grow: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  gap: var(--spacing);
+  overflow-y: auto;
+}
+
+.batch-list__frame {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.batch-list__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * The position in the batch, which is the only name these have. It is also the
+ * variation the run will ask for, so it is worth being able to read off.
+ */
+.batch-list__index {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding-inline: calc(var(--spacing) * 0.5);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 70%,
+    transparent
+  );
+}
+
+/*
+ * Striking one off. Hidden until the tile is hovered or the button is focused:
+ * twelve permanent crosses on a contact sheet compete with the pictures, which
+ * are the thing being judged.
+ */
+.batch-list__strike {
+  position: absolute;
+  top: calc(var(--spacing) * 0.5);
+  right: calc(var(--spacing) * 0.5);
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 80%,
+    transparent
+  );
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.batch-list__frame:hover .batch-list__strike,
+.batch-list__strike:focus-visible {
+  opacity: 1;
+}
+
+.batch-list__strike:hover {
+  color: var(--color-red-600);
+}

@@ -7,10 +7,10 @@ import {
   StopIcon,
   TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { nodeTypeFor } from "../../config/nodeTypes.js";
-import type { BoardItem, BoardItemVariation } from "../types";
-import { HalftonePreview } from "./canvas/HalftonePreview";
-import { pickImages, selectedIndex } from "./itemOutput";
+import { nodeTypeFor } from "../../../config/nodeTypes.js";
+import type { BoardItem, BoardItemVariation } from "../../types";
+import { HalftonePreview } from "../canvas/HalftonePreview";
+import { pickImages, selectedIndex } from "../itemOutput";
 import { ListRows } from "./ListRows";
 import { PaletteSwatches } from "./PaletteSwatches";
 import { ResultImages } from "./ResultImages";

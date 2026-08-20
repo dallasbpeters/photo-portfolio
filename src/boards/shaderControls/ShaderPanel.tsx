@@ -6,7 +6,7 @@ import {
 import { useState } from "react";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem } from "../../types";
-import { SettingField } from "../SettingField";
+import { SettingField } from "../nodes/SettingField";
 import { ShaderControls } from "../ShaderControls";
 import { isShaderConfig, type ShaderConfig } from "../shaderConfig";
 

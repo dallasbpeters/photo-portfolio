@@ -6,7 +6,6 @@ import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
 import type { ResizeHandle } from "./alignmentGuides";
-import { BatchList } from "./BatchList";
 import { BoardTextTools } from "./BoardTextTools";
 import { BoardToolBar } from "./BoardToolBar";
 import { DrawingView } from "./DrawingView";
@@ -20,7 +19,8 @@ import {
 } from "./itemBodies";
 import { MaskOverlay } from "./MaskOverlay";
 import { maskOf } from "./mask";
-import { OpNodeView } from "./OpNodeView";
+import { BatchList } from "./nodes/BatchList";
+import { OpNodeView } from "./nodes/OpNodeView";
 import { inputPoints, outputPoints } from "./portGeometry";
 import { ResizeHandles } from "./ResizeHandles";
 import type { BoardTools } from "./tools/useBoardTools";

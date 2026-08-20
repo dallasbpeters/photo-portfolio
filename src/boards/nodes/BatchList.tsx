@@ -1,7 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
-import type { BoardItem } from "../types";
-import { excludedFrom } from "./itemOutput";
+import type { BoardItem } from "../../types";
+import { excludedFrom } from "../itemOutput";
+import "./BatchList.css";
 
 /**
  * The pictures a Batch node is about to hand on, listed and counted.
@@ -30,18 +31,16 @@ export function BatchList({
   const restore = () => onConfigChange?.({ ...config, excluded: [] });
 
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 bg-board-panel p-2.5">
-      <p className="flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-board-ink/70">
-        <span className="font-medium text-board-ink tabular-nums">
-          {images.length}
-        </span>
+    <div className="batch-list">
+      <p className="batch-list__summary">
+        <span className="batch-list__count">{images.length}</span>
         <span>{images.length === 1 ? "image" : "images"}</span>
         {limit > 0 ? (
-          <span className="text-amber-300/80">· first {limit} only</span>
+          <span className="batch-list__limit">· first {limit} only</span>
         ) : null}
         {excluded.size > 0 ? (
           <button
-            className="text-sky-300/80 underline-offset-2 hover:underline"
+            className="batch-list__restore"
             onClick={restore}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -52,15 +51,15 @@ export function BatchList({
       </p>
 
       {images.length === 0 ? (
-        <p className="text-[11px] text-board-ink/35 leading-relaxed">
+        <p className="batch-list__empty">
           Wire a frame in, or images directly. Everything here is sent onward
           one at a time.
         </p>
       ) : (
-        <div className="grid grow auto-rows-min grid-cols-4 gap-1 overflow-y-auto">
+        <div className="batch-list__sheet">
           {images.map((url, index) => (
             <div
-              className="group/b relative aspect-square overflow-hidden rounded border border-board-ink/10 bg-board-surface/40"
+              className="batch-list__frame"
               // Position is the identity: the same picture may legitimately
               // appear twice in a batch.
               // biome-ignore lint/suspicious/noArrayIndexKey: a batch entry has no identity but its place
@@ -68,20 +67,18 @@ export function BatchList({
             >
               <img
                 alt=""
-                className="h-full w-full object-cover"
+                className="batch-list__thumb"
                 decoding="async"
                 height={64}
                 loading="lazy"
                 src={url}
                 width={64}
               />
-              <span className="absolute bottom-0 left-0 bg-board-surface/70 px-1 text-[8px] text-board-ink/70 tabular-nums">
-                {index + 1}
-              </span>
+              <span className="batch-list__index">{index + 1}</span>
               {readOnly ? null : (
                 <button
                   aria-label={`Remove image ${index + 1} from the batch`}
-                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-board-surface/80 text-board-ink/70 opacity-0 transition-opacity hover:text-red-300 focus-visible:opacity-100 group-hover/b:opacity-100"
+                  className="batch-list__strike"
                   onClick={() => strike(url)}
                   onPointerDown={(e) => e.stopPropagation()}
                   type="button"

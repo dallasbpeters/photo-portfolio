@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { NODE_TYPES } from "../../../config/nodeTypes.js";
 import type { BoardItem } from "../../types";
-import { OpNodeView } from "../OpNodeView";
+import { OpNodeView } from "../nodes/OpNodeView";
 import { ShaderPanel } from "./ShaderPanel";
 
 /**
