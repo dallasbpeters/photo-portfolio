@@ -6,6 +6,8 @@ import {
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardComment } from "../../services/comments";
 import type { BoardItem } from "../../types";
+import "../boardChrome.css";
+import "./CommentsPanel.css";
 
 interface CommentsPanelProps {
   comments: BoardComment[];
@@ -61,18 +63,18 @@ export function CommentsPanel({
   const list = [...open, ...resolved];
 
   return (
-    <div className="board-panel board-panel--column pointer-events-auto absolute top-40 right-4 flex max-h-[calc(100%-6rem)] w-80 flex-col overflow-hidden rounded-lg bg-board-panel/95 shadow-xl backdrop-blur">
-      <header className="flex w-full shrink-0 items-center justify-between gap-2 border-board-ink/10 border-b px-3 py-2">
-        <span className="flex items-center gap-1.5 text-[10px] text-board-ink/70 uppercase tracking-[0.18em]">
+    <div className="board-panel board-panel--column panel-surface panel-docked comments-panel">
+      <header className="panel-header">
+        <span className="comments-panel__header-title">
           <HugeiconsIcon aria-hidden icon={Message02Icon} size={13} />
           Comments
-          <span className="text-white/40">
+          <span className="comments-panel__count">
             {open.length > 0 ? `· ${open.length} open` : ""}
           </span>
         </span>
         <button
           aria-label="Close comments"
-          className="grid size-6 place-items-center rounded text-board-ink/70"
+          className="panel-icon-button panel-icon-button--plain"
           onClick={onClose}
           type="button"
         >
@@ -80,9 +82,9 @@ export function CommentsPanel({
         </button>
       </header>
 
-      <ul className="min-h-0 flex-1 overflow-y-auto p-2">
+      <ul className="panel-list">
         {list.length === 0 ? (
-          <li className="px-2 py-6 text-center text-[11px] text-board-ink/70 leading-relaxed">
+          <li className="panel-empty">
             No comments yet. Click an image or node to leave one.
           </li>
         ) : (
@@ -90,34 +92,30 @@ export function CommentsPanel({
             const item = byId.get(comment.itemId);
             return (
               <li
-                className={`rounded-lg border px-2.5 py-2 ${
-                  comment.resolved
-                    ? "border-white/5 opacity-50"
-                    : "border-white/10"
+                className={`comments-panel__comment ${
+                  comment.resolved ? "comments-panel__comment--resolved" : ""
                 }`}
                 key={comment.id}
               >
-                <p className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-medium text-[12px] text-white">
+                <p className="comments-panel__byline">
+                  <span className="comments-panel__author">
                     {comment.authorName}
                   </span>
-                  <span className="shrink-0 text-[9px] text-white/40 tabular-nums">
+                  <span className="comments-panel__time">
                     {timeAgo(comment.createdAt)}
                   </span>
                 </p>
-                <p className="wrap-break-word mt-0.5 text-[12px] text-white/85 leading-relaxed">
-                  {comment.body}
-                </p>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-[9px] text-white/40 uppercase tracking-[0.14em]">
+                <p className="comments-panel__body">{comment.body}</p>
+                <div className="comments-panel__footer">
+                  <span className="comments-panel__subject">
                     on {itemLabel(item)}
                   </span>
                   {onResolve ? (
                     <button
-                      className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-[0.14em] transition-colors ${
+                      className={`comments-panel__resolve ${
                         comment.resolved
-                          ? "text-emerald-300/80 hover:text-emerald-300"
-                          : "text-white/40 hover:text-white"
+                          ? "comments-panel__resolve--resolved"
+                          : ""
                       }`}
                       onClick={() => onResolve(comment.id, !comment.resolved)}
                       type="button"

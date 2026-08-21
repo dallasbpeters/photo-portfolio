@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { MAX_RECIPE_NAME } from "../../../config/recipes.js";
-import "./panelChrome.css";
+import "../boardChrome.css";
 
 /**
  * Naming a recipe on the way to saving it.

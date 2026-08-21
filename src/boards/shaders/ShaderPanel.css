@@ -12,31 +12,17 @@
  * reference photograph makes the controls hard to read against it.
  */
 
+/* Paint comes from .panel-surface in boardChrome; this is only the shape. */
 .shader-panel {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  overflow: hidden;
   pointer-events: auto;
-  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
-  border: var(--border-hairline) solid
-    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
-  backdrop-filter: blur(var(--blur-sm));
 }
 
-.shader-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-block: calc(var(--spacing) * 2);
-  padding-inline: calc(var(--spacing) * 3);
-  border-bottom: var(--border-hairline) solid
-    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
-}
-
+/* A rung quieter and a rung smaller than .panel-header__title: this panel names
+   the node it is editing, which the node itself already says. */
 .shader-panel__title {
   font-size: var(--text-micro-2xs);
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);

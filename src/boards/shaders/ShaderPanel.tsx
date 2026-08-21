@@ -9,6 +9,7 @@ import type { BoardItem } from "../../types";
 import { SettingField } from "../nodes/SettingField";
 import { ShaderControls } from "./ShaderControls";
 import { isShaderConfig, type ShaderConfig } from "./shaderConfig";
+import "../boardChrome.css";
 import "./ShaderPanel.css";
 
 /**
@@ -62,8 +63,8 @@ export function ShaderPanel({
     : { layers: [] };
 
   return (
-    <div className="shader-panel">
-      <div className="shader-panel__header">
+    <div className="panel-surface shader-panel">
+      <div className="panel-header">
         <span className="shader-panel__title">
           {isHalftone ? "Halftone" : "Shader"}
         </span>

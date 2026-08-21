@@ -17,7 +17,7 @@ import {
   type NodeTypeId,
   type PortType,
 } from "../../../config/nodeTypes.js";
-import "./panelChrome.css";
+import "../boardChrome.css";
 
 /** What clicking a port can create, and what to wire it into. */
 export interface PortTarget {
@@ -125,7 +125,7 @@ export function PortMenu({
         type="button"
       />
       <div
-        className="panel-popover"
+        className="panel-surface panel-popover"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
         <p className="panel-popover__title">Send {portType} to</p>

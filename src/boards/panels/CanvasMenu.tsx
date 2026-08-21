@@ -6,7 +6,7 @@ import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
 import { CollectionPanel } from "./CollectionPanel";
 import { MenuRows } from "./MenuRows";
 import { RecipeNamePanel } from "./RecipeNamePanel";
-import "./panelChrome.css";
+import "../boardChrome.css";
 import "./CanvasMenu.css";
 
 /**
@@ -248,7 +248,7 @@ export function CanvasMenu({
         type="button"
       />
       <div
-        className="panel-popover canvas-menu"
+        className="panel-surface panel-popover canvas-menu"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
         {rows}

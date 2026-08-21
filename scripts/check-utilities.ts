@@ -17,6 +17,18 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
+/*
+ * Left alone on purpose.
+ *
+ * src/components/ui is shadcn. Its utility classes are the upstream API — a
+ * caller restyles one of these by passing utilities that `cn()` merges over the
+ * defaults — so converting them to BEM would fork the whole directory off
+ * upstream permanently and break the way every call site already customises
+ * them. The cost is ongoing; the benefit is tidiness in files nobody edits by
+ * hand. Excluded by the owner's decision, not by oversight.
+ */
+const EXCLUDED = ["src/components/ui"];
+
 /** The primitives in src/styles/primitives.css, which are not utilities. */
 const PRIMITIVES = new Set([
   "label",
@@ -38,23 +50,65 @@ const tsxUnder = (dir: string): string[] =>
     if (entry.isDirectory()) {
       return entry.name.startsWith(".") ? [] : tsxUnder(full);
     }
+    if (EXCLUDED.some((skip) => full.startsWith(skip))) {
+      return [];
+    }
     return entry.name.endsWith(".tsx") && !entry.name.includes(".test.")
       ? [full]
       : [];
   });
 
-/** A bare block name is fine when a stylesheet next to it defines the block. */
-const hasOwnStylesheet = (file: string, token: string): boolean => {
-  const dir = path.dirname(file);
-  try {
-    return readdirSync(dir)
-      .filter((name) => name.endsWith(".css"))
-      .some((name) =>
-        readFileSync(path.join(dir, name), "utf8").includes(`.${token}`)
-      );
-  } catch {
-    return false;
+/**
+ * Every class this project's own stylesheets define.
+ *
+ * Collected across all of src rather than per directory. The first version of
+ * this looked only beside the file, which was wrong the moment a shared
+ * stylesheet moved one level up — every shared class then read as a utility.
+ * Where a class is declared is not the question; whether we declare it is.
+ */
+const declaredClasses = (dir: string): Set<string> => {
+  const found = new Set<string>();
+  const walk = (at: string): void => {
+    for (const entry of readdirSync(at, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) {
+        continue;
+      }
+      const full = path.join(at, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.name.endsWith(".css")) {
+        for (const m of readFileSync(full, "utf8").matchAll(
+          /\.(-?[_a-zA-Z][\w-]*)/g
+        )) {
+          found.add(m[1]);
+        }
+      }
+    }
+  };
+  walk(dir);
+  return found;
+};
+
+const OURS = declaredClasses("src");
+
+/**
+ * A block whose elements we declare, even if the block needs no rules itself.
+ *
+ * `<div className="page content-page">` is correct BEM: the root carries the
+ * block name that `content-page__*` hangs off, and the block has nothing to
+ * declare because `.page` already paints it. Dropping the class to satisfy a
+ * checker would leave the root anonymous.
+ */
+const isOurBlock = (token: string): boolean => {
+  for (const declared of OURS) {
+    if (
+      declared.startsWith(`${token}__`) ||
+      declared.startsWith(`${token}--`)
+    ) {
+      return true;
+    }
   }
+  return false;
 };
 
 const root = process.argv[2] ?? "src";
@@ -72,7 +126,7 @@ for (const file of tsxUnder(root)) {
       if (!token || token.includes("__") || token.includes("--")) {
         continue;
       }
-      if (PRIMITIVES.has(token) || hasOwnStylesheet(file, token)) {
+      if (PRIMITIVES.has(token) || OURS.has(token) || isOurBlock(token)) {
         continue;
       }
       found.add(token);

@@ -1,0 +1,106 @@
+/*
+ * Everything on the board, in stacking order, reorderable by drag.
+ *
+ * Docked bottom-right above the zoom chrome, and tall: this is a list of every
+ * item on the board, and a short one would spend its life being scrolled. The
+ * bottom padding leaves room for the chrome it sits above, so the last row is
+ * never hidden behind it.
+ */
+
+.layers-panel {
+  right: calc(var(--spacing) * 4);
+  bottom: calc(var(--spacing) * 16);
+  width: calc(var(--spacing) * 60);
+  height: calc(var(--spacing) * 200);
+}
+
+.layers-panel__list {
+  min-height: 100%;
+  max-height: calc(var(--spacing) * 80);
+  padding: calc(var(--spacing) * 1.5);
+  padding-block-end: calc(var(--spacing) * 20);
+  overflow-y: auto;
+}
+
+/*
+ * One item.
+ *
+ * The whole row is the drag handle, not the grip glyph — a 6px target inside a
+ * list being reordered by hand is a target you miss.
+ */
+.layers-panel__row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  text-align: left;
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.layers-panel__row:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 5%, transparent);
+}
+
+.layers-panel__row--selected {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* Where the drop would land. A ring rather than a border, so the row does not
+   change size as the pointer moves over it. sky-300. */
+.layers-panel__row--over {
+  outline: var(--border-hairline) solid oklch(82.8% 0.111 230.318);
+  outline-offset: 0;
+}
+
+/* The row being carried. Faded so the gap it will leave is readable. */
+.layers-panel__row--dragging {
+  opacity: 0.5;
+}
+
+.layers-panel__grip {
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  cursor: grab;
+}
+
+/* A frame cannot be reordered — it holds its members rather than sitting
+   beside them — so its grip is shown inert rather than removed. */
+.layers-panel__grip--fixed {
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+  cursor: default;
+}
+
+.layers-panel__thumb {
+  flex-shrink: 0;
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  object-fit: cover;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/* Stands in for a thumbnail an item has no picture for — a note, a prompt. */
+.layers-panel__thumb--glyph {
+  display: grid;
+  place-items: center;
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+}
+
+/* `min-width: 0` so a long title truncates instead of pushing the row wider. */
+.layers-panel__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-md);
+  white-space: nowrap;
+}
