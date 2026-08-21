@@ -328,6 +328,15 @@ export function useGraphRun({
       // read as busy immediately, or a click looks like nothing happened and
       // gets repeated (each repeat being a fresh paid generation).
       setIsRunning(true);
+      // The node itself has to say so too, and this is the line that was
+      // missing. `setIsRunning` only moves the board's own control; the node's
+      // header reads from `runState`, which nothing touched until `runOne`
+      // below — so for the whole of `beforeRun` the node a person is watching
+      // sat on READY. Measured at five seconds for a board with a single
+      // Halftone node to render and upload, and it grows with every one added.
+      // Five seconds of a node insisting it is ready, immediately after being
+      // told to run, is indistinguishable from a click that did not land.
+      onPatch(itemId, { runError: null, runState: "running" });
       const controller = new AbortController();
       abort.current = controller;
       try {

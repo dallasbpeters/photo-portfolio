@@ -253,13 +253,25 @@ export const useBoardRun = (deps: BoardRunDeps) => {
    * would otherwise be invisible to it.
    */
   const flushBeforeRun = useCallback(async () => {
+    /*
+     * The board as it was when the flush began, held onto deliberately.
+     *
+     * Everything below renders and uploads, which takes seconds — and the board
+     * does not hold still for them. `pending.current.items` moves on during
+     * those awaits, so the array the three stages below are built from is a
+     * snapshot the moment it is taken, and every later comparison has to be
+     * against *this* rather than against `pending.current`, which is no longer
+     * the same list.
+     */
+    const started = pending.current.items;
+
     // Masks are rendered here rather than as they are painted. A stroke is one
     // of many, and uploading a bitmap per stroke would spend a request on every
     // brush movement — while a run is the first moment the mask has to exist as
     // a picture. `maskUrl` is cleared whenever the mask changes, so anything
     // still holding one is already current.
     const rendered = await Promise.all(
-      pending.current.items.map(async (item) => {
+      started.map(async (item) => {
         const mask = maskOf(item.config);
         const config = item.config ?? {};
         if (!(mask && item.imageUrl) || typeof config.maskUrl === "string") {
@@ -369,14 +381,50 @@ export const useBoardRun = (deps: BoardRunDeps) => {
       })
     );
 
-    const changed = composed.some(
-      (item, i) => item !== pending.current.items[i]
-    );
-    if (changed) {
-      setItems(composed);
+    /*
+     * What the three stages above actually produced, keyed by item.
+     *
+     * All any of them writes is `config` — a mask URL, a list of render URLs, a
+     * composite URL — so that is all that is carried forward. Collected as a
+     * map rather than kept as an array because the array is about to be laid
+     * over a *different* list.
+     */
+    const flushed = new Map<string, BoardItem["config"]>();
+    composed.forEach((item, i) => {
+      if (item !== started[i]) {
+        flushed.set(item.id, item.config);
+      }
+    });
+
+    if (flushed.size > 0) {
+      /*
+       * Merged onto the board as it is now, not written over it.
+       *
+       * `composed` was derived from `started`, and the renders and uploads
+       * above have taken seconds since. Handing that array to `setItems`
+       * republished every stale field in it along with the fresh URLs — so
+       * anything that changed during the flush was silently reverted. The
+       * visible case: a node is marked `running` the moment its Run button is
+       * pressed, the flush then finishes and puts it back to whatever it was
+       * before the click, and a node that is genuinely working reads as idle.
+       * A prompt typed or a node dragged during those seconds went the same
+       * way.
+       *
+       * `pending.current.items` is the freshest list there is — the ref is
+       * reassigned on every render — so the merge lands on top of those
+       * changes instead of underneath them.
+       */
+      const merged = pending.current.items.map((item) => {
+        const config = flushed.get(item.id);
+        // `undefined` means this item was untouched by the flush, which is not
+        // the same as a flush that produced no config — so the absence is
+        // tested rather than the truthiness.
+        return config === undefined ? item : { ...item, config };
+      });
+      setItems(merged);
       // Saved explicitly with these items: the run reads the board from the
       // database, and React has not re-rendered with them yet.
-      await save({ items: composed });
+      await save({ items: merged });
       return;
     }
     if (pending.current.isDirty) {
