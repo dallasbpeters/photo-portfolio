@@ -1,0 +1,193 @@
+/*
+ * One photograph at its own address: the picture, its title, and the way on.
+ *
+ * Composes the app primitives — `.page`, `.label`, `.quiet-link`, `.row`,
+ * `.stack`, `.hairline` — and states only what is particular to a photograph.
+ * The one primitive it deliberately does not take is `.page__body`: that is a
+ * measure for prose, and this page gives the window to the picture.
+ *
+ * Everything it does state is in tokens, so a site themed light in the database
+ * reads correctly. The utilities this replaced hard-coded `text-white/90`,
+ * `border-white/[0.07]` and `hover:bg-white hover:text-black`, all of which are
+ * right only because every site happens to be dark today.
+ */
+
+.photo-page__masthead {
+  padding-block-start: calc(var(--spacing) * 10);
+  padding-inline: calc(var(--spacing) * 8);
+}
+
+.photo-page__wordmark {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  transition: opacity 150ms ease-out;
+}
+
+.photo-page__wordmark:hover {
+  opacity: 0.8;
+}
+
+/*
+ * Narrower gutters than the masthead's on a phone. The photograph is the only
+ * thing here that wants the extra width, and it is the thing that suffers most
+ * for the lack of it.
+ */
+.photo-page__main {
+  padding-block: calc(var(--spacing) * 10);
+  padding-inline: calc(var(--spacing) * 4);
+}
+
+.photo-page__not-found {
+  padding-block: calc(var(--spacing) * 16);
+}
+
+.photo-page__notice-title {
+  font-size: var(--text-2xl);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+/*
+ * The way back, and on a missing photograph the only control on the page — so
+ * it is sized as a target rather than a link: 44px tall, the smallest box a
+ * thumb hits without aiming.
+ *
+ * Hover inverts to the site's own ink and ground. `hover:bg-white
+ * hover:text-black` read as an invert only while the site was dark; on a light
+ * one it was white on black over white.
+ *
+ * `align-self` because it is a flex item now: stretched, the border would run
+ * the width of the column and the button would read as a bar.
+ */
+.photo-page__back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 6);
+  border: 1px solid color-mix(in oklch, var(--foreground) 20%, transparent);
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.photo-page__back:hover {
+  color: var(--background);
+  background-color: var(--foreground);
+}
+
+.photo-page__article {
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+/*
+ * Capped in viewport height so the whole print and its title are in the window
+ * at once. Having to scroll to find out what you are looking at is worse than
+ * a smaller picture. `object-fit` rather than a crop: the frame is the
+ * photographer's, and this is not the place to second-guess it.
+ */
+.photo-page__image {
+  width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+}
+
+.photo-page__meta {
+  /*
+   * Not the row's centre: the left column runs three lines deep and the pager
+   * belongs level with the title rather than floating halfway down it.
+   */
+  align-items: flex-start;
+  margin-block-start: calc(var(--spacing) * 8);
+}
+
+.photo-page__title {
+  font-size: var(--text-xl);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+/*
+ * Shrink-wrapped to its text. It is a flex item now, and a stretched one would
+ * make the whole column width clickable — a link whose target extends into
+ * empty space beside the words it names.
+ */
+.photo-page__category {
+  align-self: flex-start;
+}
+
+.photo-page__share {
+  padding-block-start: calc(var(--spacing) * 2);
+}
+
+/*
+ * Either end of the run, shown rather than hidden. Dropping the dead direction
+ * would move the live one under the cursor between two photographs, which is
+ * the arrow key you are already holding.
+ */
+.photo-page__pager-empty {
+  color: color-mix(in oklch, var(--foreground) 15%, transparent);
+}
+
+.photo-page__exif {
+  /*
+   * Width and style only, so `.hairline` keeps the colour. The `border-block-
+   * start: 1px solid` shorthand would reset it to `currentcolor` — the rules
+   * carry equal specificity and this file loads after the primitives.
+   */
+  column-gap: calc(var(--spacing) * 6);
+  padding-block-start: calc(var(--spacing) * 5);
+  margin-block-start: calc(var(--spacing) * 8);
+  border-block-start-style: solid;
+  /*
+   * Width and style only, so `.hairline` keeps the colour. The `border-block-
+   * start: 1px solid` shorthand would reset it to `currentcolor` — the rules
+   * carry equal specificity and this file loads after the primitives.
+   */
+  border-block-start-width: 1px;
+}
+
+/*
+ * The one monospaced thing on the public site, and it earns it: shutter,
+ * aperture, ISO and focal length are numbers read against each other, and a
+ * proportional face gives the same reading a different width every time.
+ *
+ * Not `.label` despite the size and tracking — uppercasing this turns `1/250s
+ * f/2.8 24mm` into shouted nonsense.
+ */
+.photo-page__exif-item {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  letter-spacing: var(--tracking-widest);
+}
+
+.photo-page__footer {
+  padding-block: calc(var(--spacing) * 10);
+  padding-inline: calc(var(--spacing) * 8);
+  border-block-start-style: solid;
+  border-block-start-width: 1px;
+}
+
+/*
+ * The project's `md` is 786px, not Tailwind's 768 — see `--breakpoint-md` in
+ * index.css. Written out because a media query cannot read a custom property,
+ * so this is the one number here that has to be kept in step by hand.
+ */
+@media (width >= 786px) {
+  .photo-page__masthead,
+  .photo-page__main,
+  .photo-page__footer {
+    padding-inline: calc(var(--spacing) * 16);
+  }
+
+  .photo-page__title {
+    font-size: var(--text-2xl);
+  }
+}

@@ -1,3 +1,4 @@
+import "./HomePage.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InstagramIcon } from "@hugeicons-pro/core-stroke-standard";
 import { AnimatePresence, motion } from "motion/react";
@@ -157,68 +158,59 @@ export const HomePage = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-white selection:text-black">
+    <div className="page home-page">
       <Toaster position="top-center" theme="dark" />
 
       {isLoadingPhotos ? (
         <div
           aria-label="Loading portfolio"
           aria-live="polite"
-          className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="home-page__loading"
           role="status"
         >
-          <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
-            Loading portfolio…
-          </p>
+          <p className="label home-page__loading-label">Loading portfolio…</p>
         </div>
       ) : null}
 
       {loadError && !isLoadingPhotos ? (
-        <div
-          className="fixed top-24 left-1/2 z-90 max-w-md -translate-x-1/2 rounded border border-white/20 bg-black/90 px-6 py-4 text-center text-sm text-white/80"
-          role="alert"
-        >
+        <div className="home-page__error" role="alert">
           {loadError.message}
         </div>
       ) : null}
 
-      <header className="absolute top-0 right-0 left-0 z-50 px-12 pt-12 md:px-24">
-        <h1 className="font-bold text-3xl text-accent uppercase tracking-widest">
-          {settings.heroTitle}
-        </h1>
+      <header className="home-page__masthead">
+        <h1 className="home-page__wordmark">{settings.heroTitle}</h1>
         <SiteNav pages={pages} />
       </header>
-      <section className="relative z-40 flex h-screen w-full items-center overflow-hidden">
-        <div className="absolute top-0 left-0 z-40 flex h-full w-full flex-col justify-center px-8 md:px-24">
-          <div className="space-y-1 md:space-y-2">
+      <section className="home-page__hero">
+        <div className="home-page__hero-copy">
+          <div className="stack home-page__hero-list">
             {heroPhotos.map((photo, i) => (
               <button
-                className={`group flex cursor-pointer items-start gap-2 text-left transition-all duration-1000 ${
+                className={
                   heroIndex === i
-                    ? "text-white opacity-100 hover:text-accent"
-                    : "text-white/90 hover:text-accent"
-                }`}
+                    ? "home-page__hero-title home-page__hero-title--current"
+                    : "home-page__hero-title"
+                }
                 key={photo.id}
                 onClick={() => setHeroIndex(i)}
                 type="button"
               >
-                <span className="font-black text-xl uppercase leading-[0.85] tracking-tighter md:text-6xl">
+                <span className="home-page__hero-title-text">
                   {photo.title}
                 </span>
-                <sup className="mt-3 font-bold text-[10px] opacity-40 md:mt-6 md:text-sm">
-                  ({i + 1})
-                </sup>
+                <sup className="home-page__hero-index">({i + 1})</sup>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="absolute inset-0 z-4">
+        <div className="home-page__hero-media">
           {heroPhotos.length > 0 ? (
             <AnimatePresence mode="wait">
               <motion.div
                 animate={{ opacity: 1 }}
-                className="relative h-full w-full"
+                className="home-page__hero-frame"
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
                 key={heroIndex}
@@ -230,7 +222,7 @@ export const HomePage = () => {
                     heroPhotos[heroIndex]?.title ||
                     ""
                   }
-                  className="h-auto w-full object-cover"
+                  className="home-page__hero-image"
                   fetchPriority="high"
                   loading="eager"
                   lqip={heroPhotos[heroIndex]?.lqip}
@@ -239,25 +231,25 @@ export const HomePage = () => {
                   sizes="100vw"
                   src={heroPhotos[heroIndex]?.url ?? ""}
                 />
-                <div className="absolute inset-0 bg-black/20" />
+                <div className="home-page__hero-scrim" />
               </motion.div>
             </AnimatePresence>
           ) : (
-            <div aria-hidden className="absolute inset-0 bg-neutral-950" />
+            <div aria-hidden className="home-page__hero-empty" />
           )}
         </div>
       </section>
 
       <section
         aria-label="Portfolio grid"
-        className="relative z-50 mx-auto scroll-mt-6 px-4 py-24 md:px-8"
+        className="home-page__grid-section"
         id="portfolio-grid"
         ref={gridSectionRef}
       >
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+        <div className="home-page__grid">
           {filteredPhotos.map((photo, index) => (
             <motion.div
-              className="group aspect-video overflow-hidden bg-white/5 md:aspect-square"
+              className="home-page__tile"
               initial={{ opacity: 0 }}
               key={photo.id}
               transition={{ duration: 0.3 }}
@@ -268,7 +260,7 @@ export const HomePage = () => {
                   copied, and followed by crawlers. A plain click still opens the
                   lightbox, which is faster than a navigation. */}
               <Link
-                className="block h-full w-full cursor-pointer"
+                className="home-page__tile-link"
                 onClick={(e) => {
                   if (
                     e.metaKey ||
@@ -289,13 +281,11 @@ export const HomePage = () => {
               >
                 <OptimizedImage
                   alt={photo.alt || photo.title}
-                  // A screenshot cropped from its centre shows the middle of a
-                  // page — no header, no context, and usually nothing that
-                  // identifies it. Anchoring the crop top-left keeps the part
-                  // that says what the page is.
-                  className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${
-                    photo.showChrome ? "object-top-left" : ""
-                  }`}
+                  className={
+                    photo.showChrome
+                      ? "home-page__tile-image home-page__tile-image--chrome"
+                      : "home-page__tile-image"
+                  }
                   height={photo.height ?? undefined}
                   lqip={photo.lqip}
                   referrerPolicy="no-referrer"
@@ -309,19 +299,15 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <footer className="relative z-50 px-4 py-24 md:px-8">
-        <div className="mx-auto flex max-w-10xl flex-col items-end justify-between gap-12 md:flex-row">
-          <div className="space-y-6">
-            <h2 className="font-bold text-3xl uppercase tracking-widest">
-              {settings.ownerName}
-            </h2>
-            <p className="max-w-xs text-sm text-white/90 uppercase tracking-widest">
-              {settings.tagline}
-            </p>
-            <div className="flex gap-6">
+      <footer className="home-page__footer">
+        <div className="home-page__footer-inner">
+          <div className="stack home-page__footer-identity">
+            <h2 className="home-page__owner">{settings.ownerName}</h2>
+            <p className="label home-page__tagline">{settings.tagline}</p>
+            <div className="row home-page__socials">
               <a
                 aria-label={`${settings.ownerName} on Instagram`}
-                className="transition-colors hover:text-white/90"
+                className="home-page__social"
                 href={settings.instagramUrl}
               >
                 <HugeiconsIcon icon={InstagramIcon} size={20} />
@@ -329,7 +315,7 @@ export const HomePage = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded bg-background/80 p-4 text-[12px] text-white/90 uppercase tracking-[0.3em]">
+          <div className="stack label home-page__legal">
             <p>
               © {new Date().getFullYear()} {settings.ownerName}. All rights
               reserved.
@@ -340,10 +326,7 @@ export const HomePage = () => {
                 buy nothing. iOS needs it because it ignores the manifest's
                 Admin shortcut. */}
             {isInstalledApp ? (
-              <Link
-                className="text-white transition-colors hover:text-white"
-                to="/admin"
-              >
+              <Link className="home-page__admin-link" to="/admin">
                 Admin
               </Link>
             ) : null}
@@ -353,12 +336,16 @@ export const HomePage = () => {
 
       <nav
         aria-label="Filter portfolio by category"
-        className="fixed bottom-12 left-1/2 z-50 -translate-x-1/2"
+        className="home-page__filters"
       >
-        <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-6 rounded-xl border border-white/10 bg-white/5 px-8 py-3 shadow-2xl backdrop-blur-xl">
+        <div className="row hairline home-page__filter-bar row--wrap">
           <button
             aria-pressed={viewMode === "all"}
-            className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === "all" ? "text-white" : "text-white/90 hover:text-white/90"}`}
+            className={
+              viewMode === "all"
+                ? "label home-page__filter home-page__filter--current"
+                : "label home-page__filter"
+            }
             onClick={() => handleFilterClick("all")}
             type="button"
           >
@@ -371,7 +358,11 @@ export const HomePage = () => {
             return (
               <button
                 aria-pressed={viewMode === category}
-                className={`text-[10px] uppercase tracking-[0.3em] transition-colors ${viewMode === category ? "text-white" : "text-white/90 hover:text-white/90"}`}
+                className={
+                  viewMode === category
+                    ? "label home-page__filter home-page__filter--current"
+                    : "label home-page__filter"
+                }
                 key={category}
                 onClick={() => handleFilterClick(category)}
                 type="button"
@@ -401,7 +392,7 @@ export const HomePage = () => {
       {settings.showShader ? (
         <Suspense fallback={null}>
           <DPDLogoShader
-            className="absolute right-0 bottom-0 left-0 z-1 opacity-70"
+            className="home-page__shader"
             colorA="oklch(2.8% 0.13 160.46)"
             colorB={settings.theme.accent}
           />

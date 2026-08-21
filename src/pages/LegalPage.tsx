@@ -164,7 +164,7 @@ export function LegalPage({ kind }: LegalPageProps) {
         </div>
       </main>
 
-      <footer className="page__body hairline label label--quiet legal-page__footer">
+      <footer className="page__body hairline hairline--top label label--quiet legal-page__footer">
         <nav className="row row--between row--wrap">
           <span>{settings.shortName}</span>
           <span className="row">

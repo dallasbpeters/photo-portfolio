@@ -31,14 +31,37 @@
  * for anything longer than three words.
  */
 .label {
-  font-size: var(--text-xs);
+  /*
+   * Stated in absolute values, not the token scale, and that is deliberate.
+   *
+   * `--text-xs` is 0.528rem — 8.4px — which is the board's dense chrome, not a
+   * page. The pages have always set micro-caps at 10px with 0.18em of tracking,
+   * and reaching for the nearest token shrank every label on every converted
+   * page by a sixth and tightened its tracking by nearly half. That is a
+   * redesign wearing a refactor's clothes, which is worse than either.
+   *
+   * Here rather than at the call sites: one definition is the entire point, and
+   * an override per page would rebuild the utility soup with worse names.
+   */
+  font-size: 0.625rem;
   text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
+  letter-spacing: 0.18em;
 }
 
 .label--loud {
   font-weight: 500;
   color: var(--foreground);
+}
+
+/*
+ * Stamped: the widest tracking the app uses, for a word standing alone.
+ *
+ * Nine remaining uses across eight files, plus three on the home page. Over the
+ * bar on evidence rather than on feel — the count was taken before promoting it,
+ * and taken again here.
+ */
+.label--stamped {
+  letter-spacing: 0.3em;
 }
 
 .label--quiet {
@@ -73,8 +96,15 @@
   margin-inline: auto;
 }
 
+/*
+ * The reading measure.
+ *
+ * 42rem, which is what these pages already used. Not a `ch` figure: 68ch looked
+ * like the better answer and is eight rem narrower here, so it quietly reflowed
+ * every CMS page that had an author-placed image in it.
+ */
 .page__body--reading {
-  max-width: 68ch;
+  max-width: 42rem;
 }
 
 /*
@@ -99,6 +129,18 @@
   display: flex;
   gap: calc(var(--spacing) * 2);
   align-items: center;
+}
+
+/*
+ * The gap the app reaches for when two things are related but not touching.
+ * Nine remaining `gap-6`/`space-y-6` between them.
+ */
+.stack--roomy {
+  gap: calc(var(--spacing) * 6);
+}
+
+.row--wide {
+  gap: calc(var(--spacing) * 6);
 }
 
 .row--between {
@@ -130,4 +172,42 @@
  */
 .hairline {
   border-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+/*
+ * A hairline above, as a footer wears it.
+ *
+ * Width and style as longhands, never the `border-block-start` shorthand — the
+ * shorthand resets `border-color` to `currentcolor`, so a block that sets it
+ * alongside `.hairline` silently throws the hairline's colour away and draws the
+ * rule in whatever the text happens to be. That is exactly what the first
+ * converted page did.
+ */
+.hairline--top {
+  border-block-start-style: solid;
+  border-block-start-width: 1px;
+}
+
+/*
+ * One line, clipped.
+ *
+ * Thirty-three uses. Three declarations that are meaningless apart and always
+ * written together, which is the definition of a primitive — and the one place
+ * `overflow: hidden` is not hiding a bug.
+ */
+.truncate-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The floor for anything meant to be tapped.
+ *
+ * Twenty-three uses of `min-h-11`, which is 44px — the size a finger can hit
+ * without aiming, and the reason it is a floor rather than a height: a control
+ * with more in it should grow, not clip.
+ */
+.tap-target {
+  min-height: calc(var(--spacing) * 11);
 }

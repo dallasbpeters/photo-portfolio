@@ -1,3 +1,4 @@
+import "./ResetPasswordPage.css";
 import { KeyRound, ShieldAlert } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
@@ -54,40 +55,37 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
+    <div className="page reset-password-page">
       <Toaster position="top-center" theme="dark" />
-      <nav className="border-white/10 border-b bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
-        <div className="mx-auto flex min-h-16 items-center px-4 sm:min-h-20 sm:px-6">
-          <h1 className="truncate font-light text-lg uppercase tracking-[0.25em] sm:text-xl sm:tracking-[0.3em]">
+      <nav className="hairline reset-password-page__bar">
+        <div className="row reset-password-page__bar-inner">
+          <h1 className="reset-password-page__title">
             {settings.shortName} Admin
           </h1>
         </div>
       </nav>
 
-      <main className="flex flex-1 flex-col items-center justify-center space-y-6 px-4 py-16">
+      <main className="stack reset-password-page__main">
         {token ? (
           <>
-            <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-              <KeyRound
-                aria-hidden
-                className="size-10 text-white/90 sm:size-12"
-              />
+            <div className="hairline reset-password-page__medallion">
+              <KeyRound aria-hidden className="reset-password-page__icon" />
             </div>
-            <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl">
+            <h2 className="reset-password-page__heading">
               Choose a new password
             </h2>
 
             <form
               aria-label="Choose a new password"
-              className="w-full max-w-sm space-y-4"
+              className="stack reset-password-page__form"
               onSubmit={(e) => void handleSubmit(e)}
             >
               {/* Hidden username field so password managers attach the new
                   credential to the right account. */}
               <input autoComplete="username" name="username" type="hidden" />
-              <div className="space-y-2">
+              <div className="stack stack--tight">
                 <Label
-                  className="text-[10px] text-white/90 uppercase tracking-widest"
+                  className="label reset-password-page__label"
                   htmlFor="new-password"
                 >
                   New password
@@ -95,7 +93,7 @@ export function ResetPasswordPage() {
                 <Input
                   autoComplete="new-password"
                   autoFocus
-                  className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+                  className="hairline reset-password-page__input"
                   id="new-password"
                   minLength={MIN_PASSWORD_LENGTH}
                   onChange={(e) => setPassword(e.target.value)}
@@ -104,16 +102,16 @@ export function ResetPasswordPage() {
                   value={password}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="stack stack--tight">
                 <Label
-                  className="text-[10px] text-white/90 uppercase tracking-widest"
+                  className="label reset-password-page__label"
                   htmlFor="confirm-password"
                 >
                   Confirm password
                 </Label>
                 <Input
                   autoComplete="new-password"
-                  className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+                  className="hairline reset-password-page__input"
                   id="confirm-password"
                   minLength={MIN_PASSWORD_LENGTH}
                   onChange={(e) => setConfirm(e.target.value)}
@@ -136,23 +134,15 @@ export function ResetPasswordPage() {
           </>
         ) : (
           <>
-            <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
-              <ShieldAlert
-                aria-hidden
-                className="size-10 text-white/90 sm:size-12"
-              />
+            <div className="hairline reset-password-page__medallion">
+              <ShieldAlert aria-hidden className="reset-password-page__icon" />
             </div>
-            <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl">
-              Link not valid
-            </h2>
-            <p className="max-w-sm text-center text-[11px] text-white/90 uppercase leading-relaxed tracking-[0.15em]">
+            <h2 className="reset-password-page__heading">Link not valid</h2>
+            <p className="reset-password-page__note">
               This reset link is missing its token. Request a new one from the
               sign-in page.
             </p>
-            <Link
-              className="inline-flex min-h-12 items-center justify-center border border-white/20 px-8 text-[10px] uppercase tracking-widest transition-all duration-500 hover:bg-white hover:text-black"
-              to="/admin"
-            >
+            <Link className="label reset-password-page__cta" to="/admin">
               Go to sign in
             </Link>
           </>

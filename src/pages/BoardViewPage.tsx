@@ -1,3 +1,4 @@
+import "./BoardViewPage.css";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -37,20 +38,20 @@ function PublishedActions({
 }) {
   const { settings } = useSiteSettings();
   return (
-    <div className="flex items-center gap-2">
+    <div className="row">
       <button
-        className={`rounded border px-2.5 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-colors ${
+        className={
           commentMode
-            ? "border-amber-300/60 bg-amber-300/10 text-amber-300"
-            : "border-white/15 text-white/70 hover:text-white"
-        }`}
+            ? "board-view-page__action board-view-page__action--armed"
+            : "board-view-page__action"
+        }
         onClick={onToggleCommentMode}
         type="button"
       >
         {commentMode ? "Cancel comment" : "Leave a comment"}
       </button>
       <button
-        className="rounded border border-white/15 px-2.5 py-1.5 text-[10px] text-white/70 uppercase tracking-[0.16em] transition-colors hover:text-white"
+        className="board-view-page__action"
         onClick={onToggleComments}
         type="button"
       >
@@ -143,10 +144,8 @@ export function BoardViewPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-[12px] text-white/60 uppercase tracking-[0.2em]">
-          {error}
-        </p>
+      <div className="page board-view-page__error">
+        <p className="board-view-page__error-note">{error}</p>
       </div>
     );
   }
@@ -160,17 +159,13 @@ export function BoardViewPage() {
     // is front end: it belongs to the branded site, so a visitor sees it the way
     // it was shared whatever their machine prefers. The light/dark switch is for
     // the editor, which is a surface you work on rather than a page you are sent.
-    <div className="board-fixed flex h-screen flex-col overflow-hidden bg-background">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-white/10 border-b px-4 py-3">
-        <div className="min-w-0">
-          <h1 className="truncate font-light text-sm text-white/90 uppercase tracking-[0.2em]">
-            {board?.title ?? "Board"}
-          </h1>
-          <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
-            {settings.name}
-          </p>
+    <div className="board-fixed board-view-page">
+      <header className="row board-view-page__bar row--between row--wrap">
+        <div className="board-view-page__identity">
+          <h1 className="board-view-page__title">{board?.title ?? "Board"}</h1>
+          <p className="board-view-page__site">{settings.name}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="row">
           {board ? (
             <PublishedActions
               board={board}
@@ -183,7 +178,7 @@ export function BoardViewPage() {
         </div>
       </header>
 
-      <div className="relative min-h-0 flex-1">
+      <div className="board-view-page__canvas">
         <BoardCanvas
           // A visitor runs no tools, so there is no result to write back.
           boardId={null}

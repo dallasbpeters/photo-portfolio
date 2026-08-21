@@ -1,0 +1,402 @@
+/*
+ * The gallery: a masthead, a full-height hero of featured titles, the grid, a
+ * footer, and a filter bar fixed over all of it.
+ *
+ * Composes the app primitives — `.page`, `.label`, `.stack`, `.row`,
+ * `.hairline` — and states only what is particular to this page. Everything it
+ * states is in tokens: the utilities this replaced hard-coded `text-white/90`,
+ * `border-white/10` and `bg-black/80`, which are correct only because every
+ * site happens to be dark today, and the theme comes from the database.
+ *
+ * **Why the doubled selectors.** Where this page tunes a declaration a
+ * primitive already makes — a `.stack` with a tighter gap, a `.label` at a size
+ * of its own — the rule is written `.home-page__x.stack`, not `.home-page__x`.
+ * Single-class rules here lose. `main.tsx` imports `App.tsx` before
+ * `index.css`, so this file is bundled *ahead* of `primitives.css`, and at
+ * equal specificity the primitive wins on source order. Written the plain way,
+ * the hero titles took `.stack`'s 16px gap and the filter bar took `.label`'s
+ * `--text-xs`. LegalPage does not hit this only because it is a lazily loaded
+ * chunk, so its stylesheet arrives afterwards.
+ *
+ * The 0.3em tracking repeated on three labels below is the nearest thing here
+ * to a new primitive, and all three uses are on this page — so it stays local.
+ *
+ * Two things deliberately not carried over, both recorded at the rule that
+ * would have held them: a `max-w-10xl` that never existed, and hover states
+ * that were the same colour as their base.
+ */
+
+.home-page {
+  position: relative;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+}
+
+/* Ink on paper, inverted — the site's own two colours rather than the literal
+   white-on-black this was, so a light-themed site selects legibly. */
+.home-page::selection,
+.home-page ::selection {
+  color: var(--background);
+  background-color: var(--foreground);
+}
+
+.home-page__loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: color-mix(in oklch, var(--background) 80%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.home-page__loading-label.label {
+  font-size: 10px;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  letter-spacing: 0.3em;
+}
+
+.home-page__error {
+  position: fixed;
+  top: calc(var(--spacing) * 24);
+  left: 50%;
+  z-index: 90;
+  max-width: 28rem;
+  padding-block: calc(var(--spacing) * 4);
+  padding-inline: calc(var(--spacing) * 6);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+  text-align: center;
+  background-color: color-mix(in oklch, var(--background) 90%, transparent);
+  border: 1px solid color-mix(in oklch, var(--foreground) 20%, transparent);
+  border-radius: 0.25rem;
+  translate: -50%;
+}
+
+.home-page__masthead {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 50;
+  padding-block-start: calc(var(--spacing) * 12);
+  padding-inline: calc(var(--spacing) * 12);
+}
+
+.home-page__wordmark {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: var(--text-3xl--line-height);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+/* `100vh`, not the `100dvh` that `.page` uses: this is a picture bled to the
+   edges rather than a column of text, and it has always run under the phone's
+   browser chrome. */
+.home-page__hero {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.home-page__hero-copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding-inline: calc(var(--spacing) * 8);
+}
+
+/* Tighter than `.stack--tight`: the titles are set at 0.85 line-height and read
+   as one block of type, so the gap is nearly closed. */
+.home-page__hero-list.stack {
+  gap: calc(var(--spacing) * 1);
+}
+
+.home-page__hero-title {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: flex-start;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  text-align: left;
+  cursor: pointer;
+  transition: color 1000ms ease-out;
+}
+
+.home-page__hero-title:hover {
+  color: var(--accent);
+}
+
+.home-page__hero-title--current {
+  color: var(--foreground);
+}
+
+.home-page__hero-title-text {
+  font-size: 7vw;
+  font-weight: 900;
+  line-height: 0.85;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-tighter);
+}
+
+.home-page__hero-index {
+  margin-block-start: calc(var(--spacing) * 3);
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.4;
+}
+
+.home-page__hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+
+.home-page__hero-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.home-page__hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A scrim in the site's own ground rather than literal black, so a light site
+   dims the photograph instead of inverting the relationship. */
+.home-page__hero-scrim {
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(in oklch, var(--background) 20%, transparent);
+}
+
+.home-page__hero-empty {
+  position: absolute;
+  inset: 0;
+  background-color: var(--background);
+}
+
+.home-page__grid-section {
+  position: relative;
+  z-index: 50;
+  padding-block: calc(var(--spacing) * 24);
+  padding-inline: calc(var(--spacing) * 4);
+  margin-inline: auto;
+  scroll-margin-block-start: calc(var(--spacing) * 6);
+}
+
+.home-page__grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: calc(var(--spacing) * 2);
+}
+
+.home-page__tile {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+}
+
+.home-page__tile-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* The easing is Tailwind's `--ease-out` written out. That token is only emitted
+   while some file still uses the utility, and this page was the last one. */
+.home-page__tile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 300ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.home-page__tile:hover .home-page__tile-image {
+  scale: 1.05;
+}
+
+/* A screenshot cropped from its centre shows the middle of a page — no header,
+   no context, and usually nothing that identifies it. Anchoring the crop
+   top-left keeps the part that says what the page is. */
+.home-page__tile-image--chrome {
+  object-position: left top;
+}
+
+.home-page__footer {
+  position: relative;
+  z-index: 50;
+  padding-block: calc(var(--spacing) * 24);
+  padding-inline: calc(var(--spacing) * 4);
+}
+
+/*
+ * `max-w-10xl` sat in this element's utilities and never existed — Tailwind's
+ * max-width scale stops at 7xl, so the class emitted nothing and the row has
+ * always run the full width. Not reinstated here: capping it now would be a
+ * change rather than a conversion. `margin-inline` is kept for the same reason
+ * it was there.
+ */
+.home-page__footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 12);
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-inline: auto;
+}
+
+.home-page__footer-identity.stack {
+  gap: calc(var(--spacing) * 6);
+}
+
+.home-page__owner {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: var(--text-3xl--line-height);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.home-page__tagline.label {
+  max-width: 20rem;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.home-page__socials.row {
+  gap: calc(var(--spacing) * 6);
+}
+
+/* Dims on hover, which is the reverse of `.quiet-link` and almost certainly not
+   what anyone meant. Preserved exactly: it is the behaviour that shipped. */
+.home-page__social {
+  transition: color 150ms ease-out;
+}
+
+.home-page__social:hover {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.home-page__legal.label {
+  padding: calc(var(--spacing) * 4);
+  font-size: 12px;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  letter-spacing: 0.3em;
+  background-color: color-mix(in oklch, var(--background) 80%, transparent);
+  border-radius: 0.25rem;
+}
+
+.home-page__admin-link {
+  color: var(--foreground);
+}
+
+.home-page__filters {
+  position: fixed;
+  bottom: calc(var(--spacing) * 12);
+  left: 50%;
+  z-index: 50;
+  translate: -50%;
+}
+
+.home-page__filter-bar.row {
+  gap: calc(var(--spacing) * 6);
+  justify-content: center;
+  max-width: calc(100vw - 2rem);
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 8);
+  background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
+  border-style: solid;
+  /* Longhands, not `border: 1px solid`: the shorthand would reset the colour to
+     `currentcolor` and take the hairline off `.hairline`. */
+  border-width: 1px;
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow-2xl);
+  backdrop-filter: blur(24px);
+}
+
+/* No hover rule: the inactive button's `hover:text-white/90` was the value it
+   already had, so this bar has never responded to the pointer. Left alone —
+   giving it a hover state would be a change, not a conversion. */
+.home-page__filter.label {
+  font-size: 10px;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  letter-spacing: 0.3em;
+  transition: color 150ms ease-out;
+}
+
+.home-page__filter.home-page__filter--current {
+  color: var(--foreground);
+}
+
+.home-page__shader {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* 786px, not the 768px `md` usually means: this project sets
+   `--breakpoint-md: 786px`, and the utilities this replaced broke there. */
+@media (width >= 786px) {
+  .home-page__masthead,
+  .home-page__hero-copy {
+    padding-inline: calc(var(--spacing) * 24);
+  }
+
+  .home-page__hero-list.stack {
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .home-page__hero-title-text {
+    font-size: 5vw;
+  }
+
+  .home-page__hero-index {
+    margin-block-start: calc(var(--spacing) * 6);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+
+  .home-page__grid-section,
+  .home-page__footer {
+    padding-inline: calc(var(--spacing) * 8);
+  }
+
+  .home-page__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-page__tile {
+    aspect-ratio: 1;
+  }
+
+  .home-page__footer-inner {
+    flex-direction: row;
+  }
+}
+
+@media (width >= 1024px) {
+  .home-page__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
