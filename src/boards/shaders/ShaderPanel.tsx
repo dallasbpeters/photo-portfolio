@@ -9,6 +9,7 @@ import type { BoardItem } from "../../types";
 import { SettingField } from "../nodes/SettingField";
 import { ShaderControls } from "./ShaderControls";
 import { isShaderConfig, type ShaderConfig } from "./shaderConfig";
+import "./ShaderPanel.css";
 
 /**
  * The settings for the selected shader, beside it rather than on it.
@@ -61,19 +62,19 @@ export function ShaderPanel({
     : { layers: [] };
 
   return (
-    <div className="pointer-events-auto flex h-full w-full flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur">
-      <div className="flex items-center justify-between border-board-ink/10 border-b px-3 py-2">
-        <span className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
+    <div className="shader-panel">
+      <div className="shader-panel__header">
+        <span className="shader-panel__title">
           {isHalftone ? "Halftone" : "Shader"}
         </span>
-        <span className="flex items-center gap-1">
+        <span className="shader-panel__actions">
           {/* Two destinations, because they are different jobs. Export puts the
               picture on the board so the rest of the graph can wire out of it;
               Save puts it on the machine, which is what you want when the board
               is not where it is going next. */}
           {onDownload ? (
             <button
-              className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
+              className="shader-panel__action"
               disabled={saving}
               onClick={async () => {
                 setSaving(true);
@@ -91,7 +92,7 @@ export function ShaderPanel({
             </button>
           ) : null}
           <button
-            className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-board-ink/70 uppercase tracking-[0.14em] hover:text-board-ink disabled:opacity-40"
+            className="shader-panel__action"
             disabled={saving}
             onClick={async () => {
               setSaving(true);
@@ -111,7 +112,7 @@ export function ShaderPanel({
       </div>
       {/* overscroll-contain so reaching the end of the settings does not hand
           the wheel back to the canvas and start zooming mid-scroll. */}
-      <div className="space-y-2 overflow-y-auto overscroll-contain p-2">
+      <div className="shader-panel__body">
         {isHalftone && nodeType
           ? nodeType.settings.map((setting) => (
               <SettingField

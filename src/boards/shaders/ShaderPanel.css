@@ -1,0 +1,96 @@
+/*
+ * The shader settings, as a panel down the right of the canvas.
+ *
+ * A panel rather than a strip because it holds fifteen to twenty controls —
+ * anchored along the bottom it ran out of height and the last group could not
+ * be scrolled to. FloatingTools owns the column it sits in; this owns how it
+ * looks.
+ *
+ * Sits above the board on `--color-board-panel` rather than on the translucent
+ * surface the bottom strips use: those float over a few dozen pixels of canvas,
+ * this one covers the height of the screen, and a blur that deep over a
+ * reference photograph makes the controls hard to read against it.
+ */
+
+.shader-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+.shader-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.shader-panel__title {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.shader-panel__actions {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+/*
+ * Save and Export, which are different jobs.
+ *
+ * Export puts the picture on the board so the rest of the graph can wire out of
+ * it; Save puts it on the machine. Both spend seconds rendering, so both go
+ * disabled while one is running.
+ */
+.shader-panel__action {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-panel__action:hover {
+  color: var(--color-board-ink);
+}
+
+.shader-panel__action:disabled {
+  opacity: 0.4;
+}
+
+/*
+ * The scrolling body.
+ *
+ * `overscroll-behavior: contain` so reaching the end of the settings does not
+ * hand the wheel back to the canvas and start zooming mid-scroll.
+ */
+.shader-panel__body {
+  padding: calc(var(--spacing) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.shader-panel__body > * + * {
+  margin-block-start: calc(var(--spacing) * 2);
+}

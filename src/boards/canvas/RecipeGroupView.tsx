@@ -6,6 +6,7 @@ import {
   type UseVersions,
   versionLabel,
 } from "../geometry/recipeGroup";
+import "./RecipeGroupView.css";
 
 /**
  * The outline around the nodes a recipe put on the board.
@@ -54,9 +55,7 @@ export function RecipeGroupView({ items, uses }: RecipeGroupViewProps) {
           const stale = hasNewerVersion(use);
           return (
             <div
-              className={`pointer-events-none absolute rounded-lg border border-dashed ${
-                stale ? "border-amber-400/60" : "border-board-ink/25"
-              }`}
+              className={`recipe-group ${stale ? "recipe-group--stale" : ""}`}
               key={use.id}
               style={{
                 height: bounds.height,
@@ -69,8 +68,8 @@ export function RecipeGroupView({ items, uses }: RecipeGroupViewProps) {
               }}
             >
               <span
-                className={`absolute -top-5 left-0 whitespace-nowrap text-[11px] tracking-[0.08em] ${
-                  stale ? "text-amber-500" : "text-board-ink/45"
+                className={`recipe-group__label ${
+                  stale ? "recipe-group__label--stale" : ""
                 }`}
               >
                 {use.recipeName ?? "Recipe"} · {versionLabel(use)}

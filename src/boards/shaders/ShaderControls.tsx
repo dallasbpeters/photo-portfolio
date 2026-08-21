@@ -20,6 +20,7 @@ import {
   SOURCE_SHADERS,
   shaderMeta,
 } from "./shaderConfig";
+import "./ShaderControls.css";
 
 /**
  * The parameter panel for a shader, generated from the registry.
@@ -124,13 +125,13 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
   const [category, setCategory] = useState(categories[0] ?? "");
 
   return (
-    <div className="space-y-2 rounded border border-board-ink/15 bg-board-surface/60 p-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[9px] text-board-ink/40 uppercase tracking-[0.18em]">
+    <div className="shader-picker">
+      <div className="shader-picker__header">
+        <p className="shader-picker__title">
           {wanting === "source" ? "Something to draw" : "Something to apply"}
         </p>
         <button
-          className="text-[9px] text-board-ink/40 uppercase tracking-[0.14em] hover:text-board-ink"
+          className="shader-picker__cancel"
           onClick={onCancel}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -138,13 +139,11 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
           Cancel
         </button>
       </div>
-      <div className="flex flex-wrap gap-1">
+      <div className="shader-picker__categories">
         {categories.map((name) => (
           <button
-            className={`min-h-6 rounded px-1.5 text-[9px] tracking-[0.08em] transition-colors ${
-              category === name
-                ? "bg-board-ink/10 text-board-ink"
-                : "text-board-ink/40 hover:text-board-ink/80"
+            className={`shader-picker__category ${
+              category === name ? "shader-picker__category--on" : ""
             }`}
             key={name}
             onClick={() => setCategory(name)}
@@ -155,12 +154,12 @@ function Picker({ onCancel, onPick, wanting }: PickerProps) {
           </button>
         ))}
       </div>
-      <div className="max-h-40 space-y-0.5 overflow-y-auto">
+      <div className="shader-picker__list">
         {shaders
           .filter((shader) => shader.category === category)
           .map((shader) => (
             <button
-              className="w-full rounded px-2 py-1 text-left text-[11px] text-board-ink/75 hover:bg-board-ink/10 hover:text-board-ink"
+              className="shader-picker__option"
               key={shader.name}
               onClick={() => onPick(shader.name)}
               onPointerDown={(e) => e.stopPropagation()}
@@ -218,12 +217,12 @@ function LayerRow({
   const children = layer.children ?? [];
 
   return (
-    <div className="rounded border border-board-ink/10 bg-board-surface/40">
-      <div className="flex items-center gap-2 border-board-ink/10 border-b px-2 py-1">
+    <div className="shader-layer">
+      <div className="shader-layer__header">
         <button
           aria-expanded={isOpen}
           aria-label={`${isOpen ? "Collapse" : "Expand"} ${layer.name}`}
-          className="shrink-0 text-board-ink/40 hover:text-board-ink"
+          className="shader-layer__toggle"
           onClick={() => setIsOpen((open) => !open)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -233,16 +232,14 @@ function LayerRow({
             size={12}
           />
         </button>
-        <span className="truncate text-[10px] text-board-ink/70 uppercase tracking-[0.14em]">
-          {layer.name}
-        </span>
-        <span className="shrink-0 text-[8px] text-board-ink/25 uppercase tracking-widest">
+        <span className="shader-layer__name">{layer.name}</span>
+        <span className="shader-layer__kind">
           {effect ? "effect" : "source"}
         </span>
-        <span className="grow" />
+        <span className="shader-layer__spacer" />
         <button
           aria-label={`Move ${layer.name} up`}
-          className="text-board-ink/30 hover:text-board-ink disabled:opacity-20"
+          className="shader-layer__control"
           disabled={!canMoveUp}
           onClick={() => onMove(layer.id, -1)}
           onPointerDown={(e) => e.stopPropagation()}
@@ -252,7 +249,7 @@ function LayerRow({
         </button>
         <button
           aria-label={`Move ${layer.name} down`}
-          className="text-board-ink/30 hover:text-board-ink disabled:opacity-20"
+          className="shader-layer__control"
           disabled={!canMoveDown}
           onClick={() => onMove(layer.id, 1)}
           onPointerDown={(e) => e.stopPropagation()}
@@ -262,7 +259,7 @@ function LayerRow({
         </button>
         <button
           aria-label={`Remove ${layer.name}`}
-          className="text-board-ink/30 hover:text-board-ink"
+          className="shader-layer__control"
           onClick={() => onRemove(layer.id)}
           onPointerDown={(e) => e.stopPropagation()}
           type="button"
@@ -272,17 +269,15 @@ function LayerRow({
       </div>
 
       {effect && isOpen ? (
-        <div className="space-y-2 border-board-ink/10 border-b p-2">
-          <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
-            Applies to
-          </p>
+        <div className="shader-layer__children">
+          <p className="shader-layer__group-title">Applies to</p>
           {children.length === 0 && !wiredSource ? (
-            <p className="text-[10px] text-amber-300/60">
+            <p className="shader-layer__note shader-layer__note--warn">
               Empty — this effect has nothing to change.
             </p>
           ) : null}
           {children.length === 0 && wiredSource ? (
-            <p className="text-[10px] text-board-ink/45">
+            <p className="shader-layer__note">
               The picture wired into this item. Unplug it to change that.
             </p>
           ) : null}
@@ -308,9 +303,9 @@ function LayerRow({
               wanting={adding}
             />
           ) : (
-            <div className="flex gap-1">
+            <div className="shader-controls__add-row">
               <button
-                className="grow rounded border border-board-ink/15 py-1 text-[9px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
+                className="shader-controls__add"
                 onClick={() => setAdding("source")}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -318,7 +313,7 @@ function LayerRow({
                 + Source
               </button>
               <button
-                className="grow rounded border border-board-ink/15 py-1 text-[9px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
+                className="shader-controls__add"
                 onClick={() => setAdding("effect")}
                 onPointerDown={(e) => e.stopPropagation()}
                 type="button"
@@ -330,24 +325,26 @@ function LayerRow({
         </div>
       ) : null}
 
-      <div className={`space-y-3 p-2 ${isOpen ? "" : "hidden"}`}>
+      <div
+        className={`shader-layer__settings ${
+          isOpen ? "" : "shader-layer__settings--closed"
+        }`}
+      >
         {meta === null ? (
-          <p className="text-[10px] text-amber-300/70">
+          <p className="shader-layer__note shader-layer__note--missing">
             This shader is not in the installed package.
           </p>
         ) : null}
         {meta !== null && meta.props.length === 0 ? (
-          <p className="text-[10px] text-board-ink/25">
+          <p className="shader-layer__note shader-layer__note--quiet">
             No settings — this one only holds what is inside it.
           </p>
         ) : null}
         {meta === null
           ? null
           : groupProps(meta.props).map(({ group, props }) => (
-              <div className="space-y-2" key={group}>
-                <p className="text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
-                  {group}
-                </p>
+              <div className="shader-layer__prop-group" key={group}>
+                <p className="shader-layer__group-title">{group}</p>
                 {props.map((prop) => (
                   <Control
                     key={prop.key}
@@ -390,7 +387,7 @@ export function ShaderControls({
   const put = (next: ShaderLayer[]) => onChange({ ...config, layers: next });
 
   return (
-    <div className="space-y-3">
+    <div className="shader-controls">
       {layers.map((layer, index) => (
         <LayerRow
           canMoveDown={index < layers.length - 1}
@@ -424,9 +421,9 @@ export function ShaderControls({
           wanting={adding}
         />
       ) : (
-        <div className="flex gap-1">
+        <div className="shader-controls__add-row">
           <button
-            className="grow rounded border border-board-ink/15 py-1.5 text-[10px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
+            className="shader-controls__add shader-controls__add--root"
             onClick={() => setAdding("source")}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -434,7 +431,7 @@ export function ShaderControls({
             Add source
           </button>
           <button
-            className="grow rounded border border-board-ink/15 py-1.5 text-[10px] text-board-ink/60 uppercase tracking-[0.14em] hover:text-board-ink"
+            className="shader-controls__add shader-controls__add--root"
             onClick={() => setAdding("effect")}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -444,10 +441,11 @@ export function ShaderControls({
         </div>
       )}
 
-      <p className="text-[9px] text-board-ink/25 leading-relaxed">
-        A <span className="text-board-ink/50">source</span> draws a picture. An{" "}
-        <span className="text-board-ink/50">effect</span> changes whatever is
-        inside it — use Group to put several things inside one effect.
+      <p className="shader-controls__legend">
+        A <span className="shader-controls__legend-term">source</span> draws a
+        picture. An <span className="shader-controls__legend-term">effect</span>{" "}
+        changes whatever is inside it — use Group to put several things inside
+        one effect.
       </p>
     </div>
   );

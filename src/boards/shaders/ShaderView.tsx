@@ -9,6 +9,7 @@ import {
   type ShaderLayer,
   withImage,
 } from "./shaderConfig";
+import "./ShaderView.css";
 
 /**
  * A stack of shaders, rendered live on the canvas.
@@ -96,17 +97,13 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
   const Shader = componentFor("Shader");
 
   const framed = (content: ReactNode) => (
-    <div className="h-full w-full" ref={frame}>
+    <div className="shader-view" ref={frame}>
       {content}
     </div>
   );
 
   if (layers.length === 0) {
-    return framed(
-      <div className="flex h-full w-full items-center justify-center bg-board-panel text-[11px] text-board-ink/40">
-        No shader chosen
-      </div>
-    );
+    return framed(<div className="shader-view__state">No shader chosen</div>);
   }
 
   // An effect holding nothing renders as an empty box, which reads as a broken
@@ -115,14 +112,14 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
   const empty = emptyEffect(layers);
   if (empty) {
     return framed(
-      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-board-panel p-3 text-center">
-        <p className="text-[11px] text-board-ink/50">
-          <span className="text-board-ink/80">{empty.name}</span> is an effect —
-          it changes a picture, and it is empty.
+      <div className="shader-view__empty">
+        <p className="shader-view__empty-text">
+          <span className="shader-view__empty-name">{empty.name}</span> is an
+          effect — it changes a picture, and it is empty.
         </p>
         {onAddSource ? (
           <button
-            className="rounded border border-board-ink/20 px-2 py-1 text-[11px] text-board-ink/80 transition-colors hover:border-board-ink/50 hover:text-board-ink"
+            className="shader-view__empty-action"
             onClick={() => onAddSource(empty.id)}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
@@ -136,14 +133,14 @@ export function ShaderView({ config, imageUrl, onAddSource }: ShaderViewProps) {
 
   if (typeof Shader !== "function") {
     return framed(
-      <div className="flex h-full w-full items-center justify-center bg-board-panel text-[11px] text-red-300">
+      <div className="shader-view__state shader-view__state--error">
         Shader runtime unavailable
       </div>
     );
   }
 
   return framed(
-    <div className="h-full w-full overflow-hidden bg-board-surface">
+    <div className="shader-view__canvas">
       {/* Unmounted while off screen, which is the only way to stop it: the
           library's root component takes no `paused` prop, so a mounted shader
           animates on a GPU frame loop forever whether or not anyone can see
