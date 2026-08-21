@@ -1,9 +1,16 @@
-// JsonWebKey is imported from node:crypto explicitly: the DOM lib declares a
-// same-named but incompatible type, and tsconfig includes both libs.
-import {
-  createPublicKey,
-  type JsonWebKey as NodeJsonWebKey,
-} from "node:crypto";
+/*
+ * The key type is taken from `createPublicKey`'s own input rather than named
+ * directly.
+ *
+ * `node:crypto` used to export `JsonWebKey` at the top level and @types/node 26
+ * moved it inside a namespace, so importing it by name stopped compiling. Naming
+ * it through `JsonWebKeyInput["key"]` — which is still exported, and is by
+ * definition the type this call wants — cannot drift from the function it is
+ * being passed to. It also keeps the original reason for not using the global:
+ * the DOM lib declares a same-named, incompatible `JsonWebKey`, and tsconfig
+ * includes both libs.
+ */
+import { createPublicKey, type JsonWebKeyInput } from "node:crypto";
 import jwt, { type JwtHeader } from "jsonwebtoken";
 
 /** Google's published signing keys. */
@@ -104,7 +111,7 @@ export const verifyGoogleIdToken = async (
   try {
     const publicKey = createPublicKey({
       format: "jwk",
-      key: jwk as unknown as NodeJsonWebKey,
+      key: jwk as unknown as JsonWebKeyInput["key"],
     });
     payload = jwt.verify(idToken, publicKey, {
       algorithms: ["RS256"],

@@ -75,6 +75,14 @@ const sourcemapUpload = (): Plugin[] => {
     return [];
   }
 
+  /*
+   * Cast because the plugin ships rollup's `Plugin` and Vite 8 wants its own.
+   *
+   * The two are structurally the same but for the options bag on `resolveId`,
+   * which this plugin does not implement — so the mismatch is in the type only.
+   * Narrow and deliberate rather than widening the array's type, which would
+   * stop checking every other plugin here too.
+   */
   return [
     posthog({
       host: process.env.POSTHOG_HOST,
@@ -83,7 +91,7 @@ const sourcemapUpload = (): Plugin[] => {
       sourcemaps: {
         deleteAfterUpload: true,
       },
-    }),
+    }) as unknown as Plugin,
   ];
 };
 
