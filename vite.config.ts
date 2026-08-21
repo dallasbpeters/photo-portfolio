@@ -112,7 +112,11 @@ export default defineConfig(({ mode }) => {
   // this one exists to override.
   const site = process.env.VITE_SITE?.trim();
   if (site) {
-    config({ override: true, path: path.resolve(cwd, `.env.${site}.local`) });
+    config({
+      override: true,
+      path: path.resolve(cwd, `.env.${site}.local`),
+      quiet: true,
+    });
   }
   return {
     build: {

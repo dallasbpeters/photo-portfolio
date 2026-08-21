@@ -2,6 +2,16 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
 
+/*
+ * Guards one module instance, which under `vercel dev` is one request.
+ *
+ * Each API route is loaded in its own module registry, so this resets
+ * constantly and the files are read again per request. That was always true;
+ * dotenv 16 simply did not say so. Version 17 prints a banner per call, which
+ * turned an invisible cost into forty lines of log per page load — see `quiet`
+ * below. Re-reading four small files per request is not worth a cross-process
+ * cache, but announcing it forty times is worth suppressing.
+ */
 let ran = false;
 
 /**
@@ -40,7 +50,9 @@ export const bootstrapEnv = (): void => {
   for (const name of names) {
     const path = resolve(cwd, name);
     if (existsSync(path)) {
-      config({ override: true, path });
+      // quiet: dotenv 17 logs a banner and a marketing tip on every call, and
+      // this runs once per API request under `vercel dev`.
+      config({ override: true, path, quiet: true });
     }
   }
 };

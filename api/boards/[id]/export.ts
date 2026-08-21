@@ -3,6 +3,7 @@ import { getDownloadUrl, put } from "@vercel/blob";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { containedBy } from "../../../config/graph.js";
 import { getBearerUser } from "../../_lib/auth.js";
+import { blobToken } from "../../_lib/blobToken.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
@@ -191,7 +192,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const blob = await put(
       `boards/exports/${boardId}-${crypto.randomUUID()}.zip`,
       zipSync(entries),
-      { access: "public", contentType: "application/zip" }
+      {
+        access: "public",
+        contentType: "application/zip",
+        token: blobToken(),
+      }
     );
 
     return res.status(200).json({
