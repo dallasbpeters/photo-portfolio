@@ -224,6 +224,20 @@
   /* Kept as the hex it was, not converted: this is a straight rename, and a
      hand-converted oklch would be a colour change dressed as a refactor. */
   --color-admin-panel: #181818;
+
+  /*
+   * What "selected" is drawn in, on the canvas.
+   *
+   * blue-500, which the resize grips, the selection ring and the wire being
+   * drawn all used independently as a bare `blue-500`. One name, because they
+   * are one idea: this is the colour of the thing you are pointing at.
+   */
+  --color-selection: oklch(62.3% 0.214 259.815);
+  /* The same idea a shade brighter, for marks drawn *over* the board rather
+     than around an item: alignment guides and the marquee. sky-400 and
+     sky-300, which were bare utilities at five call sites. */
+  --color-selection-bright: oklch(74.6% 0.16 232.661);
+  --color-selection-soft: oklch(82.8% 0.111 230.318);
 }
 
 /*
@@ -459,6 +473,10 @@
   /* A single-pixel rule. Named because it is a decision, not an accident. */
   --border-hairline: 1px;
 
+  /* Long enough to read as the same wire moving, short enough not to lag the
+     node it follows. */
+  --duration-wire: 300ms;
+
   /*
    * What sits in front of what.
    *
@@ -476,6 +494,9 @@
   --z-popover: 50;
   --z-modal-scrim: 60;
   --z-modal: 70;
+  /* Wires sit above every node so a connection is never hidden behind the box
+     it runs to. Its own rung rather than a big number: this was `z-1000`. */
+  --z-wires: 1000;
 }
 
 /* Register --gradient-angle as a typed property so browsers can interpolate it */

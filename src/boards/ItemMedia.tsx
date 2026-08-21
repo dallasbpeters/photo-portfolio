@@ -5,6 +5,7 @@ import { useAutoplay } from "./autoplayPref";
 import { grownBucket, wantedWidth } from "./io/imageBucket";
 import { isVideoUrl } from "./io/isVideo";
 import { currentImageUrl } from "./itemOutput";
+import "./ItemMedia.css";
 
 /**
  * The picture — or the clip — a canvas item shows.
@@ -77,7 +78,7 @@ export function ItemMedia({
     return (
       <video
         autoPlay={playing}
-        className="h-full w-full object-cover"
+        className="item-media"
         height={item.height}
         loop
         muted
@@ -97,7 +98,7 @@ export function ItemMedia({
   return (
     <img
       alt=""
-      className={`h-full w-full ${isIcon ? "object-contain" : "object-cover"}`}
+      className={`item-media ${isIcon ? "item-media--contain" : ""}`}
       decoding="async"
       draggable={false}
       height={item.height}

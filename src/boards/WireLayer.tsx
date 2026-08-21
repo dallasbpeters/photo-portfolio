@@ -13,6 +13,7 @@ import {
   type Point,
   wirePath,
 } from "./geometry/portGeometry";
+import "./WireLayer.css";
 
 /** The wire currently being dragged out of a port, before it lands. */
 export interface DraftWire {
@@ -70,7 +71,7 @@ export function WireLayer({
       // overflow-visible because an SVG clips at its own viewport: a wire's
       // control points reach half the horizontal distance beyond each end, so a
       // curve between items near the canvas edge was cut off at the boundary.
-      className="pointer-events-none absolute inset-0 z-1000 overflow-visible"
+      className="wire-layer"
       fill="none"
       height={CANVAS_HEIGHT}
       role={wires.length === 0 ? undefined : "list"}
@@ -100,7 +101,7 @@ export function WireLayer({
           <g key={wire.id}>
             <title>{`${source.kind} → ${target.kind}`}</title>
             <path
-              className="transition-all duration-300"
+              className="wire-layer__wire"
               d={d}
               stroke={
                 isHovered
@@ -130,7 +131,7 @@ export function WireLayer({
             {isHovered && !readOnly ? (
               // biome-ignore lint/a11y/useSemanticElements: SVG has no button element, and an HTML one cannot be placed on a curve inside the canvas transform without being projected out of it
               <g
-                className="cursor-pointer"
+                className="wire-layer__hit"
                 onPointerDown={(e) => {
                   // The surface would otherwise read this as a background press
                   // and start panning the board.

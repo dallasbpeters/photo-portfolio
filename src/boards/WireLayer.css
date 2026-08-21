@@ -1,0 +1,27 @@
+/*
+ * The wires between nodes.
+ *
+ * Above everything, and deaf to the pointer except on the wires themselves: the
+ * layer spans the whole canvas, so a layer that took events would swallow every
+ * click on the board underneath. Each wire re-enables its own.
+ *
+ * `overflow: visible` because a wire's curve bows outside the box its endpoints
+ * describe, and clipping it cuts the middle out of the line.
+ */
+.wire-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-wires);
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Animated so a wire re-routing after a node moves reads as the same wire
+   rather than a new one appearing. */
+.wire-layer__wire {
+  transition: all var(--duration-wire) var(--ease-in-out);
+}
+
+.wire-layer__hit {
+  cursor: pointer;
+}

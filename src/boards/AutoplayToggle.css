@@ -1,0 +1,28 @@
+/*
+ * Whether the board's shaders animate.
+ *
+ * The same floating strip as the drawing toolbar it sits beside — see
+ * DrawToolbar.css. Wears its own class rather than sharing one because it is a
+ * single control, not a bar of them, and the shared strip carries a wrap and a
+ * gap it has no use for.
+ */
+.autoplay-toggle {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--blur-sm));
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.autoplay-toggle:hover {
+  color: var(--color-board-ink);
+}

@@ -1,4 +1,5 @@
 import type { ResizeHandle } from "./geometry/alignmentGuides";
+import "./ResizeHandles.css";
 
 interface ResizeHandlesProps {
   /** Cancels the canvas zoom, so a handle is the same size at every scale. */
@@ -19,40 +20,13 @@ interface ResizeHandlesProps {
  * dragging it toward the middle.
  */
 const CORNERS: {
-  cursor: string;
   handle: ResizeHandle;
   label: string;
-  origin: string;
-  place: string;
 }[] = [
-  {
-    cursor: "cursor-nwse-resize",
-    handle: "nw",
-    label: "Resize from the top left",
-    origin: "origin-top-left",
-    place: "top-0 -left-1.5 -translate-y-1/2",
-  },
-  {
-    cursor: "cursor-nesw-resize",
-    handle: "ne",
-    label: "Resize from the top right",
-    origin: "origin-top-right",
-    place: "top-0 -right-1.5 -translate-y-1/2",
-  },
-  {
-    cursor: "cursor-nesw-resize",
-    handle: "sw",
-    label: "Resize from the bottom left",
-    origin: "origin-bottom-left",
-    place: "bottom-0 -left-1.5 translate-y-1/2",
-  },
-  {
-    cursor: "cursor-nwse-resize",
-    handle: "se",
-    label: "Resize from the bottom right",
-    origin: "origin-bottom-right",
-    place: "-right-1.5 bottom-0 translate-y-1/2",
-  },
+  { handle: "nw", label: "Resize from the top left" },
+  { handle: "ne", label: "Resize from the top right" },
+  { handle: "sw", label: "Resize from the bottom left" },
+  { handle: "se", label: "Resize from the bottom right" },
 ];
 
 export function ResizeHandles({ chromeScale, onStart }: ResizeHandlesProps) {
@@ -61,7 +35,7 @@ export function ResizeHandles({ chromeScale, onStart }: ResizeHandlesProps) {
       {CORNERS.map((corner) => (
         <button
           aria-label={corner.label}
-          className={`absolute size-2 rounded-xs border border-blue-500 bg-blue-500 ${corner.place} ${corner.origin} ${corner.cursor}`}
+          className={`resize-handle resize-handle--${corner.handle}`}
           key={corner.handle}
           onPointerDown={(e) => {
             // The press belongs to the handle: without stopping it the item

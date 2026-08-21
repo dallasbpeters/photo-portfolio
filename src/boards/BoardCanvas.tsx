@@ -66,6 +66,7 @@ import { CanvasMenu, type CanvasMenuTarget } from "./panels/CanvasMenu";
 import { PortMenu, type PortTarget } from "./panels/PortMenu";
 import { useBoardTools } from "./tools/useBoardTools";
 import { WireLayer } from "./WireLayer";
+import "./BoardCanvas.css";
 
 const NO_WIRES: BoardWire[] = [];
 
@@ -975,23 +976,15 @@ export function BoardCanvas({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-board-ground">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={dotGridStyle}
-      />
+    <div className="board-canvas">
+      <div aria-hidden className="board-canvas__grid" style={dotGridStyle} />
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the pan/zoom surface is scenery, not a control — keyboard users reach the items themselves, which are focusable */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same — this element exists to receive pointer gestures and file drops aimed at the board as a whole */}
       <div
-        className={`h-full w-full touch-none ${
-          // No native cursor on the canvas: CustomCursor draws the pointer, and
-          // two of them is one too many. A `cursor-*` class here would win over
-          // `cursor: none` on `.board` however that rule were written, since it
-          // sits on the element the pointer is actually over — which is why
-          // hiding it in the stylesheet alone did nothing.
-          "cursor-none"
-        }`}
+        // The cursor is hidden in the stylesheet, and has to be: this is the
+        // element the pointer is over, so `cursor: none` on `.board` alone
+        // never wins. See .board-canvas__surface.
+        className="board-canvas__surface"
         onContextMenu={openMenu}
         onDragOver={
           onDropFiles || onDropImage
@@ -1131,7 +1124,7 @@ export function BoardCanvas({
         ref={containerRef}
       >
         <div
-          className="relative origin-top-left outline outline-board-ink/5"
+          className="board-canvas__layer"
           ref={view.layerRef}
           style={{
             height: CANVAS_HEIGHT,
@@ -1141,7 +1134,7 @@ export function BoardCanvas({
         >
           {guides.vertical.map((guide) => (
             <div
-              className="pointer-events-none absolute bg-sky-400"
+              className="board-canvas__guide"
               key={`v-${guide.position}-${guide.from}`}
               style={{
                 height: guide.to - guide.from,
@@ -1157,7 +1150,7 @@ export function BoardCanvas({
           ))}
           {guides.horizontal.map((guide) => (
             <div
-              className="pointer-events-none absolute bg-sky-400"
+              className="board-canvas__guide"
               key={`h-${guide.position}-${guide.from}`}
               style={{
                 height: 1 / view.viewport.scale,
@@ -1208,7 +1201,7 @@ export function BoardCanvas({
               under the pointer at any zoom. */}
           {marquee ? (
             <div
-              className="pointer-events-none absolute border border-sky-300 bg-sky-300/10"
+              className="board-canvas__marquee"
               style={{
                 height: Math.abs(marquee.to.y - marquee.from.y),
                 left: Math.min(marquee.from.x, marquee.to.x),
