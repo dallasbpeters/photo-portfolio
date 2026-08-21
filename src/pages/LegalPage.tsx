@@ -1,3 +1,4 @@
+import "./LegalPage.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useState } from "react";
@@ -123,68 +124,54 @@ export function LegalPage({ kind }: LegalPageProps) {
   const sections = kind === "privacy" ? PRIVACY_SECTIONS : TERMS_SECTIONS;
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="page legal-page">
       <Toaster position="top-center" theme="dark" />
 
-      <header className="px-8 pt-12 md:px-24">
-        <Link
-          className="font-bold text-3xl text-accent uppercase tracking-widest transition-opacity hover:opacity-80"
-          to="/"
-        >
+      <header className="page__body legal-page__masthead">
+        <Link className="legal-page__wordmark" to="/">
           {settings.heroTitle}
         </Link>
         <SiteNav pages={pages} />
       </header>
 
-      <main className="mx-auto max-w-2xl px-8 py-16 md:py-24">
-        <nav aria-label="Breadcrumb" className="mb-8">
-          <ol className="flex flex-wrap items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em]">
+      <main className="page__body page__body--reading legal-page__main">
+        <nav aria-label="Breadcrumb" className="legal-page__crumbs">
+          <ol className="row label label--quiet row--wrap">
             <li>
-              <Link className="transition-colors hover:text-white/90" to="/">
+              <Link className="quiet-link" to="/">
                 {settings.shortName}
               </Link>
             </li>
-            <li aria-hidden className="flex items-center">
+            <li aria-hidden className="row">
               <HugeiconsIcon icon={ArrowRight01Icon} size={11} />
             </li>
             <li aria-current="page">{title}</li>
           </ol>
         </nav>
 
-        <h1 className="mb-4 font-light text-3xl uppercase tracking-[0.16em] md:text-4xl">
-          {title}
-        </h1>
+        <h1 className="legal-page__title">{title}</h1>
         {updated ? (
-          <p className="mb-10 text-[10px] text-white/70 uppercase tracking-[0.18em]">
-            {updated}
-          </p>
+          <p className="label label--quiet legal-page__updated">{updated}</p>
         ) : null}
 
-        <div className="space-y-10">
+        <div className="stack stack--loose">
           {sections.map((section) => (
             <section key={section.heading}>
-              <h2 className="mb-3 font-normal text-accent text-sm uppercase tracking-[0.18em]">
-                {section.heading}
-              </h2>
-              <p className="text-[13px] text-white/90 leading-relaxed">
-                {section.body}
-              </p>
+              <h2 className="legal-page__heading">{section.heading}</h2>
+              <p className="legal-page__prose">{section.body}</p>
             </section>
           ))}
         </div>
       </main>
 
-      <footer className="border-white/10 border-t px-8 py-8 text-[10px] text-white/70 uppercase tracking-[0.18em]">
-        <nav className="flex flex-wrap items-center justify-between gap-4">
+      <footer className="page__body hairline label label--quiet legal-page__footer">
+        <nav className="row row--between row--wrap">
           <span>{settings.shortName}</span>
-          <span className="flex items-center gap-5">
-            <Link
-              className="transition-colors hover:text-white/90"
-              to="/privacy"
-            >
+          <span className="row">
+            <Link className="quiet-link" to="/privacy">
               Privacy
             </Link>
-            <Link className="transition-colors hover:text-white/90" to="/terms">
+            <Link className="quiet-link" to="/terms">
               Terms
             </Link>
           </span>

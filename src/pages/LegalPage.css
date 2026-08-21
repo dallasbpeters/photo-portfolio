@@ -1,0 +1,85 @@
+/*
+ * A legal page: a heading, a date, and prose in sections.
+ *
+ * Composes the app primitives — `.page`, `.page__body--reading`, `.label`,
+ * `.quiet-link`, `.hairline` — and states only what is particular to this page.
+ * Everything it does state is in tokens, so a site themed light in the database
+ * reads correctly; the utilities this replaced hard-coded `text-white/90`, which
+ * was right only because every site happens to be dark today.
+ */
+
+.legal-page__masthead {
+  padding-block-start: calc(var(--spacing) * 12);
+}
+
+.legal-page__wordmark {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  transition: opacity 150ms ease-out;
+}
+
+.legal-page__wordmark:hover {
+  opacity: 0.8;
+}
+
+.legal-page__main {
+  padding-block: calc(var(--spacing) * 16);
+}
+
+.legal-page__crumbs {
+  margin-block-end: calc(var(--spacing) * 8);
+}
+
+/*
+ * The title. Light and widely tracked rather than bold: this is a document
+ * nobody wants to read, and shouting at them about it does not help.
+ */
+.legal-page__title {
+  margin-block-end: calc(var(--spacing) * 4);
+  font-size: var(--text-3xl);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.legal-page__updated {
+  margin-block-end: calc(var(--spacing) * 10);
+}
+
+.legal-page__heading {
+  margin-block-end: calc(var(--spacing) * 3);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.legal-page__prose {
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.legal-page__footer {
+  padding-block: calc(var(--spacing) * 8);
+  border-block-start: 1px solid;
+}
+
+@media (width >= 48rem) {
+  .legal-page__masthead,
+  .legal-page__main {
+    padding-inline: calc(var(--spacing) * 24);
+  }
+
+  .legal-page__main {
+    padding-block: calc(var(--spacing) * 24);
+  }
+
+  .legal-page__title {
+    font-size: var(--text-4xl);
+  }
+}
