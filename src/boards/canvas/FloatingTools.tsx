@@ -7,6 +7,7 @@ import { MaskControls } from "../drawing/MaskControls";
 import type { MaskConfig } from "../drawing/mask";
 import { ShaderPanel } from "../shaders/ShaderPanel";
 import { wiredImageFor } from "./wiredPreviews";
+import "./FloatingTools.css";
 
 /**
  * The tools that float over the canvas, near whatever is selected.
@@ -55,8 +56,8 @@ export function FloatingTools({
 }: FloatingToolsProps) {
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
-        <div className="pointer-events-auto">
+      <div className="floating-tools-bottom">
+        <div className="floating-tools-bottom__content">
           <AutoplayToggle items={items} />
           <MaskControls onChange={onMaskChange} selected={selected} />
           <BoardDrawTools
@@ -70,7 +71,7 @@ export function FloatingTools({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute top-24 right-4 bottom-4 z-20 flex w-72 justify-end">
+      <div className="floating-tools-side">
         <ShaderPanel
           imageUrl={
             selected ? wiredImageFor(selected.id, { items, wires }) : null

@@ -1,0 +1,86 @@
+/*
+ * The board's bottom-right chrome: zoom, and the layers toggle.
+ *
+ * An instrument panel rather than page furniture, which is why the type here is
+ * the board's own `--text-xs` (8.4px) and not the 10px `.label` the pages use.
+ * The two are not interchangeable and this is the dense end of that split — see
+ * the note on `.label` in styles/primitives.css. The scale readout and Fit stay
+ * at 10px because that is what they have always been; they read as values, not
+ * as labels, and shrinking them to 8.4px to make the file tidy would be a
+ * redesign.
+ */
+
+.canvas-chrome {
+  position: absolute;
+  right: calc(var(--spacing) * 4);
+  bottom: calc(var(--spacing) * 4);
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  /* The strip floats over the canvas, so the gap around it must not eat
+     drags that belong to the board underneath. The bar re-enables itself. */
+  pointer-events: none;
+}
+
+.canvas-chrome__bar {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  padding: var(--spacing);
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
+}
+
+/*
+ * The three controls share everything but their layout box.
+ *
+ * 36px because it is the smallest square a finger reliably hits, and the board
+ * is used on a tablet as well as a desktop.
+ */
+.canvas-chrome__button {
+  min-width: calc(var(--spacing) * 9);
+  min-height: calc(var(--spacing) * 9);
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  transition: color 150ms ease;
+}
+
+.canvas-chrome__button:hover {
+  color: var(--color-board-ink);
+}
+
+.canvas-chrome__button--layers {
+  display: grid;
+  place-items: center;
+}
+
+/* Held lit while the panel it opens is showing. */
+.canvas-chrome__button--on {
+  color: var(--color-board-ink);
+}
+
+/* No min-width: it is as wide as the word, unlike the icon squares. */
+.canvas-chrome__button--fit {
+  min-width: auto;
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: 0.625rem;
+}
+
+/*
+ * The zoom percentage.
+ *
+ * Tabular figures so the strip does not shuffle sideways as the number goes
+ * from 23% to 100% and back, and a fixed width for the same reason.
+ */
+.canvas-chrome__scale {
+  width: calc(var(--spacing) * 12);
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  text-align: center;
+}
