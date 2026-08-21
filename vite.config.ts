@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { config } from "dotenv";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { applySiteOverrides, resolveSite } from "./config/sites";
+import { applySiteOverrides, resolveSite } from "./config/sites.ts";
 
 /**
  * Substitutes the %SITE_*% placeholders in index.html so one codebase produces
