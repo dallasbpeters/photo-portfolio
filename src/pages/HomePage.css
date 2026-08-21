@@ -355,9 +355,9 @@
   opacity: 0.7;
 }
 
-/* 786px, not the 768px `md` usually means: this project sets
-   `--breakpoint-md: 786px`, and the utilities this replaced broke there. */
-@media (width >= 786px) {
+/* `md` — `--breakpoint-md` in index.css, written out because a media query
+   cannot read a custom property. */
+@media (width >= 768px) {
   .home-page__masthead,
   .home-page__hero-copy {
     padding-inline: calc(var(--spacing) * 24);
