@@ -17,6 +17,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NodeTypeId } from "../../../config/nodeTypes.js";
 import { ALL_SHADERS } from "../shaders/shaderConfig";
+import "../boardChrome.css";
+import "./InsertPalette.css";
 
 /**
  * Everything that can be inserted, in one keyboard-reachable list.
@@ -251,18 +253,18 @@ export function InsertPalette({
   let lastSection = "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]">
+    <div className="modal-layer modal-layer--top">
       <button
         aria-label="Dismiss"
-        className="absolute inset-0 cursor-default bg-board-surface/50 backdrop-blur-sm"
+        className="modal-scrim"
         onClick={onDismiss}
         tabIndex={-1}
         type="button"
       />
 
-      <div className="relative w-lg max-w-[90vw] overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel/95 shadow-2xl">
+      <div className="modal-panel modal-panel--veiled insert-palette">
         <input
-          className="w-full border-board-ink/10 border-b bg-transparent px-4 py-3 text-[14px] text-board-ink outline-none placeholder:text-board-ink/30"
+          className="insert-palette__input"
           onChange={(e) => {
             setQuery(e.target.value);
             setActive(0);
@@ -273,11 +275,9 @@ export function InsertPalette({
           value={query}
         />
 
-        <div className="max-h-[50vh] overflow-y-auto py-1">
+        <div className="insert-palette__list">
           {entries.length === 0 ? (
-            <p className="px-4 py-6 text-center text-[12px] text-board-ink/35">
-              Nothing matches “{query}”.
-            </p>
+            <p className="insert-palette__empty">Nothing matches “{query}”.</p>
           ) : null}
 
           {entries.map((entry, index) => {
@@ -286,15 +286,11 @@ export function InsertPalette({
             return (
               <div key={`${entry.section}-${entry.label}`}>
                 {showSection ? (
-                  <p className="px-4 pt-2 pb-1 text-[9px] text-board-ink/30 uppercase tracking-[0.18em]">
-                    {entry.section}
-                  </p>
+                  <p className="insert-palette__section">{entry.section}</p>
                 ) : null}
                 <button
-                  className={`flex w-full items-center gap-2 px-4 py-2 text-left text-[13px] transition-colors ${
-                    index === active
-                      ? "bg-board-ink/10 text-board-ink"
-                      : "text-board-ink/70 hover:bg-board-ink/5"
+                  className={`insert-palette__option ${
+                    index === active ? "insert-palette__option--active" : ""
                   }`}
                   onClick={() => choose(index)}
                   onPointerEnter={() => setActive(index)}
@@ -308,7 +304,7 @@ export function InsertPalette({
           })}
         </div>
 
-        <p className="border-board-ink/10 border-t px-4 py-2 text-[10px] text-board-ink/25">
+        <p className="insert-palette__keys">
           ↑↓ to move · ↵ to insert · esc to close
         </p>
       </div>

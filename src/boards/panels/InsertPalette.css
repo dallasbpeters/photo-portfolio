@@ -1,0 +1,108 @@
+/*
+ * The command palette: type a few letters, insert the thing.
+ *
+ * Anchored a little down from the top rather than centred, because the list
+ * grows and shrinks as you type and a centred panel makes the first result — the
+ * one about to be chosen — move under the cursor as you filter.
+ *
+ * Height is capped against the viewport, not the content, so a broad query
+ * scrolls instead of running off the screen.
+ */
+
+.insert-palette {
+  width: 32rem;
+  max-width: 90vw;
+}
+
+/*
+ * The query field.
+ *
+ * No ground or corners of its own: it is the top of the panel, and a field
+ * inset inside a panel that exists only to hold it is a box in a box.
+ */
+.insert-palette__input {
+  width: 100%;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-micro-xl);
+  color: var(--color-board-ink);
+  outline: none;
+  background: transparent;
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.insert-palette__input::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}
+
+.insert-palette__list {
+  max-height: 50vh;
+  padding-block: var(--spacing);
+  overflow-y: auto;
+}
+
+.insert-palette__empty {
+  padding-block: calc(var(--spacing) * 6);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-align: center;
+}
+
+/* Which group the entries below belong to. Shown only when it changes. */
+.insert-palette__section {
+  padding-block-start: calc(var(--spacing) * 2);
+  padding-block-end: var(--spacing);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/*
+ * One entry.
+ *
+ * Deeper inset than a menu row, because the panel is wider and the section
+ * headings above align to the same edge.
+ */
+.insert-palette__option {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-micro-lg);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-align: left;
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.insert-palette__option:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 5%, transparent);
+}
+
+/*
+ * Where the keyboard is, which follows the pointer too.
+ *
+ * One highlight for both, so hovering and arrowing never disagree about which
+ * entry Enter will take.
+ */
+.insert-palette__option--active {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* The keys that drive it, said once at the bottom. */
+.insert-palette__keys {
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}

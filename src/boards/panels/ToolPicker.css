@@ -1,0 +1,175 @@
+/*
+ * Choosing a tool for an item: a searchable list, keyboard-driven.
+ *
+ * Its own surface most of the time, and no surface at all when the canvas menu
+ * embeds it — see the `--embedded` modifier at the bottom. That is the whole
+ * reason this file exists rather than the picker reusing `.panel-popover`: the
+ * same list has to be able to be a panel or to be part of one.
+ */
+
+.tool-picker {
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--spacing) * 72);
+}
+
+.tool-picker__search {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  padding-block-start: calc(var(--spacing) * 2.5);
+  padding-block-end: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+.tool-picker__search-icon {
+  flex-shrink: 0;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/* No border or ground of its own: the row it sits in is the field. */
+.tool-picker__input {
+  width: 100%;
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+  outline: none;
+  background: transparent;
+}
+
+.tool-picker__input::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+.tool-picker__list {
+  max-height: calc(var(--spacing) * 72);
+  overflow-y: auto;
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/*
+ * One tool.
+ *
+ * Top-aligned, not centred: a tool carries a name, a description and sometimes
+ * a reason it cannot be used, so the row is two or three lines tall and the
+ * icon belongs beside the first of them.
+ */
+.tool-picker__row {
+  display: flex;
+  gap: calc(var(--spacing) * 2.5);
+  align-items: flex-start;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  text-align: left;
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.tool-picker__row:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* Where the keyboard is. */
+.tool-picker__row--active {
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/*
+ * Cannot run on this item.
+ *
+ * Faded and inert, but still listed with its reason — a tool that vanished
+ * would leave someone hunting for it.
+ */
+.tool-picker__row--blocked {
+  opacity: 0.55;
+}
+
+.tool-picker__row--blocked:hover {
+  background: transparent;
+}
+
+/* Nudged down to sit on the name's baseline rather than above it. */
+.tool-picker__icon {
+  flex-shrink: 0;
+  margin-block-start: calc(var(--spacing) * 0.5);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+/* `min-width: 0` so a long description wraps instead of widening the row. */
+.tool-picker__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-picker__heading {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  align-items: center;
+}
+
+.tool-picker__name {
+  font-size: var(--text-micro-md);
+  font-weight: 600;
+  color: var(--color-board-ink);
+}
+
+/* A tag beside the name — which surface the tool runs on, what it costs. */
+.tool-picker__tag {
+  padding-block: 1px;
+  padding-inline: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-glyph);
+}
+
+/* Tighter leading than a paragraph: these are two lines at most, read as a
+   label rather than as prose. */
+.tool-picker__description {
+  display: block;
+  margin-block-start: calc(var(--spacing) * 0.5);
+  font-size: var(--text-micro-sm);
+  line-height: 1.375;
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+/* Why this tool is unavailable. amber-300. */
+.tool-picker__blocked-reason {
+  display: block;
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-xs);
+  line-height: 1.375;
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 80%, transparent);
+}
+
+.tool-picker__empty {
+  padding-block: calc(var(--spacing) * 4);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+.tool-picker__footer {
+  display: flex;
+  gap: var(--spacing);
+  padding-block-end: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 2);
+}
+
+/*
+ * Embedded in the canvas menu, which already is a panel.
+ *
+ * Strips the surface rather than the shape: the menu supplies border, ground,
+ * corners and blur, and two of them stacked reads as a panel inside a panel.
+ */
+.tool-picker--embedded {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}

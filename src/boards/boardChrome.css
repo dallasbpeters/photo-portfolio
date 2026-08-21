@@ -272,22 +272,128 @@
   letter-spacing: var(--tracking-micro-caps);
 }
 
-.panel-popover__option {
+/*
+ * A row in a menu.
+ *
+ * One definition and one variant, where there were two near-copies: the canvas
+ * menu's rows and the port menu's options were the same row 2px and 5% apart,
+ * which is the kind of difference nobody chose. The full-height row is the
+ * default because it is the one used fifteen times.
+ */
+.panel-row {
   display: flex;
   gap: calc(var(--spacing) * 2);
   align-items: center;
   width: 100%;
-  padding-block: calc(var(--spacing) * 2);
+  padding-block: calc(var(--spacing) * 2.5);
   padding-inline: calc(var(--spacing) * 3);
   font-size: var(--text-micro-md);
-  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  color: color-mix(in oklch, var(--color-board-ink) 85%, transparent);
   text-align: left;
   transition:
     color var(--default-transition-duration) var(--ease-in-out),
     background-color var(--default-transition-duration) var(--ease-in-out);
 }
 
-.panel-popover__option:hover {
+.panel-row:hover {
   color: var(--color-board-ink);
   background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* Tighter and a shade quieter, for a menu that is a list of destinations
+   rather than a list of actions. */
+.panel-row--compact {
+  padding-block: calc(var(--spacing) * 2);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+}
+
+/* Starts a new group of rows. */
+.panel-row--divided {
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* A note between groups of rows, explaining what the group below will do. */
+.panel-row-note {
+  padding-block-end: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/* A line saying what a setting will cost or change. amber-300. */
+.panel-warning {
+  display: block;
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 70%, transparent);
+}
+
+/*
+ * A modal, and the scrim under it.
+ *
+ * Four things wanted this: the element editor, the insert palette, the comment
+ * dialog and the SVG import dialog. Three of them had written it out.
+ *
+ * The scrim is a button, not a div, at every call site — a way out has to be
+ * reachable by keyboard, and `cursor: default` says it is a surface to leave
+ * through rather than a target to aim at.
+ */
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Anchored near the top instead of centred, for a palette that grows downward
+   as it filters — centring makes the first result jump as you type. */
+.modal-layer--top {
+  z-index: var(--z-popover);
+  align-items: flex-start;
+  padding-block-start: 12vh;
+}
+
+.modal-scrim {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+  background: color-mix(in oklch, var(--color-board-surface) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+}
+
+/* Over the board rather than over the admin: darker, because the canvas behind
+   it is busy. */
+.modal-scrim--heavy {
+  background: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+}
+
+/*
+ * The dialog itself.
+ *
+ * Width is the smaller of a fixed measure and most of the viewport, so it never
+ * has to be scrolled sideways on a phone. Each dialog states its own measure;
+ * the pattern is here.
+ */
+.modal-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-board-panel);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+}
+
+.modal-panel--column {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+/* Translucent over the blur, for a palette that wants the board readable
+   behind it. */
+.modal-panel--veiled {
+  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
 }

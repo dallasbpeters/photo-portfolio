@@ -20,6 +20,8 @@ import type { ToolContext } from "../tools/itemContext";
 import { blockedReason, searchTools, toolsForKind } from "../tools/registry";
 import { TOOL_GROUPS, type Tool, type ToolGroup } from "../tools/types";
 import { ToolPrompt } from "./ToolPrompt";
+import "../boardChrome.css";
+import "./ToolPicker.css";
 
 /**
  * Picking a tool: search, tabs, a list, and nothing else.
@@ -125,8 +127,7 @@ interface Row {
   tool: Tool;
 }
 
-const ROW_BASE =
-  "flex w-full items-start gap-2.5 px-3 py-2 text-left transition-colors";
+const ROW_BASE = "tool-picker__row";
 
 function ToolRow({
   active,
@@ -147,8 +148,8 @@ function ToolRow({
       aria-disabled={blocked !== null}
       aria-selected={active}
       className={`${ROW_BASE} ${
-        active ? "bg-board-ink/10" : ""
-      } ${blocked ? "opacity-55" : "hover:bg-board-ink/10"}`}
+        active ? "tool-picker__row--active" : ""
+      } ${blocked ? "tool-picker__row--blocked" : ""}`}
       disabled={blocked !== null}
       id={id}
       onClick={onPick}
@@ -158,33 +159,22 @@ function ToolRow({
     >
       <HugeiconsIcon
         aria-hidden
-        className="mt-0.5 shrink-0 text-board-ink/70"
+        className="tool-picker__icon"
         icon={iconFor(tool)}
         size={14}
       />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span
-            className="font-semibold text-[12px] text-board-ink"
-            data-tool-label={tool.id}
-          >
+      <span className="tool-picker__text">
+        <span className="tool-picker__heading">
+          <span className="tool-picker__name" data-tool-label={tool.id}>
             {tool.label}
           </span>
-          {planned ? (
-            <span className="rounded-sm bg-board-ink/10 px-1 py-px text-[9px] text-board-ink/50 uppercase tracking-[0.14em]">
-              Soon
-            </span>
-          ) : null}
+          {planned ? <span className="tool-picker__tag">Soon</span> : null}
         </span>
-        <span className="mt-0.5 block text-[11px] text-board-ink/50 leading-snug">
-          {tool.description}
-        </span>
+        <span className="tool-picker__description">{tool.description}</span>
         {/* The disabled reason, in the row rather than in a tooltip: a tooltip
             on a disabled control is unreachable by pointer and by keyboard. */}
         {blocked ? (
-          <span className="mt-1 block text-[10px] text-amber-300/80 leading-snug">
-            {blocked}
-          </span>
+          <span className="tool-picker__blocked-reason">{blocked}</span>
         ) : null}
       </span>
     </button>
@@ -200,7 +190,7 @@ function GroupTabs({
   onChange: (next: ToolGroup | null) => void;
 }) {
   return (
-    <div className="flex gap-1 px-2 pb-2">
+    <div className="tool-picker__footer">
       {[null, ...TOOL_GROUPS].map((candidate) => (
         <Button
           key={candidate ?? "all"}
@@ -252,8 +242,7 @@ const collecting = (context: ToolPickerContext): ToolPickerContext => ({
 });
 
 /** The picker's own chrome. */
-const SHELL =
-  "flex w-72 flex-col overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur";
+const SHELL = "panel-surface tool-picker";
 
 export function ToolPicker({
   className,
@@ -357,10 +346,10 @@ export function ToolPicker({
       // needs to turn it off. Concatenated classes would leave both.
       className={cn(SHELL, className)}
     >
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-2">
+      <div className="tool-picker__search">
         <HugeiconsIcon
           aria-hidden
-          className="shrink-0 text-board-ink/40"
+          className="tool-picker__search-icon"
           icon={Search01Icon}
           size={14}
         />
@@ -373,7 +362,7 @@ export function ToolPicker({
           aria-label="Search tools"
           autoComplete="off"
           autoFocus
-          className="w-full bg-transparent text-[12px] text-board-ink outline-none placeholder:text-board-ink/35"
+          className="tool-picker__input"
           onChange={(event) => {
             setQuery(event.target.value);
             setCursor(0);
@@ -396,14 +385,12 @@ export function ToolPicker({
 
       <div
         aria-label="Tools"
-        className="max-h-72 overflow-y-auto border-board-ink/10 border-t"
+        className="tool-picker__list"
         id={listId}
         role="listbox"
       >
         {rows.length === 0 ? (
-          <p className="px-3 py-4 text-[11px] text-board-ink/45">
-            No tools match “{query}”.
-          </p>
+          <p className="tool-picker__empty">No tools match “{query}”.</p>
         ) : (
           rows.map((row, index) => (
             <ToolRow

@@ -131,7 +131,7 @@ export function PortMenu({
         <p className="panel-popover__title">Send {portType} to</p>
         {targets.map((target) => (
           <button
-            className="panel-popover__option"
+            className="panel-row panel-row--compact"
             key={`${target.kind}-${target.nodeType ?? "frame"}`}
             onClick={() => onChoose(target)}
             type="button"
