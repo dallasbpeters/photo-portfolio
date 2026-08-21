@@ -121,6 +121,16 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       /**
+       * Stated rather than left to the default, which is already `true`.
+       *
+       * The stylesheets are the one part of this build whose minification
+       * nobody had written down, and "which CSS is live" is a question this
+       * project has had to answer while debugging before. Naming it here means
+       * the answer does not depend on a Vite default staying put, and a build
+       * that stops minifying becomes a diff rather than a discovery.
+       */
+      cssMinify: true,
+      /**
        * "hidden" rather than true: the maps are built, but no
        * `//# sourceMappingURL=` comment is written into the bundles.
        *
@@ -135,6 +145,23 @@ export default defineConfig(({ mode }) => {
        * the public site while still handing PostHog what it needs to de-minify.
        */
       sourcemap: "hidden",
+    },
+    css: {
+      /**
+       * Source maps for stylesheets, in dev.
+       *
+       * `build.sourcemap` above covers JavaScript only — Vite emits no `.css.map`
+       * for a production build at any setting, so this is the one place CSS maps
+       * can be turned on. Verified rather than assumed: a build with
+       * `sourcemap: true` writes 21 `.js.map` files and no `.css.map` at all.
+       *
+       * Worth having anyway, because dev is where the question gets asked. These
+       * stylesheets are bundled out of a dozen files into one, and without a map
+       * devtools attributes every rule to the bundle rather than to the file it
+       * was written in — which is exactly the "which CSS is live" problem, in
+       * the place where it is actually debugged.
+       */
+      devSourcemap: true,
     },
     plugins: [
       react(),
