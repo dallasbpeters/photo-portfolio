@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* The app-wide primitives. See src/styles/primitives.css for the strategy. */
+@import "./styles/primitives.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

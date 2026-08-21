@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 const PICKER_WIDTH = 220;
 const PICKER_HEIGHT = 300;
 
-import { isTransparent } from "./drawing";
+import { isTransparent } from "./drawing/drawing";
 
 /**
  * A color swatch that opens the project's SketchPicker.
@@ -37,7 +37,7 @@ interface ColorWellProps {
  * The alpha pair is dropped at full opacity so ordinary colors stay in the
  * familiar six-digit form, and carried whenever it would otherwise be lost.
  */
-const toHex = (color: ColorResult): string => {
+export const toHex = (color: ColorResult): string => {
   const alpha = color.rgb.a ?? 1;
   if (alpha >= 1) {
     return color.hex;
@@ -46,6 +46,23 @@ const toHex = (color: ColorResult): string => {
     .toString(16)
     .padStart(2, "0")}`;
 };
+
+/**
+ * What the picker should open on.
+ *
+ * A transparent value is a *sentinel* — NO_FILL is "#00000000", meaning "do not
+ * paint" — not an alpha somebody chose. Seeding the picker with it started the
+ * alpha slider at zero, so every colour picked came back as `#rrggbb00`, which
+ * isTransparent() reads as no paint: the shape stayed hollow and the well
+ * appeared to do nothing at all.
+ *
+ * Opening on opaque white instead makes picking a colour mean what it looks
+ * like it means. The swatch still shows the chequerboard, so "there is no fill
+ * yet" is not lost, and the alpha slider still reaches zero for anyone who
+ * genuinely wants to turn a fill off.
+ */
+export const pickerSeed = (value: string): string =>
+  isTransparent(value) ? "#ffffff" : value;
 
 export function ColorWell({ label, onChange, value }: ColorWellProps) {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
@@ -153,7 +170,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                 style={{ left: at.left, top: at.top }}
               >
                 <SketchPicker
-                  color={value}
+                  color={pickerSeed(value)}
                   onChange={(color: ColorResult) => onChange(toHex(color))}
                 />
                 {/* Sampling beats matching by eye when the color wanted is

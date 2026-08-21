@@ -166,6 +166,178 @@ export const JournalInput = z
   .object({ body: z.string().max(20_000) })
   .meta({ id: "JournalInput" });
 
+// ── Recipes ──────────────────────────────────────────────────────────────────
+
+export const DeclaredInput = z
+  .object({
+    key: z.string(),
+    label: z.string(),
+    nodeKey: z.string().describe("Which node in the template this feeds."),
+    port: z.string(),
+    required: z.boolean(),
+    type: z.string().describe("A PortType — see config/nodeTypes.ts."),
+  })
+  .meta({ id: "DeclaredInput" });
+
+export const RecipeVersion = z
+  .object({
+    createdAt: z.iso.datetime(),
+    declaredInputs: z.array(DeclaredInput),
+    id: z.uuid(),
+    nodeCount: z.int(),
+    unverified: z
+      .boolean()
+      .describe("Saved from a selection that had never run successfully."),
+    version: z.int(),
+  })
+  .meta({ id: "RecipeVersion" });
+
+export const Recipe = z
+  .object({
+    createdAt: z.iso.datetime(),
+    currentVersion: z.int().nullable(),
+    declaredInputs: z.array(DeclaredInput),
+    description: z.string().nullable(),
+    id: z.uuid(),
+    name: z.string(),
+    nodeCount: z.int(),
+    unverified: z.boolean(),
+    updatedAt: z.iso.datetime(),
+  })
+  .meta({ id: "Recipe" });
+
+export const RecipeInput = z
+  .object({
+    boardId: z.uuid().describe("The board the selection is read from."),
+    declaredInputs: z.array(DeclaredInput).optional(),
+    description: z.string().nullable().optional(),
+    itemIds: z
+      .array(z.string())
+      .describe("Ids only — the server reads the graph, never the client."),
+    name: z.string(),
+  })
+  .meta({ id: "RecipeInput" });
+
+export const RecipeUse = z
+  .object({
+    id: z.uuid(),
+    latestVersion: z
+      .int()
+      .nullable()
+      .describe("Null when the recipe has been deleted."),
+    pinnedVersion: z.int().describe("What this board was built against."),
+    recipeId: z.uuid().nullable(),
+    recipeName: z.string().nullable(),
+  })
+  .meta({ id: "RecipeUse" });
+
+export const RecipePlacement = z
+  .object({
+    boardId: z.uuid(),
+    x: z.number(),
+    y: z.number(),
+  })
+  .meta({ id: "RecipePlacement" });
+
+/**
+ * What produced an asset, kept legible.
+ *
+ * Stored beside the fingerprint in `board_items.result` — the fingerprint
+ * decides whether to re-run, this says what happened. Absent on anything made
+ * before the record existed, which the canvas says rather than inventing.
+ */
+export const Provenance = z
+  .object({
+    at: z.iso.datetime(),
+    brandKitVersionId: z.uuid().nullable().optional(),
+    inputs: z.array(z.string()),
+    model: z.string().nullable(),
+    prompt: z.string().nullable(),
+    recipeVersionId: z.uuid().nullable().optional(),
+    settings: z.record(z.string(), z.unknown()),
+  })
+  .meta({ id: "Provenance" });
+
+// ── Brand kits ───────────────────────────────────────────────────────────────
+
+export const BrandKitDoc = z
+  .object({
+    logos: z.array(
+      z.object({
+        clearSpace: z.number(),
+        label: z.string(),
+        minWidth: z.number(),
+        rules: z.string(),
+        url: z.string().describe("Ours — adopted into blob storage on save."),
+      })
+    ),
+    offBrand: z
+      .array(z.string())
+      .describe("Counter-examples, and the more precise half of a kit."),
+    onBrand: z.array(z.string()),
+    palette: z.array(
+      z.object({ name: z.string(), role: z.string(), value: z.string() })
+    ),
+    typefaces: z.array(
+      z.object({
+        name: z.string(),
+        role: z.string(),
+        weights: z.array(z.int()),
+      })
+    ),
+    voice: z.string().describe("Substance — it travels into the prompt."),
+  })
+  .meta({ id: "BrandKitDoc" });
+
+export const BrandKit = z
+  .object({
+    createdAt: z.iso.datetime(),
+    currentVersion: z.int().nullable(),
+    doc: BrandKitDoc,
+    id: z.uuid(),
+    name: z.string(),
+    updatedAt: z.iso.datetime(),
+  })
+  .meta({ id: "BrandKit" });
+
+export const BrandKitInput = z
+  .object({ doc: BrandKitDoc, name: z.string() })
+  .meta({ id: "BrandKitInput" });
+
+export const CheckFinding = z
+  .object({
+    detail: z.string(),
+    expected: z.string().optional(),
+    found: z.string().optional(),
+    kind: z.string().describe("A FindingKind — see config/brandCheck.ts."),
+    severity: z.enum(["pass", "warn", "fail"]),
+    source: z
+      .enum(["measured", "judged"])
+      .describe(
+        "Arithmetic, or a model's opinion. An override differs by which."
+      ),
+  })
+  .meta({ id: "CheckFinding" });
+
+export const CheckVerdict = z
+  .object({
+    acknowledgedAt: z.iso.datetime().nullable(),
+    assetUrl: z.string(),
+    boardId: z.uuid(),
+    createdAt: z.iso.datetime(),
+    findings: z.array(CheckFinding),
+    id: z.uuid(),
+    itemId: z.string().nullable(),
+    kitName: z.string().nullable(),
+    kitVersion: z.int(),
+    overrideReason: z
+      .string()
+      .nullable()
+      .describe("Recorded beside the findings, never in place of them."),
+    passed: z.boolean(),
+  })
+  .meta({ id: "CheckVerdict" });
+
 /** Named for the generated document. See NAMED_SCHEMAS in ./domain. */
 export const BOARD_SCHEMAS = {
   AiModel,
@@ -175,11 +347,23 @@ export const BOARD_SCHEMAS = {
   BoardCreate,
   BoardSummary,
   BoardUpdate,
+  BrandKit,
+  BrandKitDoc,
+  BrandKitInput,
+  CheckFinding,
+  CheckVerdict,
   DailyChallengeInfo,
   DailyChallengeJournal,
   DailyChallengeResponse,
+  DeclaredInput,
   Element,
   ElementInput,
   JournalInput,
+  Provenance,
+  Recipe,
+  RecipeInput,
+  RecipePlacement,
+  RecipeUse,
+  RecipeVersion,
   RunNodeResult,
 } as const;

@@ -1,0 +1,155 @@
+/*
+ * What a node has made: the version being shown, and every version before it.
+ *
+ * The gallery appears from the first image rather than the second, so it is
+ * visibly the place versions collect instead of appearing only once there
+ * happen to be two.
+ */
+
+.result-images,
+.result-images__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+.result-images__hero {
+  position: relative;
+}
+
+/*
+ * Draggable, because dragging a result onto the board is how it leaves the
+ * node — the grab cursor is the only thing that says so.
+ */
+.result-images__media {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: grab;
+  object-fit: contain;
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+/*
+ * Saving the picture is the point of having made it. On the image rather than
+ * in a footer, so it always refers to the version being looked at.
+ */
+.result-images__save {
+  position: absolute;
+  top: var(--spacing);
+  right: var(--spacing);
+  padding: calc(var(--spacing) * 1.5);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 70%,
+    transparent
+  );
+  border-radius: var(--radius-xs);
+  opacity: 0;
+  backdrop-filter: blur(4px);
+  transition: opacity 150ms ease-out;
+}
+
+.result-images__hero:hover .result-images__save,
+.result-images__save:focus-visible {
+  opacity: 1;
+}
+
+.result-images__save:hover {
+  color: var(--color-board-ink);
+}
+
+.result-images__bar {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-images__count {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.result-images__send {
+  font-size: 9px;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.result-images__send:hover {
+  color: var(--color-board-ink);
+}
+
+.result-images__strip {
+  display: flex;
+  gap: var(--spacing);
+  padding-block-end: var(--spacing);
+  overflow-x: auto;
+}
+
+.result-images__version {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/*
+ * Which version the node is showing, and handing downstream. A border rather
+ * than a badge: the picture is the thing, and the mark belongs on its edge.
+ */
+.result-images__pick {
+  display: block;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+  transition: border-color 150ms ease-out;
+}
+
+.result-images__pick:hover {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.result-images__pick--chosen {
+  border-color: var(--color-sky-600);
+}
+
+.result-images__thumb {
+  width: 3rem;
+  height: 3rem;
+  cursor: grab;
+  object-fit: cover;
+}
+
+.result-images__remove {
+  position: absolute;
+  top: calc(var(--spacing) * -1);
+  right: calc(var(--spacing) * -1);
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 90%,
+    transparent
+  );
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.result-images__version:hover .result-images__remove,
+.result-images__remove:focus-visible {
+  opacity: 1;
+}
+
+.result-images__remove:hover {
+  color: var(--color-red-600);
+}

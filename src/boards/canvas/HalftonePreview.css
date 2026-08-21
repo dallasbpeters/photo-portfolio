@@ -1,0 +1,46 @@
+/*
+ * The halftone as it is drawn on the node.
+ *
+ * A fixed aspect rather than the node's full height: the node body scrolls, and
+ * a child sized to a scrolling parent has no height to render into.
+ */
+
+.halftone-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+.halftone-preview__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border-radius: var(--radius-xs);
+}
+
+.halftone-preview__empty,
+.halftone-preview__count {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.halftone-preview__empty {
+  padding: calc(var(--spacing) * 2) var(--spacing);
+}
+
+.halftone-preview__count {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.halftone-preview__failed {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-red-600);
+}

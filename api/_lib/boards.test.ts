@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { TextStyle } from "../../config/textStyle.js";
+import { rowToItemDto } from "./boardDto.js";
+import { parseIncomingItem } from "./boardItemParse.js";
 import type { BoardItemRow } from "./boards.js";
-import { parseIncomingItem, rowToItemDto } from "./boards.js";
 
 /**
  * A text item's appearance, all the way to the database and back.

@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { boardsApi } from "../../services/portfolioService";
 import type { BoardItem } from "../../types.js";
-import { maskOf } from "../mask.js";
+import { maskOf } from "../drawing/mask.js";
 import { promptOf } from "./itemContext.js";
 import { maskBitmapUrl } from "./maskBitmap.js";
 import type { RunTool } from "./types.js";

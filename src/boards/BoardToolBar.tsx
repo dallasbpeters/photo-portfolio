@@ -2,14 +2,15 @@ import type { RefObject } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { BoardItem } from "../types";
-import { isVideoUrl } from "./isVideo";
-import { PANEL_GAP } from "./panelPlacement";
-import { ToolPicker } from "./ToolPicker";
-import { ToolPrompt } from "./ToolPrompt";
+import { PANEL_GAP } from "./geometry/panelPlacement";
+import { downloadImage } from "./io/downloadImage";
+import { isVideoUrl } from "./io/isVideo";
+import { ToolPicker } from "./panels/ToolPicker";
+import { ToolPrompt } from "./panels/ToolPrompt";
+import { useAnchoredPanel } from "./panels/useAnchoredPanel";
 import { imageOf, toolContextOf } from "./tools/itemContext";
 import { blockedReason, toolsForKind } from "./tools/registry";
 import type { Tool } from "./tools/types";
-import { useAnchoredPanel } from "./useAnchoredPanel";
 
 /**
  * The tools for the item you have selected, on the item.
@@ -82,6 +83,14 @@ export function BoardToolBar({
   const above = placement === "above";
 
   const context = toolContextOf(item);
+  /*
+   * The picture as it is now, which is the one worth saving.
+   *
+   * imageOf follows the same precedence the canvas draws with, so an item that
+   * has been rotated, retouched or generated into saves the version on screen
+   * rather than the one it arrived as.
+   */
+  const shown = imageOf(item);
   // A clip has a URL and so passes `hasImage`, but the photo editor draws its
   // source into a canvas — handed an mp4 it would open on nothing.
   const canEditByHand =
@@ -189,6 +198,31 @@ export function BoardToolBar({
             </Button>
           ))
         )}
+        {/*
+         * Saving the picture, on the picture.
+         *
+         * There was no way to get an ordinary image off a board at all. A
+         * node's own result had a download button and nothing else did, so a
+         * photograph, a reference, a drawing, or anything dragged in from
+         * Drive could be looked at and worked on and never taken away — and
+         * the way out was a right-click, which the canvas overrides.
+         *
+         * First in the bar, before the tools. It is the one action here that
+         * does not change the item, and the only one anybody needs when they
+         * have finished rather than started.
+         */}
+        {shown ? (
+          <Button
+            onClick={() => {
+              void downloadImage(shown, item.body ?? "image");
+            }}
+            size="xs"
+            title="Save this picture"
+            variant="ghost"
+          >
+            Save
+          </Button>
+        ) : null}
         {/* Beside the AI tools rather than buried in the picker: the choice
             between describing a change and making it by hand is the first one,
             not one of thirty. Only for items that have a picture to open. */}

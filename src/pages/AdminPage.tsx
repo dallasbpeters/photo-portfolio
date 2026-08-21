@@ -1,3 +1,4 @@
+import "./AdminPage.css";
 import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Route, Routes } from "react-router-dom";
@@ -40,11 +41,9 @@ const SECTIONS = [
 ];
 
 const sectionClass = ({ isActive }: { isActive: boolean }) =>
-  `inline-flex min-h-11 items-center whitespace-nowrap border-b-2 px-1 font-medium text-[10px] uppercase tracking-[0.18em] transition-colors sm:text-[11px] ${
-    isActive
-      ? "border-white text-white"
-      : "border-transparent text-white/50 hover:text-white/90"
-  }`;
+  isActive
+    ? "admin-page__section admin-page__section--current"
+    : "admin-page__section";
 
 export function AdminPage() {
   const { settings } = useSiteSettings();
@@ -95,27 +94,20 @@ export function AdminPage() {
 
   if (authState === "checking") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="animate-pulse text-[10px] text-white/40 uppercase tracking-[0.25em]">
-          Checking…
-        </p>
+      <div className="page admin-page__checking">
+        <p className="admin-page__checking-note">Checking…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="page admin-page">
       <Toaster position="top-center" theme="dark" />
-      <nav className="fixed top-0 left-0 z-50 w-full border-white/10 border-b bg-black/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
-        <div className="mx-auto flex min-h-16 items-center justify-between gap-4 px-4 py-3 sm:min-h-20 sm:px-6 sm:py-0">
-          <h1 className="truncate font-light text-lg sm:text-xl">
-            {settings.shortName} Admin
-          </h1>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              className="inline-flex min-h-11 items-center justify-center px-2 font-medium text-[10px] text-white/90 uppercase tracking-[0.15em] transition-colors hover:text-white sm:text-[11px] sm:tracking-[0.2em]"
-              to="/"
-            >
+      <nav className="hairline admin-page__bar">
+        <div className="row admin-page__bar-inner row--between">
+          <h1 className="admin-page__title">{settings.shortName} Admin</h1>
+          <div className="row admin-page__bar-actions">
+            <Link className="quiet-link admin-page__back" to="/">
               Back to site
             </Link>
             {isAuthenticated ? (
@@ -130,7 +122,7 @@ export function AdminPage() {
         {/* Hidden until signed in: section links behind a login screen are an
             invitation to a page that will only bounce you back here. */}
         {isAuthenticated ? (
-          <div className="mx-auto flex items-center gap-5 overflow-x-auto px-4 sm:gap-7 sm:px-6">
+          <div className="row admin-page__sections">
             {SECTIONS.map((section) => (
               <NavLink
                 className={sectionClass}
@@ -145,7 +137,7 @@ export function AdminPage() {
         ) : null}
       </nav>
 
-      <main className="justify-content-center mx-auto grid w-full grid-cols-1 place-items-center px-4 pt-28 pb-[max(4rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pt-36 sm:pb-20">
+      <main className="admin-page__main">
         <ConfirmProvider>
           <AdminGate isAuthenticated={isAuthenticated} onLogin={handleLogin}>
             <Routes>
@@ -159,13 +151,13 @@ export function AdminPage() {
               <Route element={<PagesPanel />} path="pages/:slug" />
               <Route
                 element={
-                  <div className="mx-auto w-full">
-                    <div className="grid items-start gap-8 lg:grid-cols-2">
+                  <div className="admin-page__settings">
+                    <div className="admin-page__settings-grid">
                       <SiteSettingsPanel />
-                      <div className="space-y-8">
-                        <Card className="border-white/10 bg-white/2">
+                      <div className="stack stack--loose">
+                        <Card className="admin-page__card">
                           <CardHeader>
-                            <CardTitle className="font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+                            <CardTitle className="admin-page__card-title">
                               Password
                             </CardTitle>
                           </CardHeader>

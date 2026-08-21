@@ -1,6 +1,8 @@
 import { containedBy } from "../../config/graph.js";
-import { DEFAULT_PLACEHOLDER, HEX_COLOUR } from "../../config/nodeTypes.js";
+import { DEFAULT_PLACEHOLDER } from "../../config/nodes/iterate.js";
+import { HEX_COLOUR } from "../../config/nodes/palette.js";
 import type { BoardItem, BoardItemVariation, BoardWire } from "../types";
+import { parseItems } from "./listItems";
 
 /**
  * Drag-and-drop type for an image pulled off a node.
@@ -149,6 +151,9 @@ export const outputListOf = (
   }
   if (item.nodeType === "iterate") {
     return iteratedTextOf(item, graph, depth);
+  }
+  if (item.nodeType === "list") {
+    return parseItems(item.config?.items);
   }
   if (item.nodeType === "palette") {
     return paletteOutputsOf(item.config ?? {});
@@ -370,6 +375,22 @@ export const outputImagesOf = (
   return one ? [one] : [];
 };
 
+/**
+ * The picture an item currently *is*, rather than the one it arrived as.
+ *
+ * A tool reads the newest version as its input and writes the next one to
+ * `result`, so anything that only ever reads `imageUrl` sees the original for
+ * ever. ItemMedia learned this when Rotate and Edit both ran, both stored a new
+ * picture, and both looked like they had done nothing — and the wires did not
+ * learn it with it: an edited photograph drew correctly on the canvas and still
+ * handed its untouched original to whatever it fed.
+ *
+ * One definition now, read by the canvas and by the wires, because the two
+ * disagreeing is precisely the failure.
+ */
+export const currentImageUrl = (item: BoardItem): string | null =>
+  item.result?.url ?? item.imageUrl ?? null;
+
 export const outputImageOf = (
   item: BoardItem,
   /**
@@ -383,7 +404,7 @@ export const outputImageOf = (
   items: BoardItem[] = []
 ): string | null => {
   if (item.kind === "photo" || item.kind === "reference") {
-    return item.imageUrl ?? null;
+    return currentImageUrl(item);
   }
   if (item.kind === "frame") {
     // The topmost picture on the frame, as a stand-in for all of them. The
@@ -391,9 +412,9 @@ export const outputImageOf = (
     // preview shows one thing, and showing nothing made a correctly wired
     // frame look like a node that could not see its own input.
     const inside = containedBy(item, items)
-      .filter((contained) => contained.imageUrl)
+      .filter((contained) => currentImageUrl(contained))
       .sort((a, b) => b.z - a.z);
-    return inside[0]?.imageUrl ?? null;
+    return inside[0] ? currentImageUrl(inside[0]) : null;
   }
   if (item.kind !== "op") {
     return null;

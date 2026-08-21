@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import { blobToken } from "./blobToken.js";
 
 /**
  * Copies a generated asset into Blob storage and returns the durable URL.
@@ -141,6 +142,7 @@ export const persistGenerated = async (
     {
       access: "public",
       contentType: type,
+      token: blobToken(),
     }
   );
   return blob.url;
@@ -160,6 +162,7 @@ export const persistSvgText = async (
   const blob = await put(`${prefix}/${crypto.randomUUID()}.svg`, svg, {
     access: "public",
     contentType: "image/svg+xml",
+    token: blobToken(),
   });
   return blob.url;
 };
@@ -183,6 +186,7 @@ export const persistBytes = async (
     {
       access: "public",
       contentType,
+      token: blobToken(),
     }
   );
   return blob.url;

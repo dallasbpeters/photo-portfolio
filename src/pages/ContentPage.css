@@ -1,0 +1,146 @@
+/*
+ * A CMS page: a breadcrumb, a title, and whatever the author put in it.
+ *
+ * Structurally the legal pages with editable contents, so it composes the same
+ * primitives — `.page`, `.page__body--reading`, `.label`, `.quiet-link`,
+ * `.row`, `.stack`, `.hairline` — and states only the little this page has that
+ * those do not: the current crumb, and the draft banner.
+ *
+ * Everything it does state is in tokens, so a site themed light in the database
+ * reads correctly; the utilities this replaced hard-coded `text-white/90` and
+ * `border-white/5`, which were right only because every site happens to be dark
+ * today. The draft banner's amber is the exception and stays a fixed colour —
+ * see the note there.
+ */
+
+.content-page__masthead {
+  padding-block-start: calc(var(--spacing) * 12);
+}
+
+.content-page__wordmark {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  transition: opacity 150ms ease-out;
+}
+
+.content-page__wordmark:hover {
+  opacity: 0.8;
+}
+
+.content-page__main {
+  padding-block: calc(var(--spacing) * 16);
+}
+
+.content-page__crumbs {
+  margin-block-end: calc(var(--spacing) * 8);
+}
+
+/*
+ * The page you are on, brighter than the trail that led here. It is the only
+ * crumb that is not a link, so nothing else marks it.
+ */
+.content-page__crumb-current {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.content-page__title {
+  margin-block-end: calc(var(--spacing) * 10);
+  font-size: var(--text-3xl);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.content-page__notice-title {
+  font-size: var(--text-2xl);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.content-page__prose {
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+/*
+ * The way back. Sized as a target rather than a link — 44px tall, the smallest
+ * box a thumb hits without aiming — because on a missing page it is the only
+ * control there is.
+ *
+ * Hover inverts to the site's own ink and ground. `hover:bg-white
+ * hover:text-black` read as an invert only while the site was dark; on a light
+ * one it was white on black over white.
+ *
+ * `align-self` because it is a flex item now: stretched, the border would run
+ * the width of the column and the button would read as a bar.
+ */
+.content-page__back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 6);
+  border: 1px solid color-mix(in oklch, var(--foreground) 20%, transparent);
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.content-page__back:hover {
+  color: var(--background);
+  background-color: var(--foreground);
+}
+
+/*
+ * A draft is only ever seen by the admin who is about to publish it, and it has
+ * to be unmistakable at a glance: this is the same page at the same URL a
+ * visitor would get a 404 from.
+ *
+ * Amber from the palette rather than a theme colour, and that is deliberate.
+ * The other colours here follow the site so a light site reads; this one must
+ * not, because it is a warning about the page rather than part of it, and a
+ * warning that reads as the site's own accent is not a warning.
+ */
+.content-page__draft {
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 4);
+  margin-block-end: calc(var(--spacing) * 8);
+  color: color-mix(in oklch, var(--color-amber-300) 80%, transparent);
+  background-color: color-mix(in oklch, var(--color-amber-400) 6%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-amber-400) 25%, transparent);
+}
+
+.content-page__footer {
+  padding-block: calc(var(--spacing) * 24);
+  padding-inline: calc(var(--spacing) * 4);
+  border-block-start-style: solid;
+  border-block-start-width: 1px;
+}
+
+/*
+ * The project's `md` is 786px, not Tailwind's 768 — see `--breakpoint-md` in
+ * index.css. Written out because a media query cannot read a custom property,
+ * so this is the one number here that has to be kept in step by hand.
+ */
+@media (width >= 786px) {
+  .content-page__masthead {
+    padding-inline: calc(var(--spacing) * 24);
+  }
+
+  .content-page__main {
+    padding-block: calc(var(--spacing) * 24);
+  }
+
+  .content-page__title {
+    font-size: var(--text-4xl);
+  }
+
+  .content-page__footer {
+    padding-inline: calc(var(--spacing) * 8);
+  }
+}

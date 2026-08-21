@@ -1,3 +1,4 @@
+import "./ContentPage.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useEffect, useState } from "react";
@@ -60,38 +61,26 @@ export function ContentPage() {
   const Icon = resolveIcon(page?.icon);
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="page content-page">
       <Toaster position="top-center" theme="dark" />
 
-      <header className="px-8 pt-12 md:px-24">
-        <Link
-          className="font-bold text-3xl text-accent uppercase tracking-widest transition-opacity hover:opacity-80"
-          to="/"
-        >
+      <header className="page__body content-page__masthead">
+        <Link className="content-page__wordmark" to="/">
           {settings.heroTitle}
         </Link>
         <SiteNav pages={pages} />
       </header>
 
-      <main className="mx-auto max-w-2xl px-8 py-16 md:py-24">
-        {state === "loading" && (
-          <p className="text-[10px] text-white/80 uppercase tracking-[0.3em]">
-            Loading
-          </p>
-        )}
+      <main className="page__body page__body--reading content-page__main">
+        {state === "loading" && <p className="label label--quiet">Loading</p>}
 
         {state === "missing" && (
-          <div className="space-y-6">
-            <h1 className="font-light text-2xl uppercase tracking-[0.24em]">
-              Page not found
-            </h1>
-            <p className="text-[13px] text-white/90 leading-relaxed">
+          <div className="stack">
+            <h1 className="content-page__notice-title">Page not found</h1>
+            <p className="content-page__prose">
               This page may have been moved, renamed, or not published yet.
             </p>
-            <Link
-              className="inline-flex min-h-11 items-center border border-white/20 px-6 text-[10px] uppercase tracking-[0.2em] transition-colors hover:bg-white hover:text-black"
-              to="/"
-            >
+            <Link className="label content-page__back" to="/">
               Back to the gallery
             </Link>
           </div>
@@ -99,22 +88,19 @@ export function ContentPage() {
 
         {state === "ready" && page && (
           <article>
-            <nav aria-label="Breadcrumb" className="mb-8">
-              <ol className="flex flex-wrap items-center gap-2 text-[10px] text-white/90 uppercase tracking-[0.18em]">
+            <nav aria-label="Breadcrumb" className="content-page__crumbs">
+              <ol className="row label label--quiet row--wrap">
                 <li>
-                  <Link
-                    className="transition-colors hover:text-white/90"
-                    to="/"
-                  >
+                  <Link className="quiet-link" to="/">
                     {settings.shortName}
                   </Link>
                 </li>
-                <li aria-hidden className="flex items-center">
+                <li aria-hidden className="row">
                   <HugeiconsIcon icon={ArrowRight01Icon} size={11} />
                 </li>
                 <li
                   aria-current="page"
-                  className="flex items-center gap-1.5 text-white/90"
+                  className="row content-page__crumb-current"
                 >
                   {Icon && <HugeiconsIcon icon={Icon} size={11} />}
                   {page.title}
@@ -122,12 +108,10 @@ export function ContentPage() {
               </ol>
             </nav>
 
-            <h1 className="mb-10 font-light text-3xl uppercase tracking-[0.16em] md:text-4xl">
-              {page.title}
-            </h1>
+            <h1 className="content-page__title">{page.title}</h1>
 
             {page.status === "draft" && (
-              <p className="mb-8 border border-amber-400/25 bg-amber-400/6 px-4 py-2.5 text-[10px] text-amber-300/80 uppercase tracking-[0.16em]">
+              <p className="label content-page__draft">
                 Draft — only visible to signed-in admins
               </p>
             )}
@@ -137,8 +121,8 @@ export function ContentPage() {
         )}
       </main>
 
-      <footer className="border-white/5 border-t px-4 py-24 md:px-8">
-        <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
+      <footer className="hairline content-page__footer">
+        <p className="label label--quiet">
           © {new Date().getFullYear()} {settings.ownerName}
         </p>
       </footer>

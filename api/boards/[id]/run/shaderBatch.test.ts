@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { browserRendered } from "./browserRendered.js";
+
+/**
+ * Which of a shader's renders a run hands back.
+ *
+ * A shader fans out into one variation per wired picture, and the browser draws
+ * one file for each before the run starts. Reading a single URL handed the same
+ * picture back for every variation, so a Batch of ten came out as ten copies of
+ * the first — the node accepted the batch and quietly ignored all but one of it.
+ */
+
+const NOT_RENDERED = /not been rendered/i;
+
+const MISSING = "This shader has not been rendered yet";
+
+const shader = (config: Record<string, unknown>, variation: number) =>
+  browserRendered(config, "renderUrl", MISSING, variation, "renderUrls");
+
+describe("a shader run picks its own variation", () => {
+  it("hands back the render for that position", () => {
+    const config = {
+      renderUrls: [
+        "https://example.test/a.png",
+        "https://example.test/b.png",
+        "https://example.test/c.png",
+      ],
+    };
+    const second = shader(config, 1);
+    expect(second).toMatchObject({ url: "https://example.test/b.png" });
+  });
+
+  it("gives each variation a different picture", () => {
+    // The failure this replaces: ten variations, one picture, ten times.
+    const config = {
+      renderUrls: ["https://example.test/a.png", "https://example.test/b.png"],
+    };
+    const urls = [shader(config, 0), shader(config, 1)];
+    const seen = new Set(urls.map((u) => (u as { url: string }).url));
+    expect(seen.size).toBe(2);
+  });
+
+  it("falls back to the single URL for a board saved before batches", () => {
+    const first = shader({ renderUrl: "https://example.test/old.png" }, 0);
+    expect(first).toMatchObject({ url: "https://example.test/old.png" });
+  });
+
+  it("refuses a variation the browser never drew", () => {
+    // Better than silently repeating the first: a run that reports success for
+    // a picture that does not exist is worse than one that says so.
+    expect(() =>
+      shader({ renderUrls: ["https://example.test/a.png"] }, 3)
+    ).toThrow(NOT_RENDERED);
+  });
+
+  it("refuses only the entry that failed, not the ones beside it", () => {
+    /*
+     * A blank holds the place of a render that failed, so variation N still
+     * means picture N. Collapsing the list instead would hand every later
+     * variation the picture belonging to the one before it — silently, and
+     * looking exactly like a run that worked.
+     */
+    const config = {
+      renderUrls: [
+        "https://example.test/a.png",
+        "",
+        "https://example.test/c.png",
+      ],
+    };
+    expect(shader(config, 0)).toMatchObject({
+      url: "https://example.test/a.png",
+    });
+    expect(() => shader(config, 1)).toThrow(NOT_RENDERED);
+    expect(shader(config, 2)).toMatchObject({
+      url: "https://example.test/c.png",
+    });
+  });
+
+  it("refuses when nothing has been rendered at all", () => {
+    expect(() => shader({}, 0)).toThrow(NOT_RENDERED);
+  });
+});
+
+describe("what a refusal says", () => {
+  it("names the picture wanted and how many were drawn", () => {
+    // The three faults that used to share one message — nothing drawn, fewer
+    // drawn than the run expects, and a save that dropped them — are told apart
+    // by these two numbers and nothing else.
+    try {
+      shader({ renderUrls: ["https://example.test/a.png"] }, 5);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("picture 6");
+      expect((err as Error).message).toContain("1 of 1");
+    }
+  });
+
+  it("says so plainly when the browser drew nothing at all", () => {
+    try {
+      shader({}, 0);
+      expect.unreachable();
+    } catch (err) {
+      expect((err as Error).message).toContain("none were drawn");
+    }
+  });
+});

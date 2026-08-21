@@ -1,6 +1,10 @@
+import { useState } from "react";
+import { optimizedImageSrc } from "../components/OptimizedImage";
 import type { BoardItem } from "../types";
 import { useAutoplay } from "./autoplayPref";
-import { isVideoUrl } from "./isVideo";
+import { grownBucket, wantedWidth } from "./io/imageBucket";
+import { isVideoUrl } from "./io/isVideo";
+import { currentImageUrl } from "./itemOutput";
 
 /**
  * The picture — or the clip — a canvas item shows.
@@ -12,14 +16,34 @@ import { isVideoUrl } from "./isVideo";
 /**
  * What the item currently shows: what a tool made of it, or its own picture.
  *
- * The same precedence `transformExecutor.sourceUrlOf` uses, and it has to be:
- * a tool reads the newest version as its input and writes the next one to
- * `result`, so a renderer that only ever read `imageUrl` showed the original
- * for ever. Rotate and Edit both ran, both stored a new picture, and both
- * looked like they had done nothing at all.
+ * Imported rather than restated. The wires had their own copy of this rule that
+ * had never been corrected, so an edited photograph drew correctly here and
+ * handed its untouched original to whatever it fed.
  */
-const shownUrl = (item: BoardItem): string | null =>
-  item.result?.url ?? item.imageUrl ?? null;
+const shownUrl = currentImageUrl;
+
+/**
+ * The width to request for an item currently this wide.
+ *
+ * Kept as state that only ever grows. The width changes every frame of a drag,
+ * so requesting it directly would ask for a new image constantly; bucketing
+ * holds the request still within a rung, and the ratchet stops a shrink from
+ * swapping a decoded image for a pending one — the flicker that kept this
+ * canvas on full-size originals.
+ *
+ * Adjusted during render rather than in an effect. React re-runs the component
+ * immediately without committing, so the larger image is asked for in the same
+ * pass; an effect would paint one frame at the old size first.
+ */
+const useImageBucket = (boxWidth: number): number => {
+  const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio;
+  const next = wantedWidth(boxWidth, dpr);
+  const [bucket, setBucket] = useState(next);
+  if (next > bucket) {
+    setBucket(next);
+  }
+  return grownBucket(bucket, next);
+};
 
 export function ItemMedia({
   isIcon,
@@ -30,6 +54,10 @@ export function ItemMedia({
   item: BoardItem;
 }) {
   const playing = useAutoplay();
+  // Before the video branch below, because that branch returns early and a hook
+  // called after it would run on some renders and not others. Videos are not
+  // put through the image optimizer, so the bucket simply goes unused there.
+  const bucket = useImageBucket(item.width);
   const url = shownUrl(item);
   if (isVideoUrl(url)) {
     // Muted and looping because a board holds a dozen of these at once and one
@@ -74,7 +102,7 @@ export function ItemMedia({
       draggable={false}
       height={item.height}
       loading="lazy"
-      src={url ?? ""}
+      src={optimizedImageSrc(url ?? "", bucket)}
       width={item.width}
     />
   );

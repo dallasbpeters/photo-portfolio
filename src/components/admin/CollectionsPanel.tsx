@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { isVideoUrl } from "../../boards/isVideo";
+import { isVideoUrl } from "../../boards/io/isVideo";
 import { useCollections } from "../../hooks/useCollections";
 import { collectionsApi } from "../../services/portfolioService";
 import type { Collection, CollectionItem } from "../../types";

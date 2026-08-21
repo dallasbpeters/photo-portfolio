@@ -1,43 +1,31 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Delete02Icon,
-  Settings01Icon,
-} from "@hugeicons-pro/core-stroke-standard";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { Delete02Icon } from "@hugeicons-pro/core-stroke-standard";
+import { type RefObject, useEffect, useRef } from "react";
 import { PORT_HIT_PX, PORT_RADIUS_PX } from "../../config/canvas.js";
 import { inputPortsFor, outputPortsFor } from "../../config/graph.js";
 import { textStyleCss } from "../../config/textStyle.js";
 import type { BoardItem } from "../types";
-import type { ResizeHandle } from "./alignmentGuides";
 import { BoardTextTools } from "./BoardTextTools";
 import { BoardToolBar } from "./BoardToolBar";
-import { DrawingView } from "./DrawingView";
-import { isDrawingConfig } from "./drawing";
+import { DrawingView } from "./drawing/DrawingView";
+import { isDrawingConfig } from "./drawing/drawing";
+import { MaskOverlay } from "./drawing/MaskOverlay";
+import { maskOf } from "./drawing/mask";
+import type { ResizeHandle } from "./geometry/alignmentGuides";
+import { inputPoints, outputPoints } from "./geometry/portGeometry";
+import { useTextFont } from "./hooks/useTextFont";
 import { ItemMedia } from "./ItemMedia";
-import { MaskOverlay } from "./MaskOverlay";
-import { maskOf } from "./mask";
-import { BatchList, OpNodeView } from "./OpNodeView";
-import { inputPoints, outputPoints } from "./portGeometry";
-import { ResizeHandles } from "./ResizeHandles";
-import { ShaderControls } from "./ShaderControls";
-import { ShaderView } from "./ShaderView";
 import {
-  DEFAULT_SOURCE,
-  isShaderConfig,
-  newLayer,
-  normalizeLayers,
-  type ShaderConfig,
-  type ShaderLayer,
-} from "./shaderConfig";
+  ElementBody,
+  FrameBody,
+  itemBoxClassName,
+  ShaderItem,
+} from "./itemBodies";
+import { BatchList } from "./nodes/BatchList";
+import { OpNodeView } from "./nodes/OpNodeView";
+import { ResizeHandles } from "./ResizeHandles";
 import type { BoardTools } from "./tools/useBoardTools";
-import { useTextFont } from "./useTextFont";
 
-/**
- * Drops a default source into the named empty effect.
- *
- * Recursive because the effect that needs filling may be nested — an empty
- * Group two levels down is exactly the case the canvas button exists for.
- */
 /**
  * Where a selected item sits while its chrome is open.
  *
@@ -47,15 +35,30 @@ import { useTextFont } from "./useTextFont";
  */
 const CHROME_STACK = 9998;
 
-const fillEmptyEffect = (
-  layers: ShaderLayer[],
-  layerId: string
-): ShaderLayer[] =>
-  layers.map((layer) =>
-    layer.id === layerId
-      ? { ...layer, children: [newLayer(DEFAULT_SOURCE)] }
-      : { ...layer, children: fillEmptyEffect(layer.children ?? [], layerId) }
-  );
+/**
+ * The input port closest to a point, in canvas units.
+ *
+ * Squared distances: the ordering is the same as with real distances and the
+ * square roots would be work done once per pointer move for nothing.
+ */
+const nearestInput = (
+  item: BoardItem,
+  px: number,
+  py: number
+): string | null => {
+  let nearest: string | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const [key, point] of inputPoints(item)) {
+    const dx = point.x - px;
+    const dy = point.y - py;
+    const distance = dx * dx + dy * dy;
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = key;
+    }
+  }
+  return nearest;
+};
 
 /**
  * Everything the item needs to take part in a wire drag.
@@ -80,6 +83,8 @@ interface BoardItemViewProps {
   commentCount?: number;
   /** True when an operation node's prompt arrives down a wire. */
   hasWiredPrompt?: boolean;
+  /** How many pictures are wired into this item's image input. */
+  imageCount?: number;
   /** A picture wired into this item's image input, if it has one. */
   imageUrl?: string | null;
   index: number;
@@ -134,6 +139,8 @@ interface BoardItemViewProps {
   scale: number;
   /** Runs tools on this item. One object: the bar needs both halves. */
   tools?: BoardTools;
+  /** The rows a List node's Fill input is offering, so it can fill itself. */
+  wiredItems?: readonly string[];
   /** The words arriving on this item's prompt input, if any. */
   wiredPrompt?: string | null;
 }
@@ -374,188 +381,10 @@ function BoardItemBody({
   );
 }
 
-/**
- * A frame: a labelled rectangle that groups whatever sits on it.
- *
- * Drawn as an outline so its contents stay readable through the middle, and
- * transparent to the pointer everywhere except its title — a frame that took
- * clicks across its whole area would swallow every item inside it.
- */
-function FrameBody({
-  item,
-  onEditBody,
-  readOnly,
-}: {
-  item: BoardItem;
-  onEditBody: (body: string) => void;
-  readOnly: boolean;
-}) {
-  return (
-    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-blue-500/50 border-dashed bg-board-ink/2">
-      <input
-        aria-label="Frame name"
-        className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-board-ink uppercase tracking-[0.18em] outline-none placeholder:text-board-ink"
-        disabled={readOnly}
-        onChange={(e) => onEditBody(e.target.value)}
-        onPointerDown={(e) => e.stopPropagation()}
-        placeholder="Frame"
-        value={item.body ?? ""}
-      />
-    </div>
-  );
-}
-
-/**
- * An element on the board: the style's cover, its name, and the words it
- * carries into a prompt.
- *
- * Nothing here is editable. The library row is the authority — the copy kept on
- * the node exists only so a board still shows and still runs after the element
- * is deleted out from under it — so a field to type over it here would be a
- * second copy, free to disagree with the library. See withElements in
- * api/boards/[id]/run.ts.
- */
-function ElementBody({ item }: { item: BoardItem }) {
-  const config = item.config ?? {};
-  const stored = typeof config.imageUrl === "string" ? config.imageUrl : null;
-  // The same picture the wire hands over, so what is on the canvas and what is
-  // sent are never two different things. See resolvedImageUrl in itemOutput.ts.
-  const cover = stored || item.imageUrl;
-  const name = typeof config.name === "string" ? config.name : null;
-  const storedWords =
-    typeof config.description === "string" ? config.description : null;
-  const words = item.body ?? storedWords;
-
-  return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-board-panel">
-      {cover ? (
-        <img
-          alt=""
-          className="min-h-0 w-full grow object-cover"
-          decoding="async"
-          draggable={false}
-          height={item.height}
-          loading="lazy"
-          src={cover}
-          width={item.width}
-        />
-      ) : (
-        <div className="flex min-h-0 grow items-center justify-center text-[11px] text-board-ink/35">
-          No cover yet
-        </div>
-      )}
-      <div className="shrink-0 px-2 py-1.5">
-        <p className="truncate font-medium text-[11px] text-board-ink">
-          {name ?? "Element"}
-        </p>
-        {/* The description is the substance of an element — it rides the wire
-            into the prompt — so it is shown rather than left to a side panel,
-            but clamped: this is a node on a canvas, not the library. */}
-        {words ? (
-          <p className="line-clamp-2 text-[10px] text-board-ink/60 leading-snug">
-            {words}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-/**
- * A shader on the board: the effect running live, with its parameters behind a
- * toggle.
- *
- * The controls are hidden until asked for because a shader is something you
- * look at — 1,668 parameters across the library means the panel would otherwise
- * bury the thing it configures.
- */
-function ShaderItem({
-  imageUrl,
-  isSelected,
-  item,
-  onConfigChange,
-  readOnly,
-}: {
-  imageUrl?: string | null;
-  isSelected: boolean;
-  item: BoardItem;
-  onConfigChange?: (config: Record<string, unknown>) => void;
-  readOnly: boolean;
-}) {
-  // Selecting a shader is the act of saying "I want to work on this one", so
-  // the controls come with it. The gear stays as a way to fold them away while
-  // keeping the item selected — a shader is a picture, and sometimes the point
-  // is to look at it. Collapsing is remembered only until the selection moves.
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const isEditing = isSelected && !isCollapsed;
-
-  useEffect(() => {
-    if (!isSelected) {
-      setIsCollapsed(false);
-    }
-  }, [isSelected]);
-  // A stack saved before layers carried identity gets one here, so the panel
-  // has a stable key to work from without the server having to be involved.
-  const config: ShaderConfig = isShaderConfig(item.config)
-    ? {
-        ...item.config,
-        layers: item.config.layers.map((layer, index) => ({
-          ...layer,
-          id: layer.id ?? `legacy-${index}-${layer.name}`,
-        })),
-      }
-    : { layers: [] };
-
-  return (
-    <div className="relative h-full w-full">
-      <ShaderView
-        config={config}
-        imageUrl={imageUrl}
-        onAddSource={
-          readOnly
-            ? undefined
-            : (layerId) =>
-                onConfigChange?.({
-                  ...config,
-                  layers: fillEmptyEffect(
-                    normalizeLayers(config.layers),
-                    layerId
-                  ),
-                } as unknown as Record<string, unknown>)
-        }
-      />
-
-      {readOnly || !isSelected ? null : (
-        <button
-          aria-label={isEditing ? "Hide shader settings" : "Shader settings"}
-          className="absolute top-1 right-1 rounded bg-board-surface/60 p-1 text-board-ink/60 backdrop-blur hover:text-board-ink"
-          onClick={() => setIsCollapsed((folded) => !folded)}
-          onPointerDown={(e) => e.stopPropagation()}
-          type="button"
-        >
-          <HugeiconsIcon icon={Settings01Icon} size={13} />
-        </button>
-      )}
-
-      {isEditing && !readOnly ? (
-        // overscroll-contain so reaching the end of the settings does not hand
-        // the wheel back to the canvas and start zooming mid-scroll.
-        <div className="absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto overscroll-contain border-board-ink/10 border-t bg-board-surface/90 p-2 backdrop-blur">
-          <ShaderControls
-            config={config}
-            onChange={(next) =>
-              onConfigChange?.(next as unknown as Record<string, unknown>)
-            }
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 interface ItemContentProps {
   fieldRef: RefObject<HTMLTextAreaElement | null>;
   hasWiredPrompt: boolean;
+  imageCount?: number;
   imageUrl?: string | null;
   isEditing: boolean;
   isSelected: boolean;
@@ -570,6 +399,7 @@ interface ItemContentProps {
   /** The pictures a Batch node is holding, so it can list them. */
   previewImages?: string[];
   readOnly: boolean;
+  wiredItems?: readonly string[];
   wiredPrompt?: string | null;
 }
 
@@ -583,10 +413,10 @@ interface ItemContentProps {
 function ItemContent({
   fieldRef,
   hasWiredPrompt,
+  imageCount,
   imageUrl,
   wiredPrompt,
   isEditing,
-  isSelected,
   item,
   onCancel,
   onConfigChange,
@@ -597,6 +427,7 @@ function ItemContent({
   outputText,
   previewImages,
   readOnly,
+  wiredItems,
 }: ItemContentProps) {
   // A Batch node is a window onto whatever is wired into it: no run state, no
   // versions, nothing of its own. Answered here rather than inside OpNodeView,
@@ -632,7 +463,6 @@ function ItemContent({
     return (
       <ShaderItem
         imageUrl={imageUrl}
-        isSelected={isSelected}
         item={item}
         onConfigChange={onConfigChange}
         readOnly={readOnly}
@@ -643,6 +473,8 @@ function ItemContent({
     return (
       <OpNodeView
         hasWiredPrompt={hasWiredPrompt}
+        imageCount={imageCount}
+        imageUrl={imageUrl}
         item={item}
         onCancel={onCancel}
         onConfigChange={onConfigChange ?? (() => undefined)}
@@ -651,6 +483,7 @@ function ItemContent({
         onSendVersions={onSendVersions}
         outputText={outputText}
         readOnly={readOnly}
+        wiredItems={wiredItems}
         wiredPrompt={wiredPrompt}
       />
     );
@@ -665,15 +498,117 @@ function ItemContent({
   );
 }
 
+/**
+ * Makes the whole item body a drop target for its nearest input port.
+ *
+ * While a wire is being dragged, landing a connection should not demand a
+ * 14-pixel aim at the port circle — the friction that made rewiring a node
+ * that already had a connection a matter of luck. The exact port buttons still
+ * win when the pointer is over one; this only claims the spaces between them.
+ */
+function useNearestInputDrop(
+  item: BoardItem,
+  scale: number,
+  ports?: PortHandlers
+) {
+  const hoveredInput = useRef<string | null>(null);
+  const handleDragHover = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    // A port button is an exact target; the body only claims the spaces
+    // between them, so an overlapping row of inputs cannot argue with itself.
+    if ((e.target as Element).closest("[data-port]")) {
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = item.x + (e.clientX - rect.left) / scale;
+    const py = item.y + (e.clientY - rect.top) / scale;
+    const nearest = nearestInput(item, px, py);
+    if (nearest && nearest !== hoveredInput.current) {
+      hoveredInput.current = nearest;
+      ports.onPortEnter(item.id, nearest);
+    }
+  };
+  const handleDragLeave = () => {
+    if (!ports?.isDragging) {
+      return;
+    }
+    if (hoveredInput.current !== null) {
+      ports.onPortLeave(item.id, hoveredInput.current);
+      hoveredInput.current = null;
+    }
+  };
+  return { handleDragHover, handleDragLeave };
+}
+
+type PointerDownRules = Pick<
+  BoardItemViewProps,
+  | "index"
+  | "isEditing"
+  | "isSelected"
+  | "onBeginEdit"
+  | "onCommentTarget"
+  | "onSelect"
+> & { isWritable: boolean };
+
+/**
+ * The press that picks an item up — and the several cases where it must not.
+ *
+ * Each refusal has its own reason, spelled out below; together they were long
+ * enough to bury the markup they were written inside.
+ */
+function itemPointerDown({
+  index,
+  isEditing,
+  isSelected,
+  isWritable,
+  onBeginEdit,
+  onCommentTarget,
+  onSelect,
+}: PointerDownRules) {
+  return (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only the primary button picks an item up. A right-click emits
+    // pointerdown too, and letting it begin a drag meant the context menu
+    // opened over a gesture holding everyone's old positions — which were
+    // written back the moment it ended, undoing whatever the menu had just
+    // done. The press still passes through, so the menu sees the selection.
+    if (e.button !== 0) {
+      return;
+    }
+    // Comment targeting: the press belongs to the item, not to a pan —
+    // without stopping it the canvas would read it as panning and the
+    // click that aims the comment would never fire.
+    if (onCommentTarget) {
+      e.stopPropagation();
+      return;
+    }
+    // While editing, the press belongs to the field — placing a caret or
+    // selecting text must not start a drag, and must not reach the
+    // background handler, which would clear the selection and pan.
+    if (isEditing) {
+      e.stopPropagation();
+      return;
+    }
+    onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
+    // Already selected, so this is the second press: start typing.
+    if (isWritable && isSelected) {
+      onBeginEdit();
+    }
+  };
+}
+
 /** One item on the board. */
 export function BoardItemView({
   hasWiredPrompt = false,
+  imageCount,
   imageUrl,
   onCancel,
   onRemoveVersion,
   onSendVersions,
   outputText,
   previewImages,
+  wiredItems,
   wiredPrompt,
   index,
   isEditing,
@@ -723,58 +658,18 @@ export function BoardItemView({
 
   const fieldRef = useEditingCaret(isEditing);
 
-  // While a wire is being dragged, the whole item body is a drop target for its
-  // nearest input port, so landing a connection does not demand a 14-pixel aim
-  // at the port circle — the friction that made rewiring a node that already
-  // had a connection a matter of luck. The exact port buttons still win when
-  // the pointer is over one; this only claims the spaces between them.
-  const hoveredInput = useRef<string | null>(null);
-  const handleDragHover = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!ports?.isDragging) {
-      return;
-    }
-    // A port button is an exact target; the body only claims the spaces
-    // between them, so an overlapping row of inputs cannot argue with itself.
-    if ((e.target as Element).closest("[data-port]")) {
-      return;
-    }
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = item.x + (e.clientX - rect.left) / scale;
-    const py = item.y + (e.clientY - rect.top) / scale;
-    let nearest: string | null = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    for (const [key, point] of inputPoints(item)) {
-      const dx = point.x - px;
-      const dy = point.y - py;
-      const distance = dx * dx + dy * dy;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearest = key;
-      }
-    }
-    if (nearest && nearest !== hoveredInput.current) {
-      hoveredInput.current = nearest;
-      ports.onPortEnter(item.id, nearest);
-    }
-  };
-  const handleDragLeave = () => {
-    if (!ports?.isDragging) {
-      return;
-    }
-    if (hoveredInput.current !== null) {
-      ports.onPortLeave(item.id, hoveredInput.current);
-      hoveredInput.current = null;
-    }
-  };
+  const { handleDragHover, handleDragLeave } = useNearestInputDrop(
+    item,
+    scale,
+    ports
+  );
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the board is a canvas of individually addressable items; the click only matters in comment mode
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same — the click aims a comment at the item, and the drag already uses pointer events the same way
     // biome-ignore lint/a11y/useKeyWithClickEvents: same — an item is a canvas surface, not a button
     <div
-      className={`group absolute rounded-xs contain-layout ${isText ? "" : "select-none"} ${
-        isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10"
-      } ${isText && !isSelected ? "ring-0 ring-transparent" : "ring-0"}`}
+      className={itemBoxClassName(item, isSelected)}
       onClick={
         onCommentTarget
           ? (e) => {
@@ -783,35 +678,15 @@ export function BoardItemView({
             }
           : undefined
       }
-      onPointerDown={(e) => {
-        // Only the primary button picks an item up. A right-click emits
-        // pointerdown too, and letting it begin a drag meant the context menu
-        // opened over a gesture holding everyone's old positions — which were
-        // written back the moment it ended, undoing whatever the menu had just
-        // done. The press still passes through, so the menu sees the selection.
-        if (e.button !== 0) {
-          return;
-        }
-        // Comment targeting: the press belongs to the item, not to a pan —
-        // without stopping it the canvas would read it as panning and the
-        // click that aims the comment would never fire.
-        if (onCommentTarget) {
-          e.stopPropagation();
-          return;
-        }
-        // While editing, the press belongs to the field — placing a caret or
-        // selecting text must not start a drag, and must not reach the
-        // background handler, which would clear the selection and pan.
-        if (isEditing) {
-          e.stopPropagation();
-          return;
-        }
-        onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
-        // Already selected, so this is the second press: start typing.
-        if (isWritable && isSelected) {
-          onBeginEdit();
-        }
-      }}
+      onPointerDown={itemPointerDown({
+        index,
+        isEditing,
+        isSelected,
+        isWritable,
+        onBeginEdit,
+        onCommentTarget,
+        onSelect,
+      })}
       onPointerLeave={handleDragLeave}
       onPointerMove={handleDragHover}
       ref={boxRef}
@@ -836,6 +711,7 @@ export function BoardItemView({
       <ItemContent
         fieldRef={fieldRef}
         hasWiredPrompt={hasWiredPrompt}
+        imageCount={imageCount}
         imageUrl={imageUrl}
         isEditing={isEditing}
         isSelected={isSelected}
@@ -849,6 +725,7 @@ export function BoardItemView({
         outputText={outputText}
         previewImages={previewImages}
         readOnly={readOnly}
+        wiredItems={wiredItems}
         wiredPrompt={wiredPrompt}
       />
 

@@ -1,0 +1,228 @@
+/*
+ * The admin shell: a fixed bar, the section links, and whatever panel the
+ * route resolves to.
+ *
+ * Composes `.page`, `.row`, `.stack`, `.quiet-link` and `.hairline`, and states
+ * only what belongs to the admin. Everything it states is in tokens; the
+ * utilities this replaced wrote `bg-black/80`, `border-white/10` and
+ * `text-white/90`, which are correct only while every site in the database is
+ * themed dark.
+ *
+ * Where a rule has to override a primitive it is written as a compound selector
+ * (`.admin-page__bar-inner.row`). A page stylesheet is a separate chunk and is
+ * not guaranteed to load after primitives.css, so equal specificity would
+ * leave the result to chunk order.
+ */
+
+.admin-page {
+  font-family: var(--font-sans);
+}
+
+/* The stored token is being checked against the server; nothing else can be
+   shown yet, because either answer changes the whole page. */
+.admin-page__checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-page__checking-note {
+  font-size: 10px;
+  color: color-mix(in oklch, var(--foreground) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  animation: admin-page-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Tailwind's `--animate-pulse` and its keyframes are emitted only while some
+   utility somewhere still asks for them, so reading them from here would make
+   this page depend on an unrelated component keeping `animate-pulse`. */
+@keyframes admin-page-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/*
+ * The bar is fixed, which is why `.admin-page__main` carries the top padding
+ * that keeps the first panel out from under it.
+ */
+.admin-page__bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  width: 100%;
+  /* Clears the notch when a phone is held in portrait. */
+  padding-block-start: env(safe-area-inset-top, 0px);
+  background-color: color-mix(in oklch, var(--background) 80%, transparent);
+  border-block-end-style: solid;
+  /* Width and style as longhands so `.hairline`'s colour survives: the
+     `border-block-end` shorthand would reset the omitted colour to
+     currentColor, which on this bar is the title's near-white. */
+  border-block-end-width: 1px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.admin-page__bar-inner {
+  min-height: calc(var(--spacing) * 16);
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  margin-inline: auto;
+}
+
+.admin-page__bar-inner.row {
+  gap: calc(var(--spacing) * 4);
+}
+
+.admin-page__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-lg);
+  font-weight: 300;
+  line-height: var(--text-lg--line-height);
+  white-space: nowrap;
+}
+
+.admin-page__bar-actions {
+  flex-shrink: 0;
+}
+
+.admin-page__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px. A link in the bar is reached for constantly and is the one thing on
+     this page that has to be hit without looking. */
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.admin-page__sections {
+  padding-inline: calc(var(--spacing) * 4);
+  margin-inline: auto;
+  /* Six sections do not fit a phone. Scrolling them beats wrapping the bar to
+     two rows and moving everything below it. */
+  overflow-x: auto;
+}
+
+.admin-page__sections.row {
+  gap: calc(var(--spacing) * 5);
+}
+
+.admin-page__section {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 1);
+  font-size: 10px;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--foreground) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  border-block-end: 2px solid transparent;
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+/* The section you are already in does not respond to hover; it is as bright as
+   it goes, and dimming it on the way past would read as a state change. */
+.admin-page__section:not(.admin-page__section--current):hover {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.admin-page__section--current {
+  color: var(--foreground);
+  border-block-end-color: var(--foreground);
+}
+
+.admin-page__main {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  place-items: center;
+  width: 100%;
+  /* Top clears the fixed bar; bottom clears the home indicator, with a floor
+     for the phones that do not report one. */
+  padding-block: calc(var(--spacing) * 28)
+    max(4rem, env(safe-area-inset-bottom, 0px));
+  padding-inline: calc(var(--spacing) * 4);
+  margin-inline: auto;
+}
+
+.admin-page__settings {
+  width: 100%;
+  margin-inline: auto;
+}
+
+.admin-page__settings-grid {
+  display: grid;
+  gap: calc(var(--spacing) * 8);
+  /* The two columns are unequal in height and neither should stretch: a short
+     password card padded out to match the settings form reads as a bug. */
+  align-items: start;
+}
+
+/*
+ * The password card. `border-white/10` was passed here too and never drew
+ * anything — Card's edge is a `ring`, and nothing set a border width — so it is
+ * gone rather than translated.
+ */
+.admin-page__card {
+  background-color: color-mix(in oklch, var(--foreground) 2%, transparent);
+}
+
+.admin-page__card-title {
+  font-size: var(--text-sm);
+  font-weight: 300;
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+@media (width >= 568px) {
+  .admin-page__bar-inner {
+    min-height: calc(var(--spacing) * 20);
+    padding-block: 0;
+    padding-inline: calc(var(--spacing) * 6);
+  }
+
+  .admin-page__title {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+  }
+
+  .admin-page__back {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+  }
+
+  .admin-page__sections {
+    padding-inline: calc(var(--spacing) * 6);
+  }
+
+  .admin-page__sections.row {
+    gap: calc(var(--spacing) * 7);
+  }
+
+  .admin-page__section {
+    font-size: 11px;
+  }
+
+  .admin-page__main {
+    padding-block: calc(var(--spacing) * 36) calc(var(--spacing) * 20);
+    padding-inline: calc(var(--spacing) * 6);
+  }
+}
+
+@media (width >= 1024px) {
+  .admin-page__settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

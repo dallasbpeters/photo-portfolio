@@ -1,0 +1,213 @@
+/*
+ * The patterns that repeat across the whole app.
+ *
+ * Three tiers, and the boundary between them is the whole strategy:
+ *
+ * 1. **Tokens** — the `@theme` block in index.css. Colours, spacing, type
+ *    scale, radii. The only place a raw value is invented.
+ * 2. **Primitives** — this file. Named for what a thing *is*, composed by
+ *    blocks, never edited to suit one caller.
+ * 3. **Blocks** — a co-located `Component.css` per component, BEM, composing
+ *    primitives and reaching for tokens directly where it needs to.
+ *
+ * A primitive earns its place at **three independent uses**. Two is a
+ * coincidence; below three it belongs to the block that wanted it. This is the
+ * rule that stops a shared stylesheet becoming a second utility framework with
+ * worse names — which is the failure mode of exactly this refactor.
+ *
+ * Everything here is stated in tokens, never in a literal colour. The public
+ * sites are themed per site from the database — background, foreground and
+ * accent are all editable — and the pages presently hard-code `text-white/90`
+ * and `border-white/10`, which is correct only because every site happens to
+ * be dark today. The moment one is not, they break.
+ */
+
+/*
+ * Micro-caps: the app's most-repeated piece of type by a wide margin.
+ *
+ * Forty-five uses across the pages alone, always the same three declarations
+ * written out longhand. Small, uppercase, widely tracked — a label on an
+ * instrument rather than a word in a sentence, which is why it is never used
+ * for anything longer than three words.
+ */
+.label {
+  /*
+   * Stated in absolute values, not the token scale, and that is deliberate.
+   *
+   * `--text-xs` is 0.528rem — 8.4px — which is the board's dense chrome, not a
+   * page. The pages have always set micro-caps at 10px with 0.18em of tracking,
+   * and reaching for the nearest token shrank every label on every converted
+   * page by a sixth and tightened its tracking by nearly half. That is a
+   * redesign wearing a refactor's clothes, which is worse than either.
+   *
+   * Here rather than at the call sites: one definition is the entire point, and
+   * an override per page would rebuild the utility soup with worse names.
+   */
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.label--loud {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/*
+ * Stamped: the widest tracking the app uses, for a word standing alone.
+ *
+ * Nine remaining uses across eight files, plus three on the home page. Over the
+ * bar on evidence rather than on feel — the count was taken before promoting it,
+ * and taken again here.
+ */
+.label--stamped {
+  letter-spacing: 0.3em;
+}
+
+.label--quiet {
+  color: color-mix(in oklch, var(--foreground) 60%, transparent);
+}
+
+/*
+ * A full-height page on the site's own ground.
+ *
+ * Tokens rather than `bg-background text-foreground min-h-screen` restated at
+ * every entry point — and `min-h-dvh`, because `100vh` on a phone is taller
+ * than the window and puts the footer under the browser chrome.
+ */
+.page {
+  min-height: 100dvh;
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+/*
+ * The measure. Wide enough for a gallery, capped so body text never runs past
+ * what an eye can track back.
+ */
+.page__body {
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: clamp(
+    calc(var(--spacing) * 4),
+    5vw,
+    calc(var(--spacing) * 8)
+  );
+  margin-inline: auto;
+}
+
+/*
+ * The reading measure.
+ *
+ * 42rem, which is what these pages already used. Not a `ch` figure: 68ch looked
+ * like the better answer and is eight rem narrower here, so it quietly reflowed
+ * every CMS page that had an author-placed image in it.
+ */
+.page__body--reading {
+  max-width: 42rem;
+}
+
+/*
+ * Vertical rhythm as a primitive, because `space-y-*` is the single most
+ * repeated layout decision in the app and it is always the same decision.
+ */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 4);
+}
+
+.stack--tight {
+  gap: calc(var(--spacing) * 2);
+}
+
+.stack--loose {
+  gap: calc(var(--spacing) * 8);
+}
+
+.row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+}
+
+/*
+ * The gap the app reaches for when two things are related but not touching.
+ * Nine remaining `gap-6`/`space-y-6` between them.
+ */
+.stack--roomy {
+  gap: calc(var(--spacing) * 6);
+}
+
+.row--wide {
+  gap: calc(var(--spacing) * 6);
+}
+
+.row--between {
+  justify-content: space-between;
+}
+
+.row--wrap {
+  flex-wrap: wrap;
+}
+
+/*
+ * A quiet link that becomes definite on hover.
+ *
+ * The app's one link treatment, written out fifteen times as
+ * `text-white/90 transition-colors hover:text-white`.
+ */
+.quiet-link {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  transition: color 150ms ease-out;
+}
+
+.quiet-link:hover {
+  color: var(--foreground);
+}
+
+/*
+ * A hairline in the site's own ink. `border-white/10` restated ten times, and
+ * wrong on any site that is not dark.
+ */
+.hairline {
+  border-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+/*
+ * A hairline above, as a footer wears it.
+ *
+ * Width and style as longhands, never the `border-block-start` shorthand — the
+ * shorthand resets `border-color` to `currentcolor`, so a block that sets it
+ * alongside `.hairline` silently throws the hairline's colour away and draws the
+ * rule in whatever the text happens to be. That is exactly what the first
+ * converted page did.
+ */
+.hairline--top {
+  border-block-start-style: solid;
+  border-block-start-width: 1px;
+}
+
+/*
+ * One line, clipped.
+ *
+ * Thirty-three uses. Three declarations that are meaningless apart and always
+ * written together, which is the definition of a primitive — and the one place
+ * `overflow: hidden` is not hiding a bug.
+ */
+.truncate-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The floor for anything meant to be tapped.
+ *
+ * Twenty-three uses of `min-h-11`, which is 44px — the size a finger can hit
+ * without aiming, and the reason it is a floor rather than a height: a control
+ * with more in it should grow, not clip.
+ */
+.tap-target {
+  min-height: calc(var(--spacing) * 11);
+}

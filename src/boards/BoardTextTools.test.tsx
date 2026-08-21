@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { BoardItem } from "../types";
 import { BoardItemView } from "./BoardItemView";
 import { BoardTextTools } from "./BoardTextTools";
-import { PANEL_GAP, placePanel } from "./panelPlacement";
+import { PANEL_GAP, placePanel } from "./geometry/panelPlacement";
 
 /**
  * What the panel shows, who it edits, and where it sits.

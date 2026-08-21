@@ -24,8 +24,7 @@
           "id",
           "token"
         ],
-        "additionalProperties": false,
-        "id": "AuthenticatedUser"
+        "additionalProperties": false
       },
       "Category": {
         "type": "object",
@@ -58,8 +57,7 @@
           "slug",
           "sortOrder"
         ],
-        "additionalProperties": false,
-        "id": "Category"
+        "additionalProperties": false
       },
       "CategoryCreate": {
         "type": "object",
@@ -79,8 +77,7 @@
           "label",
           "sortOrder"
         ],
-        "additionalProperties": false,
-        "id": "CategoryCreate"
+        "additionalProperties": false
       },
       "Credentials": {
         "type": "object",
@@ -99,8 +96,7 @@
           "email",
           "password"
         ],
-        "additionalProperties": false,
-        "id": "Credentials"
+        "additionalProperties": false
       },
       "ErrorResponse": {
         "type": "object",
@@ -176,8 +172,7 @@
           "title",
           "updatedAt"
         ],
-        "additionalProperties": false,
-        "id": "Page"
+        "additionalProperties": false
       },
       "PageCreate": {
         "type": "object",
@@ -213,8 +208,7 @@
           "slug",
           "title"
         ],
-        "additionalProperties": false,
-        "id": "PageCreate"
+        "additionalProperties": false
       },
       "PageSummary": {
         "type": "object",
@@ -253,8 +247,7 @@
           "slug",
           "title"
         ],
-        "additionalProperties": false,
-        "id": "PageSummary"
+        "additionalProperties": false
       },
       "Photo": {
         "type": "object",
@@ -436,8 +429,7 @@
           "url",
           "width"
         ],
-        "additionalProperties": false,
-        "id": "Photo"
+        "additionalProperties": false
       },
       "PhotoCreate": {
         "type": "object",
@@ -528,8 +520,7 @@
           "title",
           "url"
         ],
-        "additionalProperties": false,
-        "id": "PhotoCreate"
+        "additionalProperties": false
       },
       "PhotoIdList": {
         "type": "object",
@@ -547,8 +538,7 @@
         "required": [
           "photoIds"
         ],
-        "additionalProperties": false,
-        "id": "PhotoIdList"
+        "additionalProperties": false
       },
       "PhotoUpdate": {
         "type": "object",
@@ -641,8 +631,7 @@
           "order",
           "title"
         ],
-        "additionalProperties": false,
-        "id": "PhotoUpdate"
+        "additionalProperties": false
       },
       "SiteSettings": {
         "type": "object",
@@ -718,8 +707,7 @@
           "tagline",
           "theme"
         ],
-        "additionalProperties": false,
-        "id": "SiteSettings"
+        "additionalProperties": false
       },
       "SiteSettingsUpdate": {
         "type": "object",
@@ -780,8 +768,7 @@
             "additionalProperties": false
           }
         },
-        "additionalProperties": false,
-        "id": "SiteSettingsUpdate"
+        "additionalProperties": false
       },
       "AiModel": {
         "type": "object",
@@ -903,8 +890,7 @@
           "lora",
           "sortOrder"
         ],
-        "additionalProperties": false,
-        "id": "AiModel"
+        "additionalProperties": false
       },
       "AiModelInput": {
         "type": "object",
@@ -1015,8 +1001,7 @@
           "id",
           "label"
         ],
-        "additionalProperties": false,
-        "id": "AiModelInput"
+        "additionalProperties": false
       },
       "Board": {
         "type": "object",
@@ -1089,8 +1074,7 @@
           "items",
           "wires"
         ],
-        "additionalProperties": false,
-        "id": "Board"
+        "additionalProperties": false
       },
       "BoardComment": {
         "type": "object",
@@ -1141,8 +1125,7 @@
           "itemId",
           "resolved"
         ],
-        "additionalProperties": false,
-        "id": "BoardComment"
+        "additionalProperties": false
       },
       "BoardCreate": {
         "type": "object",
@@ -1159,8 +1142,7 @@
         "required": [
           "title"
         ],
-        "additionalProperties": false,
-        "id": "BoardCreate"
+        "additionalProperties": false
       },
       "BoardSummary": {
         "type": "object",
@@ -1223,8 +1205,7 @@
           "title",
           "updatedAt"
         ],
-        "additionalProperties": false,
-        "id": "BoardSummary"
+        "additionalProperties": false
       },
       "BoardUpdate": {
         "type": "object",
@@ -1256,8 +1237,319 @@
             "items": {}
           }
         },
-        "additionalProperties": false,
-        "id": "BoardUpdate"
+        "additionalProperties": false
+      },
+      "BrandKitDoc": {
+        "type": "object",
+        "properties": {
+          "logos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clearSpace": {
+                  "type": "number"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "minWidth": {
+                  "type": "number"
+                },
+                "rules": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Ours — adopted into blob storage on save."
+                }
+              },
+              "required": [
+                "clearSpace",
+                "label",
+                "minWidth",
+                "rules",
+                "url"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "offBrand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Counter-examples, and the more precise half of a kit."
+          },
+          "onBrand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "palette": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "role",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "typefaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "weights": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "role",
+                "weights"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "voice": {
+            "type": "string",
+            "description": "Substance — it travels into the prompt."
+          }
+        },
+        "required": [
+          "logos",
+          "offBrand",
+          "onBrand",
+          "palette",
+          "typefaces",
+          "voice"
+        ],
+        "additionalProperties": false
+      },
+      "BrandKit": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "currentVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "doc": {
+            "$ref": "#/components/schemas/BrandKitDoc"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "createdAt",
+          "currentVersion",
+          "doc",
+          "id",
+          "name",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "BrandKitInput": {
+        "type": "object",
+        "properties": {
+          "doc": {
+            "$ref": "#/components/schemas/BrandKitDoc"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "CheckFinding": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "string"
+          },
+          "found": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "A FindingKind — see config/brandCheck.ts."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "warn",
+              "fail"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "judged"
+            ],
+            "description": "Arithmetic, or a model's opinion. An override differs by which."
+          }
+        },
+        "required": [
+          "detail",
+          "kind",
+          "severity",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "CheckVerdict": {
+        "type": "object",
+        "properties": {
+          "acknowledgedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assetUrl": {
+            "type": "string"
+          },
+          "boardId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckFinding"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kitName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kitVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "overrideReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recorded beside the findings, never in place of them."
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "acknowledgedAt",
+          "assetUrl",
+          "boardId",
+          "createdAt",
+          "findings",
+          "id",
+          "itemId",
+          "kitName",
+          "kitVersion",
+          "overrideReason",
+          "passed"
+        ],
+        "additionalProperties": false
       },
       "DailyChallengeInfo": {
         "type": "object",
@@ -1340,8 +1632,7 @@
           "unsplashHtmlLink",
           "unsplashPhotoId"
         ],
-        "additionalProperties": false,
-        "id": "DailyChallengeInfo"
+        "additionalProperties": false
       },
       "DailyChallengeJournal": {
         "type": "object",
@@ -1359,8 +1650,7 @@
           "body",
           "updatedAt"
         ],
-        "additionalProperties": false,
-        "id": "DailyChallengeJournal"
+        "additionalProperties": false
       },
       "DailyChallengeResponse": {
         "type": "object",
@@ -1383,8 +1673,41 @@
           "challenge",
           "journal"
         ],
-        "additionalProperties": false,
-        "id": "DailyChallengeResponse"
+        "additionalProperties": false
+      },
+      "DeclaredInput": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "nodeKey": {
+            "type": "string",
+            "description": "Which node in the template this feeds."
+          },
+          "port": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "description": "A PortType — see config/nodeTypes.ts."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "nodeKey",
+          "port",
+          "required",
+          "type"
+        ],
+        "additionalProperties": false
       },
       "Element": {
         "type": "object",
@@ -1445,8 +1768,7 @@
           "name",
           "updatedAt"
         ],
-        "additionalProperties": false,
-        "id": "Element"
+        "additionalProperties": false
       },
       "ElementInput": {
         "type": "object",
@@ -1487,8 +1809,7 @@
           "imageUrls",
           "name"
         ],
-        "additionalProperties": false,
-        "id": "ElementInput"
+        "additionalProperties": false
       },
       "JournalInput": {
         "type": "object",
@@ -1501,8 +1822,321 @@
         "required": [
           "body"
         ],
-        "additionalProperties": false,
-        "id": "JournalInput"
+        "additionalProperties": false
+      },
+      "Provenance": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "brandKitVersionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recipeVersionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "settings": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "at",
+          "inputs",
+          "model",
+          "prompt",
+          "settings"
+        ],
+        "additionalProperties": false
+      },
+      "Recipe": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "currentVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "declaredInputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeclaredInput"
+            }
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nodeCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unverified": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "createdAt",
+          "currentVersion",
+          "declaredInputs",
+          "description",
+          "id",
+          "name",
+          "nodeCount",
+          "unverified",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeInput": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "The board the selection is read from."
+          },
+          "declaredInputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeclaredInput"
+            }
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ids only — the server reads the graph, never the client."
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "boardId",
+          "itemIds",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "RecipePlacement": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "boardId",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeUse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "latestVersion": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the recipe has been deleted."
+          },
+          "pinnedVersion": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "What this board was built against."
+          },
+          "recipeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recipeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "latestVersion",
+          "pinnedVersion",
+          "recipeId",
+          "recipeName"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeVersion": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "declaredInputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeclaredInput"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "nodeCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unverified": {
+            "type": "boolean",
+            "description": "Saved from a selection that had never run successfully."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "createdAt",
+          "declaredInputs",
+          "id",
+          "nodeCount",
+          "unverified",
+          "version"
+        ],
+        "additionalProperties": false
       },
       "RunNodeResult": {
         "type": "object",
@@ -1531,8 +2165,7 @@
           "outputs",
           "state"
         ],
-        "additionalProperties": false,
-        "id": "RunNodeResult"
+        "additionalProperties": false
       },
       "CanvaStatus": {
         "type": "object",
@@ -1556,8 +2189,7 @@
         "required": [
           "connected"
         ],
-        "additionalProperties": false,
-        "id": "CanvaStatus"
+        "additionalProperties": false
       },
       "FalLibraryItem": {
         "type": "object",
@@ -1610,8 +2242,7 @@
           "prompt",
           "url"
         ],
-        "additionalProperties": false,
-        "id": "FalLibraryItem"
+        "additionalProperties": false
       },
       "FalLibraryPage": {
         "type": "object",
@@ -1630,8 +2261,7 @@
           "hasMore",
           "items"
         ],
-        "additionalProperties": false,
-        "id": "FalLibraryPage"
+        "additionalProperties": false
       },
       "FramerImage": {
         "type": "object",
@@ -1665,8 +2295,7 @@
           "imageUrl",
           "thumbUrl"
         ],
-        "additionalProperties": false,
-        "id": "FramerImage"
+        "additionalProperties": false
       },
       "GeneratedImage": {
         "type": "object",
@@ -1716,8 +2345,7 @@
           "url",
           "width"
         ],
-        "additionalProperties": false,
-        "id": "GeneratedImage"
+        "additionalProperties": false
       },
       "GenerateInput": {
         "type": "object",
@@ -1743,8 +2371,7 @@
         "required": [
           "prompt"
         ],
-        "additionalProperties": false,
-        "id": "GenerateInput"
+        "additionalProperties": false
       },
       "PickerConfig": {
         "type": "object",
@@ -1782,8 +2409,7 @@
           "developerKey",
           "scope"
         ],
-        "additionalProperties": false,
-        "id": "PickerConfig"
+        "additionalProperties": false
       },
       "PinResult": {
         "type": "object",
@@ -1833,8 +2459,7 @@
           "imageUrl",
           "thumbUrl"
         ],
-        "additionalProperties": false,
-        "id": "PinResult"
+        "additionalProperties": false
       },
       "PinterestBoardResult": {
         "type": "object",
@@ -1860,8 +2485,7 @@
           "pins",
           "title"
         ],
-        "additionalProperties": false,
-        "id": "PinterestBoardResult"
+        "additionalProperties": false
       },
       "ProvisionResult": {
         "type": "object",
@@ -1897,8 +2521,7 @@
           "projectId",
           "projectName"
         ],
-        "additionalProperties": false,
-        "id": "ProvisionResult"
+        "additionalProperties": false
       },
       "UnsplashResult": {
         "type": "object",
@@ -1949,8 +2572,7 @@
           "imageUrl",
           "thumbUrl"
         ],
-        "additionalProperties": false,
-        "id": "UnsplashResult"
+        "additionalProperties": false
       },
       "UploadResult": {
         "type": "object",
@@ -1988,8 +2610,7 @@
         "required": [
           "url"
         ],
-        "additionalProperties": false,
-        "id": "UploadResult"
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -3161,6 +3782,53 @@
         ]
       }
     },
+    "/api/boards/{id}/result": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/result",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
     "/api/boards/{id}/run": {
       "post": {
         "description": "Runs one node and everything downstream of it. The longest request in the API — generation is measured in tens of seconds.",
@@ -3245,6 +3913,570 @@
         "tags": [
           "boards"
         ]
+      }
+    },
+    "/api/boards/{id}/run/browserRendered": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_browserRendered",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/browserRendered",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/capabilities": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_capabilities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/capabilities",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/expand": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_expand",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/expand",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/fingerprint": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_fingerprint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/fingerprint",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/inputs": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_inputs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/inputs",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/outputs": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_outputs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/outputs",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/refusals.test": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_refusals.test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/refusals.test",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/refusals": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_refusals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/refusals",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/replies": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_replies",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/replies",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/results": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_results",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/results",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/rows": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_rows",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/rows",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/boards/{id}/run/shaderBatch.test": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__run_shaderBatch.test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/run/shaderBatch.test",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
       }
     },
     "/api/boards/{id}/svg": {
@@ -3423,6 +4655,53 @@
         "tags": [
           "boards"
         ]
+      }
+    },
+    "/api/boards/{id}/video": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_boards__id__video",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/boards/{id}/video",
+        "tags": [
+          "boards"
+        ],
+        "x-undocumented": true
       }
     },
     "/api/boards/adopt": {
@@ -4134,6 +5413,260 @@
         "tags": [
           "categories"
         ]
+      }
+    },
+    "/api/collections/{id}": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_collections__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/collections/{id}",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
+      },
+      "patch": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "patch_api_collections__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "PATCH /api/collections/{id}",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
+      },
+      "post": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "post_api_collections__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "POST /api/collections/{id}",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
+      },
+      "delete": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "delete_api_collections__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "DELETE /api/collections/{id}",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/collections": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_collections",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/collections",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
+      },
+      "post": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "post_api_collections",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "POST /api/collections",
+        "tags": [
+          "collections"
+        ],
+        "x-undocumented": true
       }
     },
     "/api/daily-challenge/history": {
@@ -6468,6 +8001,262 @@
         "tags": [
           "pinterest"
         ]
+      }
+    },
+    "/api/recipes/{id}": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_recipes__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/recipes/{id}",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
+      },
+      "patch": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "patch_api_recipes__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "PATCH /api/recipes/{id}",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
+      },
+      "delete": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "delete_api_recipes__id_",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "DELETE /api/recipes/{id}",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/recipes/{id}/place": {
+      "post": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "post_api_recipes__id__place",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "POST /api/recipes/{id}/place",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
+      }
+    },
+    "/api/recipes": {
+      "get": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "get_api_recipes",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "GET /api/recipes",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
+      },
+      "post": {
+        "description": "Not yet described in schemas/routes.ts — path and method were read from the handler.",
+        "operationId": "post_api_recipes",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "4XX": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "POST /api/recipes",
+        "tags": [
+          "recipes"
+        ],
+        "x-undocumented": true
       }
     },
     "/api/robots": {

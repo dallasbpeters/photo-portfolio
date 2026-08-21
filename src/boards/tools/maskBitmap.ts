@@ -1,6 +1,6 @@
 import { portfolioService } from "../../services/portfolioService.js";
 import type { BoardItem } from "../../types.js";
-import { maskOf, naturalSizeOf, rasterizeMask } from "../mask.js";
+import { maskOf, naturalSizeOf, rasterizeMask } from "../drawing/mask.js";
 import { imageOf } from "./itemContext.js";
 
 /**

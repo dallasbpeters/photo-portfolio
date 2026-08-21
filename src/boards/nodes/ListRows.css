@@ -1,0 +1,178 @@
+/*
+ * The rows of a List node: one prompt each, editable and removable.
+ *
+ * An Iterate node computes its prompts from a template on every read, which is
+ * right for writing fifty variations and wrong the moment three of them are not
+ * what you wanted. These are the prompts themselves, so a bad one is fixed or
+ * deleted where it is.
+ */
+
+.list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  min-height: 0;
+}
+
+.list-rows__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: calc(var(--spacing) * 0.5);
+}
+
+/*
+ * The count, said out loud.
+ *
+ * What this feeds is where the money goes: fifty rows is fifty paid runs, and
+ * the length is the most useful thing about the list before pressing Run.
+ */
+.list-rows__count {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.list-rows__add,
+.list-rows__refill {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.list-rows__add {
+  padding: calc(var(--spacing) * 0.5) var(--spacing);
+  color: color-mix(in oklch, var(--color-board-ink) 55%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.list-rows__add:hover {
+  color: var(--color-board-ink);
+}
+
+.list-rows__add:disabled {
+  opacity: 0.3;
+}
+
+/*
+ * Offered rather than taken, because these rows have been worked on and a
+ * refill would throw that work away.
+ */
+.list-rows__refill {
+  padding: var(--spacing) calc(var(--spacing) * 1.5);
+  color: var(--color-amber-700);
+  text-transform: none;
+  letter-spacing: normal;
+  background-color: color-mix(in oklch, var(--color-amber-600) 5%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-amber-600) 30%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.list-rows__refill:hover {
+  background-color: color-mix(
+    in oklch,
+    var(--color-amber-600) 10%,
+    transparent
+  );
+}
+
+.list-rows__empty {
+  padding: calc(var(--spacing) * 2) var(--spacing);
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+.list-rows__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list-rows__row {
+  display: flex;
+  gap: var(--spacing);
+  align-items: flex-start;
+  padding: var(--spacing) calc(var(--spacing) * 1.5);
+  background-color: color-mix(
+    in oklch,
+    var(--color-board-surface) 40%,
+    transparent
+  );
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.list-rows__number {
+  flex-shrink: 0;
+  width: 1.25rem;
+  padding-top: var(--spacing);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}
+
+.list-rows__text {
+  flex: 1;
+  min-height: 5rem;
+  font-size: var(--text-xs);
+  color: var(--color-board-ink);
+  resize: vertical;
+  outline: none;
+  background-color: transparent;
+}
+
+/*
+ * The controls for one row, revealed on hover.
+ *
+ * Fifty rows each wearing three permanent buttons is a hundred and fifty
+ * controls competing with the prompts, which are the thing being read.
+ */
+.list-rows__move,
+.list-rows__delete {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.list-rows__move {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-rows__delete {
+  padding-top: var(--spacing);
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}
+
+.list-rows__row:hover .list-rows__move,
+.list-rows__row:hover .list-rows__delete,
+.list-rows__move:focus-within,
+.list-rows__delete:focus-visible {
+  opacity: 1;
+}
+
+.list-rows__delete:hover {
+  color: var(--color-red-600);
+}
+
+.list-rows__nudge {
+  padding-inline: calc(var(--spacing) * 0.5);
+  font-size: 9px;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.list-rows__nudge:hover {
+  color: var(--color-board-ink);
+}
+
+.list-rows__nudge:disabled {
+  opacity: 0.2;
+}

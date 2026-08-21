@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { isVideoUrl } from "../boards/isVideo";
+import { isVideoUrl } from "../boards/io/isVideo";
 import { useCollections } from "../hooks/useCollections";
 import { usePhotos } from "../hooks/usePhotos";
 import { collectionsApi } from "../services/portfolioService";
@@ -163,7 +163,7 @@ export function AssetPicker({ onChoose, onClose }: AssetPickerProps) {
   );
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-6">
+    <div className="fixed inset-0 z-60 grid place-items-center bg-black/60 p-6">
       {/* The backdrop dismisses; Escape above is the keyboard equivalent. */}
       <div
         aria-hidden

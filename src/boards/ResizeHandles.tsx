@@ -1,4 +1,4 @@
-import type { ResizeHandle } from "./alignmentGuides";
+import type { ResizeHandle } from "./geometry/alignmentGuides";
 
 interface ResizeHandlesProps {
   /** Cancels the canvas zoom, so a handle is the same size at every scale. */

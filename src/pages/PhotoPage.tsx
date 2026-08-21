@@ -1,3 +1,4 @@
+import "./PhotoPage.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -87,46 +88,34 @@ export function PhotoPage() {
   }, [navigate, next, previous]);
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="page photo-page">
       <Toaster position="top-center" theme="dark" />
 
-      <header className="px-8 pt-10 md:px-16">
-        <Link
-          className="font-bold text-2xl text-accent uppercase tracking-widest transition-opacity hover:opacity-80"
-          to="/"
-        >
+      <header className="photo-page__masthead">
+        <Link className="photo-page__wordmark" to="/">
           {settings.heroTitle}
         </Link>
         <SiteNav pages={pages} />
       </header>
 
-      <main className="px-4 py-10 md:px-16">
-        {state === "loading" && (
-          <p className="text-[10px] text-white/80 uppercase tracking-[0.3em]">
-            Loading
-          </p>
-        )}
+      <main className="photo-page__main">
+        {state === "loading" && <p className="label label--quiet">Loading</p>}
 
         {state === "missing" && (
-          <div className="space-y-6 py-16">
-            <h1 className="font-light text-2xl uppercase tracking-[0.24em]">
-              Photograph not found
-            </h1>
-            <Link
-              className="inline-flex min-h-11 items-center border border-white/20 px-6 text-[10px] uppercase tracking-[0.2em] transition-colors hover:bg-white hover:text-black"
-              to="/"
-            >
+          <div className="stack photo-page__not-found">
+            <h1 className="photo-page__notice-title">Photograph not found</h1>
+            <Link className="label photo-page__back" to="/">
               Back to the gallery
             </Link>
           </div>
         )}
 
         {state === "ready" && photo && (
-          <article className="mx-auto max-w-5xl">
-            <figure className="relative">
+          <article className="photo-page__article">
+            <figure>
               <OptimizedImage
                 alt={photo.alt || photo.title}
-                className="max-h-[76vh] w-full object-contain"
+                className="photo-page__image"
                 fetchPriority="high"
                 height={photo.height ?? undefined}
                 loading="eager"
@@ -138,19 +127,14 @@ export function PhotoPage() {
               />
             </figure>
 
-            <div className="mt-8 flex flex-wrap items-start justify-between gap-6">
-              <div className="space-y-2">
-                <h1 className="font-light text-xl uppercase tracking-[0.2em] md:text-2xl">
-                  {photo.title}
-                </h1>
-                <Link
-                  className="inline-block text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
-                  to="/"
-                >
+            <div className="row photo-page__meta row--between row--wrap">
+              <div className="stack stack--tight">
+                <h1 className="photo-page__title">{photo.title}</h1>
+                <Link className="label quiet-link photo-page__category" to="/">
                   {photo.categoryLabel}
                 </Link>
 
-                <div className="pt-2">
+                <div className="photo-page__share">
                   <ShareButtons
                     description={photo.alt || photo.title}
                     imageUrl={photo.url}
@@ -160,48 +144,38 @@ export function PhotoPage() {
                 </div>
               </div>
 
-              <nav
-                aria-label="Photograph navigation"
-                className="flex items-center gap-4"
-              >
+              <nav aria-label="Photograph navigation" className="row">
                 {previous ? (
                   <Link
                     aria-label={`Previous: ${previous.title}`}
-                    className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
+                    className="row label quiet-link"
                     to={`/photo/${previous.id}`}
                   >
                     <HugeiconsIcon icon={ArrowLeft01Icon} size={13} />
                     Prev
                   </Link>
                 ) : (
-                  <span className="text-[10px] text-white/15 uppercase tracking-[0.18em]">
-                    Prev
-                  </span>
+                  <span className="label photo-page__pager-empty">Prev</span>
                 )}
                 {next ? (
                   <Link
                     aria-label={`Next: ${next.title}`}
-                    className="flex items-center gap-1.5 text-[10px] text-white/90 uppercase tracking-[0.18em] transition-colors hover:text-white"
+                    className="row label quiet-link"
                     to={`/photo/${next.id}`}
                   >
                     Next
                     <HugeiconsIcon icon={ArrowRight01Icon} size={13} />
                   </Link>
                 ) : (
-                  <span className="text-[10px] text-white/15 uppercase tracking-[0.18em]">
-                    Next
-                  </span>
+                  <span className="label photo-page__pager-empty">Next</span>
                 )}
               </nav>
             </div>
 
             {exifParts.length > 0 && (
-              <dl className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-white/[0.07] border-t pt-5">
+              <dl className="row hairline photo-page__exif row--wrap">
                 {exifParts.map((part) => (
-                  <dd
-                    className="font-mono text-[10px] text-white/90 tracking-[0.08em]"
-                    key={part}
-                  >
+                  <dd className="photo-page__exif-item" key={part}>
                     {part}
                   </dd>
                 ))}
@@ -211,8 +185,8 @@ export function PhotoPage() {
         )}
       </main>
 
-      <footer className="border-white/5 border-t px-8 py-10 md:px-16">
-        <p className="text-[10px] text-white/90 uppercase tracking-[0.3em]">
+      <footer className="hairline photo-page__footer">
+        <p className="label label--quiet">
           © {new Date().getFullYear()} {settings.ownerName}
         </p>
       </footer>

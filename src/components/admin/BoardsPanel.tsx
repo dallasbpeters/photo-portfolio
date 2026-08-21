@@ -119,12 +119,28 @@ export function BoardsPanel() {
             {boards.map((board) => (
               <motion.li initial="initial" key={board.id} whileHover="hover">
                 <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                  {/*
+                   * onClick, not Motion's onTap, and the scale barely moves.
+                   *
+                   * onTap only fires if the pointer is still within the element
+                   * when it is released — and `whileTap: 0.9` shrank the card to
+                   * nine tenths under the finger, so a press anywhere but dead
+                   * centre ended up outside it and the tap was dropped. Opening
+                   * a board took anywhere up to a dozen clicks, and clicking
+                   * faster made it worse, because each release landed earlier in
+                   * the shrink.
+                   *
+                   * onClick is dispatched on the element the press began on
+                   * regardless of what the animation did to its box. The press
+                   * feedback stays, at a depth that cannot move the target out
+                   * from under the pointer.
+                   */}
                   <motion.button
                     className="block w-full cursor-pointer text-left"
-                    onTap={() => navigate(`/admin/boards/${board.id}`)}
+                    onClick={() => navigate(`/admin/boards/${board.id}`)}
                     type="button"
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex aspect-4/3 items-center justify-center bg-neutral-900">
                       {board.coverUrl ? (

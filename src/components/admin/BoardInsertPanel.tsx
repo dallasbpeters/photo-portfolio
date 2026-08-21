@@ -19,9 +19,12 @@ import {
 import { ICON_STYLES, type IconStyle } from "../../../config/iconStyles";
 import type { NodeTypeId } from "../../../config/nodeTypes";
 import { defaultPrompt } from "../../boards/defaultPrompt";
-import { pickDriveImages } from "../../boards/googleDrive";
-import { newItemId } from "../../boards/newItemId";
-import { ALL_SHADERS, SHADER_CATEGORIES } from "../../boards/shaderConfig";
+import { pickDriveImages } from "../../boards/io/googleDrive";
+import { newItemId } from "../../boards/io/newItemId";
+import {
+  ALL_SHADERS,
+  SHADER_CATEGORIES,
+} from "../../boards/shaders/shaderConfig";
 import {
   aiApi,
   type FalLibraryItem,

@@ -25,8 +25,12 @@ export const loadEnv = (): void => {
   );
 
   config({ path: join(root, ".env") });
-  config({ override: true, path: join(root, ".env.local") });
-  config({ override: true, path: join(root, ".env.development.local") });
+  config({ override: true, path: join(root, ".env.local"), quiet: true });
+  config({
+    override: true,
+    path: join(root, ".env.development.local"),
+    quiet: true,
+  });
 
   // The site's own file last, so `SITE=dallas pnpm db:migrate` migrates
   // dallas's database rather than whichever one `.env.local` happens to name.
@@ -34,7 +38,11 @@ export const loadEnv = (): void => {
   // one a file just supplied, or this would pick its own file.
   const site = (explicit.get("SITE") ?? explicit.get("VITE_SITE"))?.trim();
   if (site) {
-    config({ override: true, path: join(root, `.env.${site}.local`) });
+    config({
+      override: true,
+      path: join(root, `.env.${site}.local`),
+      quiet: true,
+    });
   }
 
   for (const [key, value] of explicit) {

@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Layers01Icon } from "@hugeicons-pro/core-stroke-standard";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -7,43 +5,43 @@ import {
   CANVAS_WIDTH,
   MIN_ITEM_SIZE,
 } from "../../config/canvas.js";
-import { findOutputPort, withinFrame, withWire } from "../../config/graph.js";
+import { findOutputPort, withWire } from "../../config/graph.js";
 import type { PortType } from "../../config/nodeTypes.js";
 import type { BoardComment } from "../services/comments";
 import type { BoardItem, BoardWire } from "../types";
+import { BoardItemView } from "./BoardItemView";
+import { CanvasChrome } from "./canvas/CanvasChrome";
+import { markFromStroke } from "./canvas/markFromStroke";
+import { maskStrokeIn } from "./canvas/maskStroke";
+import { portHandlersFor } from "./canvas/portHandlers";
+import {
+  RecipeGroupView,
+  type RecipeGroupViewProps,
+} from "./canvas/RecipeGroupView";
+import { NO_PREVIEW, resolveWired } from "./canvas/wiredPreviews";
+import {
+  type DrawingConfig,
+  type DrawTool,
+  isFreehand,
+  isMaskTool,
+  type Point,
+} from "./drawing/drawing";
+import type { MaskStroke } from "./drawing/mask";
+import { StrokePreview } from "./drawing/StrokePreview";
+import { isImageDrop } from "./drawing/svgToRaster";
 import {
   type Guides,
   NO_GUIDES,
   type ResizeHandle,
   snapResize,
   snapToGuides,
-} from "./alignmentGuides";
-import { BoardItemView } from "./BoardItemView";
-import { CanvasMenu, type CanvasMenuTarget } from "./CanvasMenu";
+} from "./geometry/alignmentGuides";
 import {
-  boundsOf,
-  type DrawingConfig,
-  type DrawTool,
-  isFreehand,
-  isMaskTool,
-  type Point,
-  toUnitSpace,
-} from "./drawing";
-import { contentBounds, topmostAt } from "./hitTest";
-import {
-  BOARD_IMAGE_TYPE,
-  iteratedTextOf,
-  outputImageOf,
-  outputImagesOf,
-  outputListOf,
-  outputTextOf,
-} from "./itemOutput";
-import { LayersPanel } from "./LayersPanel";
-import type { MaskStroke } from "./mask";
-import { PortMenu, type PortTarget } from "./PortMenu";
-import { outputPointFor } from "./portGeometry";
-import { resizeBox } from "./resizeBox";
-import { StrokePreview } from "./StrokePreview";
+  contentBounds,
+  containedIndices as indicesWithin,
+  topmostAt,
+} from "./geometry/hitTest";
+import { resizeBox } from "./geometry/resizeBox";
 import {
   applyMarquee,
   EMPTY_SELECTION,
@@ -53,17 +51,20 @@ import {
   select,
   selectedItems,
   soleSelected,
-} from "./selectionModel";
+} from "./geometry/selectionModel";
 import {
   buildSnapIndex,
   type Box as SnapBox,
   type SnapIndex,
-} from "./snapIndex";
-import { isImageDrop } from "./svgToRaster";
+} from "./geometry/snapIndex";
+import { useCanvasViewport } from "./hooks/useCanvasViewport";
+import { useDeleteKey } from "./hooks/useDeleteKey";
+import { useSpaceKey } from "./hooks/useSpaceKey";
+import { useWireGesture } from "./hooks/useWireGesture";
+import { BOARD_IMAGE_TYPE } from "./itemOutput";
+import { CanvasMenu, type CanvasMenuTarget } from "./panels/CanvasMenu";
+import { PortMenu, type PortTarget } from "./panels/PortMenu";
 import { useBoardTools } from "./tools/useBoardTools";
-import { type CanvasViewport, useCanvasViewport } from "./useCanvasViewport";
-import { useSpaceKey } from "./useSpaceKey";
-import { useWireGesture } from "./useWireGesture";
 import { WireLayer } from "./WireLayer";
 
 const NO_WIRES: BoardWire[] = [];
@@ -188,6 +189,8 @@ interface BoardCanvasProps {
   onRun?: (itemId: string, force: boolean) => void;
   /** Stores the selected items as a reusable element. */
   onSaveElement?: (items: BoardItem[]) => void;
+  /** Keeps a selection as a reusable way of working. */
+  onSaveRecipe?: (items: BoardItem[], name: string) => void;
   /**
    * The item currently selected, or null.
    *
@@ -212,6 +215,8 @@ interface BoardCanvasProps {
    * were made, which is most of the reason to publish one.
    */
   readOnly?: boolean;
+  /** The recipe groups on this board, so their outlines can be drawn. */
+  recipeUses?: RecipeGroupViewProps["uses"];
   /**
    * Filled with a getter for the middle of what is currently on screen.
    *
@@ -293,6 +298,8 @@ export function BoardCanvas({
   onRemoveVersion,
   onRun,
   onSaveElement,
+  onSaveRecipe,
+  recipeUses,
   boardId,
   onDrawTool,
   onEditImage,
@@ -450,17 +457,7 @@ export function BoardCanvas({
       if (!(target && onMaskStroke)) {
         return;
       }
-      onMaskStroke(target.id, {
-        points: toUnitSpace(points, {
-          height: target.height,
-          width: target.width,
-          x: target.x,
-          y: target.y,
-        }),
-        // Stored relative to the item's width so the mask scales with the
-        // node, exactly as the points do.
-        width: strokeWidth / target.width,
-      });
+      onMaskStroke(target.id, maskStrokeIn(points, target, strokeWidth));
     },
     [imageAt, onMaskStroke]
   );
@@ -477,48 +474,10 @@ export function BoardCanvas({
         finishMaskStroke(points, drawStyle.strokeWidth);
         return;
       }
-      const [first] = points;
-      const last = points.at(-1);
-      if (!(first && last && onDraw)) {
-        return;
+      const mark = markFromStroke(points, drawTool, drawStyle);
+      if (mark) {
+        onDraw?.(mark.config, mark.box);
       }
-
-      if (isFreehand(drawTool)) {
-        const box = boundsOf(points, drawStyle.strokeWidth);
-        onDraw(
-          {
-            fill: null,
-            points: toUnitSpace(points, box),
-            stroke: drawStyle.stroke,
-            strokeWidth: drawStyle.strokeWidth,
-            tool: drawTool,
-          },
-          box
-        );
-        return;
-      }
-
-      // A shape is defined by where the drag began and ended, in either
-      // direction — dragging up and left is as natural as down and right.
-      const box = {
-        height: Math.abs(last.y - first.y),
-        width: Math.abs(last.x - first.x),
-        x: Math.min(first.x, last.x),
-        y: Math.min(first.y, last.y),
-      };
-      if (box.width < MIN_ITEM_SIZE || box.height < MIN_ITEM_SIZE) {
-        // A click rather than a drag. Nothing was asked for.
-        return;
-      }
-      onDraw(
-        {
-          fill: drawStyle.fill,
-          stroke: drawStyle.stroke,
-          strokeWidth: drawStyle.strokeWidth,
-          tool: drawTool,
-        },
-        box
-      );
     },
     [drawStyle, drawTool, finishMaskStroke, onDraw]
   );
@@ -624,84 +583,12 @@ export function BoardCanvas({
   const wiring = useWireGesture({ items, onConnect: connect, wires });
 
   /** Inputs already fed by a wire, so a node can say its prompt is wired in. */
+  // Once per graph change, never in the render loop. See resolveWired.
+  const wired = useMemo(() => resolveWired({ items, wires }), [items, wires]);
+
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
   );
-
-  /**
-   * What a node that composes text will send, read before it runs. Combine
-   * answers with one string, Iterate with one per value — seeing "3 prompts"
-   * and what they say is the only way to know a batch is set up right.
-   */
-  /** The pictures a Batch node holds. Only that node: resolving every image
-   * behind every node on every render walks the graph once per node. */
-  const previewImagesFor = (item: BoardItem): string[] | undefined =>
-    item.nodeType === "batch"
-      ? outputImagesOf(item, { items, wires })
-      : undefined;
-
-  const previewTextFor = (item: BoardItem): string | null => {
-    if (item.nodeType === "join" || item.nodeType === "palette") {
-      return outputTextOf(item, { items, wires });
-    }
-    if (item.nodeType !== "iterate") {
-      return null;
-    }
-    const prompts = iteratedTextOf(item, { items, wires });
-    if (prompts.length === 0) {
-      return null;
-    }
-    return prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
-  };
-
-  /**
-   * The words arriving on an item's prompt input, so the node can show them.
-   *
-   * Resolved here because only the canvas holds the wires; the node itself
-   * knows nothing about what feeds it.
-   */
-  const wiredTextFor = (itemId: string): string | null => {
-    // Every wire on the prompt port, kept apart: each contributes a part of
-    // each run, and a wire carrying several values makes several runs. Mirrors
-    // jobsFor, so what the node shows is what the node will send.
-    const perWire = wires
-      .filter((w) => w.targetItemId === itemId && w.targetPort === "prompt")
-      .map((w) => items.find((i) => i.id === w.sourceItemId))
-      .map((source) => outputListOf(source ?? null, { items, wires }))
-      .map((list) => list.filter((text) => text.trim()))
-      .filter((list) => list.length > 0);
-
-    if (perWire.length === 0) {
-      return null;
-    }
-    const rows = Math.max(...perWire.map((list) => list.length));
-    const prompts = Array.from({ length: rows }, (_, row) =>
-      perWire.map((list) => list[row % list.length] ?? "").join(", ")
-    );
-    return rows === 1
-      ? (prompts[0] ?? null)
-      : prompts.map((text, index) => `${index + 1}. ${text}`).join("\n");
-  };
-
-  /**
-   * The picture feeding an item's image input, for the kinds that render one
-   * themselves rather than being run on the server.
-   *
-   * A shader restyles its input live in the browser, so the URL has to reach
-   * the component; nothing is written to the item, which keeps the wire the
-   * single source of truth for what is being shown.
-   */
-  const wiredImageFor = (itemId: string): string | null => {
-    const wire = wires.find(
-      (candidate) =>
-        candidate.targetItemId === itemId && candidate.targetPort === "image"
-    );
-    if (!wire) {
-      return null;
-    }
-    const source = items.find((item) => item.id === wire.sourceItemId);
-    return source ? outputImageOf(source, items) : null;
-  };
 
   /**
    * Removes an item and everything attached to it.
@@ -709,21 +596,38 @@ export function BoardCanvas({
    * One action, not two: a board must never be left holding a wire that points
    * at nothing. The schema cascades on the server for the same reason.
    */
-  const removeItem = useCallback(
-    (index: number) => {
-      const item = items[index];
-      if (!item) {
+  /**
+   * Items gone, with every wire that touched any of them.
+   *
+   * One removal rather than one per way of asking. The cross on an item's
+   * chrome and the Delete key were separate code doing the same thing, and only
+   * the first of them remembered to take the wires — a node deleted by keyboard
+   * would have left wires pointing at nothing.
+   */
+  const removeIds = useCallback(
+    (doomed: Set<string>) => {
+      if (doomed.size === 0) {
         return;
       }
-      onChange(items.filter((_, i) => i !== index));
+      onChange(items.filter((item) => !doomed.has(item.id)));
       onWiresChange?.(
         wires.filter(
           (wire) =>
-            wire.sourceItemId !== item.id && wire.targetItemId !== item.id
+            !(doomed.has(wire.sourceItemId) || doomed.has(wire.targetItemId))
         )
       );
     },
     [items, onChange, onWiresChange, wires]
+  );
+
+  const removeItem = useCallback(
+    (index: number) => {
+      const item = items[index];
+      if (item) {
+        removeIds(new Set([item.id]));
+      }
+    },
+    [items, removeIds]
   );
 
   // Frames the arrangement the first time the board has one. A published board
@@ -733,6 +637,15 @@ export function BoardCanvas({
   // Pulled out of `view`, whose identity changes every render; `frameContent`
   // itself is stable, so this runs only when the items change, and it declines
   // to do anything once the board has been framed or taken hold of.
+  const removeSelected = useCallback(() => {
+    removeIds(new Set(selectedItems(selection, items).map((i) => i.id)));
+    setSelection(EMPTY_SELECTION);
+  }, [items, removeIds, selection]);
+
+  // Not while a visitor is looking at a published board, and not while a node
+  // is being edited — the node's own fields handle their own keys.
+  useDeleteKey(removeSelected, !(readOnly || editingId));
+
   const { frameContent } = view;
   useEffect(() => {
     // An empty board has nothing to frame, and the viewport already centres the
@@ -745,15 +658,7 @@ export function BoardCanvas({
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
-    (frame: BoardItem): number[] => {
-      const inside = new Set(withinFrame(frame, items).map((item) => item.id));
-      return items.reduce<number[]>((acc, item, index) => {
-        if (inside.has(item.id)) {
-          acc.push(index);
-        }
-        return acc;
-      }, []);
-    },
+    (frame: BoardItem): number[] => indicesWithin(frame, items),
     [items]
   );
 
@@ -1292,6 +1197,13 @@ export function BoardCanvas({
               image. */}
           <StrokePreview points={stroke} style={drawStyle} tool={drawTool} />
 
+          {/* Behind the items, in canvas units: a group is part of the
+              arrangement rather than chrome, so it zooms and pans with the
+              nodes it describes. */}
+          {recipeUses && recipeUses.length > 0 ? (
+            <RecipeGroupView items={items} uses={recipeUses} />
+          ) : null}
+
           {/* Drawn in canvas units inside the transform, so it stays exactly
               under the pointer at any zoom. */}
           {marquee ? (
@@ -1306,77 +1218,74 @@ export function BoardCanvas({
             />
           ) : null}
 
-          {items.map((item, index) => (
-            <BoardItemView
-              commentCount={openCommentCounts.get(item.id) ?? 0}
-              hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
-              imageUrl={wiredImageFor(item.id)}
-              index={index}
-              isEditing={!readOnly && editingId === item.id}
-              isSelected={!readOnly && selection.has(item.id)}
-              isSoleSelected={selectedItem?.id === item.id}
-              item={item}
-              key={keyOf(item)}
-              onBeginEdit={() => {
-                if (!readOnly) {
-                  setEditingId(item.id);
+          {items.map((item, index) => {
+            const preview = wired.get(item.id) ?? NO_PREVIEW;
+            return (
+              <BoardItemView
+                commentCount={openCommentCounts.get(item.id) ?? 0}
+                hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
+                imageCount={preview.imageCount}
+                imageUrl={preview.imageUrl}
+                index={index}
+                isEditing={!readOnly && editingId === item.id}
+                isSelected={!readOnly && selection.has(item.id)}
+                isSoleSelected={selectedItem?.id === item.id}
+                item={item}
+                key={keyOf(item)}
+                onBeginEdit={() => {
+                  if (!readOnly) {
+                    setEditingId(item.id);
+                  }
+                }}
+                onCancel={onCancel}
+                onCommentTarget={
+                  commentMode && onCommentItem
+                    ? () => onCommentItem(item.id)
+                    : undefined
                 }
-              }}
-              onCancel={onCancel}
-              onCommentTarget={
-                commentMode && onCommentItem
-                  ? () => onCommentItem(item.id)
-                  : undefined
-              }
-              onConfigChange={(config) => onConfigChange?.(item.id, config)}
-              onDelete={() => removeItem(index)}
-              onEditBody={(body) =>
-                onChange(
-                  items.map((it, i) => (i === index ? { ...it, body } : it))
-                )
-              }
-              onEditManually={onEditImage ? () => onEditImage(item) : undefined}
-              onPatch={(patch) =>
-                onChange(
-                  items.map((it, i) => (i === index ? { ...it, ...patch } : it))
-                )
-              }
-              onRemoveVersion={
-                onRemoveVersion
-                  ? (version) => onRemoveVersion(item.id, version)
-                  : undefined
-              }
-              onResizeStart={readOnly ? () => undefined : beginResize}
-              onRun={(force) => onRun?.(item.id, force)}
-              onSelect={selectFor()}
-              onSendVersions={
-                onSendVersions ? () => onSendVersions(item.id) : undefined
-              }
-              outputText={previewTextFor(item)}
-              ports={
-                readOnly
-                  ? undefined
-                  : {
-                      canDropOn: wiring.canDropOn,
-                      isDragging: wiring.isDragging,
-                      onPortDown: (itemId, portKey, screen) => {
-                        const point = outputPointFor(item, portKey);
-                        if (point) {
-                          view.markUserMoved();
-                          wiring.begin(itemId, portKey, point, screen);
-                        }
-                      },
-                      onPortEnter: wiring.enterPort,
-                      onPortLeave: wiring.leavePort,
-                    }
-              }
-              previewImages={previewImagesFor(item)}
-              readOnly={readOnly}
-              scale={view.viewport.scale}
-              tools={readOnly ? undefined : tools}
-              wiredPrompt={wiredTextFor(item.id)}
-            />
-          ))}
+                onConfigChange={(config) => onConfigChange?.(item.id, config)}
+                onDelete={() => removeItem(index)}
+                onEditBody={(body) =>
+                  onChange(
+                    items.map((it, i) => (i === index ? { ...it, body } : it))
+                  )
+                }
+                onEditManually={
+                  onEditImage ? () => onEditImage(item) : undefined
+                }
+                onPatch={(patch) =>
+                  onChange(
+                    items.map((it, i) =>
+                      i === index ? { ...it, ...patch } : it
+                    )
+                  )
+                }
+                onRemoveVersion={
+                  onRemoveVersion
+                    ? (version) => onRemoveVersion(item.id, version)
+                    : undefined
+                }
+                onResizeStart={readOnly ? () => undefined : beginResize}
+                onRun={(force) => onRun?.(item.id, force)}
+                onSelect={selectFor()}
+                onSendVersions={
+                  onSendVersions ? () => onSendVersions(item.id) : undefined
+                }
+                outputText={preview.outputText}
+                ports={
+                  readOnly
+                    ? undefined
+                    : portHandlersFor(item, wiring, view.markUserMoved)
+                }
+                previewImages={preview.previewImages}
+                readOnly={readOnly}
+                scale={view.viewport.scale}
+                tools={readOnly ? undefined : tools}
+                wiredItems={preview.wiredItems}
+                wiredPrompt={preview.wiredPrompt}
+              />
+            );
+          })}
         </div>
       </div>
       <CanvasMenu
@@ -1412,6 +1321,14 @@ export function BoardCanvas({
           onSaveElement?.(chosen);
           setMenu(null);
         }}
+        onSaveRecipe={
+          readOnly || !onSaveRecipe
+            ? undefined
+            : (chosen, name) => {
+                onSaveRecipe(chosen, name);
+                setMenu(null);
+              }
+        }
         onSendToBack={(itemId) => {
           onSendToBack?.(itemId);
           setMenu(null);
@@ -1446,86 +1363,5 @@ export function BoardCanvas({
         view={view}
       />
     </div>
-  );
-}
-
-/**
- * The bottom-right chrome: zoom controls, and the layers panel's toggle.
- *
- * Kept out of BoardCanvas because the canvas's own function was already at the
- * complexity ceiling, and this is self-contained chrome — the panel's open
- * state, the button that toggles it, and the zoom box that hosts the button.
- */
-function CanvasChrome({
-  items,
-  onChange,
-  onSelect,
-  readOnly,
-  selectedId,
-  view,
-}: {
-  items: BoardItem[];
-  onChange: (items: BoardItem[]) => void;
-  onSelect: (item: BoardItem) => void;
-  readOnly?: boolean;
-  selectedId: string | null;
-  view: CanvasViewport;
-}) {
-  const [showLayers, setShowLayers] = useState(false);
-  return (
-    <>
-      {!readOnly && showLayers ? (
-        <LayersPanel
-          items={items}
-          onChange={onChange}
-          onClose={() => setShowLayers(false)}
-          onSelect={onSelect}
-          selectedId={selectedId}
-        />
-      ) : null}
-      <div className="pointer-events-none absolute right-4 bottom-4 flex items-center gap-2">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
-          {readOnly ? null : (
-            <button
-              aria-label="Layers"
-              aria-pressed={showLayers}
-              className={`grid min-h-9 min-w-9 place-items-center text-xs uppercase tracking-widest transition-colors hover:text-board-ink ${
-                showLayers ? "text-board-ink" : "text-board-ink/70"
-              }`}
-              onClick={() => setShowLayers((open) => !open)}
-              type="button"
-            >
-              <HugeiconsIcon aria-hidden icon={Layers01Icon} size={16} />
-            </button>
-          )}
-          <button
-            aria-label="Zoom out"
-            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
-            onClick={() => view.zoomBy(1 / 1.25)}
-            type="button"
-          >
-            −
-          </button>
-          <span className="w-12 text-center text-[10px] text-board-ink/50 tabular-nums">
-            {Math.round(view.viewport.scale * 100)}%
-          </span>
-          <button
-            aria-label="Zoom in"
-            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
-            onClick={() => view.zoomBy(1.25)}
-            type="button"
-          >
-            +
-          </button>
-          <button
-            className="min-h-9 px-2 text-[10px] text-board-ink/70 uppercase tracking-widest hover:text-board-ink"
-            onClick={view.fit}
-            type="button"
-          >
-            Fit
-          </button>
-        </div>
-      </div>
-    </>
   );
 }
