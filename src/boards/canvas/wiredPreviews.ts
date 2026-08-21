@@ -179,3 +179,54 @@ export const wiredImageFor = (itemId: string, graph: Graph): string | null =>
    * preview and the render can never disagree about what is feeding a node.
    */
   wiredImagesFor(itemId, graph)[0] ?? null;
+
+/**
+ * Everything the six resolvers above answer, for every item, worked out once.
+ *
+ * They were being called inside the item loop — six graph walks per item per
+ * render, each recursing through whatever feeds it. On a board of fifty that is
+ * three hundred walks, and BoardCanvas re-renders on every pointer move: a
+ * drag, a marquee, a selection change, a guide appearing. The cost is quadratic
+ * in the board and it was being paid at pointer rate.
+ *
+ * None of it depends on the pointer. Every one of these is a function of the
+ * items and the wires alone, so the whole table is computed when the graph
+ * changes and read by address the rest of the time.
+ */
+export interface WiredPreview {
+  imageCount?: number;
+  imageUrl: string | null;
+  outputText: string | null;
+  previewImages?: string[];
+  wiredItems?: string[];
+  wiredPrompt: string | null;
+}
+
+export const resolveWired = (graph: Graph): Map<string, WiredPreview> =>
+  new Map(
+    graph.items.map((item) => [
+      item.id,
+      {
+        imageCount: wiredImageCountFor(item, graph),
+        imageUrl: wiredImageFor(item.id, graph),
+        outputText: previewTextFor(item, graph),
+        previewImages: previewImagesFor(item, graph),
+        wiredItems: wiredItemsFor(item, graph),
+        wiredPrompt: wiredTextFor(item.id, graph),
+      },
+    ])
+  );
+
+/**
+ * What an item that is not in the table would answer.
+ *
+ * So a caller reads `preview.imageUrl` rather than
+ * `wired.get(id)?.imageUrl ?? null` six times over — five nullish fallbacks in
+ * a render loop is five branches, and it pushed the loop past the complexity
+ * ceiling for no gain in safety.
+ */
+export const NO_PREVIEW: WiredPreview = {
+  imageUrl: null,
+  outputText: null,
+  wiredPrompt: null,
+};

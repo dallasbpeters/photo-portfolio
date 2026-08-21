@@ -18,14 +18,7 @@ import {
   RecipeGroupView,
   type RecipeGroupViewProps,
 } from "./canvas/RecipeGroupView";
-import {
-  previewImagesFor,
-  previewTextFor,
-  wiredImageCountFor,
-  wiredImageFor,
-  wiredItemsFor,
-  wiredTextFor,
-} from "./canvas/wiredPreviews";
+import { NO_PREVIEW, resolveWired } from "./canvas/wiredPreviews";
 import {
   type DrawingConfig,
   type DrawTool,
@@ -590,8 +583,8 @@ export function BoardCanvas({
   const wiring = useWireGesture({ items, onConnect: connect, wires });
 
   /** Inputs already fed by a wire, so a node can say its prompt is wired in. */
-  /** The graph the preview helpers read. One object, so they share an identity. */
-  const graph = { items, wires };
+  // Once per graph change, never in the render loop. See resolveWired.
+  const wired = useMemo(() => resolveWired({ items, wires }), [items, wires]);
 
   const wiredPorts = new Set(
     wires.map((wire) => `${wire.targetItemId}:${wire.targetPort}`)
@@ -1225,67 +1218,74 @@ export function BoardCanvas({
             />
           ) : null}
 
-          {items.map((item, index) => (
-            <BoardItemView
-              commentCount={openCommentCounts.get(item.id) ?? 0}
-              hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
-              imageCount={wiredImageCountFor(item, graph)}
-              imageUrl={wiredImageFor(item.id, graph)}
-              index={index}
-              isEditing={!readOnly && editingId === item.id}
-              isSelected={!readOnly && selection.has(item.id)}
-              isSoleSelected={selectedItem?.id === item.id}
-              item={item}
-              key={keyOf(item)}
-              onBeginEdit={() => {
-                if (!readOnly) {
-                  setEditingId(item.id);
+          {items.map((item, index) => {
+            const preview = wired.get(item.id) ?? NO_PREVIEW;
+            return (
+              <BoardItemView
+                commentCount={openCommentCounts.get(item.id) ?? 0}
+                hasWiredPrompt={wiredPorts.has(`${item.id}:prompt`)}
+                imageCount={preview.imageCount}
+                imageUrl={preview.imageUrl}
+                index={index}
+                isEditing={!readOnly && editingId === item.id}
+                isSelected={!readOnly && selection.has(item.id)}
+                isSoleSelected={selectedItem?.id === item.id}
+                item={item}
+                key={keyOf(item)}
+                onBeginEdit={() => {
+                  if (!readOnly) {
+                    setEditingId(item.id);
+                  }
+                }}
+                onCancel={onCancel}
+                onCommentTarget={
+                  commentMode && onCommentItem
+                    ? () => onCommentItem(item.id)
+                    : undefined
                 }
-              }}
-              onCancel={onCancel}
-              onCommentTarget={
-                commentMode && onCommentItem
-                  ? () => onCommentItem(item.id)
-                  : undefined
-              }
-              onConfigChange={(config) => onConfigChange?.(item.id, config)}
-              onDelete={() => removeItem(index)}
-              onEditBody={(body) =>
-                onChange(
-                  items.map((it, i) => (i === index ? { ...it, body } : it))
-                )
-              }
-              onEditManually={onEditImage ? () => onEditImage(item) : undefined}
-              onPatch={(patch) =>
-                onChange(
-                  items.map((it, i) => (i === index ? { ...it, ...patch } : it))
-                )
-              }
-              onRemoveVersion={
-                onRemoveVersion
-                  ? (version) => onRemoveVersion(item.id, version)
-                  : undefined
-              }
-              onResizeStart={readOnly ? () => undefined : beginResize}
-              onRun={(force) => onRun?.(item.id, force)}
-              onSelect={selectFor()}
-              onSendVersions={
-                onSendVersions ? () => onSendVersions(item.id) : undefined
-              }
-              outputText={previewTextFor(item, graph)}
-              ports={
-                readOnly
-                  ? undefined
-                  : portHandlersFor(item, wiring, view.markUserMoved)
-              }
-              previewImages={previewImagesFor(item, graph)}
-              readOnly={readOnly}
-              scale={view.viewport.scale}
-              tools={readOnly ? undefined : tools}
-              wiredItems={wiredItemsFor(item, graph)}
-              wiredPrompt={wiredTextFor(item.id, graph)}
-            />
-          ))}
+                onConfigChange={(config) => onConfigChange?.(item.id, config)}
+                onDelete={() => removeItem(index)}
+                onEditBody={(body) =>
+                  onChange(
+                    items.map((it, i) => (i === index ? { ...it, body } : it))
+                  )
+                }
+                onEditManually={
+                  onEditImage ? () => onEditImage(item) : undefined
+                }
+                onPatch={(patch) =>
+                  onChange(
+                    items.map((it, i) =>
+                      i === index ? { ...it, ...patch } : it
+                    )
+                  )
+                }
+                onRemoveVersion={
+                  onRemoveVersion
+                    ? (version) => onRemoveVersion(item.id, version)
+                    : undefined
+                }
+                onResizeStart={readOnly ? () => undefined : beginResize}
+                onRun={(force) => onRun?.(item.id, force)}
+                onSelect={selectFor()}
+                onSendVersions={
+                  onSendVersions ? () => onSendVersions(item.id) : undefined
+                }
+                outputText={preview.outputText}
+                ports={
+                  readOnly
+                    ? undefined
+                    : portHandlersFor(item, wiring, view.markUserMoved)
+                }
+                previewImages={preview.previewImages}
+                readOnly={readOnly}
+                scale={view.viewport.scale}
+                tools={readOnly ? undefined : tools}
+                wiredItems={preview.wiredItems}
+                wiredPrompt={preview.wiredPrompt}
+              />
+            );
+          })}
         </div>
       </div>
       <CanvasMenu
