@@ -1,0 +1,14 @@
+/*
+ * The painted mask, drawn over the picture it belongs to.
+ *
+ * Never interactive: the mask is painted through the canvas underneath, and an
+ * overlay that took the pointer would stop the brush reaching the very image
+ * being masked.
+ */
+.mask-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

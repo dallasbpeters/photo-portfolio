@@ -1,0 +1,159 @@
+/*
+ * The drawing toolbar: tool, colour, fill and stroke weight.
+ *
+ * The same floating strip as the board's zoom chrome — border, translucent
+ * ground and blur are deliberately identical, because they are two halves of
+ * one row of furniture along the bottom of the canvas.
+ *
+ * Corner radii here are written as `0.25rem` rather than as `--radius-sm`, and
+ * that is not an oversight. Tailwind's bare `rounded` is a fixed 0.25rem, while
+ * this project re-points `--radius-sm` to `calc(var(--radius) - 4px)` — 6px. The
+ * token would round these corners half again as much as they were, so the
+ * literal is the faithful value and the token would be the quiet redesign.
+ *
+ * The 9px micro-caps are likewise what was there. They are smaller than
+ * anything in the type scale and smaller than the 10px `.label`; whether the
+ * board's dense chrome should have its own step, and at what size, is an open
+ * question and not one a refactor gets to answer.
+ */
+
+.draw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  align-items: center;
+  padding: var(--spacing);
+  background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
+}
+
+/* Tool buttons. 32px, the smallest square a finger reliably finds. */
+.draw-toolbar__button {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  border-radius: 0.25rem;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.draw-toolbar__button:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/*
+ * The selected tool inverts rather than tinting.
+ *
+ * A drawing tool being on changes what a click on the canvas does, which is a
+ * bigger claim than a tint makes — and the strip is read at a glance while
+ * looking somewhere else.
+ */
+.draw-toolbar__button--on {
+  color: var(--color-board-surface);
+  background: var(--color-board-ink);
+}
+
+.draw-toolbar__button--on:hover {
+  background: var(--color-board-ink);
+}
+
+/* The square tool's glyph, borrowed for the rounded rectangle. */
+.draw-toolbar__icon--rounded {
+  border-radius: 3px;
+}
+
+/* Said out loud only while a tool is on — see the note at the call site. */
+.draw-toolbar__hint {
+  padding-inline: var(--spacing);
+  font-size: 9px;
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.draw-toolbar__divider {
+  width: 1px;
+  height: calc(var(--spacing) * 5);
+  margin-inline: var(--spacing);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* A labelled colour well. Two of them, so "which colour" never has to be
+   guessed from a lone swatch. */
+.draw-toolbar__well {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: 9px;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.draw-toolbar__fill {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  border-radius: 0.25rem;
+  transition: color 150ms ease;
+}
+
+.draw-toolbar__fill--on {
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+.draw-toolbar__fill--on:hover {
+  color: var(--color-board-ink);
+}
+
+.draw-toolbar__fill--off {
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}
+
+.draw-toolbar__fill--off:hover {
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+}
+
+.draw-toolbar__weights {
+  display: flex;
+  gap: calc(var(--spacing) * 0.5);
+  align-items: center;
+}
+
+/* Narrower than a tool button: these are a set of four read as one control. */
+.draw-toolbar__weight {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 7);
+  height: calc(var(--spacing) * 7);
+  border-radius: 0.25rem;
+  transition: background-color 150ms ease;
+}
+
+.draw-toolbar__weight:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* A tint, not an inversion — the dot inside carries the meaning. */
+.draw-toolbar__weight--on {
+  background: color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+}
+
+/*
+ * The dot showing the weight, sized inline.
+ *
+ * Its diameter is the stroke width itself, capped in the component so a
+ * 160-unit mask brush does not draw a dot wider than the button.
+ */
+.draw-toolbar__dot {
+  display: block;
+  background: var(--color-board-ink);
+  border-radius: calc(infinity * 1px);
+}

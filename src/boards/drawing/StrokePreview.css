@@ -1,0 +1,13 @@
+/*
+ * The stroke being drawn right now, over the canvas.
+ *
+ * `overflow: visible` because a stroke is drawn with a round cap and a join
+ * that both reach past the geometry they are built from — clipped to the box,
+ * a line along the edge loses half its width.
+ */
+.stroke-preview {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}

@@ -1,0 +1,74 @@
+/*
+ * The mask strip: what the paint means, and a way to throw it away.
+ *
+ * Same floating-strip treatment as DrawToolbar, which it sits beside. See the
+ * note there on why the corner radii are literals rather than `--radius-sm`.
+ *
+ * The two invert states keep their sky/rose palette as literal colours. They
+ * are the one place on the board where colour carries the meaning rather than
+ * decorating it — "painted = keep" against "painted = change" — and the theme
+ * tokens are a single ink and ground, with nothing in them for an opposed pair.
+ * Naming them here at least puts the pair in one place.
+ */
+
+.mask-controls {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  padding: var(--spacing);
+  pointer-events: auto;
+  background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(8px);
+}
+
+.mask-controls__title {
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: 9px;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  /* 0.16em, not the 0.14em next door. Both were there; neither is a mistake
+     worth making a decision about inside a refactor. */
+  letter-spacing: 0.16em;
+}
+
+.mask-controls__invert {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: 11px;
+  border-radius: 0.25rem;
+}
+
+/* Painted area is preserved. */
+.mask-controls__invert--keep {
+  /* sky-200 on sky-400 at 20%. Literals because the utilities that carried
+     these are going away, and Tailwind emits only the theme variables it can
+     see in use. */
+  color: oklch(90.1% 0.058 230.902);
+  background: color-mix(in oklch, oklch(74.6% 0.16 232.661) 20%, transparent);
+}
+
+/* Painted area is what gets regenerated. */
+.mask-controls__invert--change {
+  /* rose-200 on rose-400 at 20%. */
+  color: oklch(89.2% 0.058 10.001);
+  background: color-mix(in oklch, oklch(71.2% 0.194 13.428) 20%, transparent);
+}
+
+.mask-controls__invert-text {
+  margin-inline-start: calc(var(--spacing) * 1.5);
+}
+
+.mask-controls__clear {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 1.5);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  border-radius: 0.25rem;
+  transition: color 150ms ease;
+}
+
+.mask-controls__clear:hover {
+  /* red-300. */
+  color: oklch(80.8% 0.114 19.571);
+}

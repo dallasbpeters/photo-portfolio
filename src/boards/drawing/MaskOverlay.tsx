@@ -1,4 +1,5 @@
 import { MASK_KEEP, MASK_OPACITY, MASK_PAINT, type MaskConfig } from "./mask";
+import "./MaskOverlay.css";
 
 /**
  * The painted mask, shown over the picture it belongs to.
@@ -31,10 +32,7 @@ export function MaskOverlay({ height, mask, width }: MaskOverlayProps) {
   }
 
   return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      viewBox={`0 0 ${width} ${height}`}
-    >
+    <svg className="mask-overlay" viewBox={`0 0 ${width} ${height}`}>
       <title>{mask.invert ? "Protected area" : "Area to change"}</title>
       {mask.strokes.map((stroke, index) => {
         const [first, ...rest] = stroke.points;
