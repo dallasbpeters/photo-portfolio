@@ -32,7 +32,7 @@
  */
 .label {
   /*
-   * Stated in absolute values, not the token scale, and that is deliberate.
+   * Its own step on the micro ladder, not the nearest rung of the page scale.
    *
    * `--text-xs` is 0.528rem — 8.4px — which is the board's dense chrome, not a
    * page. The pages have always set micro-caps at 10px with 0.18em of tracking,
@@ -41,11 +41,14 @@
    * redesign wearing a refactor's clothes, which is worse than either.
    *
    * Here rather than at the call sites: one definition is the entire point, and
-   * an override per page would rebuild the utility soup with worse names.
+   * an override per page would rebuild the utility soup with worse names. The
+   * two values moved into `@theme` as `--text-micro-xs` and
+   * `--tracking-micro-caps` once the board turned out to need the same ladder;
+   * the numbers are unchanged, they just live where raw values are allowed.
    */
-  font-size: 0.625rem;
+  font-size: var(--text-micro-xs);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--tracking-micro-caps);
 }
 
 .label--loud {
@@ -61,7 +64,7 @@
  * and taken again here.
  */
 .label--stamped {
-  letter-spacing: 0.3em;
+  letter-spacing: var(--tracking-stamped);
 }
 
 .label--quiet {

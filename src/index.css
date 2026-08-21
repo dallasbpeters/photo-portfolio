@@ -389,6 +389,62 @@
   --text-7xl: 8.346rem;
   --text-8xl: 10.458rem;
   --text-9xl: 12.606rem;
+
+  /*
+   * The micro ladder: instrument type, below the scale above.
+   *
+   * Seven steps because seven were already in use — the board's chrome and the
+   * pages' micro-caps had accumulated 8, 9, 10, 11, 12, 13 and 14px written as
+   * literals across 111 call sites, and `.label` a 10px one of its own. They are
+   * gathered here unchanged rather than flattened: collapsing them is a visible
+   * redesign of every panel on the board, and this file is the place a raw value
+   * is allowed to be invented, so it is the place they belong until that
+   * decision is taken deliberately.
+   *
+   * In rem, so they answer to the root size like everything else. As px they
+   * could not: a reader who enlarges type got a board whose chrome stayed
+   * exactly as small as before.
+   *
+   * `--text-micro-xs` is `.label`'s step, shared with the pages. The rest are
+   * the board's own.
+   */
+  --text-micro-3xs: 0.5rem;
+  --text-micro-2xs: 0.5625rem;
+  --text-micro-xs: 0.625rem;
+  --text-micro-sm: 0.6875rem;
+  --text-micro-md: 0.75rem;
+  --text-micro-lg: 0.8125rem;
+  --text-micro-xl: 0.875rem;
+
+  /*
+   * Tracking for that ladder. Tailwind's own stops at `widest` (0.1em), and
+   * every one of these is wider — small uppercase type needs the room, which is
+   * why four of them had been written out by hand.
+   */
+  --tracking-micro-tight: 0.08em;
+  --tracking-micro: 0.14em;
+  --tracking-micro-wide: 0.16em;
+  --tracking-micro-caps: 0.18em;
+  /* The widest the app goes, for a single word standing alone — `.label--stamped`. */
+  --tracking-stamped: 0.3em;
+
+  /*
+   * Control corners.
+   *
+   * `--radius-control` is Tailwind's bare `rounded` — 0.25rem — and is NOT
+   * `--radius-sm`, which this project re-points to `calc(var(--radius) - 4px)`
+   * = 6px. The two are half again apart, so a control reaching for the wrong
+   * one is a visible change. `--radius-glyph` is for a borrowed icon that has
+   * to look like a rounded rectangle at 18px.
+   */
+  --radius-control: 0.25rem;
+  --radius-glyph: 0.1875rem;
+  /* Fully round, whatever the box. `infinity` rather than a big number, which
+     is what 9999px was pretending to be. */
+  --radius-pill: calc(infinity * 1px);
+
+  /* A single-pixel rule. Named because it is a decision, not an accident. */
+  --border-hairline: 1px;
 }
 
 /* Register --gradient-angle as a typed property so browsers can interpolate it */

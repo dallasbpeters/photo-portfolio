@@ -61,7 +61,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-hairline) solid var(--color-border);
 }
 
 .op-node-view__title {
@@ -128,7 +128,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 
@@ -165,7 +166,7 @@
   gap: var(--spacing);
   align-items: center;
   padding: var(--spacing);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-hairline) solid var(--color-border);
 }
 
 /*

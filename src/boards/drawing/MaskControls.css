@@ -2,7 +2,7 @@
  * The mask strip: what the paint means, and a way to throw it away.
  *
  * Same floating-strip treatment as DrawToolbar, which it sits beside. See the
- * note there on why the corner radii are literals rather than `--radius-sm`.
+ * note there on why the control radius is its own token.
  *
  * The two invert states keep their sky/rose palette as literal colours. They
  * are the one place on the board where colour carries the meaning rather than
@@ -18,26 +18,27 @@
   padding: var(--spacing);
   pointer-events: auto;
   background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
 }
 
 .mask-controls__title {
   padding-inline: calc(var(--spacing) * 1.5);
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
   text-transform: uppercase;
-  /* 0.16em, not the 0.14em next door. Both were there; neither is a mistake
-     worth making a decision about inside a refactor. */
-  letter-spacing: 0.16em;
+  /* The wide step, not the toolbar's `--tracking-micro` next door. Both were
+     in use; which is right is a decision for one line in `@theme`. */
+  letter-spacing: var(--tracking-micro-wide);
 }
 
 .mask-controls__invert {
   padding-block: var(--spacing);
   padding-inline: calc(var(--spacing) * 2);
-  font-size: 11px;
-  border-radius: 0.25rem;
+  font-size: var(--text-micro-sm);
+  border-radius: var(--radius-control);
 }
 
 /* Painted area is preserved. */
@@ -64,8 +65,8 @@
   padding-block: var(--spacing);
   padding-inline: calc(var(--spacing) * 1.5);
   color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
-  border-radius: 0.25rem;
-  transition: color 150ms ease;
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
 }
 
 .mask-controls__clear:hover {

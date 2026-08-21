@@ -5,16 +5,16 @@
  * ground and blur are deliberately identical, because they are two halves of
  * one row of furniture along the bottom of the canvas.
  *
- * Corner radii here are written as `0.25rem` rather than as `--radius-sm`, and
- * that is not an oversight. Tailwind's bare `rounded` is a fixed 0.25rem, while
- * this project re-points `--radius-sm` to `calc(var(--radius) - 4px)` — 6px. The
- * token would round these corners half again as much as they were, so the
- * literal is the faithful value and the token would be the quiet redesign.
+ * Corners take `--radius-control`, which is Tailwind's bare `rounded` (0.25rem)
+ * and deliberately not `--radius-sm` — this project re-points that to 6px, half
+ * again as round. The two are a visible difference, which is why the control
+ * radius is its own token rather than the nearest-looking one.
  *
- * The 9px micro-caps are likewise what was there. They are smaller than
- * anything in the type scale and smaller than the 10px `.label`; whether the
- * board's dense chrome should have its own step, and at what size, is an open
- * question and not one a refactor gets to answer.
+ * Type is `--text-micro-2xs` on the micro ladder in index.css. Its value is the
+ * 9px these controls have always been, now in rem so it answers to the root
+ * size; whether the board's dense chrome should keep a step of its own below
+ * `.label` is still open, and is now a question about one line in `@theme`
+ * rather than about thirty call sites.
  */
 
 .draw-toolbar {
@@ -24,9 +24,10 @@
   align-items: center;
   padding: var(--spacing);
   background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
 }
 
 /* Tool buttons. 32px, the smallest square a finger reliably finds. */
@@ -36,10 +37,10 @@
   width: calc(var(--spacing) * 8);
   height: calc(var(--spacing) * 8);
   color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-control);
   transition:
-    color 150ms ease,
-    background-color 150ms ease;
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
 }
 
 .draw-toolbar__button:hover {
@@ -64,20 +65,20 @@
 
 /* The square tool's glyph, borrowed for the rounded rectangle. */
 .draw-toolbar__icon--rounded {
-  border-radius: 3px;
+  border-radius: var(--radius-glyph);
 }
 
 /* Said out loud only while a tool is on — see the note at the call site. */
 .draw-toolbar__hint {
   padding-inline: var(--spacing);
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-micro);
 }
 
 .draw-toolbar__divider {
-  width: 1px;
+  width: var(--border-hairline);
   height: calc(var(--spacing) * 5);
   margin-inline: var(--spacing);
   background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
@@ -89,20 +90,20 @@
   display: flex;
   gap: var(--spacing);
   align-items: center;
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-micro);
 }
 
 .draw-toolbar__fill {
   padding-block: var(--spacing);
   padding-inline: calc(var(--spacing) * 1.5);
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  border-radius: 0.25rem;
-  transition: color 150ms ease;
+  letter-spacing: var(--tracking-micro);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
 }
 
 .draw-toolbar__fill--on {
@@ -133,8 +134,9 @@
   place-items: center;
   width: calc(var(--spacing) * 7);
   height: calc(var(--spacing) * 7);
-  border-radius: 0.25rem;
-  transition: background-color 150ms ease;
+  border-radius: var(--radius-control);
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
 }
 
 .draw-toolbar__weight:hover {
@@ -155,5 +157,5 @@
 .draw-toolbar__dot {
   display: block;
   background: var(--color-board-ink);
-  border-radius: calc(infinity * 1px);
+  border-radius: var(--radius-pill);
 }

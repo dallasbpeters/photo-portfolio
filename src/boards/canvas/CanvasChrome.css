@@ -1,13 +1,10 @@
 /*
  * The board's bottom-right chrome: zoom, and the layers toggle.
  *
- * An instrument panel rather than page furniture, which is why the type here is
- * the board's own `--text-xs` (8.4px) and not the 10px `.label` the pages use.
- * The two are not interchangeable and this is the dense end of that split — see
- * the note on `.label` in styles/primitives.css. The scale readout and Fit stay
- * at 10px because that is what they have always been; they read as values, not
- * as labels, and shrinking them to 8.4px to make the file tidy would be a
- * redesign.
+ * An instrument panel rather than page furniture, which is why the buttons take
+ * the board's own `--text-xs` and not `.label`'s step. The scale readout and Fit
+ * sit one rung up at `--text-micro-xs`: they read as values rather than labels,
+ * and flattening the two to one size to tidy the file would be a redesign.
  */
 
 .canvas-chrome {
@@ -29,9 +26,10 @@
   padding: var(--spacing);
   pointer-events: auto;
   background: color-mix(in oklch, var(--color-board-surface) 80%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
 }
 
 /*
@@ -47,7 +45,7 @@
   color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
-  transition: color 150ms ease;
+  transition: color var(--default-transition-duration) var(--ease-in-out);
 }
 
 .canvas-chrome__button:hover {
@@ -68,7 +66,7 @@
 .canvas-chrome__button--fit {
   min-width: auto;
   padding-inline: calc(var(--spacing) * 2);
-  font-size: 0.625rem;
+  font-size: var(--text-micro-xs);
 }
 
 /*
@@ -79,7 +77,7 @@
  */
 .canvas-chrome__scale {
   width: calc(var(--spacing) * 12);
-  font-size: 0.625rem;
+  font-size: var(--text-micro-xs);
   font-variant-numeric: tabular-nums;
   color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
   text-align: center;

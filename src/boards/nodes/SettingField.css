@@ -58,7 +58,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 
@@ -77,7 +78,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 
