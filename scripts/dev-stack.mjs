@@ -11,8 +11,10 @@
  *   PORT=3005 pnpm dev
  */
 import { execSync, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 
 /** API port. Overridable so this can run alongside other local apps. */
 const PORT = Number(process.env.PORT) || 3006;
@@ -101,6 +103,32 @@ if (dbUrl) {
 const env = { ...process.env };
 if (env.VITE_SITE && !env.SITE) {
   env.SITE = env.VITE_SITE;
+}
+
+/*
+ * The site's own env file, handed to the functions.
+ *
+ * vite.config.ts already loads `.env.local` then `.env.<site>.local` — but that
+ * is the Vite process, so it reaches the browser bundle and the config, and not
+ * the serverless functions `vercel dev` runs. Those got a plain copy of the
+ * shell's environment plus whatever `vercel dev` pulls into
+ * `.env.development.local`.
+ *
+ * Anything that lives only in the site file was therefore invisible to /api.
+ * BLOB_READ_WRITE_TOKEN is the one that bites: it is per-site, it is in all
+ * three site files and in none of the shared ones, so every upload failed
+ * claiming Blob was not enabled while the token sat on disk two directories up.
+ *
+ * Same precedence Vite uses — the shared file first, the site's own overriding
+ * it — so the two halves of the stack cannot disagree about what site they are.
+ */
+const site = env.VITE_SITE || "addison";
+for (const file of [".env.local", `.env.${site}.local`]) {
+  const at = path.resolve(root, file);
+  if (existsSync(at)) {
+    const { parsed } = dotenv.config({ override: true, path: at });
+    Object.assign(env, parsed);
+  }
 }
 
 const pnpm = isWin ? "pnpm.cmd" : "pnpm";
