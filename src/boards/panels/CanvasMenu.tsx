@@ -6,6 +6,8 @@ import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
 import { CollectionPanel } from "./CollectionPanel";
 import { MenuRows } from "./MenuRows";
 import { RecipeNamePanel } from "./RecipeNamePanel";
+import "./panelChrome.css";
+import "./CanvasMenu.css";
 
 /**
  * What the canvas offers on a right-click.
@@ -240,13 +242,13 @@ export function CanvasMenu({
     <>
       <button
         aria-label="Dismiss"
-        className="fixed inset-0 z-40 cursor-default"
+        className="panel-scrim"
         onClick={onDismiss}
         tabIndex={-1}
         type="button"
       />
       <div
-        className="absolute z-50 w-60 overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur"
+        className="panel-popover canvas-menu"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
         {rows}

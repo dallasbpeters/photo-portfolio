@@ -211,6 +211,19 @@
   --btn-danger-solid-bg: oklch(0.637 0.237 25.331);
   --btn-danger-solid-fg: rgb(255 255 255);
   --btn-danger-solid-hover-bg: oklch(0.577 0.245 27.325);
+
+  /*
+   * The ground a modal sits on, on that same fixed dark chrome.
+   *
+   * One use today — the comment dialog, which had it as a bare `#181818` at the
+   * call site. Named rather than left there because it is a surface colour, and
+   * a surface the next dialog will want too. Literal for the same reason the
+   * buttons above are: this chrome does not follow the light/dark switch, and a
+   * token that inverted would turn the dialog inside out.
+   */
+  /* Kept as the hex it was, not converted: this is a straight rename, and a
+     hand-converted oklch would be a colour change dressed as a refactor. */
+  --color-admin-panel: #181818;
 }
 
 /*
@@ -445,6 +458,24 @@
 
   /* A single-pixel rule. Named because it is a decision, not an accident. */
   --border-hairline: 1px;
+
+  /*
+   * What sits in front of what.
+   *
+   * Named by role, because the numbers were the problem. The app had eleven
+   * distinct z-indexes written as literals — 4, 10, 20, 40, 50, 60, 61, 70,
+   * 100, 200, 1000 — and a `61` only means anything if you already know what
+   * 60 is. A stack this shallow needs six rungs, and anything reaching for a
+   * bigger number than the layer above it is answering the wrong question.
+   *
+   * The gaps are deliberate: room to slot a layer in without renumbering.
+   */
+  --z-canvas-item: 10;
+  --z-canvas-chrome: 20;
+  --z-scrim: 40;
+  --z-popover: 50;
+  --z-modal-scrim: 60;
+  --z-modal: 70;
 }
 
 /* Register --gradient-angle as a typed property so browsers can interpolate it */

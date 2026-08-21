@@ -1,0 +1,11 @@
+/*
+ * The canvas's right-click menu.
+ *
+ * A `panel-popover` with one thing of its own: a fixed width. The rows inside
+ * are labels and shortcut hints of very different lengths, and a menu that
+ * resized to whichever one is showing would move under the cursor between
+ * openings.
+ */
+.canvas-menu {
+  width: calc(var(--spacing) * 60);
+}

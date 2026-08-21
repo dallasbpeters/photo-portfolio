@@ -1,0 +1,196 @@
+/*
+ * The shapes every board panel is built from.
+ *
+ * Here rather than in styles/primitives.css because all of them are stated in
+ * `--color-board-ink` and `--color-board-surface`, which invert with the board
+ * and mean nothing on a page. The app-wide file is for shapes a page can use;
+ * this is the same idea one surface down.
+ *
+ * Each earns its place the same way a primitive does — three independent uses,
+ * counted before promoting it. The field label had seven, the section padding
+ * three, the text field and the scrim two apiece and are here because they are
+ * the field and the scrim rather than one panel's version of them.
+ */
+
+/* A panel's own padding. Wider than it is tall, so a label sits close to the
+   edge it is aligned to and clear of the one above. */
+.panel-section {
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+/*
+ * A label above a field.
+ *
+ * The board's smallest caps — a rung below `.label`, which is a page's size.
+ * `display: block` and the margin are part of it: it is always above something,
+ * never beside it.
+ */
+.panel-label {
+  display: block;
+  margin-block-end: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* The same label on the admin's own dark chrome, which does not invert. */
+.panel-label--fixed {
+  color: color-mix(in oklch, oklch(1 0 0) 40%, transparent);
+}
+
+/* Text in, of any length: input, textarea, select. */
+.panel-field {
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+  outline: none;
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.panel-field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+.panel-field::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+/* A textarea that grows by being dragged is worse than one that does not:
+   the panel it sits in has its own height. */
+.panel-field--fixed-size {
+  resize: none;
+}
+
+/* A row of choices at the end of a panel — cancel on the left of confirm. */
+.panel-actions {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  justify-content: flex-end;
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+.panel-actions--roomy {
+  gap: calc(var(--spacing) * 2);
+}
+
+/* The quiet half of a pair: dismissing, cancelling, going back. */
+.panel-button {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.panel-button:hover {
+  color: var(--color-board-ink);
+}
+
+.panel-button--louder {
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+}
+
+/*
+ * The committing half, which inverts.
+ *
+ * Same reasoning as the drawing toolbar's selected tool: an action that changes
+ * the board makes a bigger claim than a tint does.
+ */
+.panel-button--primary {
+  padding-inline: calc(var(--spacing) * 2.5);
+  color: var(--color-board-surface);
+  background: var(--color-board-ink);
+}
+
+.panel-button--primary:hover {
+  color: var(--color-board-surface);
+}
+
+/* The same commit, tinted rather than inverted, where a panel already sits on
+   a strong ground and an inversion would shout. */
+.panel-button--tinted {
+  padding-inline: calc(var(--spacing) * 2.5);
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+}
+
+.panel-button--tinted:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}
+
+.panel-button:disabled {
+  opacity: 0.4;
+}
+
+/* A note under a field, explaining what it will do. */
+.panel-hint {
+  margin-block-start: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/*
+ * Click-away.
+ *
+ * Covers the window under the menu it dismisses, and keeps the ordinary cursor:
+ * this is a way out, not something to be aimed at.
+ */
+.panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  cursor: default;
+}
+
+/* A floating menu or popover, above its own scrim. */
+.panel-popover {
+  position: absolute;
+  z-index: var(--z-popover);
+  min-width: calc(var(--spacing) * 40);
+  overflow: hidden;
+  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+.panel-popover__title {
+  padding-block-start: calc(var(--spacing) * 2);
+  padding-block-end: var(--spacing);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.panel-popover__option {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  text-align: left;
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.panel-popover__option:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}

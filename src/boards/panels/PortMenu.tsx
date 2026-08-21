@@ -17,6 +17,7 @@ import {
   type NodeTypeId,
   type PortType,
 } from "../../../config/nodeTypes.js";
+import "./panelChrome.css";
 
 /** What clicking a port can create, and what to wire it into. */
 export interface PortTarget {
@@ -118,21 +119,19 @@ export function PortMenu({
           other menu does rather than needing its own dismiss button. */}
       <button
         aria-label="Dismiss"
-        className="fixed inset-0 z-40 cursor-default"
+        className="panel-scrim"
         onClick={onDismiss}
         tabIndex={-1}
         type="button"
       />
       <div
-        className="absolute z-50 min-w-40 overflow-hidden rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur"
+        className="panel-popover"
         style={{ left: point.x + 10, top: point.y - 8 }}
       >
-        <p className="px-3 pt-2 pb-1 text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-          Send {portType} to
-        </p>
+        <p className="panel-popover__title">Send {portType} to</p>
         {targets.map((target) => (
           <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-board-ink/80 transition-colors hover:bg-board-ink/10 hover:text-board-ink"
+            className="panel-popover__option"
             key={`${target.kind}-${target.nodeType ?? "frame"}`}
             onClick={() => onChoose(target)}
             type="button"
