@@ -1,0 +1,172 @@
+/*
+ * What each kind of board item looks like inside its box.
+ *
+ * The box itself is `.board-item` at the bottom of this file; these are the
+ * bodies that fill it.
+ */
+
+/*
+ * A frame's title field.
+ *
+ * Dashed and deliberately empty-looking: a frame is a region rather than a
+ * thing, and a solid card would read as content. The border is the selection
+ * colour at half strength so it reads as scaffolding rather than as a picture.
+ */
+.frame-body {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: color-mix(in oklch, var(--color-board-ink) 2%, transparent);
+  border: calc(var(--border-hairline) * 2) dashed
+    color-mix(in oklch, var(--color-selection) 50%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+/* The field re-enables its own events; the frame around it stays pass-through
+   so a drag inside the frame reaches the canvas. */
+.frame-body__name {
+  width: 100%;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-lg);
+  font-weight: 300;
+  color: var(--color-board-ink);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+  pointer-events: auto;
+  outline: none;
+  background: transparent;
+}
+
+/* The placeholder is full-strength ink on purpose: an unnamed frame should read
+   as waiting for a name rather than as faintly labelled. */
+.frame-body__name::placeholder {
+  color: var(--color-board-ink);
+}
+
+/* A reference or photograph: the picture, with its caption beneath. */
+.media-body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-board-panel);
+}
+
+/* `min-height: 0` so the picture may shrink and let the caption keep its
+   height, rather than pushing it out of the box. */
+.media-body__image {
+  flex-grow: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
+
+.media-body__missing {
+  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+.media-body__caption {
+  flex-shrink: 0;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+}
+
+.media-body__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-sm);
+  font-weight: 500;
+  color: var(--color-board-ink);
+  white-space: nowrap;
+}
+
+/* Two lines at most: a credit is context, not the content. */
+.media-body__credit {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  font-size: var(--text-micro-xs);
+  line-height: 1.375;
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+}
+
+.shader-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * A note: a paper card, the one item that does not follow the board's ink.
+ *
+ * Amber on near-black text whatever the theme, because a note is a physical
+ * object on the board — a sticky note is yellow in a dark room too.
+ */
+.text-body {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  outline: none;
+}
+
+.text-body--note {
+  padding: calc(var(--spacing) * 3);
+  /* amber-100 at 95%, on neutral-900. */
+  color: oklch(20.5% 0 none);
+  background: color-mix(in oklch, oklch(96.2% 0.059 95.617) 95%, transparent);
+}
+
+/* Plain text: no card, no ground — just words on the board. */
+.text-body--plain {
+  padding: var(--spacing);
+  color: var(--color-board-ink);
+  background: transparent;
+  border: 0;
+}
+
+.text-body--plain::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}
+
+/*
+ * The box every item sits in.
+ *
+ * `contain: layout` keeps an item's own transforms from being measured against
+ * the whole canvas — which also makes each box a stacking context, and is why
+ * the chrome that hangs off one has to raise itself deliberately.
+ */
+.board-item {
+  position: absolute;
+  contain: layout;
+  outline: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+/* Everything but text: dragging an item should not select its label. */
+.board-item--fixed {
+  user-select: none;
+}
+
+.board-item--selected {
+  outline: calc(var(--border-hairline) * 2) solid var(--color-selection);
+}
+
+/*
+ * No outline at all.
+ *
+ * Text and an unselected drawing wear none: their content is the whole of them,
+ * and a border there reads as part of the picture rather than as chrome.
+ */
+.board-item--bare {
+  outline: 0;
+}

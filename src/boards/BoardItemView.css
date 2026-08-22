@@ -1,0 +1,155 @@
+/*
+ * An item's ports, its caption, and the chrome that hangs off it when selected.
+ *
+ * The box itself is `.board-item` in itemBodies.css; this is everything drawn
+ * around and on top of it.
+ *
+ * Every control here stops its own pointer events at the call site. Without
+ * that the canvas reads a press on a control as the start of a drag and the
+ * item slides out from under the pointer.
+ */
+
+/*
+ * A port.
+ *
+ * The button is a generous target positioned inline in canvas units; the dot
+ * inside is what you see. Two elements rather than one because the target has
+ * to be bigger than the mark — a 6px circle is not something anyone can hit
+ * while zoomed out.
+ */
+.board-item__port {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+}
+
+/* An output: solid, because it is always available to drag from. */
+.board-item__port-dot {
+  display: block;
+  background: color-mix(
+    in oklch,
+    var(--color-selection-bright) 80%,
+    transparent
+  );
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-selection-soft) 70%, transparent);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.board-item__port-dot:hover {
+  background: var(--color-selection-soft);
+}
+
+/*
+ * An input, which reads as the board's own colour until a wire is in flight.
+ *
+ * Three states rather than two, and the middle one matters: while a wire is
+ * being dragged, a port that *cannot* accept it dims instead of lighting up, so
+ * the refusal is visible during the drag rather than at the drop.
+ */
+.board-item__port-target {
+  display: block;
+  padding: calc(var(--spacing) * 2);
+  background: var(--color-board-panel);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  border-radius: var(--radius-pill);
+}
+
+/* A wire is in flight and this is not somewhere it can land. */
+.board-item__port-target--closed {
+  border-color: color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+}
+
+/* It can land here. emerald-400 on emerald-300. */
+.board-item__port-target--open {
+  outline: var(--border-hairline) solid oklch(70.7% 0.165 254.624);
+  outline-offset: calc(var(--spacing) * -0.5);
+  background: oklch(76.5% 0.177 163.223);
+  border-color: oklch(84.5% 0.143 164.978);
+}
+
+.board-item__figure {
+  width: 100%;
+  height: 100%;
+}
+
+/* A photograph's title, over the foot of the picture. */
+.board-item__caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  white-space: nowrap;
+  background: color-mix(in oklch, var(--color-board-surface) 60%, transparent);
+}
+
+/*
+ * Remove, hung off the item's top-right corner.
+ *
+ * Outside the box rather than inside it, so it never covers the picture it
+ * would delete. Hidden until the item is selected or hovered — but present in
+ * the tree, because a control that cannot be focused is its own bug, which is
+ * why `:focus-visible` brings it back.
+ */
+.board-item__delete {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  background: var(--color-board-surface);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  transform-origin: top left;
+  transition: opacity var(--default-transition-duration) var(--ease-in-out);
+}
+
+.board-item__delete:hover {
+  color: var(--color-board-ink);
+}
+
+.board-item__delete--shown,
+.board-item__delete:focus-visible,
+.group:hover .board-item__delete {
+  opacity: 1;
+}
+
+/*
+ * How many comments are pinned to this item.
+ *
+ * Straddling the corner, so it reads as attached to the item rather than as
+ * part of its content. Amber because it is a count of things waiting, not a
+ * fault. amber-300 on black — a fixed pair, since the badge keeps its colour
+ * whichever way the board inverts.
+ */
+.board-item__comment-count {
+  position: absolute;
+  top: calc(var(--spacing) * -2);
+  right: calc(var(--spacing) * -2);
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--spacing) * 5);
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  font-weight: 600;
+  color: #000;
+  background: oklch(87.9% 0.169 91.605);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow);
+}

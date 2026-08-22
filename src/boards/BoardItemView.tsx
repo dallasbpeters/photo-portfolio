@@ -25,6 +25,7 @@ import { BatchList } from "./nodes/BatchList";
 import { OpNodeView } from "./nodes/OpNodeView";
 import { ResizeHandles } from "./ResizeHandles";
 import type { BoardTools } from "./tools/useBoardTools";
+import "./BoardItemView.css";
 
 /**
  * Where a selected item sits while its chrome is open.
@@ -188,7 +189,7 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
         return point ? (
           <button
             aria-label={`Drag a connection from ${port.label}`}
-            className="absolute grid place-items-center rounded-full"
+            className="board-item__port"
             data-port={port.key}
             key={`out-${port.key}`}
             onPointerDown={(e) => {
@@ -204,7 +205,7 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
           >
             <span
               aria-hidden
-              className="block rounded-full border border-sky-300/70 bg-sky-400/80 hover:bg-sky-300"
+              className="board-item__port-dot"
               style={{ height: dot, width: dot }}
             />
           </button>
@@ -221,12 +222,12 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
         const isOpen =
           handlers.isDragging && handlers.canDropOn(item.id, port.key);
         const idle = handlers.isDragging
-          ? "border-board-ink/20 bg-board-panel"
-          : "border-board-ink/40 bg-board-panel";
+          ? "board-item__port-target--closed"
+          : "";
         return (
           <button
             aria-label={`Connect to ${port.label}`}
-            className="absolute grid place-items-center rounded-full"
+            className="board-item__port"
             data-port={port.key}
             key={`in-${port.key}`}
             onPointerDown={(e) => e.stopPropagation()}
@@ -237,10 +238,8 @@ function PortHandles({ handlers, item, scale }: PortHandlesProps) {
           >
             <span
               aria-hidden
-              className={`block rounded-full border p-2 ${
-                isOpen
-                  ? "border-emerald-300 bg-emerald-400 ring-1 ring-blue-400 -ring-offset-2"
-                  : idle
+              className={`board-item__port-target ${
+                isOpen ? "board-item__port-target--open" : idle
               }`}
               style={{ height: dot, width: dot }}
             />
@@ -320,12 +319,9 @@ function BoardItemBody({
     const css = textStyleCss(item);
     return (
       <textarea
-        className={
-          isNote
-            ? "h-full w-full resize-none bg-amber-100/95 p-3 text-neutral-900 outline-none"
-            : // Plain text: no card, no background — just words on the board.
-              "h-full w-full resize-none border-0 bg-transparent p-1 text-board-ink outline-none placeholder:text-board-ink/30"
-        }
+        className={`text-body ${
+          isNote ? "text-body--note" : "text-body--plain"
+        }`}
         onChange={(e) => onEditBody(e.target.value)}
         placeholder={isNote ? "Note…" : "Type…"}
         // A note is covered edge to edge by its field, so while it is not
@@ -355,7 +351,7 @@ function BoardItemBody({
   const mask = maskOf(item.config);
 
   return (
-    <figure className="h-full w-full">
+    <figure className="board-item__figure">
       {/* Lazy and async because a board is mostly off screen. A decoded
           1024-square bitmap is four megabytes whether or not it is in view, and
           a board of a hundred results was decoding all of them at once — which
@@ -373,7 +369,7 @@ function BoardItemBody({
           the image appears, so the credit renders with the item rather than
           living only in the database. */}
       {item.creditName ? (
-        <figcaption className="absolute inset-x-0 bottom-0 truncate bg-board-surface/60 px-2 py-1 text-[10px] text-board-ink/80">
+        <figcaption className="board-item__caption">
           {item.creditName}
         </figcaption>
       ) : null}
@@ -741,8 +737,8 @@ export function BoardItemView({
       {readOnly ? null : (
         <button
           aria-label="Remove from board"
-          className={`absolute top-0 left-full flex size-8 origin-top-left items-center justify-center rounded-full border border-board-ink/20 bg-board-surface text-board-ink/80 transition-opacity hover:text-board-ink focus-visible:opacity-100 group-hover:opacity-100 ${
-            isSelected ? "opacity-100" : "opacity-0"
+          className={`board-item__delete ${
+            isSelected ? "board-item__delete--shown" : ""
           }`}
           onClick={onDelete}
           onPointerDown={(e) => e.stopPropagation()}
@@ -788,9 +784,7 @@ export function BoardItemView({
       {/* Open comments pinned to this item: the count, so a visitor can see at
           a glance what has feedback on it. */}
       {commentCount > 0 ? (
-        <span className="absolute -top-2 -right-2 grid min-w-5 place-items-center rounded-full bg-amber-300 px-1.5 py-0.5 font-semibold text-[10px] text-black shadow">
-          {commentCount}
-        </span>
+        <span className="board-item__comment-count">{commentCount}</span>
       ) : null}
     </div>
   );

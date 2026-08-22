@@ -1,0 +1,78 @@
+/*
+ * A colour swatch that opens a picker.
+ *
+ * The picker is portalled to the body, so the two halves of this file are not
+ * nested: the well sits inline wherever it was placed, and the picker is
+ * positioned against the viewport at coordinates the component measures.
+ */
+
+.color-well {
+  position: relative;
+}
+
+.color-well__swatch {
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  overflow: hidden;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/*
+ * The colour itself, over a chequerboard.
+ *
+ * The board is painted inline because it is only drawn when the value is clear
+ * — a transparent swatch on a plain ground reads as black, which is a different
+ * colour rather than no colour.
+ */
+.color-well__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Under the picker, over everything else.
+ *
+ * A button rather than a div: dismissing has to be reachable by keyboard, and
+ * `cursor: default` says this is a way out rather than a target.
+ */
+.color-well__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-scrim);
+  cursor: default;
+}
+
+/* One rung above its own scrim — the only place in the app that needs the pair
+   to sit between the modal rungs. */
+.color-well__picker {
+  position: fixed;
+  z-index: var(--z-color-picker);
+}
+
+/*
+ * Sampling a colour from the screen.
+ *
+ * Beats matching by eye when the colour wanted is already on the board. Absent
+ * rather than disabled where the browser has no sampler — see the call site.
+ */
+.color-well__sample {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  background: var(--color-board-ink);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.color-well__sample:hover {
+  color: var(--color-board-surface);
+}

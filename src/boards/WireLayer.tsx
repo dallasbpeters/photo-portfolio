@@ -14,6 +14,7 @@ import {
   wirePath,
 } from "./geometry/portGeometry";
 import "./WireLayer.css";
+import { motion } from "motion/react";
 
 /** The wire currently being dragged out of a port, before it lands. */
 export interface DraftWire {
@@ -66,7 +67,7 @@ export function WireLayer({
   const badge = WIRE_BADGE_PX / scale;
 
   return (
-    <svg
+    <motion.svg
       aria-hidden={wires.length === 0}
       // overflow-visible because an SVG clips at its own viewport: a wire's
       // control points reach half the horizontal distance beyond each end, so a
@@ -153,11 +154,14 @@ export function WireLayer({
                   stroke="oklch(57.6% 0.21 27.25)"
                   strokeWidth={stroke}
                 />
-                <path
+                <motion.path
+                  animate={{ opacity: 1, pathLength: 1 }}
                   d={`M ${mid.x - badge / 3} ${mid.y - badge / 3} L ${mid.x + badge / 3} ${mid.y + badge / 3} M ${mid.x + badge / 3} ${mid.y - badge / 3} L ${mid.x - badge / 3} ${mid.y + badge / 3}`}
+                  initial={{ opacity: 0, pathLength: 0 }}
                   stroke="oklch(57.6% 0.21 27.25)"
                   strokeLinecap="round"
                   strokeWidth={stroke}
+                  transition={{ duration: 1, ease: "easeOut" }}
                 />
               </g>
             ) : null}
@@ -177,6 +181,6 @@ export function WireLayer({
           strokeWidth={stroke * 1.5}
         />
       ) : null}
-    </svg>
+    </motion.svg>
   );
 }

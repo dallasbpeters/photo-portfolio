@@ -94,7 +94,7 @@ const render = async (
 
 /** Every item the canvas has drawn, in DOM order. */
 const drawn = (box: HTMLElement): HTMLElement[] =>
-  Array.from(box.querySelectorAll<HTMLElement>("div.absolute.group"));
+  Array.from(box.querySelectorAll<HTMLElement>("div.board-item"));
 
 const press = async (el: Element, over: Partial<PointerEventInit> = {}) => {
   el.dispatchEvent(
@@ -177,7 +177,7 @@ describe("BoardCanvas — selection", () => {
       throw new Error("nothing drawn");
     }
     await press(el);
-    expect(el.className).toContain("ring-blue-500");
+    expect(el.className).toContain("board-item--selected");
   });
 
   it("moves the selection when another item is pressed", async () => {
@@ -224,7 +224,7 @@ describe("BoardCanvas — a board that is not yours", () => {
       throw new Error("nothing drawn");
     }
     await press(el);
-    expect(el.className).not.toContain("ring-blue-500");
+    expect(el.className).not.toContain("board-item--selected");
   });
 
   it("does not change the arrangement when an item is pressed", async () => {

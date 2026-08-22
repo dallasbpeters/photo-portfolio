@@ -82,7 +82,8 @@
     0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
-  --spacing: 0.25rem;
+  --spacing: 0.28rem;
+  --spacing-lg: 0.48rem;
 
   /*
    * The board's palette, which is not the site's.
@@ -497,6 +498,10 @@
   /* Wires sit above every node so a connection is never hidden behind the box
      it runs to. Its own rung rather than a big number: this was `z-1000`. */
   --z-wires: 1000;
+  /* One rung above --z-modal-scrim, for the colour picker that portals itself
+     over a scrim of its own. This was the `z-61` that made the ladder
+     unreadable. */
+  --z-color-picker: 61;
 }
 
 /* Register --gradient-angle as a typed property so browsers can interpolate it */

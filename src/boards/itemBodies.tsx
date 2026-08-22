@@ -8,6 +8,7 @@ import {
   type ShaderConfig,
   type ShaderLayer,
 } from "./shaders/shaderConfig";
+import "./itemBodies.css";
 
 /**
  * What the kinds of item that are not nodes look like on the board.
@@ -51,10 +52,10 @@ export function FrameBody({
   readOnly: boolean;
 }) {
   return (
-    <div className="pointer-events-none h-full w-full rounded-lg border-2 border-blue-500/50 border-dashed bg-board-ink/2">
+    <div className="frame-body">
       <input
         aria-label="Frame name"
-        className="pointer-events-auto w-full bg-transparent px-2 py-1 font-light text-[13px] text-board-ink uppercase tracking-[0.18em] outline-none placeholder:text-board-ink"
+        className="frame-body__name"
         disabled={readOnly}
         onChange={(e) => onEditBody(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
@@ -87,11 +88,11 @@ export function ElementBody({ item }: { item: BoardItem }) {
   const words = item.body ?? storedWords;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-board-panel">
+    <div className="media-body">
       {cover ? (
         <img
           alt=""
-          className="min-h-0 w-full grow object-cover"
+          className="media-body__image"
           decoding="async"
           draggable={false}
           height={item.height}
@@ -100,22 +101,14 @@ export function ElementBody({ item }: { item: BoardItem }) {
           width={item.width}
         />
       ) : (
-        <div className="flex min-h-0 grow items-center justify-center text-[11px] text-board-ink/35">
-          No cover yet
-        </div>
+        <div className="media-body__missing">No cover yet</div>
       )}
-      <div className="shrink-0 px-2 py-1.5">
-        <p className="truncate font-medium text-[11px] text-board-ink">
-          {name ?? "Element"}
-        </p>
+      <div className="media-body__caption">
+        <p className="media-body__title">{name ?? "Element"}</p>
         {/* The description is the substance of an element — it rides the wire
             into the prompt — so it is shown rather than left to a side panel,
             but clamped: this is a node on a canvas, not the library. */}
-        {words ? (
-          <p className="line-clamp-2 text-[10px] text-board-ink/60 leading-snug">
-            {words}
-          </p>
-        ) : null}
+        {words ? <p className="media-body__credit">{words}</p> : null}
       </div>
     </div>
   );
@@ -156,7 +149,7 @@ export function ShaderItem({
     : { layers: [] };
 
   return (
-    <div className="relative h-full w-full">
+    <div className="shader-body">
       <ShaderView
         config={config}
         imageUrl={imageUrl}
@@ -192,9 +185,14 @@ export function ShaderItem({
 export function itemBoxClassName(item: BoardItem, isSelected: boolean) {
   const isText = item.kind === "text";
   const isDrawing = item.kind === "drawing";
-  const selecting = isText ? "" : "select-none";
-  const ring = isSelected ? "ring-2 ring-blue-500" : "ring-1 ring-board-ink/10";
-  const bare =
-    isText || (isDrawing && !isSelected) ? "ring-0 ring-transparent" : "ring-0";
-  return `group absolute rounded-xs contain-layout ${selecting} ${ring} ${bare}`;
+  const bare = isText || (isDrawing && !isSelected);
+  return [
+    "group",
+    "board-item",
+    isText ? "" : "board-item--fixed",
+    isSelected ? "board-item--selected" : "",
+    bare ? "board-item--bare" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
