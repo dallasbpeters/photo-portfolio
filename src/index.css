@@ -455,6 +455,17 @@
    */
   --text-sm-ui: 0.875rem;
   --text-xs-ui: 0.75rem;
+  --text-base-ui: 1rem;
+
+  /*
+   * Prose: the one thing in this app meant to be read at length.
+   *
+   * Its own step because the scale above is built for headings and instrument
+   * labels — `--text-base` is 0.738rem, which is a caption, not a paragraph.
+   * 15px with 1.75 leading is what the CMS pages have always set.
+   */
+  --text-prose: 0.9375rem;
+  --leading-prose: 1.75;
 
   /*
    * Tracking for that ladder. Tailwind's own stops at `widest` (0.1em), and
@@ -470,6 +481,8 @@
   /* Between --tracking-micro-caps and --tracking-stamped. The CMS headings use
      it; it had been written out as `tracking-[0.2em]` at twenty-one sites. */
   --tracking-micro-widest: 0.2em;
+  /* A page heading, wider still than the label steps. */
+  --tracking-heading: 0.24em;
 
   /*
    * Control corners.

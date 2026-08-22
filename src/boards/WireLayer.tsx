@@ -101,16 +101,19 @@ export function WireLayer({
         return (
           <g key={wire.id}>
             <title>{`${source.kind} → ${target.kind}`}</title>
-            <path
+            <motion.path
+              animate={{ opacity: 1, pathLength: 1 }}
               className="wire-layer__wire"
               d={d}
-              stroke={
-                isHovered
-                  ? "oklch(57.6% 0.21 27.25)"
-                  : "oklch(67.2% 0.22 241.99)"
-              }
+              initial={{ opacity: 0, pathLength: 0 }}
+              stroke="oklch(67.2% 0.22 241.99)"
               strokeWidth={isHovered ? stroke * 1.5 : stroke}
               style={{ zIndex: 1000 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              whileHover={{
+                stroke: "oklch(67.2% 0.22 241.99 / 0.8)",
+                strokeWidth: stroke * 1.5,
+              }}
             />
             {/* A 2px curve is nearly impossible to hit with a pointer and
                 hopeless with a thumb, so a wide invisible band carries the

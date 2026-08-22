@@ -29,15 +29,19 @@
   font-size: 0.9rem;
   line-height: 2;
   /*
-   * Literal white, as it was.
+   * The site's own foreground, not white.
    *
-   * This is the front end, which is branded per site — so by the argument in
-   * primitives.css this ought to be `--foreground`. It is not changed here
-   * because it is correct only while every site is dark, and finding out which
-   * site is not is a visual decision rather than a refactor. Left as it was, and
-   * written down.
+   * `--foreground` is written at runtime from site settings, so this follows a
+   * site's branding instead of assuming it. Verified before changing: it
+   * resolves to #ffffff here, so this renders exactly as the `text-white/90` it
+   * replaced.
+   *
+   * The case to watch is the home page, where this nav sits over a photograph.
+   * A light-branded site would put dark type over a dark image — readable
+   * today at every site because all of them are dark, and a real decision the
+   * day one is not. An overlay colour would be the answer, not a literal.
    */
-  color: color-mix(in oklch, #fff 90%, transparent);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
   letter-spacing: var(--tracking-micro-widest);
   text-shadow: var(--text-shadow-2xs, none);
   border-block-end: calc(var(--border-hairline) * 2) solid transparent;
@@ -47,11 +51,11 @@
 }
 
 .site-nav__link:hover {
-  color: #fff;
+  color: var(--foreground);
 }
 
 .site-nav__link--current {
-  border-block-end-color: #fff;
+  border-block-end-color: var(--foreground);
 }
 
 .site-nav__label {
