@@ -29,6 +29,15 @@ import { motion } from "motion/react";
  * Hover was previously the resting blue at 0.8 alpha, which over this canvas is
  * the resting blue. That is why hovering appeared to do nothing.
  */
+/*
+ * How much of a wire the travelling mark covers, as a fraction of its length.
+ *
+ * A fraction rather than a distance so it reads the same on a wire between
+ * touching nodes and one spanning the canvas. Small enough to be a light moving
+ * along the line rather than a dash pattern crawling down it.
+ */
+const COMET = 0.09;
+
 const WIRE_REST = "oklch(67.2% 0.22 241.99)";
 const WIRE_SENDING = "oklch(80% 0.25 241.99)";
 const WIRE_HOVER = "oklch(50.1% 0.16 31.5)";
@@ -118,8 +127,18 @@ export function WireLayer({
       width={CANVAS_WIDTH}
     >
       <defs>
-        <filter height="140%" id="wire-glow" width="140%" x="-20%" y="-20%">
-          <feGaussianBlur result="blur" stdDeviation={stroke * 2} />
+        {/*
+         * The bloom around the travelling mark.
+         *
+         * The region is generous because a Gaussian blur is clipped to the
+         * filter box, and a tight box shears the halo off square — which reads
+         * as a rectangle sliding along the wire rather than a light.
+         *
+         * `stdDeviation` scales with the stroke, so the bloom stays the same
+         * size on screen at any zoom, exactly as the stroke does.
+         */}
+        <filter height="300%" id="wire-glow" width="300%" x="-100%" y="-100%">
+          <feGaussianBlur result="blur" stdDeviation={stroke * 1.5} />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -174,27 +193,6 @@ export function WireLayer({
           <g key={wireId}>
             <title>{`${sourceKind} → ${targetKind}`}</title>
 
-            {/* GLOW PATH */}
-            {isWireSending && (
-              <motion.path
-                animate={{
-                  opacity: [0.3, 0.8, 0.3],
-                }}
-                d={d}
-                stroke="oklch(67.2% 0.22 241.99 / 0.5)"
-                strokeWidth={stroke * 4}
-                style={{
-                  filter: "url(#wire-glow)",
-                  pointerEvents: "none",
-                }}
-                transition={{
-                  duration: 2,
-                  ease: "easeInOut",
-                  repeat: Number.POSITIVE_INFINITY,
-                }}
-              />
-            )}
-
             {/* CORE PATH */}
             <motion.path
               animate={{
@@ -217,29 +215,35 @@ export function WireLayer({
             />
 
             {/*
-                The travelling dash, on a path of its own.
+                One small glow, travelling from the source to the target.
 
-                It cannot live on the core path above: `pathLength` is
-                implemented *with* stroke-dasharray and stroke-dashoffset — motion
-                normalises the path to a length of 1 and draws it in by moving the
-                dash — so anything else animating those two is overwritten the
-                moment the reveal runs. That is why the dash never moved. One path
-                reveals, one path flows.
+                `pathLength={1}` is the native SVG attribute, not motion's
+                animated property — it renormalises the path so dash lengths are
+                fractions of it. That is what makes this work on a wire of any
+                length: `COMET` of the wire is lit, the gap behind it is the whole
+                wire, so exactly one mark is ever visible and it is the same
+                proportion whether the nodes are touching or a screen apart.
 
-                Offset by exactly two dashes so the loop is seamless: the pattern
-                lands back where it started and there is no visible jump.
+                It must stay off motion's `animate`, for the reason the core path
+                above documents: animating `pathLength` there is implemented *with*
+                dasharray and dashoffset, which would overwrite these.
+
+                The offset runs to -(1 + COMET) rather than -1 so the mark clears
+                the end completely before the loop restarts, instead of being
+                clipped mid-flight at the target.
              */}
             {isWireSending && (
               <motion.path
-                animate={{ strokeDashoffset: [0, -(stroke * 8)] }}
+                animate={{ strokeDashoffset: [0, -(1 + COMET)] }}
                 d={d}
+                pathLength={1}
                 stroke={WIRE_SENDING}
-                strokeDasharray={`${stroke * 4} ${stroke * 4}`}
+                strokeDasharray={`${COMET} 1`}
                 strokeLinecap="round"
-                strokeWidth={stroke * 1.25}
-                style={{ pointerEvents: "none" }}
+                strokeWidth={stroke * 1.75}
+                style={{ filter: "url(#wire-glow)", pointerEvents: "none" }}
                 transition={{
-                  duration: 1,
+                  duration: 1.4,
                   ease: "linear",
                   repeat: Number.POSITIVE_INFINITY,
                 }}
