@@ -1,3 +1,4 @@
+import type { BrandKitDoc } from "../../config/brandKit.js";
 import type { IconStyle } from "../../config/iconStyles";
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
 import type { AffinityWriteback } from "../boards/io/affinity";
@@ -1576,6 +1577,115 @@ const elementsPath = (): string => `${apiBase()}/api/elements`;
  * which is the portfolio, and from `elementsApi`, which is a style rather than
  * a set of assets. See api/_lib/collections.ts.
  */
+/** What the brand-kit endpoints hand back. See api/_lib/brandKitStore.ts. */
+export interface BrandKit {
+  createdAt: string;
+  doc: BrandKitDoc;
+  id: string;
+  name: string;
+  updatedAt: string;
+  version: number | null;
+  versionCount: number;
+  versionId: string | null;
+}
+
+export interface BrandKitVersion {
+  createdAt: string;
+  doc: BrandKitDoc;
+  id: string;
+  version: number;
+}
+
+/**
+ * The brand kits.
+ *
+ * `save` sends the whole document rather than a patch of it, because a version
+ * is the whole document — there is nothing meaningful to send half of. The
+ * server writes a new version for every call that carries one, which is why the
+ * panel debounces nothing and saves on a press.
+ */
+export const brandKitsApi = {
+  create: async (name: string, doc?: BrandKitDoc): Promise<BrandKit> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits`, {
+      body: JSON.stringify({ doc, name }),
+      headers: jsonHeaders(),
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not create the kit"));
+    }
+    return (await res.json()) as BrandKit;
+  },
+
+  get: async (id: string): Promise<BrandKit> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits/${id}`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load the kit"));
+    }
+    return (await res.json()) as BrandKit;
+  },
+
+  /** The kit with its history — asked for only when a kit is open. */
+  history: async (
+    id: string
+  ): Promise<BrandKit & { versions: BrandKitVersion[] }> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits/${id}?versions=1`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load the history"));
+    }
+    return (await res.json()) as BrandKit & { versions: BrandKitVersion[] };
+  },
+
+  list: async (): Promise<BrandKit[]> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load brand kits"));
+    }
+    return (await res.json()) as BrandKit[];
+  },
+
+  remove: async (id: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits/${id}`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not delete the kit"));
+    }
+  },
+
+  rename: async (id: string, name: string): Promise<BrandKit> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits/${id}`, {
+      body: JSON.stringify({ name }),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not rename the kit"));
+    }
+    return (await res.json()) as BrandKit;
+  },
+
+  /** A new version. Renaming is separate, and deliberately not one. */
+  save: async (id: string, doc: BrandKitDoc): Promise<BrandKit> => {
+    const res = await fetch(`${apiBase()}/api/brand-kits/${id}`, {
+      body: JSON.stringify({ doc }),
+      headers: jsonHeaders(),
+      method: "PATCH",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save the kit"));
+    }
+    return (await res.json()) as BrandKit;
+  },
+};
+
 export const collectionsApi = {
   /** Adds one asset. Saving the same url twice is a no-op, not an error. */
   addItem: async (
