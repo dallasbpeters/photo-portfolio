@@ -475,3 +475,23 @@
   display: flex;
   gap: calc(var(--spacing) * 0.5);
 }
+
+/*
+ * "There is unsaved work on this screen."
+ *
+ * The editor holds the only copy of everything typed into it — every save
+ * writes a version, deliberately, so nothing is written until asked. That rule
+ * cost a whole kit once: the only sign was the Save button changing from grey to
+ * black, which nobody reads as "this will be thrown away if you leave".
+ *
+ * Amber rather than red: this is a state to notice, not a failure. Beside the
+ * button that resolves it, so the notice and the fix are one glance apart.
+ */
+.brand-kit__unsaved {
+  align-self: center;
+  font-size: var(--text-micro-xs);
+  /* amber-300, the same warning colour .panel-warning uses on the board. */
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 85%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}

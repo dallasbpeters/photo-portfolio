@@ -49,6 +49,14 @@ import "./BrandKitsPanel.css";
  * Editing is local until Save. Every save writes a *version*, so autosaving a
  * keystroke would mint a version per character and make the history useless for
  * the one question it exists to answer.
+ *
+ * That rule is right, and on its own it lost a kit. Local-until-Save means the
+ * editor holds the only copy of everything typed into it, and leaving discarded
+ * that copy without a word — a whole brand built up, a click on "Back to kits",
+ * and a card still reading "0 colours". So every way out of a dirty editor is
+ * now guarded: the button asks, and the browser asks on unload. The dirty state
+ * is also said out loud rather than left implied by an enabled button, because
+ * "there is unsaved work here" is exactly what nobody could see.
  */
 
 const PREVIEW_FORMATS = [
@@ -618,6 +626,7 @@ function KitEditor({
   /** The parent's resolved document, when this kit is a sub-brand. */
   parentDoc: BrandKitDoc | null;
 }) {
+  const { confirm } = useConfirm();
   const [doc, setDoc] = useState<BrandKitDoc>(kit.doc);
   const [name, setName] = useState(kit.name);
   const [isSaving, setIsSaving] = useState(false);
@@ -631,6 +640,48 @@ function KitEditor({
   const isDirty =
     JSON.stringify(sanitizeKitDoc(doc)) !== JSON.stringify(kit.doc) ||
     name.trim() !== kit.name;
+
+  /*
+   * The browser's own guard, for the exits this component cannot see.
+   *
+   * Closing the tab, reloading, and following one of the admin's nav links all
+   * unmount the editor without going through its own button. The router here is
+   * a plain <Routes> with no navigation blocker to hook, so this is the only
+   * thing that covers a reload or a close — and it is the case that matters
+   * most, because there is nothing to come back to.
+   */
+  useEffect(() => {
+    if (!isDirty) {
+      return;
+    }
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Assigning returnValue is what actually triggers the prompt in Safari
+      // and older Chrome; preventDefault alone is the modern spelling and both
+      // are needed for it to fire everywhere.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
+
+  /** Leaving, having asked first if there is anything to lose. */
+  const close = async () => {
+    if (
+      isDirty &&
+      !(await confirm({
+        cancelLabel: "Keep editing",
+        confirmLabel: "Discard changes",
+        description:
+          "This kit has edits that have not been saved as a version. Leaving now throws them away.",
+        destructive: true,
+        title: "Discard unsaved changes?",
+      }))
+    ) {
+      return;
+    }
+    onClose();
+  };
 
   const save = async () => {
     setIsSaving(true);
@@ -746,16 +797,24 @@ function KitEditor({
         </section>
 
         <div className="row row--between">
-          <Button onClick={onClose} type="button" variant="ghost">
+          <Button onClick={() => void close()} type="button" variant="ghost">
             Back to kits
           </Button>
-          <Button
-            disabled={!isDirty || isSaving}
-            onClick={() => void save()}
-            type="button"
-          >
-            {isSaving ? "Saving…" : "Save a new version"}
-          </Button>
+          <span className="row row--snug">
+            {/* Said, not implied. An enabled Save button was the only sign that
+                this screen held the sole copy of the work, and it was not
+                enough — see the note at the top of the file. */}
+            {isDirty ? (
+              <span className="brand-kit__unsaved">Unsaved changes</span>
+            ) : null}
+            <Button
+              disabled={!isDirty || isSaving}
+              onClick={() => void save()}
+              type="button"
+            >
+              {isSaving ? "Saving…" : "Save a new version"}
+            </Button>
+          </span>
         </div>
       </div>
 
