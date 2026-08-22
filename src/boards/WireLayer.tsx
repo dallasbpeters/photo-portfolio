@@ -126,26 +126,6 @@ export function WireLayer({
       role={wires.length === 0 ? undefined : "list"}
       width={CANVAS_WIDTH}
     >
-      <defs>
-        {/*
-         * The bloom around the travelling mark.
-         *
-         * The region is generous because a Gaussian blur is clipped to the
-         * filter box, and a tight box shears the halo off square — which reads
-         * as a rectangle sliding along the wire rather than a light.
-         *
-         * `stdDeviation` scales with the stroke, so the bloom stays the same
-         * size on screen at any zoom, exactly as the stroke does.
-         */}
-        <filter height="300%" id="wire-glow" width="300%" x="-100%" y="-100%">
-          <feGaussianBlur result="blur" stdDeviation={stroke * 1.5} />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
       <title>Connections between items on this board</title>
 
       {wires.map((wire) => {
@@ -231,6 +211,19 @@ export function WireLayer({
                 The offset runs to -(1 + COMET) rather than -1 so the mark clears
                 the end completely before the loop restarts, instead of being
                 clipped mid-flight at the target.
+
+                The bloom is a CSS `drop-shadow`, not an SVG `<filter>`, and that
+                is a correctness fix rather than a preference. An SVG filter's
+                region defaults to `objectBoundingBox` units, so a percentage
+                region is a percentage *of the path's bounding box* — and a wire
+                between two nodes at the same height has a box of zero height. A
+                zero-area filter region does not render, so on any level wire the
+                mark vanished completely. Measured: one of five wires on a real
+                board had a 120x0 box. `drop-shadow` applies to the rendered
+                element and has no such dependency.
+
+                Its lengths scale with the stroke, so the bloom holds its size on
+                screen at any zoom — the same reasoning as the stroke itself.
              */}
             {isWireSending && (
               <motion.path
@@ -241,7 +234,12 @@ export function WireLayer({
                 strokeDasharray={`${COMET} 1`}
                 strokeLinecap="round"
                 strokeWidth={stroke * 1.75}
-                style={{ filter: "url(#wire-glow)", pointerEvents: "none" }}
+                style={{
+                  // Two stacked shadows: a tight core and a wider halo. See the
+                  // note above on why this is not an SVG filter.
+                  filter: `drop-shadow(0 0 ${stroke}px ${WIRE_SENDING}) drop-shadow(0 0 ${stroke * 3}px ${WIRE_SENDING})`,
+                  pointerEvents: "none",
+                }}
                 transition={{
                   duration: 1.4,
                   ease: "linear",
