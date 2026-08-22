@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authApi, authStorage } from "../../services/portfolioService";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
+import "./GoogleSignInButton.css";
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 
@@ -123,17 +126,15 @@ export function GoogleSignInButton({ onSignedIn }: GoogleSignInButtonProps) {
   }
 
   return (
-    <div className="w-full max-w-sm space-y-3">
-      <div aria-hidden className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-white/10" />
-        <span className="text-[9px] text-white/80 uppercase tracking-[0.3em]">
-          or
-        </span>
-        <span className="h-px flex-1 bg-white/10" />
+    <div className="admin-gate__form stack stack--mid">
+      <div aria-hidden className="admin-or">
+        <span className="admin-or__rule" />
+        <span className="admin-or__word">or</span>
+        <span className="admin-or__rule" />
       </div>
-      <div className="flex min-h-11 justify-center" ref={containerRef} />
+      <div className="google-signin__slot" ref={containerRef} />
       {failed ? (
-        <p className="text-center text-[10px] text-white/90 uppercase tracking-[0.15em]">
+        <p className="google-signin__note">
           Google sign-in is unavailable. Use your email and password.
         </p>
       ) : null}

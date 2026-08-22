@@ -1,0 +1,20 @@
+/*
+ * Google's own button, and the rule above it.
+ *
+ * The slot is left empty for Google's script to render into — its markup and
+ * its styling are theirs, and re-skinning it would breach the branding rules
+ * that come with the API. All this owns is the space it sits in.
+ */
+.google-signin__slot {
+  display: flex;
+  justify-content: center;
+  min-height: calc(var(--spacing) * 11);
+}
+
+.google-signin__note {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-gate-tight);
+}

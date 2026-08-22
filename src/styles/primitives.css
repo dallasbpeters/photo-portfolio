@@ -173,6 +173,10 @@
   gap: var(--spacing);
 }
 
+.row--tight {
+  gap: calc(var(--spacing) * 2);
+}
+
 .row--between {
   justify-content: space-between;
 }

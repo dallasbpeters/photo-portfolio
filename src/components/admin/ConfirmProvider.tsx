@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
 
 /**
  * Promise-based confirmation, replacing window.confirm.
@@ -115,19 +117,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         }}
         open={options !== null}
       >
-        <DialogContent className="max-w-sm border-white/10 bg-black">
+        <DialogContent className="admin-dialog">
           <DialogHeader>
-            <DialogTitle className="font-light text-sm text-white/80 uppercase tracking-[0.2em]">
+            <DialogTitle className="admin-dialog__title">
               {options?.title}
             </DialogTitle>
             {options?.description ? (
-              <DialogDescription className="text-[12px] text-white/90 leading-relaxed">
+              <DialogDescription className="admin-dialog__body">
                 {options.description}
               </DialogDescription>
             ) : null}
           </DialogHeader>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="row row--tight">
             <Button onClick={() => settle(false)} type="button" variant="ghost">
               {options?.cancelLabel ?? "Cancel"}
             </Button>
@@ -151,13 +153,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         }}
         open={promptOptions !== null}
       >
-        <DialogContent className="max-w-sm border-white/10 bg-black">
+        <DialogContent className="admin-dialog">
           <DialogHeader>
-            <DialogTitle className="font-light text-sm text-white/80 uppercase tracking-[0.2em]">
+            <DialogTitle className="admin-dialog__title">
               {promptOptions?.title}
             </DialogTitle>
             {promptOptions?.description ? (
-              <DialogDescription className="text-[12px] text-white/90 leading-relaxed">
+              <DialogDescription className="admin-dialog__body">
                 {promptOptions.description}
               </DialogDescription>
             ) : null}
@@ -165,7 +167,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
           <Input
             autoFocus
-            className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+            className="admin-control admin-control--touch"
             onChange={(e) => setPromptValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -177,7 +179,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             value={promptValue}
           />
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="row row--tight">
             <Button
               onClick={() => settlePrompt(null)}
               type="button"
