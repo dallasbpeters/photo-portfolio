@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useConfirm } from "./ConfirmProvider";
 import { ModelForm } from "./ModelForm";
 import { ModelRow } from "./ModelRow";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
 
 /**
  * The models a Generate node may use, editable without code.
@@ -92,11 +94,9 @@ export function ModelsPanel() {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-sm text-white/90 uppercase tracking-widest">
-          Models
-        </CardTitle>
+    <Card className="admin-card">
+      <CardHeader className="row row--between">
+        <CardTitle className="admin-heading">Models</CardTitle>
         <Button
           onClick={() =>
             setEditing((current) => (current === "new" ? null : "new"))
@@ -109,8 +109,8 @@ export function ModelsPanel() {
           {editing === "new" ? "Close" : "Add model"}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-white/50 text-xs">
+      <CardContent className="stack stack--mid">
+        <p className="admin-note--quiet">
           These are the models a Generate node may use. Add a fal.ai model id,
           give it a label and its input shape, and it appears in every node
           without a code change.
@@ -123,7 +123,7 @@ export function ModelsPanel() {
         ) : null}
 
         {models.length === 0 ? (
-          <p className="text-sm text-white/50">No models yet.</p>
+          <p className="admin-empty">No models yet.</p>
         ) : (
           models.map((model, index) => (
             <Fragment key={model.id}>

@@ -336,3 +336,232 @@
     height: calc(var(--spacing) * 12);
   }
 }
+
+/*
+ * A status chip.
+ *
+ * Three tones, and they mean three different kinds of thing rather than three
+ * severities: what a model *is*, what it is *for*, and whether it is *on*. So
+ * they are named after that rather than after their colours.
+ */
+.admin-chip {
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  border-radius: var(--radius-control);
+}
+
+/* The model's kind. purple-300 on purple-500 at 20%. */
+.admin-chip--kind {
+  color: oklch(82.7% 0.119 306.383);
+  background: color-mix(in oklch, oklch(62.7% 0.265 303.9) 20%, transparent);
+}
+
+/* A neutral fact — a capability, a size. */
+.admin-chip--plain {
+  color: color-mix(in oklch, #fff 50%, transparent);
+  background: color-mix(in oklch, #fff 10%, transparent);
+}
+
+/* On, enabled, default. emerald-300 on emerald-500 at 20%. */
+.admin-chip--on {
+  color: oklch(84.5% 0.143 164.978);
+  background: color-mix(in oklch, oklch(69.6% 0.17 162.48) 20%, transparent);
+}
+
+/*
+ * A row in a list of settings — a model, a site, a page.
+ *
+ * A bordered strip rather than a table row: each carries a name, an id, a line
+ * of description and a handful of controls, which is a card's worth of content
+ * on one line.
+ */
+.admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  background: color-mix(in oklch, #000 20%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+/* `min-width: 0` so the name truncates rather than pushing the controls off. */
+.admin-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: color-mix(in oklch, #fff 90%, transparent);
+  white-space: nowrap;
+}
+
+.admin-row__id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  white-space: nowrap;
+}
+
+.admin-row__note {
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 60%, transparent);
+}
+
+/*
+ * A card on the admin's ground.
+ *
+ * Passed to shadcn's `Card` as its className, which is how that component is
+ * meant to be restyled.
+ */
+.admin-card {
+  width: 100%;
+  background: color-mix(in oklch, #fff 2%, transparent);
+  border-color: color-mix(in oklch, #fff 10%, transparent);
+}
+
+/*
+ * Controls that appear on hover, over the thing they act on.
+ *
+ * Present in the tree at all times and revealed by opacity, not mounted on
+ * hover: a control that cannot be reached by keyboard is its own bug, which is
+ * why `:focus-within` reveals it too.
+ */
+.admin-hover-tray {
+  position: absolute;
+  top: var(--spacing);
+  right: var(--spacing);
+  z-index: var(--z-canvas-item);
+  display: flex;
+  gap: calc(var(--spacing) * 0.5);
+  padding: calc(var(--spacing) * 0.5);
+  background: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+  border-radius: var(--radius-lg);
+  opacity: 0;
+  backdrop-filter: blur(var(--blur-xs));
+  transition: opacity var(--default-transition-duration) var(--ease-in-out);
+}
+
+.admin-hover-tray:focus-within,
+.group:hover .admin-hover-tray {
+  opacity: 1;
+}
+
+/*
+ * A grid of picture tiles — boards, elements, collections.
+ *
+ * Every one of these is "a picture with a name under it, in a grid that reflows"
+ * and each had written it out. The column count is the caller's, because it is
+ * the one thing that genuinely differs: five boards fit a row, two elements do.
+ */
+.admin-tile {
+  position: relative;
+  overflow: hidden;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.admin-tile:hover {
+  border-color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+/* On the board's inverting surface rather than the admin's. */
+.admin-tile--board {
+  border-color: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.admin-tile--board:hover {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/* The whole tile opens the thing. */
+.admin-tile__open {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+/*
+ * The picture's frame.
+ *
+ * Given an aspect ratio rather than a height, so the grid stays even whatever
+ * shape the pictures are, and a tile with no picture keeps its place.
+ */
+.admin-tile__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-admin-panel);
+}
+
+.admin-tile__frame--square {
+  aspect-ratio: 1;
+  background: color-mix(in oklch, var(--color-board-surface) 30%, transparent);
+}
+
+/* Faint on purpose: it stands in for a picture rather than illustrating one. */
+.admin-tile__placeholder {
+  color: color-mix(in oklch, #fff 15%, transparent);
+}
+
+.admin-tile__caption {
+  padding: calc(var(--spacing) * 3);
+}
+
+.admin-tile__caption--tight {
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+}
+
+.admin-tile__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-lg);
+  font-weight: 300;
+  color: color-mix(in oklch, #fff 90%, transparent);
+  white-space: nowrap;
+}
+
+.admin-tile__name--board {
+  display: block;
+  font-size: var(--text-micro-sm);
+  font-weight: 400;
+  color: var(--color-board-ink);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+}
+
+.admin-tile__meta {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.admin-tile__meta--board {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+}

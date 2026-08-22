@@ -169,6 +169,10 @@
   gap: calc(var(--spacing) * 4);
 }
 
+.row--snug {
+  gap: var(--spacing);
+}
+
 .row--between {
   justify-content: space-between;
 }

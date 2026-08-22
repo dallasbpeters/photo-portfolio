@@ -1,0 +1,26 @@
+/*
+ * The brand elements available to a board, as a grid of two.
+ *
+ * Two columns because this tab is narrow — it sits in the board's insert panel
+ * rather than on a page of its own — and an element is recognised by its
+ * picture, so the picture wants the width.
+ */
+.elements-tab__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--spacing) * 2);
+}
+
+/* The positioning context the hover tray anchors to. */
+.elements-tab__cell {
+  position: relative;
+}
+
+.elements-tab__message {
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+.elements-tab__message--wrapped {
+  line-height: 1.625;
+}

@@ -13,6 +13,9 @@ import type { Board } from "../../types";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useConfirm } from "./ConfirmProvider";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
+import "./BoardsPanel.css";
 
 /**
  * Moodboards: somewhere to plan a shoot before shooting it.
@@ -87,9 +90,9 @@ export function BoardsPanel() {
   };
 
   return (
-    <Card className="w-full border-white/10 bg-white/2">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <CardTitle className="flex items-center gap-2 font-light text-sm text-white/90 uppercase tracking-[0.2em]">
+    <Card className="admin-card">
+      <CardHeader className="row row--between row--mid">
+        <CardTitle className="admin-heading">
           <HugeiconsIcon aria-hidden icon={FrameIcon} size={16} />
           Moodboards
         </CardTitle>
@@ -100,25 +103,21 @@ export function BoardsPanel() {
       </CardHeader>
 
       <CardContent>
-        {isLoading ? (
-          <p className="text-[11px] text-white/50 uppercase tracking-widest">
-            Loading…
-          </p>
-        ) : null}
+        {isLoading ? <p className="boards-panel__count">Loading…</p> : null}
 
         {!isLoading && boards.length === 0 ? (
-          <p className="text-[12px] text-white/60 leading-relaxed">
+          <p className="boards-panel__note">
             No boards yet. A board is a canvas for planning a shoot — collect
             references, pin your own frames next to them, and leave yourself
             notes.
           </p>
         ) : null}
 
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <ul className="boards-panel__grid">
           <AnimatePresence>
             {boards.map((board) => (
               <motion.li initial="initial" key={board.id} whileHover="hover">
-                <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                <div className="group admin-tile boards-panel__tile">
                   {/*
                    * onClick, not Motion's onTap, and the scale barely moves.
                    *
@@ -136,17 +135,17 @@ export function BoardsPanel() {
                    * from under the pointer.
                    */}
                   <motion.button
-                    className="block w-full cursor-pointer text-left"
+                    className="admin-tile__open"
                     onClick={() => navigate(`/admin/boards/${board.id}`)}
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <div className="flex aspect-4/3 items-center justify-center bg-neutral-900">
+                    <div className="admin-tile__frame">
                       {board.coverUrl ? (
                         <motion.img
                           alt=""
-                          className="h-full w-full object-cover"
+                          className="admin-fill"
                           height={300}
                           src={board.coverUrl}
                           transition={{
@@ -160,17 +159,15 @@ export function BoardsPanel() {
                       ) : (
                         <HugeiconsIcon
                           aria-hidden
-                          className="text-white/15"
+                          className="admin-tile__placeholder"
                           icon={FrameIcon}
                           size={32}
                         />
                       )}
                     </div>
-                    <div className="space-y-1 p-3">
-                      <p className="truncate font-light text-[13px] text-white/90">
-                        {board.title}
-                      </p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
+                    <div className="admin-tile__caption stack stack--snug">
+                      <p className="admin-tile__name">{board.title}</p>
+                      <p className="admin-tile__meta">
                         {board.itemCount ?? 0}{" "}
                         {board.itemCount === 1 ? "item" : "items"}
                       </p>

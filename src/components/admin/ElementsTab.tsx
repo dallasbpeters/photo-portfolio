@@ -11,6 +11,8 @@ import { elementsApi } from "../../services/portfolioService";
 import type { Element } from "../../types";
 import { Button } from "../ui/button";
 import { useConfirm } from "./ConfirmProvider";
+import "../../styles/adminChrome.css";
+import "./ElementsTab.css";
 
 /**
  * The library of styles, as covers.
@@ -77,14 +79,14 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
   };
 
   if (error) {
-    return <p className="text-[12px] text-board-ink/50">{error}</p>;
+    return <p className="elements-tab__message">{error}</p>;
   }
   if (!elements) {
-    return <p className="text-[12px] text-board-ink/40">Loading…</p>;
+    return <p className="elements-tab__message">Loading…</p>;
   }
   if (elements.length === 0) {
     return (
-      <p className="text-[12px] text-board-ink/50 leading-relaxed">
+      <p className="elements-tab__message elements-tab__message--wrapped">
         No elements yet. Select the pictures that share a look on a board,
         right-click, and save them as one.
       </p>
@@ -93,14 +95,14 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="elements-tab__grid">
         {elements.map((element) => (
-          <div className="group relative" key={element.id}>
+          <div className="group elements-tab__cell" key={element.id}>
             {/* Sits over the cover rather than in the row below it, which is the
                 only part of the card that is not the button that places it. The
                 tray carries the backdrop so the buttons themselves stay plain
                 variants — legibility over a photograph is the tray's job. */}
-            <div className="absolute top-1 right-1 z-10 flex gap-0.5 rounded-lg bg-board-surface/70 p-0.5 opacity-0 backdrop-blur-sm transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <div className="admin-hover-tray">
               <Button
                 aria-label={`Edit ${element.name}`}
                 onClick={() => setEditing(element)}
@@ -122,15 +124,15 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
               </Button>
             </div>
             <button
-              className="block w-full overflow-hidden rounded-lg border border-board-ink/10 text-left transition-colors hover:border-board-ink/40"
+              className="admin-tile admin-tile--board admin-tile__open"
               onClick={() => onAdd(element)}
               type="button"
             >
-              <div className="aspect-square w-full overflow-hidden bg-board-surface/30">
+              <div className="admin-tile__frame admin-tile__frame--square">
                 {element.coverUrl ? (
                   <img
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="admin-fill"
                     draggable={false}
                     height={160}
                     loading="lazy"
@@ -139,11 +141,11 @@ export function ElementsTab({ onAdd }: { onAdd: (element: Element) => void }) {
                   />
                 ) : null}
               </div>
-              <div className="px-2 py-1.5">
-                <span className="block truncate text-[11px] text-board-ink uppercase tracking-[0.14em]">
+              <div className="admin-tile__caption admin-tile__caption--tight">
+                <span className="admin-tile__name admin-tile__name--board">
                   {element.name}
                 </span>
-                <span className="block truncate text-[10px] text-board-ink/40">
+                <span className="admin-tile__meta admin-tile__meta--board">
                   {element.imageUrls.length === 1
                     ? "1 picture"
                     : `${element.imageUrls.length} pictures`}
