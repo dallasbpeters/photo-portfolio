@@ -1,0 +1,28 @@
+/*
+ * A photograph's title, category and browser-chrome settings.
+ */
+
+/* Ruled off above: the chrome settings are a separate question from the
+   photograph's own details. */
+.photo-details__section {
+  padding-block-start: calc(var(--spacing) * 4);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+/*
+ * A checkbox with a label and a note beside it.
+ *
+ * Top-aligned, because the note runs to two lines and centring put the box
+ * against the middle of the paragraph rather than its first line.
+ */
+.photo-details__check-row {
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: flex-start;
+}
+
+/* Nudged down onto the label's baseline. */
+.photo-details__check {
+  margin-block-start: calc(var(--spacing) * 0.5);
+}

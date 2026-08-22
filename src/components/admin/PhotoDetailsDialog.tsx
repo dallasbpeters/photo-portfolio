@@ -12,6 +12,9 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { CategoryPicker } from "./CategoryPicker";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
+import "./PhotoDetailsDialog.css";
 
 // ── Edit details dialog ───────────────────────────────────────────────────────
 
@@ -73,28 +76,22 @@ export const DetailsDialog = ({
     }}
     open={details.detailsPhoto !== null}
   >
-    <DialogContent
-      className="max-h-[85dvh] overflow-y-auto overflow-x-hidden border-white/10 bg-neutral-950 text-white sm:max-w-md"
-      showCloseButton
-    >
-      <form className="space-y-4" onSubmit={(e) => void details.save(e)}>
+    <DialogContent className="admin-dialog--form" showCloseButton>
+      <form className="stack" onSubmit={(e) => void details.save(e)}>
         <DialogHeader>
-          <DialogTitle className="font-light text-white uppercase tracking-[0.2em]">
+          <DialogTitle className="admin-dialog__heading">
             Edit details
           </DialogTitle>
-          <DialogDescription className="text-white/90 text-xs uppercase tracking-widest">
+          <DialogDescription className="admin-dialog__subtitle">
             Title, category, and sort order. Use the pencil to edit the image.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-2">
-          <Label
-            className="text-[10px] text-white/90 uppercase tracking-widest"
-            htmlFor="details-title"
-          >
+        <div className="stack stack--tight">
+          <Label className="admin-caps" htmlFor="details-title">
             Title
           </Label>
           <Input
-            className="border-white/10 bg-black/40 focus:border-white/40"
+            className="admin-control"
             id="details-title"
             onChange={(e) => details.setDetailsTitle(e.target.value)}
             required
@@ -111,15 +108,12 @@ export const DetailsDialog = ({
           onCreate={data.createCategoryFromLabel}
           value={details.detailsCategoryId}
         />
-        <div className="space-y-2">
-          <Label
-            className="text-[10px] text-white/90 uppercase tracking-widest"
-            htmlFor="details-order"
-          >
+        <div className="stack stack--tight">
+          <Label className="admin-caps" htmlFor="details-order">
             Order
           </Label>
           <Input
-            className="border-white/10 bg-black/40 focus:border-white/40"
+            className="admin-control"
             id="details-order"
             onChange={(e) =>
               details.setDetailsOrder(Number.parseInt(e.target.value, 10) || 0)
@@ -133,45 +127,39 @@ export const DetailsDialog = ({
         {/* For screenshots rather than photographs. Framing one in a browser
             window says what it is, and lets a tall capture scroll at full
             width in the lightbox instead of shrinking until it is unreadable. */}
-        <fieldset className="space-y-3 border-white/10 border-t pt-4">
+        <fieldset className="photo-details__section stack stack--mid">
           <legend className="sr-only">Browser chrome</legend>
-          <div className="flex items-start gap-3">
+          <div className="photo-details__check-row">
             <Checkbox
               checked={details.detailsShowChrome}
-              className="mt-0.5"
+              className="photo-details__check"
               id="details-show-chrome"
               onChange={(e) => details.setDetailsShowChrome(e.target.checked)}
             />
-            <div className="space-y-1">
-              <Label
-                className="text-[10px] text-white/90 uppercase tracking-widest"
-                htmlFor="details-show-chrome"
-              >
+            <div className="stack stack--snug">
+              <Label className="admin-caps" htmlFor="details-show-chrome">
                 Show browser chrome
               </Label>
-              <p className="text-[10px] text-white/80">
+              <p className="admin-note">
                 Frames this image in a browser window and lets it scroll
               </p>
             </div>
           </div>
 
           {details.detailsShowChrome ? (
-            <div className="space-y-2">
-              <Label
-                className="text-[10px] text-white/90 uppercase tracking-widest"
-                htmlFor="details-chrome-url"
-              >
+            <div className="stack stack--tight">
+              <Label className="admin-caps" htmlFor="details-chrome-url">
                 Address bar
               </Label>
               <Input
-                className="border-white/10 bg-black/40 focus:border-white/40"
+                className="admin-control"
                 id="details-chrome-url"
                 maxLength={300}
                 onChange={(e) => details.setDetailsChromeUrl(e.target.value)}
                 placeholder="dallaspeters.com/work"
                 value={details.detailsChromeUrl}
               />
-              <p className="text-[10px] text-white/80">
+              <p className="admin-note">
                 Display only — never linked. Leave empty to hide the bar.
               </p>
             </div>
@@ -181,7 +169,7 @@ export const DetailsDialog = ({
         {/* Read off the file at upload, and wrong often enough to need
             correcting: adapted lenses report nothing, scans carry the
             scanner's date, and a borrowed body stamps someone else's make. */}
-        <fieldset className="space-y-3 border-white/10 border-t pt-4">
+        <fieldset className="photo-details__section stack stack--mid">
           <legend className="sr-only">Shooting details</legend>
           <p className="text-[10px] text-white/90 uppercase tracking-widest">
             Shooting details
@@ -197,7 +185,7 @@ export const DetailsDialog = ({
                   {field.label}
                 </Label>
                 <Input
-                  className="border-white/10 bg-black/40 focus:border-white/40"
+                  className="admin-control"
                   id={`details-exif-${field.name}`}
                   inputMode={field.inputMode}
                   onChange={(e) =>

@@ -510,6 +510,9 @@
   /* Long enough to read as the same wire moving, short enough not to lag the
      node it follows. */
   --duration-wire: 300ms;
+  /* Slower than a state change: the hover glow is decoration, and it should
+     arrive after the thing it decorates. */
+  --duration-glow: 500ms;
 
   /*
    * What sits in front of what.
