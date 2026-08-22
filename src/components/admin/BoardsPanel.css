@@ -44,3 +44,36 @@
   line-height: 1.625;
   color: color-mix(in oklch, #fff 60%, transparent);
 }
+
+/*
+ * Delete, revealed on hover over a cover.
+ *
+ * Its own ground rather than the shared hover tray, because it sits on a
+ * photograph rather than on a panel — a translucent tray over a busy image
+ * leaves the glyph unreadable. Focus reveals it too: a control that cannot be
+ * reached by keyboard is its own bug.
+ */
+.boards-panel__delete {
+  position: absolute;
+  top: calc(var(--spacing) * 2);
+  right: calc(var(--spacing) * 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 9);
+  height: calc(var(--spacing) * 9);
+  color: color-mix(in oklch, #fff 60%, transparent);
+  background: color-mix(in oklch, #000 70%, transparent);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  transition: opacity var(--default-transition-duration) var(--ease-in-out);
+}
+
+.boards-panel__delete:hover {
+  color: #fff;
+}
+
+.boards-panel__delete:focus-visible,
+.group:hover .boards-panel__delete {
+  opacity: 1;
+}

@@ -320,7 +320,7 @@ export function BoardEditor({
 
         {/* The layer every board overlay belongs in. Named so a panel escaping
             its own transform has somewhere to escape to — see ElementsTab. */}
-        <div className="relative z-100 min-h-0 flex-1" data-board-overlays>
+        <div className="board__overlays" data-board-overlays>
           <FloatingTools
             drawStyle={drawStyle}
             drawTool={drawTool}

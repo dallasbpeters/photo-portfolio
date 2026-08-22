@@ -33,6 +33,7 @@
   border-radius: var(--radius-lg);
   opacity: 0;
   transition: opacity var(--duration-glow) var(--ease-in-out);
+  animation: var(--animate-gradient-spin);
 }
 
 .group:hover .photo-card__glow {

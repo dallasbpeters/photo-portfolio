@@ -128,7 +128,7 @@ export const DetailsDialog = ({
             window says what it is, and lets a tall capture scroll at full
             width in the lightbox instead of shrinking until it is unreadable. */}
         <fieldset className="photo-details__section stack stack--mid">
-          <legend className="sr-only">Browser chrome</legend>
+          <legend className="photo-details__legend">Browser chrome</legend>
           <div className="photo-details__check-row">
             <Checkbox
               checked={details.detailsShowChrome}
@@ -170,16 +170,14 @@ export const DetailsDialog = ({
             correcting: adapted lenses report nothing, scans carry the
             scanner's date, and a borrowed body stamps someone else's make. */}
         <fieldset className="photo-details__section stack stack--mid">
-          <legend className="sr-only">Shooting details</legend>
-          <p className="text-[10px] text-white/90 uppercase tracking-widest">
-            Shooting details
-          </p>
+          <legend className="photo-details__legend">Shooting details</legend>
+          <p className="photo-details__group-title">Shooting details</p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="photo-details__grid">
             {EXIF_FIELDS.map((field) => (
-              <div className="space-y-2" key={field.name}>
+              <div className="stack stack--tight" key={field.name}>
                 <Label
-                  className="text-[10px] text-white/60 uppercase tracking-widest"
+                  className="photo-details__field-label"
                   htmlFor={`details-exif-${field.name}`}
                 >
                   {field.label}
@@ -199,13 +197,13 @@ export const DetailsDialog = ({
             ))}
           </div>
 
-          <p className="text-[10px] text-white/30 leading-relaxed">
+          <p className="photo-details__hint">
             Empty every box to remove the shooting details from this photograph
             entirely.
           </p>
         </fieldset>
 
-        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+        <div className="photo-details__footer">
           <Button onClick={details.close} type="button" variant="ghost">
             Cancel
           </Button>

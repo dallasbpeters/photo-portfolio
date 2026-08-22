@@ -22,7 +22,7 @@ export function BoardStatusBar({
   title,
 }: BoardStatusBarProps) {
   return (
-    <div className="board-panel board-panel--top min-w-0">
+    <div className="board-panel board-panel--top board-status">
       <HugeiconsIcon
         aria-hidden
         className="board-status__icon"

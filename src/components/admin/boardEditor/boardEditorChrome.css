@@ -5,6 +5,17 @@
  * and the docking; what follows is only what each adds to it.
  */
 
+/*
+ * The board's name and its state, top-left.
+ *
+ * `min-width: 0` on the panel so the title inside can actually truncate — a
+ * flex item defaults to its content width, which makes `text-overflow` a
+ * promise the box never lets it keep.
+ */
+.board-status {
+  min-width: 0;
+}
+
 /* The board's name and its state, top-left. */
 .board-status__icon {
   color: var(--color-board-ink);

@@ -72,3 +72,18 @@
     display: none;
   }
 }
+
+/*
+ * Where the board's own overlays live.
+ *
+ * `flex: 1` with `min-height: 0` because the parent is a column: without the
+ * zero minimum the canvas inside claims its content height and the board stops
+ * fitting the screen. Raised to the photo editor's rung so a chosen tool's
+ * chrome clears the items it sits over.
+ */
+.board__overlays {
+  position: relative;
+  z-index: var(--z-photo-editor);
+  flex: 1;
+  min-height: 0;
+}
