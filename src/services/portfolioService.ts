@@ -871,7 +871,8 @@ export type PageRecord = PageSummary & {
 
 const pagesPath = (): string => `${apiBase()}/api/pages`;
 
-const readPageError = async (
+/** Exported so a service module of its own can report errors the same way. */
+export const readPageError = async (
   res: Response,
   fallback: string
 ): Promise<string> => {

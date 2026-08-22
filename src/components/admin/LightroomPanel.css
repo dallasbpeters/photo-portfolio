@@ -1,0 +1,189 @@
+/*
+ * The Lightroom panel: a connection state, then an album browser.
+ *
+ * On the admin's own dark chrome rather than the board's invertible surface, so
+ * the colours are the admin tokens throughout.
+ */
+
+.lightroom {
+  max-width: calc(var(--spacing) * 260);
+}
+
+/*
+ * Whether this is usable, and the one action that changes it.
+ *
+ * One row with three shapes — blocked, actionable, connected — because the
+ * panel has to say which of three different "no"s applies before an album can
+ * be shown. See the note at the top of LightroomPanel.tsx.
+ */
+.lightroom__state {
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--spacing) * 3);
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.lightroom__state-title {
+  font-size: var(--text-micro-md);
+  color: var(--color-foreground);
+}
+
+/* Nothing to press: an env var or a subscription is missing. amber-400. */
+.lightroom__state--blocked {
+  color: oklch(82.8% 0.189 84.429);
+  border-color: color-mix(in oklch, oklch(82.8% 0.189 84.429) 30%, transparent);
+}
+
+/* Working. emerald-400. */
+.lightroom__state--ok {
+  color: oklch(84.5% 0.143 164.978);
+  border-color: color-mix(
+    in oklch,
+    oklch(84.5% 0.143 164.978) 30%,
+    transparent
+  );
+}
+
+/* The album list beside the album's contents. Collapses on a narrow screen —
+   this is an admin tool, but it is used on a laptop as often as a desktop. */
+.lightroom__browser {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: calc(var(--spacing) * 4);
+}
+
+@media (width < 60rem) {
+  .lightroom__browser {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lightroom__albums {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+}
+
+.lightroom__album {
+  display: block;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-foreground) 75%, transparent);
+  text-align: left;
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.lightroom__album:hover {
+  color: var(--color-foreground);
+  background: color-mix(in oklch, var(--color-foreground) 8%, transparent);
+}
+
+.lightroom__album--on {
+  color: var(--color-foreground);
+  background: color-mix(in oklch, var(--color-foreground) 12%, transparent);
+}
+
+/*
+ * A collection set: a heading, not a target.
+ *
+ * Lightroom's sets hold only other albums, so opening one shows an empty grid.
+ * Rendered as a caption rather than a disabled button — a set is not a broken
+ * album, it is a different kind of thing.
+ */
+.lightroom__album--set {
+  padding-block-start: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-foreground) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/*
+ * The asset grid.
+ *
+ * Text rather than thumbnails, deliberately — a rendition needs the bearer
+ * token and the API key, so every thumbnail would be an authenticated round
+ * trip through our own API. See the note in the component. Auto-fill so the
+ * grid uses whatever width it is given.
+ */
+.lightroom__grid {
+  display: grid;
+  grid-template-columns: repeat(
+      auto-fill,
+      minmax(calc(var(--spacing) * 44), 1fr)
+    );
+  gap: var(--spacing);
+}
+
+.lightroom__asset {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+  padding: calc(var(--spacing) * 2);
+  text-align: left;
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.lightroom__asset:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--color-foreground) 35%, transparent);
+}
+
+/* Chosen for import. sky-400. */
+.lightroom__asset--on {
+  background: color-mix(in oklch, oklch(74.6% 0.16 232.661) 12%, transparent);
+  border-color: oklch(74.6% 0.16 232.661);
+}
+
+/* Already in the library: shown rather than hidden, so an album still reads as
+   the album, and not selectable because importing it again is a duplicate. */
+.lightroom__asset--done {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.lightroom__asset-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-sm);
+  color: var(--color-foreground);
+  white-space: nowrap;
+}
+
+.lightroom__asset-meta {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-foreground) 45%, transparent);
+}
+
+.lightroom__asset-badge {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-foreground) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.lightroom__actions {
+  padding-block-start: calc(var(--spacing) * 2);
+  border-top: var(--border-hairline) solid var(--color-border);
+}
+
+/* photos.category_id is NOT NULL, so an import must name one — there is no
+   sensible default to invent server-side. */
+.lightroom__category {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-sm);
+  color: var(--color-foreground);
+  background: transparent;
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-control);
+}

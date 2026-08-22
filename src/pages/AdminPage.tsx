@@ -9,6 +9,7 @@ import { BrandKitsPanel } from "../components/admin/BrandKitsPanel";
 import { ChangePasswordForm } from "../components/admin/ChangePasswordForm";
 import { CollectionsPanel } from "../components/admin/CollectionsPanel";
 import { ConfirmProvider } from "../components/admin/ConfirmProvider";
+import { LightroomPanel } from "../components/admin/LightroomPanel";
 import { ModelsPanel } from "../components/admin/ModelsPanel";
 import { PagesPanel } from "../components/admin/PagesPanel";
 import { SiteSettingsPanel } from "../components/admin/SiteSettingsPanel";
@@ -37,6 +38,7 @@ const SECTIONS = [
   { end: false, label: "Moodboards", to: "/admin/boards" },
   { end: false, label: "Collections", to: "/admin/collections" },
   { end: false, label: "Brand kits", to: "/admin/brand-kits" },
+  { end: false, label: "Lightroom", to: "/admin/lightroom" },
   { end: false, label: "Pages", to: "/admin/pages" },
   { end: false, label: "Models", to: "/admin/models" },
   { end: false, label: "Settings", to: "/admin/settings" },
@@ -155,6 +157,7 @@ export function AdminPage() {
               <Route element={<BoardsPanel />} path="boards" />
               <Route element={<CollectionsPanel />} path="collections" />
               <Route element={<BrandKitsPanel />} path="brand-kits" />
+              <Route element={<LightroomPanel />} path="lightroom" />
               <Route element={<PagesPanel />} path="pages" />
               <Route element={<ModelsPanel />} path="models" />
               {/* Same component: it reads the slug and opens that page, so the
