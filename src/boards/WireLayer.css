@@ -16,10 +16,19 @@
   pointer-events: none;
 }
 
-/* Animated so a wire re-routing after a node moves reads as the same wire
-   rather than a new one appearing. */
+/*
+ * Only the width transitions here, and that is deliberate.
+ *
+ * This was `transition: all`, converted faithfully from `transition-all
+ * duration-300` — which was harmless until the wire started animating. Framer
+ * Motion drives `stroke-dashoffset` frame by frame, and a CSS transition on
+ * *all* properties interpolates every one of those steps, damping the travelling
+ * dash into something that barely moves. Motion's own `transition` prop owns
+ * opacity, pathLength, stroke and dashoffset; this owns the one thing it does
+ * not touch.
+ */
 .wire-layer__wire {
-  transition: all var(--duration-wire) var(--ease-in-out);
+  transition: stroke-width var(--duration-wire) var(--ease-in-out);
 }
 
 .wire-layer__hit {
