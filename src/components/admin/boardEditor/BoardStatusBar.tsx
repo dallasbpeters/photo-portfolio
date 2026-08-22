@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GridViewIcon, Tick02Icon } from "@hugeicons-pro/core-stroke-standard";
+import "./boardEditorChrome.css";
 
 /**
  * The board's name, and whether its work is safe.
@@ -24,18 +25,16 @@ export function BoardStatusBar({
     <div className="board-panel board-panel--top min-w-0">
       <HugeiconsIcon
         aria-hidden
-        className="text-board-ink"
+        className="board-status__icon"
         icon={GridViewIcon}
         size={14}
       />
-      <h2 className="truncate font-light text-board-ink/90 text-sm uppercase tracking-[0.2em]">
-        {title}
-      </h2>
-      <p className="text-[10px] text-board-ink/40 uppercase tracking-[0.2em]">
+      <h2 className="board-status__title">{title}</h2>
+      <p className="board-status__state">
         {isSaving ? "Saving…" : null}
         {!isSaving && isDirty ? "Unsaved changes" : null}
         {isSaving || isDirty ? null : (
-          <span className="flex items-center gap-1">
+          <span className="board-status__detail">
             <HugeiconsIcon aria-hidden icon={Tick02Icon} size={11} />
             Saved
           </span>

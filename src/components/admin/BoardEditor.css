@@ -17,7 +17,7 @@
 .board {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-board);
   display: flex;
   flex-direction: column;
   color: var(--color-board-ink);
@@ -26,22 +26,22 @@
 
 .board-panel {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-board-panel);
   display: flex;
   gap: var(--spacing);
   align-items: center;
   height: fit-content;
-  padding: 8px;
+  padding: calc(var(--spacing) * 2);
   background-color: var(--color-board-panel);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   &.board-panel--top {
-    top: 12px;
-    left: 12px;
+    top: calc(var(--spacing) * 3);
+    left: calc(var(--spacing) * 3);
   }
   &.board-panel--top-right {
-    top: 12px;
-    right: 12px;
+    top: calc(var(--spacing) * 3);
+    right: calc(var(--spacing) * 3);
   }
   &.board-panel--column {
     flex-direction: column;
@@ -51,8 +51,8 @@
 /*
  * The board gets out of the way while the manual editor is open.
  *
- * The editor is a full-screen fixed surface at z-index 100, and the panels are
- * fixed at 200 — inside `.board`'s own stacking context the panels win, so
+ * The editor is a full-screen fixed surface above the board, and the panels are
+ * fixed above that — inside `.board`'s own stacking context the panels win, so
  * without this the board's toolbars hang over the editor's, and a press on one
  * operates a board nobody can see.
  *

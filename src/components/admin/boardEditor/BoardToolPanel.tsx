@@ -14,6 +14,7 @@ import {
 import { motion } from "motion/react";
 import type { NodeTypeId } from "../../../../config/nodeTypes.js";
 import { Button } from "../../ui/button";
+import "./boardEditorChrome.css";
 
 /**
  * The insert rail down the left of the board.
@@ -43,7 +44,7 @@ export function BoardToolPanel({
   return (
     <motion.div
       animate={{ opacity: 1, x: 0 }}
-      className="board-panel board-panel--column top-20 left-4 z-20 grid place-items-stretch justify-stretch gap-2 rounded bg-board-surface text-board-ink"
+      className="board-panel board-panel--column board-tool-rail"
       initial={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.5 }}
     >

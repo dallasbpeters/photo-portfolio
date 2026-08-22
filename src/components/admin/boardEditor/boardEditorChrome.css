@@ -1,0 +1,106 @@
+/*
+ * The board editor's own chrome: the status bar, the tool rail, the header.
+ *
+ * These sit on `.board-panel` from BoardEditor.css, which supplies the ground
+ * and the docking; what follows is only what each adds to it.
+ */
+
+/* The board's name and its state, top-left. */
+.board-status__icon {
+  color: var(--color-board-ink);
+}
+
+/* Truncates rather than wraps: the panel is docked and a two-line title would
+   push the saved-state line out of it. */
+.board-status__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm-ui);
+  font-weight: 300;
+  color: color-mix(in oklch, var(--color-board-ink) 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+  white-space: nowrap;
+}
+
+.board-status__state {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.board-status__detail {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+/*
+ * The tool rail down the left.
+ *
+ * `place-items: stretch` so every tool fills the rail's width — a column of
+ * differently-sized buttons reads as a list of unrelated things.
+ */
+.board-tool-rail {
+  top: calc(var(--spacing) * 20);
+  left: calc(var(--spacing) * 4);
+  z-index: var(--z-canvas-chrome);
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  place-items: stretch;
+  justify-content: stretch;
+  color: var(--color-board-ink);
+  background: var(--color-board-surface);
+  border-radius: var(--radius-control);
+}
+
+/* An action in the board's header. */
+.board-header-action {
+  min-height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+/* Comments are open. cyan-200 on cyan-300 at 15% — the board's one accent that
+   is not the selection blue, so an open panel is distinguishable from a
+   selected item at a glance. */
+.board-header-action--on {
+  color: oklch(91.7% 0.08 205.041);
+  background: color-mix(in oklch, oklch(86.5% 0.127 207.078) 15%, transparent);
+}
+
+.board-header-action--off {
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+.board-header-action--off:hover {
+  color: var(--color-board-ink);
+}
+
+/*
+ * The published board's address.
+ *
+ * Green because it reports a state — this board is live — rather than offering
+ * an action. Underlined on hover only: it is a fact first and a link second.
+ * emerald-500.
+ */
+.board-header-link {
+  max-width: calc(var(--spacing) * 40);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-xs);
+  color: oklch(69.6% 0.17 162.48);
+  white-space: nowrap;
+  text-underline-offset: calc(var(--spacing) * 0.5);
+}
+
+.board-header-link:hover {
+  text-decoration-line: underline;
+}

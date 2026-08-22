@@ -530,6 +530,12 @@
   --z-modal: 70;
   /* Wires sit above every node so a connection is never hidden behind the box
      it runs to. Its own rung rather than a big number: this was `z-1000`. */
+  /* The board editor is a fixed surface over the admin; its own floating panels
+     sit above the photo editor that can open on top of it. These were 50, 100
+     and 200 as literals, in three different files. */
+  --z-board: 50;
+  --z-photo-editor: 100;
+  --z-board-panel: 200;
   --z-wires: 1000;
   /* One rung above --z-modal-scrim, for the colour picker that portals itself
      over a scrim of its own. This was the `z-61` that made the ladder
