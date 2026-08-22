@@ -5,6 +5,7 @@ import {
   LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
+  PaintBucketIcon,
   PaintBoardIcon,
   RepeatIcon,
   SearchVisualIcon,
@@ -137,6 +138,18 @@ export function BoardToolPanel({
       >
         <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
         Prompt
+      </Button>
+      {/* Next to Palette rather than at the end: a brand kit is the same kind of
+          thing one rung up — a palette states colours, a brand states colours,
+          voice, type and a look together. */}
+      <Button
+        fullWidthLeft
+        onClick={() => onAddNode("brand")}
+        type="button"
+        variant="noborder"
+      >
+        <HugeiconsIcon aria-hidden icon={PaintBucketIcon} size={14} />
+        Brand
       </Button>
       <Button
         fullWidthLeft

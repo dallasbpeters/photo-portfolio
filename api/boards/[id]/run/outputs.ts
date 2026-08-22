@@ -282,6 +282,19 @@ export const singleOutputOf = (
   if (row.node_type === "element") {
     return row.image_url;
   }
+  /*
+   * A Brand node hands over the kit as prompt material.
+   *
+   * Read from `brandText`, which withBrandKits resolved from the library before
+   * the walk began — never from the node's own config, which holds only an id.
+   * Empty means no kit chosen, or a kit since deleted; both contribute nothing
+   * rather than a stale brand, and returning null keeps the wire silent instead
+   * of joining an empty string into somebody's prompt.
+   */
+  if (row.node_type === "brand") {
+    const text = asObject(row.config).brandText;
+    return typeof text === "string" && text.trim() ? text : null;
+  }
   // A source node produces its value without ever running, so it is read from
   // its settings rather than from a result it will never have.
   if (!isRunnableNodeType(row.node_type)) {

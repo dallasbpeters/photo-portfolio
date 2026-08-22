@@ -9,6 +9,7 @@ import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../../types";
 import { HalftonePreview } from "../canvas/HalftonePreview";
 import { pickImages, selectedIndex } from "../itemOutput";
+import { BrandPreview } from "./BrandPreview";
 import { ListRows } from "./ListRows";
 import { NodeHeader } from "./NodeHeader";
 import { PaletteSwatches } from "./PaletteSwatches";
@@ -309,6 +310,14 @@ function NodeBody({
           imageCount={imageCount}
           imageUrl={imageUrl}
         />
+      ) : null}
+
+      {/* A Brand node shows the kit it will spend, for the same reason the
+          halftone shows its render: the node is otherwise a name and a
+          dropdown, and there would be no way to tell a kit with six colours
+          from an empty one. */}
+      {item.nodeType === "brand" ? (
+        <BrandPreview brandKitId={config.brandKitId} />
       ) : null}
 
       <ResultImages

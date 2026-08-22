@@ -28,6 +28,7 @@
  */
 
 import { BATCH } from "./nodes/batch.js";
+import { BRAND } from "./nodes/brand.js";
 import { COMPOSITE } from "./nodes/composite.js";
 import { DESCRIBE } from "./nodes/describe.js";
 import { ELEMENT } from "./nodes/element.js";
@@ -125,6 +126,20 @@ export type SettingDef =
       video?: boolean;
     }
   | {
+      /**
+       * A brand kit from the library, chosen by id.
+       *
+       * Data rather than options, exactly like `kind: "model"` — the choices are
+       * rows in `brand_kits`, so the registry declares the control and the
+       * control asks for what to offer.
+       */
+      default: string;
+      key: string;
+      kind: "brandKit";
+      label: string;
+      panel?: boolean;
+    }
+  | {
       default: number;
       key: string;
       kind: "number";
@@ -167,6 +182,7 @@ export type NodeCapability =
 
 export type NodeTypeId =
   | "batch"
+  | "brand"
   | "composite"
   | "describe"
   | "element"
@@ -192,6 +208,7 @@ export interface NodeType {
 
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   batch: BATCH,
+  brand: BRAND,
   composite: COMPOSITE,
   describe: DESCRIBE,
   element: ELEMENT,

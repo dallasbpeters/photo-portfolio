@@ -1,5 +1,6 @@
 import { MAX_MODEL_ID } from "../../config/models.js";
 import { nodeTypeFor, type SettingDef } from "../../config/nodeTypes.js";
+import { UUID_RE } from "./boardItemParse.js";
 import { clamp, num, text } from "./values.js";
 
 /**
@@ -70,6 +71,14 @@ export const settingStored = (
       keep: true,
       value: ok ? value.slice(0, MAX_MODEL_ID) : setting.default,
     };
+  }
+  if (setting.kind === "brandKit") {
+    // A uuid or nothing. Not checked against the table for the same reason a
+    // model id is not: a kit deleted from the library must leave the boards
+    // built on it saveable, and the run path already treats an id it cannot
+    // resolve as "no brand" rather than as an error.
+    const ok = typeof value === "string" && UUID_RE.test(value.trim());
+    return { keep: true, value: ok ? value.trim() : setting.default };
   }
   if (setting.kind === "color") {
     // Coerced to the default rather than refused, like every other continuous

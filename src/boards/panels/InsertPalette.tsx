@@ -8,6 +8,7 @@ import {
   MagicWand01Icon,
   NotebookIcon,
   PaintBoardIcon,
+  PaintBucketIcon,
   RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
@@ -163,6 +164,13 @@ const BASE_ENTRIES: Entry[] = [
     hint: "text source shared style",
     icon: TextIcon,
     label: "Prompt",
+    section: "Nodes",
+  },
+  {
+    action: { kind: "node", nodeType: "brand" },
+    hint: "brand kit palette voice typeface look guidelines identity",
+    icon: PaintBucketIcon,
+    label: "Brand",
     section: "Nodes",
   },
 ];

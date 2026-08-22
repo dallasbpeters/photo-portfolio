@@ -8,6 +8,7 @@ import { hasCycle } from "../../../config/graph.js";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import { getBearerUser } from "../../_lib/auth.js";
 import type { BoardItemRow, BoardWireRow } from "../../_lib/boards.js";
+import { brandVersionOf, withBrandKits } from "../../_lib/brandBrief.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
 import { withElements } from "../../_lib/elementBrief.js";
@@ -317,7 +318,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const [rows, wireRows, models] = await Promise.all([
-      loadItems(sql, boardId).then((items) => withElements(sql, items)),
+      loadItems(sql, boardId)
+        .then((items) => withElements(sql, items))
+        // Both fold library rows onto the board's own before anything
+        // walks the graph, so singleOutputOf finds plain values and
+        // nothing downstream knows a library was involved.
+        .then((items) => withBrandKits(sql, items)),
       loadWires(sql, boardId),
       loadModelDefs(sql),
     ]);
@@ -375,6 +381,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // node holds: an Iterate node upstream rewrites the prompt per run, and
         // a stamp naming the typed one would describe a job nobody ran.
         stampProvenance({
+          // Which brand governed this, so "what made this picture" stays
+          // answerable after the kit has been edited. Read off the rows the
+          // run resolved rather than the wires — see brandVersionOf.
+          brandKitVersionId: brandVersionOf(rows),
           inputs: [
             jobs[variation]?.image,
             jobs[variation]?.mask,

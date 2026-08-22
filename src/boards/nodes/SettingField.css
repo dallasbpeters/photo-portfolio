@@ -108,3 +108,18 @@
 .setting-field__trigger {
   width: 100%;
 }
+
+/*
+ * A note under a control, saying why it is not doing anything yet.
+ *
+ * Only the brand kit picker has one so far, and it earns it: a Brand node with
+ * no kit chosen looks identical to one that is working, and so does a node whose
+ * kit has been deleted from the library. Both are silent failures on a node
+ * whose whole job is to carry something.
+ */
+.setting-field__note {
+  margin-block-start: var(--spacing);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}

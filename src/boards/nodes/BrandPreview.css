@@ -1,0 +1,63 @@
+/*
+ * What a Brand node will send, shown on the node.
+ *
+ * Stated in board tokens throughout, like the rest of a node: the same card
+ * renders on paper in the editor and on black once the board is published.
+ */
+
+.brand-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+/*
+ * The palette, as a row of swatches.
+ *
+ * Wraps rather than scrolls — a kit's palette is bounded (see MAX_PALETTE) and
+ * a node is read at a glance, so a hidden second row would defeat the purpose.
+ */
+.brand-preview__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 0.75);
+}
+
+.brand-preview__swatch {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
+  border-radius: var(--radius-control);
+  /* A hairline of the board's ink, so a white or near-white brand colour is
+     still a visible swatch rather than a hole in the card. */
+  box-shadow: inset 0 0 0 var(--border-hairline)
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+}
+
+/*
+ * The line the wire actually carries.
+ *
+ * Selectable, and not truncated: the usual reason for reading it is to work out
+ * why a generation drifted, which means reading the whole thing.
+ */
+.brand-preview__prompt {
+  padding: var(--spacing);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-board-ink) 75%, transparent);
+  user-select: text;
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.brand-preview__note {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/* A kit that has been deleted from under the node. Amber, because the node
+   still runs — it just contributes nothing. */
+.brand-preview__note--warn {
+  /* amber-600, as the node's own warning notices use. */
+  color: var(--color-amber-600);
+}
