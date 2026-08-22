@@ -1580,9 +1580,16 @@ const elementsPath = (): string => `${apiBase()}/api/elements`;
 /** What the brand-kit endpoints hand back. See api/_lib/brandKitStore.ts. */
 export interface BrandKit {
   createdAt: string;
+  /** What this kit itself states. */
   doc: BrandKitDoc;
   id: string;
+  /** Parts of `resolvedDoc` that came from the parent, named. */
+  inherited: string[];
   name: string;
+  parentId: string | null;
+  parentName: string | null;
+  /** What the kit means with its parent folded in. */
+  resolvedDoc: BrandKitDoc;
   updatedAt: string;
   version: number | null;
   versionCount: number;
@@ -1605,9 +1612,14 @@ export interface BrandKitVersion {
  * panel debounces nothing and saves on a press.
  */
 export const brandKitsApi = {
-  create: async (name: string, doc?: BrandKitDoc): Promise<BrandKit> => {
+  /** `parentId` makes it a sub-brand. One level only — see patch 032. */
+  create: async (
+    name: string,
+    doc?: BrandKitDoc,
+    parentId?: string | null
+  ): Promise<BrandKit> => {
     const res = await fetch(`${apiBase()}/api/brand-kits`, {
-      body: JSON.stringify({ doc, name }),
+      body: JSON.stringify({ doc, name, parentId }),
       headers: jsonHeaders(),
       method: "POST",
     });

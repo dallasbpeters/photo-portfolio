@@ -1,11 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { MAX_KIT_NAME, sanitizeKitDoc } from "../../config/brandKit.js";
 import { getBearerUser } from "../_lib/auth.js";
-import {
-  type BrandKitDto,
-  loadKits,
-  writeKitVersion,
-} from "../_lib/brandKitStore.js";
+import { loadKit, loadKits, writeKitVersion } from "../_lib/brandKitStore.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
@@ -50,11 +46,26 @@ async function handlePost(
     return res.status(400).json({ error: "A kit needs a name" });
   }
 
-  const created = (await sql`
-    INSERT INTO brand_kits (name, created_by)
-    VALUES (${name}, ${user.userId})
-    RETURNING id, name, created_at, updated_at
-  `) as { created_at: string; id: string; name: string; updated_at: string }[];
+  /* A sub-brand names its parent at creation. The one-level rule and the cycle
+     check are enforced by the database (patch 032), so a bad parent is a
+     rejected insert rather than something this handler has to re-litigate. */
+  const parentId =
+    typeof body.parentId === "string" && body.parentId ? body.parentId : null;
+
+  let created: { id: string }[];
+  try {
+    created = (await sql`
+      INSERT INTO brand_kits (name, created_by, parent_id)
+      VALUES (${name}, ${user.userId}, ${parentId})
+      RETURNING id
+    `) as { id: string }[];
+  } catch (e) {
+    /* The trigger raises for a sub-brand of a sub-brand, which is a request
+       problem rather than a server one — so it is reported as such. */
+    const message = e instanceof Error ? e.message : "Could not create the kit";
+    return res.status(400).json({ error: message });
+  }
+
   const [kit] = created;
   if (!kit) {
     return res.status(500).json({ error: "Could not create the kit" });
@@ -62,22 +73,14 @@ async function handlePost(
 
   /* The first version, when the caller sent one. Sanitised rather than trusted:
      the same call that names the kit may be carrying a whole document. */
-  const written =
-    body.doc === undefined
-      ? null
-      : await writeKitVersion(sql, kit.id, sanitizeKitDoc(body.doc));
+  if (body.doc !== undefined) {
+    await writeKitVersion(sql, kit.id, sanitizeKitDoc(body.doc));
+  }
 
-  const dto: BrandKitDto = {
-    createdAt: kit.created_at,
-    doc: sanitizeKitDoc(body.doc),
-    id: kit.id,
-    name: kit.name,
-    updatedAt: kit.updated_at,
-    version: written?.version ?? null,
-    versionCount: written ? 1 : 0,
-    versionId: written?.id ?? null,
-  };
-  return res.status(201).json(dto);
+  /* Read back rather than assembled here: the resolved document and the list of
+     inherited parts are the store's answer, and two places computing them is
+     how they come to disagree. */
+  return res.status(201).json(await loadKit(sql, kit.id));
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

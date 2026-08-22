@@ -1,5 +1,10 @@
 import type { BrandKitDoc } from "../../config/brandKit.js";
-import { EMPTY_KIT, sanitizeKitDoc } from "../../config/brandKit.js";
+import {
+  EMPTY_KIT,
+  inheritedParts,
+  resolveKitDoc,
+  sanitizeKitDoc,
+} from "../../config/brandKit.js";
 import type { getSql } from "./db.js";
 
 /**
@@ -20,16 +25,31 @@ export interface BrandKitRow {
   doc: unknown;
   id: string;
   name: string;
+  parent_doc: unknown;
+  parent_id: string | null;
+  parent_name: string | null;
   updated_at: string;
   version_count: number | string;
 }
 
 export interface BrandKitDto {
   createdAt: string;
-  /** The kit as it currently stands. `EMPTY_KIT` when no version exists yet. */
+  /** The kit's *own* document. `EMPTY_KIT` when no version exists yet. */
   doc: BrandKitDoc;
   id: string;
+  /** Which parts of `resolvedDoc` came from the parent rather than this kit. */
+  inherited: string[];
   name: string;
+  parentId: string | null;
+  parentName: string | null;
+  /**
+   * What this kit actually means, parent included.
+   *
+   * Sent alongside the kit's own document rather than instead of it: the editor
+   * has to show what a sub-brand states, and everything else wants what it
+   * resolves to. Computed here so the panel and the run path cannot disagree.
+   */
+  resolvedDoc: BrandKitDoc;
   updatedAt: string;
   /** Which version `doc` came from, so a caller can pin what it read. */
   version: number | null;
@@ -43,16 +63,24 @@ export interface BrandKitDto {
  * A row written before a limit changed would otherwise hand the panel a
  * document it refuses to save back, which reads as the editor being broken.
  */
-export const rowToKitDto = (row: BrandKitRow): BrandKitDto => ({
-  createdAt: row.created_at,
-  doc: row.current_version_id ? sanitizeKitDoc(row.doc) : EMPTY_KIT,
-  id: row.id,
-  name: row.name,
-  updatedAt: row.updated_at,
-  version: row.current_version,
-  versionCount: Number(row.version_count) || 0,
-  versionId: row.current_version_id,
-});
+export const rowToKitDto = (row: BrandKitRow): BrandKitDto => {
+  const own = row.current_version_id ? sanitizeKitDoc(row.doc) : EMPTY_KIT;
+  const parent = row.parent_id ? sanitizeKitDoc(row.parent_doc) : null;
+  return {
+    createdAt: row.created_at,
+    doc: own,
+    id: row.id,
+    inherited: inheritedParts(own, parent),
+    name: row.name,
+    parentId: row.parent_id,
+    parentName: row.parent_name,
+    resolvedDoc: resolveKitDoc(own, parent),
+    updatedAt: row.updated_at,
+    version: row.current_version,
+    versionCount: Number(row.version_count) || 0,
+    versionId: row.current_version_id,
+  };
+};
 
 /**
  * Every kit, newest first, each with its current version inlined.
@@ -69,13 +97,23 @@ export const loadKits = async (sql: Sql): Promise<BrandKitDto[]> => {
       k.created_at,
       k.updated_at,
       k.current_version_id,
+      k.parent_id,
+      p.name      AS parent_name,
+      pv.doc      AS parent_doc,
       v.version   AS current_version,
       v.doc       AS doc,
       (SELECT COUNT(*) FROM brand_kit_versions c WHERE c.brand_kit_id = k.id)
         AS version_count
     FROM brand_kits k
     LEFT JOIN brand_kit_versions v ON v.id = k.current_version_id
-    ORDER BY k.updated_at DESC
+    /* The parent's *current* version, which is what a sub-brand inherits from —
+       pinning a sub-brand to a particular parent version would mean two
+       version histories to reason about, and the question this feature answers
+       is "what does this brand mean now". */
+    LEFT JOIN brand_kits k_parent ON k_parent.id = k.parent_id
+    LEFT JOIN brand_kits p ON p.id = k.parent_id
+    LEFT JOIN brand_kit_versions pv ON pv.id = k_parent.current_version_id
+    ORDER BY COALESCE(p.updated_at, k.updated_at) DESC, k.parent_id NULLS FIRST, k.updated_at DESC
   `) as BrandKitRow[];
   return rows.map(rowToKitDto);
 };
@@ -91,12 +129,22 @@ export const loadKit = async (
       k.created_at,
       k.updated_at,
       k.current_version_id,
+      k.parent_id,
+      p.name      AS parent_name,
+      pv.doc      AS parent_doc,
       v.version   AS current_version,
       v.doc       AS doc,
       (SELECT COUNT(*) FROM brand_kit_versions c WHERE c.brand_kit_id = k.id)
         AS version_count
     FROM brand_kits k
     LEFT JOIN brand_kit_versions v ON v.id = k.current_version_id
+    /* The parent's *current* version, which is what a sub-brand inherits from —
+       pinning a sub-brand to a particular parent version would mean two
+       version histories to reason about, and the question this feature answers
+       is "what does this brand mean now". */
+    LEFT JOIN brand_kits k_parent ON k_parent.id = k.parent_id
+    LEFT JOIN brand_kits p ON p.id = k.parent_id
+    LEFT JOIN brand_kit_versions pv ON pv.id = k_parent.current_version_id
     WHERE k.id = ${id}
   `) as BrandKitRow[];
   const [row] = rows;

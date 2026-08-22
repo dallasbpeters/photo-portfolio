@@ -9,16 +9,25 @@ import { toast } from "sonner";
 import type { BrandKitDoc } from "../../../config/brandKit.js";
 import {
   EMPTY_KIT,
+  inheritedParts,
   isHexColour,
   kitPromptText,
   MAX_KIT_NAME,
+  MAX_LOGOS,
   MAX_PALETTE,
   MAX_TYPEFACES,
   MAX_VOICE,
+  paletteFromCss,
+  resolveKitDoc,
   sanitizeKitDoc,
 } from "../../../config/brandKit.js";
+import { LOOK_FAMILIES, LOOKS } from "../../editor/presets";
 import { useBrandKits } from "../../hooks/useBrandKits";
-import { type BrandKit, brandKitsApi } from "../../services/portfolioService";
+import {
+  type BrandKit,
+  brandKitsApi,
+  portfolioService,
+} from "../../services/portfolioService";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
@@ -150,6 +159,279 @@ function FormatPreviews({ doc, name }: { doc: BrandKitDoc; name: string }) {
           </div>
         </figure>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The grade the brand is finished in.
+ *
+ * The same 72 looks the photo editor offers, in their eight families, because a
+ * brand's grade and a photograph's grade are the same kind of thing and having
+ * two catalogues would mean two answers to "what does this brand look like".
+ *
+ * The kit stores a reference — id and strength — not the look's edit payload.
+ * An unknown id resolves to no look rather than a guess, which is why the
+ * chosen look is looked up rather than trusted.
+ */
+function LookPicker({
+  doc,
+  onChange,
+}: {
+  doc: BrandKitDoc;
+  onChange: (next: BrandKitDoc) => void;
+}) {
+  const chosen = doc.look
+    ? (LOOKS.find((look) => look.id === doc.look?.id) ?? null)
+    : null;
+  const [family, setFamily] = useState(
+    chosen?.family ?? LOOK_FAMILIES[0]?.id ?? "a"
+  );
+  const inFamily = LOOKS.filter((look) => look.family === family);
+
+  return (
+    <div className="stack stack--tight">
+      <div className="brand-kit__families">
+        {LOOK_FAMILIES.map((entry) => (
+          <button
+            aria-pressed={entry.id === family}
+            className={`brand-kit__family ${
+              entry.id === family ? "brand-kit__family--on" : ""
+            }`}
+            key={entry.id}
+            onClick={() => setFamily(entry.id)}
+            style={{ background: entry.color }}
+            title={`${entry.name} — ${entry.description}`}
+            type="button"
+          >
+            {entry.letter}
+          </button>
+        ))}
+      </div>
+
+      <div className="brand-kit__looks">
+        <button
+          className={`brand-kit__look ${doc.look ? "" : "brand-kit__look--on"}`}
+          onClick={() => onChange({ ...doc, look: null })}
+          type="button"
+        >
+          No look
+        </button>
+        {inFamily.map((look) => (
+          <button
+            className={`brand-kit__look ${
+              doc.look?.id === look.id ? "brand-kit__look--on" : ""
+            }`}
+            key={look.id}
+            onClick={() =>
+              onChange({
+                ...doc,
+                look: { id: look.id, strength: doc.look?.strength ?? 1 },
+              })
+            }
+            title={look.name}
+            type="button"
+          >
+            {look.code}
+          </button>
+        ))}
+      </div>
+
+      {doc.look ? (
+        <label className="brand-kit__strength">
+          <span className="admin-note--quiet">
+            {chosen ? chosen.name : "Unknown look"} ·{" "}
+            {Math.round((doc.look.strength ?? 1) * 100)}%
+          </span>
+          <input
+            aria-label="Look strength"
+            max={1}
+            min={0}
+            onChange={(e) =>
+              onChange({
+                ...doc,
+                look: {
+                  id: doc.look?.id ?? "",
+                  strength: Number(e.target.value),
+                },
+              })
+            }
+            step={0.05}
+            type="range"
+            value={doc.look.strength ?? 1}
+          />
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Colours out of a pasted stylesheet.
+ *
+ * A brand's colours almost always already exist as CSS — a tokens file, a theme
+ * block — and retyping six hex codes into six fields is how one of them ends up
+ * wrong. Custom property names come across as the colour's name, because
+ * `--brand-ink: #101a2b` already knows both halves of a palette entry.
+ *
+ * Added to the palette rather than replacing it, and deduplicated against what
+ * is already there: pasting twice should not double the palette.
+ */
+function CssImport({
+  doc,
+  onChange,
+}: {
+  doc: BrandKitDoc;
+  onChange: (next: BrandKitDoc) => void;
+}) {
+  const [css, setCss] = useState("");
+  const found = paletteFromCss(css);
+  const fresh = found.filter(
+    (entry) => !doc.palette.some((existing) => existing.value === entry.value)
+  );
+
+  return (
+    <div className="stack stack--snug">
+      <textarea
+        aria-label="CSS to read colours from"
+        className="admin-control brand-kit__css"
+        onChange={(e) => setCss(e.target.value)}
+        placeholder={
+          ":root {\n  --brand-ink: #101a2b;\n  --brand-signal: #4ade80;\n}"
+        }
+        value={css}
+      />
+      <div className="row row--between">
+        <span className="admin-note--quiet">
+          {css.trim() === ""
+            ? "Paste a tokens file, a theme block, or any rule."
+            : `${found.length} found · ${fresh.length} new`}
+        </span>
+        <Button
+          disabled={fresh.length === 0}
+          onClick={() => {
+            onChange({
+              ...doc,
+              palette: [...doc.palette, ...fresh].slice(0, MAX_PALETTE),
+            });
+            setCss("");
+          }}
+          type="button"
+          variant="outline"
+        >
+          Add {fresh.length || ""} colour{fresh.length === 1 ? "" : "s"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The logos, uploaded and shown.
+ *
+ * Uploaded into our own blob storage before the version is written, which patch
+ * 031 requires and states the reason for: a logo referenced from someone else's
+ * CDN is a logo that 404s on a handoff page months later.
+ *
+ * Shown on a chequerboard, because a mark is usually transparent and a
+ * transparent logo on a flat panel is indistinguishable from a white one.
+ */
+function LogoEditor({
+  doc,
+  onChange,
+}: {
+  doc: BrandKitDoc;
+  onChange: (next: BrandKitDoc) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const upload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const { url } = await portfolioService.uploadImageFile(
+        file,
+        undefined,
+        "brand-kits/logos"
+      );
+      onChange({
+        ...doc,
+        logos: [
+          ...doc.logos,
+          { clearSpace: 0.5, label: file.name, minWidth: 24, rules: "", url },
+        ].slice(0, MAX_LOGOS),
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not upload the logo");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="stack stack--tight">
+      {doc.logos.length > 0 ? (
+        <ul className="brand-kit__logos">
+          {doc.logos.map((logo, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a logo's identity here is its place in the list, and two uploads of the same file share a url
+            <li className="brand-kit__logo" key={`logo-${index}`}>
+              <img
+                alt={logo.label}
+                className="brand-kit__logo-image"
+                height={64}
+                src={logo.url}
+                width={96}
+              />
+              <Input
+                aria-label="Logo label"
+                className="admin-control"
+                onChange={(e) =>
+                  onChange({
+                    ...doc,
+                    logos: doc.logos.map((l, i) =>
+                      i === index ? { ...l, label: e.target.value } : l
+                    ),
+                  })
+                }
+                placeholder="Primary mark"
+                value={logo.label}
+              />
+              <Button
+                aria-label={`Remove ${logo.label || "logo"}`}
+                onClick={() =>
+                  onChange({
+                    ...doc,
+                    logos: doc.logos.filter((_, i) => i !== index),
+                  })
+                }
+                size="icon"
+                tone="danger"
+                type="button"
+                variant="ghost"
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={14} />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="brand-kit__empty-note">No logo yet.</p>
+      )}
+      {doc.logos.length < MAX_LOGOS ? (
+        <input
+          accept="image/png,image/svg+xml,image/webp,image/jpeg"
+          aria-label="Upload a logo"
+          className="admin-file"
+          disabled={isUploading}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              void upload(file);
+            }
+            e.target.value = "";
+          }}
+          type="file"
+        />
+      ) : null}
     </div>
   );
 }
@@ -328,10 +610,13 @@ function KitEditor({
   kit,
   onClose,
   onSaved,
+  parentDoc,
 }: {
   kit: BrandKit;
   onClose: () => void;
   onSaved: () => void;
+  /** The parent's resolved document, when this kit is a sub-brand. */
+  parentDoc: BrandKitDoc | null;
 }) {
   const [doc, setDoc] = useState<BrandKitDoc>(kit.doc);
   const [name, setName] = useState(kit.name);
@@ -363,7 +648,17 @@ function KitEditor({
     }
   };
 
-  const prompt = kitPromptText(sanitizeKitDoc(doc));
+  /* What the kit means as edited: the parent's parts still showing through
+     wherever this one leaves a gap. `resolvedDoc` from the server covers the
+     saved state; this recomputes it live against the same rule. */
+  const own = sanitizeKitDoc(doc);
+  const inheritedFrom = kit.parentId ? parentDoc : null;
+  const effective = resolveKitDoc(own, inheritedFrom);
+  /* Recomputed from what is on screen, not read off the saved kit: overriding a
+     part should stop the panel claiming to inherit it before the save, or the
+     line contradicts the fields under it. */
+  const inheriting = inheritedParts(own, inheritedFrom);
+  const prompt = kitPromptText(effective);
 
   return (
     <div className="brand-kit">
@@ -383,14 +678,43 @@ function KitEditor({
           </span>
         </div>
 
+        {/*
+          A sub-brand's empty parts are not empty in effect — they are the
+          parent's. Said out loud, because a palette that looks unset but paints
+          the previews is the most confusing state this panel can be in.
+        */}
+        {kit.parentName ? (
+          <p className="brand-kit__inherits">
+            A sub-brand of <strong>{kit.parentName}</strong>
+            {inheriting.length > 0
+              ? ` — taking its ${inheriting.join(", ")}. Fill a part in here to override it.`
+              : " — overriding every part."}
+          </p>
+        ) : null}
+
         <section className="stack stack--tight">
           <h3 className="admin-caps">Palette</h3>
           <PaletteEditor doc={doc} onChange={setDoc} />
         </section>
 
+        <section className="stack stack--snug">
+          <h3 className="admin-caps">Colours from CSS</h3>
+          <CssImport doc={doc} onChange={setDoc} />
+        </section>
+
+        <section className="stack stack--tight">
+          <h3 className="admin-caps">Logos</h3>
+          <LogoEditor doc={doc} onChange={setDoc} />
+        </section>
+
         <section className="stack stack--tight">
           <h3 className="admin-caps">Typefaces</h3>
           <TypefaceEditor doc={doc} onChange={setDoc} />
+        </section>
+
+        <section className="stack stack--tight">
+          <h3 className="admin-caps">Look</h3>
+          <LookPicker doc={doc} onChange={setDoc} />
         </section>
 
         <section className="stack stack--snug">
@@ -435,18 +759,81 @@ function KitEditor({
         </div>
       </div>
 
+      {/*
+        Previewed from the *resolved* document, not this kit's own.
+        A sub-brand that states nothing still produces its parent's brand, and a
+        preview showing an empty palette next to a prompt full of colours is the
+        panel contradicting itself. The left column edits what this kit states;
+        this column is the outcome.
+       */}
       <div className="brand-kit__aside stack stack--mid">
         <section className="stack stack--snug">
           <h3 className="admin-caps">Colours</h3>
-          <PalettePreview doc={sanitizeKitDoc(doc)} />
+          <PalettePreview doc={effective} />
         </section>
         <section className="stack stack--snug">
           <h3 className="admin-caps">In the formats it will be used in</h3>
-          <FormatPreviews
-            doc={sanitizeKitDoc(doc)}
-            name={name || "Your brand"}
-          />
+          <FormatPreviews doc={effective} name={name || "Your brand"} />
         </section>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One kit in the library.
+ *
+ * A brand and a sub-brand use the same card: the only difference is the indent
+ * and whether it offers to add a child, which is the parent's business rather
+ * than the card's.
+ */
+function KitCard({
+  kit,
+  onAddSub,
+  onOpen,
+  onRemove,
+}: {
+  kit: BrandKit;
+  onAddSub?: () => void;
+  onOpen: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="brand-kit__card">
+      <button className="brand-kit__open" onClick={onOpen} type="button">
+        <span className="brand-kit__card-name">{kit.name}</span>
+        <span className="brand-kit__card-meta">
+          {kit.version === null
+            ? "No version yet"
+            : `v${kit.version} · ${kit.resolvedDoc.palette.length} colours`}
+          {kit.inherited.length > 0
+            ? ` · inherits ${kit.inherited.length}`
+            : ""}
+        </span>
+        <PalettePreview doc={kit.resolvedDoc} />
+      </button>
+      <div className="brand-kit__card-actions">
+        {onAddSub ? (
+          <Button
+            aria-label={`Add a sub-brand of ${kit.name}`}
+            onClick={onAddSub}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon icon={PlusSignIcon} size={14} />
+          </Button>
+        ) : null}
+        <Button
+          aria-label={`Delete ${kit.name}`}
+          onClick={onRemove}
+          size="icon"
+          tone="danger"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={14} />
+        </Button>
       </div>
     </div>
   );
@@ -457,6 +844,9 @@ export function BrandKitsPanel() {
   const { confirm } = useConfirm();
   const [openId, setOpenId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  /** Which brand is having a sub-brand added, if any. */
+  const [parentFor, setParentFor] = useState<string | null>(null);
+  const [subName, setSubName] = useState("");
 
   const open = kits.find((kit) => kit.id === openId) ?? null;
 
@@ -476,10 +866,36 @@ export function BrandKitsPanel() {
     }
   }, [newName, refresh]);
 
+  const createSub = async (parentId: string) => {
+    const name = subName.trim();
+    if (!name) {
+      toast.error("A sub-brand needs a name");
+      return;
+    }
+    try {
+      const kit = await brandKitsApi.create(name, EMPTY_KIT, parentId);
+      setSubName("");
+      setParentFor(null);
+      await refresh();
+      setOpenId(kit.id);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Could not add the sub-brand"
+      );
+    }
+  };
+
   const remove = async (kit: BrandKit) => {
+    const subs = kits.filter((candidate) => candidate.parentId === kit.id);
     const ok = await confirm({
       confirmLabel: "Delete the kit",
-      description: `Every version of ${kit.name} goes with it. This cannot be undone.`,
+      /* The sub-brand count is the part worth stating: they cascade, and a
+         sub-brand inherits, so one left behind would be a document with holes
+         nothing can fill. */
+      description:
+        subs.length > 0
+          ? `Every version of ${kit.name} goes with it, and so do its ${subs.length} sub-brand${subs.length === 1 ? "" : "s"}. This cannot be undone.`
+          : `Every version of ${kit.name} goes with it. This cannot be undone.`,
       destructive: true,
       title: "Delete this brand kit?",
     });
@@ -503,6 +919,13 @@ export function BrandKitsPanel() {
         kit={open}
         onClose={() => setOpenId(null)}
         onSaved={() => void refresh()}
+        /* The parent's *resolved* document, which is what a sub-brand inherits
+           from — taken from the list rather than fetched, since the list already
+           carries every kit's resolution. */
+        parentDoc={
+          kits.find((candidate) => candidate.id === open.parentId)
+            ?.resolvedDoc ?? null
+        }
       />
     );
   }
@@ -546,34 +969,67 @@ export function BrandKitsPanel() {
             rather than remembered.
           </p>
         ) : null}
+        {/*
+          A tree rather than a flat list, because a sub-brand read out of context
+          is just a kit with a confusing name. Two levels is all there can be —
+          the database enforces it, see patch 032.
+         */}
         <ul className="brand-kit__list">
-          {kits.map((kit) => (
-            <li className="brand-kit__card" key={kit.id}>
-              <button
-                className="brand-kit__open"
-                onClick={() => setOpenId(kit.id)}
-                type="button"
-              >
-                <span className="brand-kit__card-name">{kit.name}</span>
-                <span className="brand-kit__card-meta">
-                  {kit.version === null
-                    ? "No version yet"
-                    : `v${kit.version} · ${kit.doc.palette.length} colours`}
-                </span>
-                <PalettePreview doc={kit.doc} />
-              </button>
-              <Button
-                aria-label={`Delete ${kit.name}`}
-                onClick={() => void remove(kit)}
-                size="icon"
-                tone="danger"
-                type="button"
-                variant="ghost"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={14} />
-              </Button>
-            </li>
-          ))}
+          {kits
+            .filter((kit) => !kit.parentId)
+            .map((parent) => (
+              <li key={parent.id}>
+                <KitCard
+                  kit={parent}
+                  onAddSub={() => setParentFor(parent.id)}
+                  onOpen={() => setOpenId(parent.id)}
+                  onRemove={() => void remove(parent)}
+                />
+                {parentFor === parent.id ? (
+                  <div className="brand-kit__sub-form row row--tight">
+                    <Input
+                      aria-label={`Name for a sub-brand of ${parent.name}`}
+                      autoFocus
+                      className="admin-control"
+                      maxLength={MAX_KIT_NAME}
+                      onChange={(e) => setSubName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void createSub(parent.id);
+                        }
+                        if (e.key === "Escape") {
+                          setParentFor(null);
+                        }
+                      }}
+                      placeholder={`${parent.name} — …`}
+                      value={subName}
+                    />
+                    <Button
+                      onClick={() => void createSub(parent.id)}
+                      type="button"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ) : null}
+                {kits.some((kit) => kit.parentId === parent.id) ? (
+                  <ul className="brand-kit__subs">
+                    {kits
+                      .filter((kit) => kit.parentId === parent.id)
+                      .map((sub) => (
+                        <li key={sub.id}>
+                          <KitCard
+                            kit={sub}
+                            onOpen={() => setOpenId(sub.id)}
+                            onRemove={() => void remove(sub)}
+                          />
+                        </li>
+                      ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
         </ul>
       </CardContent>
     </Card>
