@@ -119,3 +119,220 @@
   color: color-mix(in oklch, #fff 40%, transparent);
   text-align: center;
 }
+
+/*
+ * A panel's heading.
+ *
+ * Five panels wrote this out identically. Light, wide-tracked uppercase — the
+ * admin's section voice, one step up from `.admin-label`.
+ */
+.admin-heading {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  font-size: var(--text-sm-ui);
+  font-weight: 300;
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+/*
+ * The smallest caps the admin uses, at sixteen sites.
+ *
+ * `--tracking-widest` rather than one of the micro steps, which is what these
+ * were set at — the board's chrome tracks tighter than the admin's does.
+ */
+.admin-caps {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.admin-caps--quiet {
+  color: color-mix(in oklch, #fff 50%, transparent);
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* A note, or a count, beside something else. */
+.admin-note {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 80%, transparent);
+}
+
+.admin-note--quiet {
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+/*
+ * A shadcn control on the admin's ground.
+ *
+ * Passed to `Input`, `Textarea` and `SelectTrigger` as their `className`, which
+ * is how those components are meant to be restyled — see the note on
+ * src/components/ui in scripts/check-utilities.ts. Five panels had written this
+ * trio out; the taller variant is for the four that set a touch-sized minimum.
+ */
+.admin-control {
+  background: color-mix(in oklch, #000 40%, transparent);
+  border-color: color-mix(in oklch, #fff 10%, transparent);
+  transition: border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.admin-control:focus {
+  border-color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+/*
+ * Eleven spacing units, which is a touch target with room to spare.
+ *
+ * Not 44px: `--spacing` is 0.28rem in this repo rather than Tailwind's 0.25, so
+ * this lands at 49.28px — exactly what the `min-h-11` it replaced computed to,
+ * for the same reason.
+ */
+.admin-control--touch {
+  min-height: calc(var(--spacing) * 11);
+  font-size: var(--text-base-ui);
+}
+
+/* The same control on the board's inverting surface rather than the admin's. */
+.admin-control--board {
+  min-height: calc(var(--spacing) * 10);
+  font-size: var(--text-base-ui);
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border-color: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* A square thumbnail, filling its cell. Five grids used this. */
+.admin-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* A picture filling whatever box it is given. */
+.admin-fill {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * A gate: sign in, forgot password, reset password.
+ *
+ * Three screens wear this and had each written it out. Centred in a fixed slice
+ * of the viewport rather than the whole of it — `min(70dvh, 32rem)` — so the
+ * form sits high enough to stay above the keyboard on a phone.
+ */
+.admin-gate {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 6);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: min(70dvh, 32rem);
+  padding-inline: calc(var(--spacing) * 2);
+}
+
+/* The icon, in a ring. */
+.admin-gate__badge {
+  padding: calc(var(--spacing) * 5);
+  background: color-mix(in oklch, #fff 5%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-pill);
+}
+
+.admin-gate__title {
+  font-size: var(--text-xl-ui);
+  font-weight: 300;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-gate);
+}
+
+/* Narrow on purpose: a line of instruction at this tracking is unreadable long. */
+.admin-gate__note {
+  max-width: 24rem;
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.admin-gate__note--relaxed {
+  font-size: var(--text-micro-sm);
+  line-height: 1.625;
+  letter-spacing: var(--tracking-gate-tight);
+}
+
+.admin-gate__form {
+  width: 100%;
+  max-width: 24rem;
+}
+
+/* A quiet way back out of the gate. */
+.admin-gate__aside {
+  width: 100%;
+  min-height: calc(var(--spacing) * 11);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.admin-gate__aside:hover {
+  color: #fff;
+}
+
+/*
+ * Roomier from the small breakpoint up.
+ *
+ * 568px written out, because a media query cannot read `--breakpoint-sm`. Note
+ * that this project sets that to 568 rather than Tailwind's 640 — see the token
+ * in index.css.
+ */
+@media (width >= 568px) {
+  .admin-gate__badge {
+    padding: calc(var(--spacing) * 6);
+  }
+
+  .admin-gate__title {
+    font-size: var(--text-2xl-ui);
+    letter-spacing: var(--tracking-stamped);
+  }
+}
+
+/* A label above a field on the admin chrome — panel-label's counterpart. */
+.admin-field-label {
+  display: block;
+  margin-block-end: var(--spacing);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* A <Label> wrapping its own field, which stacks rather than sits beside it. */
+.admin-field-group {
+  display: block;
+}
+
+/* The gate's icon, inside its ring. */
+.admin-gate__icon {
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 10);
+  color: color-mix(in oklch, #fff 90%, transparent);
+}
+
+@media (width >= 568px) {
+  .admin-gate__icon {
+    width: calc(var(--spacing) * 12);
+    height: calc(var(--spacing) * 12);
+  }
+}

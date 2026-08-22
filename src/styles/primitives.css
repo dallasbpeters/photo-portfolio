@@ -120,8 +120,26 @@
   gap: calc(var(--spacing) * 4);
 }
 
+/*
+ * The gap ladder, in `--spacing` multiples:
+ *
+ *   snug   1    tight  2    mid   3
+ *   (base) 4    roomy  6    loose 8
+ *
+ * Written out because the names alone do not say which is which, and the two
+ * new rungs exist because the admin was reaching past this primitive for them —
+ * `space-y-1` at seventeen sites and `space-y-3` at nine.
+ */
+.stack--snug {
+  gap: var(--spacing);
+}
+
 .stack--tight {
   gap: calc(var(--spacing) * 2);
+}
+
+.stack--mid {
+  gap: calc(var(--spacing) * 3);
 }
 
 .stack--loose {
@@ -144,6 +162,11 @@
 
 .row--wide {
   gap: calc(var(--spacing) * 6);
+}
+
+/* The same ladder sideways, for the one step the rows actually needed. */
+.row--mid {
+  gap: calc(var(--spacing) * 4);
 }
 
 .row--between {

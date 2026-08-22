@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { GoogleSignInButton } from "./GoogleSignInButton";
+import "../../styles/adminChrome.css";
 
 // ── Login screen ──────────────────────────────────────────────────────────────
 
@@ -19,31 +20,24 @@ export const LoginScreen = ({
   onForgotPassword,
   onSignedIn,
 }: LoginScreenProps) => (
-  <div className="flex min-h-[min(70dvh,32rem)] w-full flex-col items-center justify-center space-y-6 px-2">
-    <div className="rounded-full border border-white/10 bg-white/5 p-5 sm:p-6">
+  <div className="admin-gate">
+    <div className="admin-gate__badge">
       <HugeiconsIcon icon={Shield01Icon} size={72} />
     </div>
-    <h2 className="text-center font-light text-xl uppercase tracking-[0.25em] sm:text-2xl sm:tracking-[0.3em]">
-      Admin Access
-    </h2>
-    <p className="max-w-sm px-2 text-center text-[10px] text-white/90 uppercase tracking-[0.2em]">
-      Sign in with your email and password.
-    </p>
+    <h2 className="admin-gate__title">Admin Access</h2>
+    <p className="admin-gate__note">Sign in with your email and password.</p>
     <form
       aria-label="Admin sign in"
-      className="w-full max-w-sm space-y-4"
+      className="admin-gate__form stack"
       onSubmit={(e) => void login.handleLogin(e)}
     >
-      <div className="space-y-2">
-        <Label
-          className="text-[10px] text-white/90 uppercase tracking-widest"
-          htmlFor="admin-email"
-        >
+      <div className="stack stack--tight">
+        <Label className="admin-caps" htmlFor="admin-email">
           Email
         </Label>
         <Input
           autoComplete="username"
-          className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+          className="admin-control admin-control--touch"
           id="admin-email"
           onChange={(e) => login.setEmail(e.target.value)}
           required
@@ -51,16 +45,13 @@ export const LoginScreen = ({
           value={login.email}
         />
       </div>
-      <div className="space-y-2">
-        <Label
-          className="text-[10px] text-white/90 uppercase tracking-widest"
-          htmlFor="admin-password"
-        >
+      <div className="stack stack--tight">
+        <Label className="admin-caps" htmlFor="admin-password">
           Password
         </Label>
         <Input
           autoComplete="current-password"
-          className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40"
+          className="admin-control admin-control--touch"
           id="admin-password"
           onChange={(e) => login.setPassword(e.target.value)}
           required

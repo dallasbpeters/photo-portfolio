@@ -456,6 +456,8 @@
   --text-sm-ui: 0.875rem;
   --text-xs-ui: 0.75rem;
   --text-base-ui: 1rem;
+  --text-xl-ui: 1.25rem;
+  --text-2xl-ui: 1.5rem;
 
   /*
    * Prose: the one thing in this app meant to be read at length.
@@ -483,6 +485,9 @@
   --tracking-micro-widest: 0.2em;
   /* A page heading, wider still than the label steps. */
   --tracking-heading: 0.24em;
+  /* The gate screens, which track wider than anything else in the admin. */
+  --tracking-gate: 0.25em;
+  --tracking-gate-tight: 0.15em;
 
   /*
    * Control corners.
