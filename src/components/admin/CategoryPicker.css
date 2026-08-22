@@ -1,0 +1,30 @@
+/*
+ * Choosing a category, by typing or from the list.
+ *
+ * The positioning context the dropdown anchors to, and nothing else — the
+ * dropdown itself is `.admin-listbox`, shared with anything that filters a list
+ * under a field.
+ */
+.category-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+}
+
+/*
+ * 16px below the small breakpoint, 14 above.
+ *
+ * The same iOS rule as AddItemForm's title field: a focused input under 16px
+ * makes the page zoom, and it does not zoom back.
+ */
+.category-picker__field {
+  min-height: calc(var(--spacing) * 11);
+  font-size: var(--text-base-ui);
+}
+
+@media (width >= 568px) {
+  .category-picker__field {
+    font-size: var(--text-sm-ui);
+  }
+}

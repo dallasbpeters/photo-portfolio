@@ -652,3 +652,152 @@
 .admin-file:hover::file-selector-button {
   background: color-mix(in oklch, #fff 15%, transparent);
 }
+
+/*
+ * A dialog with a list in it, rather than a sentence and two buttons.
+ *
+ * Capped against the viewport and scrolling inside, so a long list never pushes
+ * its own footer off the screen — and inset from the edges on a phone, where
+ * `max-width` alone leaves a dialog flush with the bezel.
+ *
+ * neutral-950, a shade off black: these sit over the admin panel, and the plain
+ * black `.admin-dialog` uses would lose its own border against it.
+ */
+.admin-dialog--wide {
+  width: calc(100vw - 1.5rem);
+  max-width: 28rem;
+  max-height: min(32rem, 85dvh);
+  overflow: hidden;
+  color: #fff;
+  background: oklch(14.5% 0 none);
+}
+
+@media (width >= 568px) {
+  .admin-dialog--wide {
+    width: 100%;
+  }
+}
+
+/* The same, for a form rather than a list: scrolls vertically, never sideways. */
+.admin-dialog--form {
+  max-height: 85dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: #fff;
+  background: oklch(14.5% 0 none);
+  border-color: color-mix(in oklch, #fff 10%, transparent);
+}
+
+@media (width >= 568px) {
+  .admin-dialog--form {
+    max-width: 28rem;
+  }
+}
+
+.admin-dialog__heading {
+  font-weight: 300;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.admin-dialog__subtitle {
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+/*
+ * A list of settings rows, ruled between rather than around.
+ *
+ * `:not(:first-child)` rather than a border on every row and none on the last:
+ * the same result, and it does not depend on knowing which row is last.
+ */
+.admin-list > li:not(:first-child) {
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, #fff 5%, transparent);
+}
+
+.admin-list__row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-sm-ui);
+}
+
+/*
+ * A dropdown of matches, under the field that filters them.
+ *
+ * Above the board's own panels, because this opens from a field that can be
+ * inside one — hence `--z-board-panel` rather than `--z-popover`.
+ */
+.admin-listbox {
+  position: absolute;
+  top: 100%;
+  z-index: var(--z-board-panel);
+  width: 100%;
+  min-width: calc(var(--spacing) * 60);
+  max-height: calc(var(--spacing) * 48);
+  padding-block: var(--spacing);
+  margin-block-start: var(--spacing);
+  overflow: auto;
+  background: oklch(14.5% 0 none);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+}
+
+.admin-listbox__option {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-sm-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-align: left;
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.admin-listbox__option:hover {
+  background: color-mix(in oklch, #fff 10%, transparent);
+}
+
+/* A count beside a match. Does not shrink, so the name truncates instead. */
+.admin-listbox__count {
+  flex-shrink: 0;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.admin-listbox__empty {
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+}
+
+.admin-listbox__footer {
+  padding: calc(var(--spacing) * 2);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+/* A framed, scrolling list inside a dialog. */
+.admin-inset-list {
+  max-height: calc(var(--spacing) * 52);
+  overflow-y: auto;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-md);
+}

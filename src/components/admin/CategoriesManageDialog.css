@@ -1,0 +1,35 @@
+/*
+ * Renaming and merging the categories photographs are filed under.
+ */
+
+.categories-dialog__state {
+  padding: calc(var(--spacing) * 4);
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-align: center;
+}
+
+.categories-dialog__state--caps {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.categories-dialog__label {
+  font-weight: 300;
+  color: #fff;
+}
+
+/* The slug, which is what the URL uses and the label is not. */
+.categories-dialog__slug {
+  margin-inline-start: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.categories-dialog__count {
+  margin-inline-start: calc(var(--spacing) * 2);
+  font-size: var(--text-xs-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+}
