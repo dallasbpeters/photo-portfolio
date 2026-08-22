@@ -1,0 +1,33 @@
+<svg
+  fill="none"
+  height="512"
+  viewBox="0 0 512 512"
+  width="512"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title>Topaz Labs</title>
+  <rect fill="white" height="512" width="512" />
+  <g fill="#2D2D2F" transform="translate(84.586 41.243) scale(21.58524)">
+    <rect
+      height="4.61613"
+      transform="rotate(-90 1 16.8984)"
+      width="4.61613"
+      x="1"
+      y="16.8984"
+    />
+    <rect
+      height="4.61613"
+      transform="rotate(90 10.2452 7.66602)"
+      width="4.61613"
+      x="10.2452"
+      y="7.66602"
+    />
+    <rect
+      height="4.61613"
+      transform="rotate(90 14.8818 3)"
+      width="4.61613"
+      x="14.8818"
+      y="3"
+    />
+  </g>
+</svg>

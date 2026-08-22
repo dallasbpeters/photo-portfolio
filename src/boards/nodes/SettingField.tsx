@@ -19,6 +19,20 @@ import "./SettingField.css";
  * the part that neither reads nor writes anything else on the node.
  */
 
+/**
+ * What a select shows for a value.
+ *
+ * Falls back to the value itself, which is right for every option list that is
+ * already readable — and is what the trigger showed before this existed.
+ */
+const labelOf = (
+  setting: Extract<SettingDef, { kind: "select" }>,
+  value: unknown
+): string => {
+  const key = typeof value === "string" ? value : String(setting.default);
+  return setting.optionLabels?.[key] ?? key;
+};
+
 interface SettingFieldProps {
   onChange: (value: string) => void;
   readOnly: boolean;
@@ -114,7 +128,14 @@ export function SettingField({
             value={shown}
           >
             <SelectTrigger>
-              <SelectValue />
+              {/* Base UI renders the raw value unless told otherwise — it has
+                  no way to know an option's text without being handed it. That
+                  is invisible while a value is its own label, which is true of
+                  every select on the board except the ones carrying fal's own
+                  vocabulary. */}
+              <SelectValue>
+                {(selected: unknown) => labelOf(setting, selected)}
+              </SelectValue>
             </SelectTrigger>
             {/* Positioning left to the default: forcing `side="top"` put the
                 menu above the node, which on a node near the top of the view
@@ -124,7 +145,7 @@ export function SettingField({
               <SelectGroup>
                 {setting.options.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {setting.optionLabels?.[option] ?? option}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -193,7 +214,16 @@ export function ModelSetting({
         value={value}
       >
         <SelectTrigger className="setting-field__trigger" data-size="lg">
-          <SelectValue />
+          {/* The model's label, not its id. Base UI shows the raw value unless
+              handed the text, and a model id is the one value on the board that
+              is genuinely unreadable — "fal-ai/recraft/vectorize" where the row
+              says "Recraft · Vectorize". */}
+          <SelectValue>
+            {(id: unknown) =>
+              options.find((model) => model.id === id)?.label ??
+              String(id ?? "")
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

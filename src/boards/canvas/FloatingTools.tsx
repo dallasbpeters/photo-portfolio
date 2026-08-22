@@ -5,6 +5,7 @@ import type { DrawStyle } from "../drawing/DrawToolbar";
 import type { DrawTool } from "../drawing/drawing";
 import { MaskControls } from "../drawing/MaskControls";
 import type { MaskConfig } from "../drawing/mask";
+import { NodeSettingsPanel } from "../panels/NodeSettingsPanel";
 import { ShaderPanel } from "../shaders/ShaderPanel";
 import { wiredImageFor } from "./wiredPreviews";
 import "./FloatingTools.css";
@@ -71,7 +72,15 @@ export function FloatingTools({
         </div>
       </div>
 
+      {/* Both panels live in the one column and only one can be showing: each
+          renders null unless the selected item is its own kind, and there is
+          only ever one selection. A shader gets ShaderPanel, a generation node
+          gets its model and parameters. */}
       <div className="floating-tools-side">
+        <NodeSettingsPanel
+          onConfigChange={onConfigChange}
+          selected={selected}
+        />
         <ShaderPanel
           imageUrl={
             selected ? wiredImageFor(selected.id, { items, wires }) : null

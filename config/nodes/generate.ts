@@ -1,5 +1,14 @@
 import type { NodeType } from "../nodeTypes.js";
 import { OUTPUT_PORT_KEY } from "../ports.js";
+import {
+  IMAGE_SIZE_LABELS,
+  IMAGE_SIZES,
+  MAX_LOOPS,
+  OUTPUT_FORMAT_LABELS,
+  OUTPUT_FORMATS,
+  QUALITIES,
+  QUALITY_LABELS,
+} from "./generation.js";
 import { GENERATE_PROMPT_MAX, MAX_BATCH_COUNT } from "./limits.js";
 
 /**
@@ -55,10 +64,15 @@ export const GENERATE: NodeType = {
       // The choices come from the `models` table, not from this registry: they
       // are data, edited in the admin. The registry declares the control, and
       // the control asks the ModelsProvider for what to offer.
+      //
+      // In the panel rather than on the node. It was the widest control on the
+      // card and the least often touched — a thirty-item menu of long labels,
+      // set once per node and then left alone while the prompt is worked on.
       default: "auto",
       key: "model",
       kind: "model",
       label: "Model",
+      panel: true,
     },
     {
       // Variations per input. With three images wired in and a count of two,
@@ -66,9 +80,57 @@ export const GENERATE: NodeType = {
       default: 1,
       key: "count",
       kind: "number",
-      label: "Variations",
+      label: "Iterations",
       max: MAX_BATCH_COUNT,
       min: 1,
+      panel: true,
+    },
+    {
+      /*
+       * How many times the node feeds its own output back in and runs again.
+       *
+       * One is a single generation and is the default. Two runs, takes the
+       * picture that came back, and runs again with it as the source image —
+       * which is how a look gets pushed further than one pass will take it.
+       *
+       * Distinct from Iterations, which is breadth: iterations are variations
+       * of the same starting point, loops are one line of descent. Together
+       * they multiply, so the panel says what a pair of them will cost.
+       */
+      default: 1,
+      key: "loops",
+      kind: "number",
+      label: "Loops",
+      max: MAX_LOOPS,
+      min: 1,
+      panel: true,
+    },
+    {
+      default: "auto",
+      key: "size",
+      kind: "select",
+      label: "Size",
+      optionLabels: IMAGE_SIZE_LABELS,
+      options: IMAGE_SIZES,
+      panel: true,
+    },
+    {
+      default: "auto",
+      key: "quality",
+      kind: "select",
+      label: "Quality",
+      optionLabels: QUALITY_LABELS,
+      options: QUALITIES,
+      panel: true,
+    },
+    {
+      default: "auto",
+      key: "outputFormat",
+      kind: "select",
+      label: "Output format",
+      optionLabels: OUTPUT_FORMAT_LABELS,
+      options: OUTPUT_FORMATS,
+      panel: true,
     },
   ],
 };
