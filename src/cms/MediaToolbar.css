@@ -1,0 +1,92 @@
+/*
+ * The toolbar over a media block in the page editor.
+ *
+ * Its own strip rather than `.admin-toolbar`: this one sits *inside* a block in
+ * the editor rather than above the whole surface, so it takes a lighter ground
+ * — a full-strength bar here would read as a second editor.
+ */
+
+.media-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  align-items: center;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  background: color-mix(in oklch, #fff 2%, transparent);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+.media-toolbar__group-label {
+  padding-inline: var(--spacing);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* Does not shrink: it names the field beside it, and a label that wraps to two
+   lines pushes the field out of the row. */
+.media-toolbar__field-label {
+  flex-shrink: 0;
+  padding-inline: var(--spacing);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* A control holding one glyph. */
+.media-toolbar__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.media-toolbar__button:hover {
+  color: #fff;
+  background: color-mix(in oklch, #fff 6%, transparent);
+}
+
+.media-toolbar__button--on {
+  color: #fff;
+  background: color-mix(in oklch, #fff 10%, transparent);
+}
+
+/* A percentage, tabular so the row does not shuffle as it is stepped. */
+.media-toolbar__value {
+  font-size: var(--text-micro-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.media-toolbar__caption-row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  width: 100%;
+  margin-block-start: var(--spacing);
+}
+
+/* A plain inset field: no radius, because it spans the strip it sits in. */
+.media-toolbar__input {
+  flex: 1;
+  min-height: calc(var(--spacing) * 8);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, #fff 85%, transparent);
+  outline: none;
+  background: color-mix(in oklch, #000 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+.media-toolbar__input:focus {
+  border-color: color-mix(in oklch, #fff 40%, transparent);
+}

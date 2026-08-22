@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { NavLink } from "react-router-dom";
 import type { PageSummary } from "../services/portfolioService";
 import { ICON_COMPONENTS, type IconComponent } from "./iconMap";
+import "./SiteNav.css";
 
 /**
  * Resolves an icon's drawing data by name, since the icon is stored as free
@@ -19,7 +20,6 @@ export const resolveIcon = (
 interface SiteNavProps {
   pages: PageSummary[];
   /** Renders links muted over photography, or solid on a plain background. */
-  variant?: "overlay" | "solid";
 }
 
 /**
@@ -28,21 +28,13 @@ interface SiteNavProps {
  * Renders nothing when there are no published pages, so a site that never adds
  * one looks exactly as it did before the CMS existed.
  */
-export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
+export function SiteNav({ pages }: SiteNavProps) {
   if (pages.length === 0) {
     return null;
   }
 
-  const base =
-    variant === "overlay"
-      ? "text-white/90 hover:text-white"
-      : "text-white/90 hover:text-white";
-
   return (
-    <nav
-      aria-label="Pages"
-      className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2"
-    >
+    <nav aria-label="Pages" className="site-nav">
       {pages.map((page) => {
         const Icon = resolveIcon(page.icon);
         return (
@@ -51,17 +43,15 @@ export function SiteNav({ pages, variant = "overlay" }: SiteNavProps) {
             // color, so the row does not jump by two pixels as you move
             // between pages — dropping the border entirely would reflow it.
             className={({ isActive }) =>
-              `group flex items-center gap-1.5 border-b-2 px-2 text-[0.9rem] text-shadow-2xs text-shadow-a-contrast leading-loose tracking-[0.2em] transition-colors duration-300 ${base} ${
-                isActive ? "border-white" : "border-transparent"
-              }`
+              `site-nav__link ${isActive ? "site-nav__link--current" : ""}`
             }
             key={page.id}
             to={`/${page.slug}`}
           >
             {Icon && <HugeiconsIcon icon={Icon} size={20} />}
-            <span className="relative">
+            <span className="site-nav__label">
               {page.title}
-              <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-current transition-all duration-300 group-hover:w-full" />
+              <span className="site-nav__rule" />
             </span>
           </NavLink>
         );

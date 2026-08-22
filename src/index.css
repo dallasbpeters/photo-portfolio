@@ -445,6 +445,18 @@
   --text-micro-xl: 0.875rem;
 
   /*
+   * Interface text on the admin chrome.
+   *
+   * Tailwind's own `text-sm` and `text-xs`, which the app was using directly
+   * because the type scale above starts too small for a form field and jumps
+   * from 0.738rem to 1.15rem with nothing in between. Named rather than left as
+   * bare utilities; whether the page scale should grow a rung here is a real
+   * question, and now it is one line rather than forty call sites.
+   */
+  --text-sm-ui: 0.875rem;
+  --text-xs-ui: 0.75rem;
+
+  /*
    * Tracking for that ladder. Tailwind's own stops at `widest` (0.1em), and
    * every one of these is wider — small uppercase type needs the room, which is
    * why four of them had been written out by hand.
@@ -455,6 +467,9 @@
   --tracking-micro-caps: 0.18em;
   /* The widest the app goes, for a single word standing alone — `.label--stamped`. */
   --tracking-stamped: 0.3em;
+  /* Between --tracking-micro-caps and --tracking-stamped. The CMS headings use
+     it; it had been written out as `tracking-[0.2em]` at twenty-one sites. */
+  --tracking-micro-widest: 0.2em;
 
   /*
    * Control corners.

@@ -1,0 +1,79 @@
+/*
+ * The public site's page navigation.
+ *
+ * The one file in this directory that is *not* admin chrome — this is the front
+ * end, branded per site, so it takes `currentColor` and the theme's own text
+ * shadow rather than the literal whites the editor surfaces use.
+ */
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2) calc(var(--spacing) * 5);
+  align-items: center;
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+/*
+ * One page.
+ *
+ * The bottom border is present at all times and only changes colour. Dropping
+ * it on the inactive links instead would reflow the whole row by two pixels as
+ * you move between pages.
+ */
+.site-nav__link {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  align-items: center;
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: 0.9rem;
+  line-height: 2;
+  /*
+   * Literal white, as it was.
+   *
+   * This is the front end, which is branded per site — so by the argument in
+   * primitives.css this ought to be `--foreground`. It is not changed here
+   * because it is correct only while every site is dark, and finding out which
+   * site is not is a visual decision rather than a refactor. Left as it was, and
+   * written down.
+   */
+  color: color-mix(in oklch, #fff 90%, transparent);
+  letter-spacing: var(--tracking-micro-widest);
+  text-shadow: var(--text-shadow-2xs, none);
+  border-block-end: calc(var(--border-hairline) * 2) solid transparent;
+  transition:
+    border-color var(--duration-wire) var(--ease-in-out),
+    color var(--duration-wire) var(--ease-in-out);
+}
+
+.site-nav__link:hover {
+  color: #fff;
+}
+
+.site-nav__link--current {
+  border-block-end-color: #fff;
+}
+
+.site-nav__label {
+  position: relative;
+}
+
+/*
+ * The hover rule, drawn by growing rather than fading.
+ *
+ * `currentColor` so it follows the branded link colour on every site instead of
+ * naming one.
+ */
+.site-nav__rule {
+  position: absolute;
+  bottom: calc(var(--spacing) * -0.5);
+  left: 0;
+  width: 0;
+  height: var(--border-hairline);
+  background: currentColor;
+  transition: width var(--duration-wire) var(--ease-in-out);
+}
+
+.site-nav__link:hover .site-nav__rule {
+  width: 100%;
+}
