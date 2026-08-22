@@ -23,19 +23,36 @@
 ALTER TABLE board_items DROP CONSTRAINT IF EXISTS board_items_kind_check;
 ALTER TABLE board_items DROP CONSTRAINT IF EXISTS board_items_shape;
 
-ALTER TABLE board_items
-  ADD CONSTRAINT board_items_kind_check
-  CHECK (kind IN ('photo', 'reference', 'note', 'text', 'op', 'frame'));
+-- Guarded because every patch replays on every migrate. This one narrows
+-- `kind` to the set that existed when it was written, and a later patch widens
+-- it again — so on a database that already holds a newer kind, re-adding the
+-- narrow constraint would fail on rows that are perfectly valid. Adding it only
+-- when the data satisfies it lets the later patch own the wider set, and keeps
+-- a fresh database getting the constraint it expects.
+DO $$
+BEGIN
+  ALTER TABLE board_items
+    ADD CONSTRAINT board_items_kind_check
+    CHECK (kind IN ('photo', 'reference', 'note', 'text', 'op', 'frame'));
+EXCEPTION
+  WHEN check_violation THEN NULL;
+END $$;
 
 /* A frame carries its title in `body`, like a note carries its text. Empty is
-   allowed: a frame is often drawn before it is named. */
-ALTER TABLE board_items
-  ADD CONSTRAINT board_items_shape CHECK (
-    (kind = 'photo' AND photo_id IS NOT NULL)
-    OR (kind = 'reference' AND image_url IS NOT NULL)
-    OR (kind IN ('note', 'text', 'frame') AND body IS NOT NULL)
-    OR (kind = 'op' AND node_type IS NOT NULL)
-  );
+   allowed: a frame is often drawn before it is named. Guarded for the same
+   reason as the kind check above — a later patch widens this too. */
+DO $$
+BEGIN
+  ALTER TABLE board_items
+    ADD CONSTRAINT board_items_shape CHECK (
+      (kind = 'photo' AND photo_id IS NOT NULL)
+      OR (kind = 'reference' AND image_url IS NOT NULL)
+      OR (kind IN ('note', 'text', 'frame') AND body IS NOT NULL)
+      OR (kind = 'op' AND node_type IS NOT NULL)
+    );
+EXCEPTION
+  WHEN check_violation THEN NULL;
+END $$;
 
 -- Dropped, not replaced: single-value inputs are enforced by the registry in
 -- config/nodeTypes.ts, which is the only place that knows an input's arity.
