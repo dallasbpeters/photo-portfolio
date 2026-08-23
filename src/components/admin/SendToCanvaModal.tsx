@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import posthog from "../../lib/posthog";
 import { type CanvaTemplate, canvaApi } from "../../services/canva";
 
 interface SendToCanvaModalProps {
@@ -275,6 +276,7 @@ export function SendToCanvaModal({
       // window.open here is silently blocked. Show a link instead, which opens
       // in the tab's own gesture.
       setDesignUrl(url);
+      posthog.capture("canva_design_sent");
       setStage({ kind: "done" });
     } catch (err) {
       const upsell = (err as Error & { upsellUrl?: string }).upsellUrl;

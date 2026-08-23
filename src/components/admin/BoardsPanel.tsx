@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import posthog from "../../lib/posthog";
 import { boardsApi } from "../../services/portfolioService";
 import type { Board } from "../../types";
 import { Button } from "../ui/button";
@@ -130,6 +131,7 @@ export function BoardsPanel() {
     }
     try {
       const board = await boardsApi.create(title.trim() || "Untitled board");
+      posthog.capture("board_created");
       setBoards((prev) => [board, ...prev]);
       navigate(`/admin/boards/${board.id}`);
     } catch (err) {
@@ -151,6 +153,7 @@ export function BoardsPanel() {
     }
     try {
       await boardsApi.remove(board.id);
+      posthog.capture("board_deleted");
       setBoards((prev) => prev.filter((b) => b.id !== board.id));
       toast.success("Board deleted");
     } catch (err) {

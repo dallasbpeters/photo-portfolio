@@ -25,6 +25,60 @@ const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
  * whole config.
  */
 
+/** A number setting's stored value, clamped rather than rejected. */
+const numberStored = (
+  setting: Extract<SettingDef, { kind: "number" }>,
+  value: unknown
+): number => {
+  // Clamped rather than rejected, like every other number the canvas sends.
+  // This one bounds *spending* — it is how many paid generations a single
+  // run will make — so an absurd value must not survive the trip.
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return setting.default;
+  }
+  // Rounded only when the setting counts in whole numbers. A tint between 0
+  // and 1 was being truncated to 0 or 1 on the way in, so every value in
+  // between was thrown away by the save rather than by the control.
+  const whole = (setting.step ?? 1) >= 1;
+  return clamp(whole ? Math.trunc(n) : n, setting.min, setting.max);
+};
+
+/** The kinds that store a bounded string and fall back to their default. */
+type ChoiceSetting = Extract<
+  SettingDef,
+  { kind: "brandKit" | "color" | "model" | "select" }
+>;
+
+/** One of those kinds' stored value: the string it accepts, or the default. */
+const choiceStored = (setting: ChoiceSetting, value: unknown): string => {
+  if (typeof value !== "string") {
+    return setting.default;
+  }
+  const trimmed = value.trim();
+  if (setting.kind === "model") {
+    // Not checked against the models table here: the run endpoint falls back
+    // to "auto" for an id it does not know, and refusing a save would strand
+    // boards whose model was deleted from the admin. Bounded like any other
+    // stored string, defaulted when empty.
+    return trimmed ? value.slice(0, MAX_MODEL_ID) : setting.default;
+  }
+  if (setting.kind === "brandKit") {
+    // A uuid or nothing. Not checked against the table for the same reason a
+    // model id is not: a kit deleted from the library must leave the boards
+    // built on it saveable, and the run path already treats an id it cannot
+    // resolve as "no brand" rather than as an error.
+    return UUID_RE.test(trimmed) ? trimmed : setting.default;
+  }
+  if (setting.kind === "color") {
+    // Coerced to the default rather than refused, like every other continuous
+    // value that arrives from a client: a malformed colour is a swatch nobody
+    // set, not a reason to lose the rest of the save.
+    return HEX_COLOR.test(trimmed) ? trimmed : setting.default;
+  }
+  return setting.options.includes(value) ? value : setting.default;
+};
+
 /**
  * What one setting's stored value is, for the value the canvas sent.
  *
@@ -40,55 +94,15 @@ export const settingStored = (
   if (setting.kind === "text") {
     // Not `text()`: a prompt may legitimately be cleared back to empty, and
     // treating that as absent would silently keep the previous one.
-    const ok = typeof value === "string";
-    return ok
-      ? { keep: true, value: value.slice(0, setting.maxLength) }
-      : { keep: false, value: undefined };
+    if (typeof value !== "string") {
+      return { keep: false, value: undefined };
+    }
+    return { keep: true, value: value.slice(0, setting.maxLength) };
   }
   if (setting.kind === "number") {
-    // Clamped rather than rejected, like every other number the canvas sends.
-    // This one bounds *spending* — it is how many paid generations a single
-    // run will make — so an absurd value must not survive the trip.
-    const n = Number(value);
-    // Rounded only when the setting counts in whole numbers. A tint between 0
-    // and 1 was being truncated to 0 or 1 on the way in, so every value in
-    // between was thrown away by the save rather than by the control.
-    const whole = (setting.step ?? 1) >= 1;
-    return {
-      keep: true,
-      value: Number.isFinite(n)
-        ? clamp(whole ? Math.trunc(n) : n, setting.min, setting.max)
-        : setting.default,
-    };
+    return { keep: true, value: numberStored(setting, value) };
   }
-  if (setting.kind === "model") {
-    // Not checked against the models table here: the run endpoint falls back
-    // to "auto" for an id it does not know, and refusing a save would strand
-    // boards whose model was deleted from the admin. Bounded like any other
-    // stored string, defaulted when empty.
-    const ok = typeof value === "string" && Boolean(value.trim());
-    return {
-      keep: true,
-      value: ok ? value.slice(0, MAX_MODEL_ID) : setting.default,
-    };
-  }
-  if (setting.kind === "brandKit") {
-    // A uuid or nothing. Not checked against the table for the same reason a
-    // model id is not: a kit deleted from the library must leave the boards
-    // built on it saveable, and the run path already treats an id it cannot
-    // resolve as "no brand" rather than as an error.
-    const ok = typeof value === "string" && UUID_RE.test(value.trim());
-    return { keep: true, value: ok ? value.trim() : setting.default };
-  }
-  if (setting.kind === "color") {
-    // Coerced to the default rather than refused, like every other continuous
-    // value that arrives from a client: a malformed colour is a swatch nobody
-    // set, not a reason to lose the rest of the save.
-    const ok = typeof value === "string" && HEX_COLOR.test(value.trim());
-    return { keep: true, value: ok ? value.trim() : setting.default };
-  }
-  const ok = typeof value === "string" && setting.options.includes(value);
-  return { keep: true, value: ok ? value : setting.default };
+  return { keep: true, value: choiceStored(setting, value) };
 };
 
 /** App-owned text config keys: not node settings, so they are not in the

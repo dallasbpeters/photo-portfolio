@@ -5,8 +5,8 @@ import {
   LinkSquare01Icon,
   MagicWand01Icon,
   NotebookIcon,
-  PaintBucketIcon,
   PaintBoardIcon,
+  PaintBucketIcon,
   RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
@@ -50,8 +50,8 @@ export function BoardToolPanel({
       transition={{ duration: 0.5 }}
     >
       <Button
-        fullWidthLeft
         onClick={() => onAddWritable("note")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -59,26 +59,21 @@ export function BoardToolPanel({
         Note
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddWritable("text")}
+        stacked
         type="button"
         variant="noborder"
       >
         <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
         Text
       </Button>
-      <Button
-        fullWidthLeft
-        onClick={onTogglePicker}
-        type="button"
-        variant="noborder"
-      >
+      <Button onClick={onTogglePicker} stacked type="button" variant="noborder">
         <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
         Image
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("generate")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -86,8 +81,8 @@ export function BoardToolPanel({
         Generate
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("describe")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -95,8 +90,8 @@ export function BoardToolPanel({
         Analyse
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("join")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -104,8 +99,8 @@ export function BoardToolPanel({
         Combine
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("iterate")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -113,8 +108,8 @@ export function BoardToolPanel({
         Iterate
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("icon")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -122,8 +117,8 @@ export function BoardToolPanel({
         Icon
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("palette")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -131,8 +126,8 @@ export function BoardToolPanel({
         Palette
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("prompt")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -143,20 +138,15 @@ export function BoardToolPanel({
           thing one rung up — a palette states colours, a brand states colours,
           voice, type and a look together. */}
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("brand")}
+        stacked
         type="button"
         variant="noborder"
       >
         <HugeiconsIcon aria-hidden icon={PaintBucketIcon} size={14} />
         Brand
       </Button>
-      <Button
-        fullWidthLeft
-        onClick={onAddFrame}
-        type="button"
-        variant="noborder"
-      >
+      <Button onClick={onAddFrame} stacked type="button" variant="noborder">
         <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
         Frame
       </Button>

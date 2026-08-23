@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import posthog from "../../lib/posthog";
 import { authApi } from "../../services/portfolioService";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -39,6 +40,7 @@ export function ChangePasswordForm() {
       setCurrent("");
       setNext("");
       setConfirm("");
+      posthog.capture("admin_password_changed");
       toast.success("Password changed");
     } catch (err) {
       toast.error(

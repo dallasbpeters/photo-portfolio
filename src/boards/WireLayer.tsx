@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
 import { useState } from "react";
 import {
   CANVAS_HEIGHT,
@@ -259,47 +258,78 @@ export function WireLayer({
               />
             )}
             {isHovered && !readOnly ? (
-              <g
-                className="wire-layer__hit"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onDelete?.(wireId);
-                  }
-                }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onDelete?.(wireId);
-                }}
-                onPointerEnter={() => setHovered(wireId)}
-                onPointerLeave={() => setHovered(null)}
-                role="button"
-                style={{
-                  cursor: "pointer",
-                  pointerEvents: "all",
-                  zIndex: 1000,
-                }}
-                tabIndex={0}
+              // A real <button>, so the affordance is focusable and announced
+              // without hand-rolling the role. SVG has no button element, so it
+              // rides in a <foreignObject>: the box is the badge plus its
+              // stroke, and the nested <svg> borrows the outer user-space
+              // coordinates through `viewBox` so the circle and cross below can
+              // still be drawn at (midX, midY).
+              <foreignObject
+                height={(badge + stroke) * 2}
+                width={(badge + stroke) * 2}
+                x={midX - badge - stroke}
+                y={midY - badge - stroke}
               >
-                <title>Remove this connection</title>
-                <circle
-                  cx={midX}
-                  cy={midY}
-                  fill="rgb(24 24 27)"
-                  r={badge}
-                  stroke={WIRE_HOVER}
-                  strokeWidth={stroke}
-                />
-                <motion.path
-                  animate={{ opacity: 1, pathLength: 1 }}
-                  d={`M ${midX - badge / 3} ${midY - badge / 3} L ${midX + badge / 3} ${midY + badge / 3} M ${midX + badge / 3} ${midY - badge / 3} L ${midX - badge / 3} ${midY + badge / 3}`}
-                  initial={{ opacity: 0, pathLength: 0 }}
-                  stroke={WIRE_HOVER}
-                  strokeLinecap="round"
-                  strokeWidth={stroke}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                />
-              </g>
+                <button
+                  aria-label="Remove this connection"
+                  className="wire-layer__hit"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onDelete?.(wireId);
+                    }
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(wireId);
+                  }}
+                  onPointerEnter={() => setHovered(wireId)}
+                  onPointerLeave={() => setHovered(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    // Round, and clipped to it, so the corners of the box are
+                    // not clickable — the <g> this replaced only took hits on
+                    // the badge itself.
+                    borderRadius: "50%",
+                    display: "block",
+                    height: "100%",
+                    lineHeight: 0,
+                    overflow: "hidden",
+                    padding: 0,
+                    pointerEvents: "all",
+                    width: "100%",
+                    zIndex: 1000,
+                  }}
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="100%"
+                    viewBox={`${midX - badge - stroke} ${midY - badge - stroke} ${(badge + stroke) * 2} ${(badge + stroke) * 2}`}
+                    width="100%"
+                  >
+                    <circle
+                      cx={midX}
+                      cy={midY}
+                      fill="rgb(24 24 27)"
+                      r={badge}
+                      stroke={WIRE_HOVER}
+                      strokeWidth={stroke}
+                    />
+                    <motion.path
+                      animate={{ opacity: 1, pathLength: 1 }}
+                      d={`M ${midX - badge / 3} ${midY - badge / 3} L ${midX + badge / 3} ${midY + badge / 3} M ${midX + badge / 3} ${midY - badge / 3} L ${midX - badge / 3} ${midY + badge / 3}`}
+                      initial={{ opacity: 0, pathLength: 0 }}
+                      stroke={WIRE_HOVER}
+                      strokeLinecap="round"
+                      strokeWidth={stroke}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                    />
+                  </svg>
+                </button>
+              </foreignObject>
             ) : null}
           </g>
         );

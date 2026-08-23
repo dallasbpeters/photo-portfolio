@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_HOST?: string;
   /** Public PostHog project token used by the browser SDK. */
   readonly VITE_POSTHOG_KEY?: string;
+  /** PostHog app host used by the browser SDK toolbar and links. */
+  readonly VITE_POSTHOG_UI_HOST?: string;
   /** Which site in config/sites.ts this bundle is branded for. */
   readonly VITE_SITE?: string;
   /** Set by `pnpm dev:local` — ignore VITE_API_BASE_URL and use same-origin /api → Vite proxy */

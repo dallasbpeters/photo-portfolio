@@ -21,15 +21,15 @@
 }
 
 .resize-handle--nw {
-  top: 0;
+  top: calc(var(--spacing) * -1.5);
   left: calc(var(--spacing) * -1.5);
   cursor: nwse-resize;
-  transform: translateY(-50%);
+
   transform-origin: top left;
 }
 
 .resize-handle--ne {
-  top: 0;
+  top: calc(var(--spacing) * -1.5);
   right: calc(var(--spacing) * -1.5);
   cursor: nesw-resize;
   transform: translateY(-50%);
@@ -37,7 +37,7 @@
 }
 
 .resize-handle--sw {
-  bottom: 0;
+  bottom: calc(var(--spacing) * -1.5);
   left: calc(var(--spacing) * -1.5);
   cursor: nesw-resize;
   transform: translateY(50%);
@@ -46,7 +46,7 @@
 
 .resize-handle--se {
   right: calc(var(--spacing) * -1.5);
-  bottom: 0;
+  bottom: calc(var(--spacing) * -1.5);
   cursor: nwse-resize;
   transform: translateY(50%);
   transform-origin: bottom right;

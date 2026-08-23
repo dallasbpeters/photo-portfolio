@@ -73,6 +73,16 @@ const pick = (
     : { source: "none", value: "" };
 };
 
+const redirectUriSource = (
+  fromDb: string,
+  fromEnv: string
+): LightroomCredentials["redirectUriSource"] => {
+  if (fromDb) {
+    return "database";
+  }
+  return fromEnv ? "environment" : "default";
+};
+
 export const loadCredentials = async (
   sql: Sql
 ): Promise<LightroomCredentials> => {
@@ -103,11 +113,7 @@ export const loadCredentials = async (
     clientId: id.value,
     clientSecret: secret.value,
     redirectUri: storedUri || envUri || defaultRedirectUri(),
-    redirectUriSource: storedUri
-      ? "database"
-      : envUri
-        ? "environment"
-        : "default",
+    redirectUriSource: redirectUriSource(storedUri, envUri),
     source: { clientId: id.source, clientSecret: secret.source },
   };
 };

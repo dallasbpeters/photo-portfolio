@@ -249,7 +249,7 @@ function LookPicker({
         <label className="brand-kit__strength">
           <span className="admin-note--quiet">
             {chosen ? chosen.name : "Unknown look"} ·{" "}
-            {Math.round((doc.look.strength ?? 1) * 100)}%
+            {Math.round(doc.look.strength * 100)}%
           </span>
           <input
             aria-label="Look strength"
@@ -266,7 +266,7 @@ function LookPicker({
             }
             step={0.05}
             type="range"
-            value={doc.look.strength ?? 1}
+            value={doc.look.strength}
           />
         </label>
       ) : null}

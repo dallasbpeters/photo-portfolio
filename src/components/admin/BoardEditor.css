@@ -37,7 +37,7 @@
   box-shadow: var(--shadow-md);
   &.board-panel--top {
     top: calc(var(--spacing) * 3);
-    left: calc(var(--spacing) * 3);
+    left: 180px;
   }
   &.board-panel--top-right {
     top: calc(var(--spacing) * 3);
