@@ -27,18 +27,18 @@ export function ConnectionState({
   status: LightroomStatus;
 }) {
   if (!status.configured) {
+    // Not a dead end any more: the panel shows the setup form under this, so
+    // this only has to say what is missing.
     return (
       <div className="lightroom__state lightroom__state--blocked">
         <HugeiconsIcon aria-hidden icon={Alert02Icon} size={16} />
         <div className="stack stack--snug">
-          <p className="lightroom__state-title">Not configured</p>
+          <p className="lightroom__state-title">
+            Needs {status.missing ?? "credentials"}
+          </p>
           <p className="admin-note">
-            Set {status.missingEnv ?? "ADOBE_CLIENT_ID and ADOBE_CLIENT_SECRET"}{" "}
-            on the project. Adobe gates the Lightroom APIs to partner
-            applications it has entitled, so a client id alone is not enough —
-            the integration also has to be approved for{" "}
-            <code>lr_partner_apis</code> and{" "}
-            <code>lr_partner_rendition_apis</code>.
+            Enter the Adobe integration's credentials below. The steps for
+            getting them are there too.
           </p>
         </div>
       </div>

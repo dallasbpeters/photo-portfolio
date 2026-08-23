@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSql } from "../_lib/db.js";
 import { exchangeCode, saveTokens } from "../_lib/lightroom.js";
 import { fetchAccount, fetchCatalogId } from "../_lib/lightroomCatalog.js";
+import { loadCredentials } from "../_lib/lightroomConfig.js";
 
 /**
  * Where Adobe sends the browser after the admin approves the connection.
@@ -69,9 +70,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // One-time state: consumed whether the exchange succeeds or not.
   await sql`DELETE FROM lightroom_oauth_states WHERE state = ${state}`;
 
+  const credentials = await loadCredentials(sql);
   let tokens: Awaited<ReturnType<typeof exchangeCode>>;
   try {
-    tokens = await exchangeCode(code, verifier);
+    tokens = await exchangeCode(credentials, code, verifier);
   } catch (error) {
     // The one step that fails for reasons invisible to the browser: a wrong
     // secret, an unregistered redirect, a scope the integration is not entitled
@@ -92,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       accessToken: tokens.accessToken,
       accountEmail: null,
       catalogId: null,
+      clientId: credentials.clientId,
     };
     accountEmail = (await fetchAccount(connection)).email;
     catalogId = await fetchCatalogId(connection);

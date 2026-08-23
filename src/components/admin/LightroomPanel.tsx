@@ -12,6 +12,7 @@ import { portfolioService } from "../../services/portfolioService";
 import type { Category } from "../../types";
 import { Button } from "../ui/button";
 import { ConnectionState } from "./LightroomConnectionState";
+import { LightroomSetup } from "./LightroomSetup";
 import "./LightroomPanel.css";
 
 /**
@@ -52,6 +53,10 @@ const CALLBACK_MESSAGES: Record<
 
 export function LightroomPanel() {
   const [status, setStatus] = useState<LightroomStatus | null>(null);
+  /* Open on its own when there is nothing configured, and reachable by choice
+     afterwards — credentials are edited rarely but the redirect URI is needed
+     again the moment the deployment's domain changes. */
+  const [setupOpen, setSetupOpen] = useState(false);
   const [albums, setAlbums] = useState<LightroomAlbum[]>([]);
   const [openAlbum, setOpenAlbum] = useState<LightroomAlbum | null>(null);
 
@@ -137,6 +142,29 @@ export function LightroomPanel() {
         }}
         status={status}
       />
+
+      {status.configured ? (
+        <div className="row row--between">
+          <span />
+          <Button
+            onClick={() => setSetupOpen((open) => !open)}
+            type="button"
+            variant="ghost"
+          >
+            {setupOpen ? "Hide setup" : "Credentials & setup"}
+          </Button>
+        </div>
+      ) : null}
+
+      {setupOpen || !status.configured ? (
+        <LightroomSetup
+          credentials={status}
+          onSaved={async () => {
+            await readStatus();
+            setSetupOpen(false);
+          }}
+        />
+      ) : null}
 
       {usable ? (
         <div className="lightroom__browser">

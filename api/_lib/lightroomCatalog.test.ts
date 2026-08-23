@@ -15,6 +15,9 @@ const connection = {
   accessToken: "t",
   accountEmail: null,
   catalogId: "cat",
+  // Required now that credentials can come from the database: every request
+  // carries it as X-API-Key rather than reading the environment.
+  clientId: "test-client-id",
 };
 
 /** A stub that answers every request with one body, guard prefix and all. */

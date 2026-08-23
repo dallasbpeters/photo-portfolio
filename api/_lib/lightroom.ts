@@ -7,10 +7,9 @@ import {
 } from "../../config/lightroom.js";
 import type { getSql } from "./db.js";
 import {
-  adobeClientId,
-  adobeClientSecret,
-  adobeRedirectUri,
-} from "./lightroomEnv.js";
+  type LightroomCredentials,
+  loadCredentials,
+} from "./lightroomConfig.js";
 
 type Sql = ReturnType<typeof getSql>;
 
@@ -57,12 +56,16 @@ export const pkcePair = (): { challenge: string; verifier: string } => {
 };
 
 /** The URL to send the admin to for Adobe's consent screen. */
-export const authorizeUrl = (state: string, challenge: string): string => {
+export const authorizeUrl = (
+  credentials: LightroomCredentials,
+  state: string,
+  challenge: string
+): string => {
   const params = new URLSearchParams({
-    client_id: adobeClientId(),
+    client_id: credentials.clientId,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    redirect_uri: adobeRedirectUri(),
+    redirect_uri: credentials.redirectUri,
     response_type: "code",
     scope: LIGHTROOM_SCOPES,
     state,
@@ -104,17 +107,18 @@ const readTokens = async (
 };
 
 export const exchangeCode = async (
+  credentials: LightroomCredentials,
   code: string,
   codeVerifier: string
 ): Promise<AdobeTokens> => {
   const res = await fetch(ADOBE_TOKEN_URL, {
     body: new URLSearchParams({
-      client_id: adobeClientId(),
-      client_secret: adobeClientSecret(),
+      client_id: credentials.clientId,
+      client_secret: credentials.clientSecret,
       code,
       code_verifier: codeVerifier,
       grant_type: "authorization_code",
-      redirect_uri: adobeRedirectUri(),
+      redirect_uri: credentials.redirectUri,
     }),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     method: "POST",
@@ -122,11 +126,14 @@ export const exchangeCode = async (
   return readTokens(res, "token exchange");
 };
 
-const refreshTokens = async (refreshToken: string): Promise<AdobeTokens> => {
+const refreshTokens = async (
+  credentials: LightroomCredentials,
+  refreshToken: string
+): Promise<AdobeTokens> => {
   const res = await fetch(ADOBE_TOKEN_URL, {
     body: new URLSearchParams({
-      client_id: adobeClientId(),
-      client_secret: adobeClientSecret(),
+      client_id: credentials.clientId,
+      client_secret: credentials.clientSecret,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }),
@@ -176,11 +183,20 @@ export const forgetTokens = async (sql: Sql, userId: string): Promise<void> => {
   await sql`DELETE FROM lightroom_tokens WHERE user_id = ${userId}`;
 };
 
-/** The connection as the panel shows it. */
+/**
+ * A live connection: the token, and the key that must accompany it.
+ *
+ * `clientId` rides along because lr.adobe.io requires it as `X-API-Key` on every
+ * request — the token says who the customer is, the key says which entitled
+ * application is asking. It used to be read from the environment at call time;
+ * now that the credentials can come from the database it has to be carried, and
+ * the connection is already threaded everywhere the key is needed.
+ */
 export interface LightroomConnection {
   accessToken: string;
   accountEmail: string | null;
   catalogId: string | null;
+  clientId: string;
 }
 
 /**
@@ -219,11 +235,14 @@ export const connectionFor = async (
     ? expiresAt - Date.now() < REFRESH_MARGIN_MS
     : true;
 
+  const credentials = await loadCredentials(sql);
+
   if (!stale) {
     return {
       accessToken: row.access_token,
       accountEmail: row.account_email,
       catalogId: row.catalog_id,
+      clientId: credentials.clientId,
     };
   }
 
@@ -236,12 +255,13 @@ export const connectionFor = async (
     );
   }
 
-  const fresh = await refreshTokens(row.refresh_token);
+  const fresh = await refreshTokens(credentials, row.refresh_token);
   await saveTokens(sql, userId, fresh);
   return {
     accessToken: fresh.accessToken,
     accountEmail: row.account_email,
     catalogId: row.catalog_id,
+    clientId: credentials.clientId,
   };
 };
 
@@ -291,7 +311,7 @@ export const lrFetch = async (
     body: options.body,
     headers: {
       Authorization: `Bearer ${connection.accessToken}`,
-      "X-API-Key": adobeClientId(),
+      "X-API-Key": connection.clientId,
       ...options.headers,
     },
     method: options.method ?? "GET",

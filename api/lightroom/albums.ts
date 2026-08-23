@@ -4,7 +4,7 @@ import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { connectionFor } from "../_lib/lightroom.js";
 import { fetchCatalogId, listAlbums } from "../_lib/lightroomCatalog.js";
-import { isLightroomConfigured } from "../_lib/lightroomEnv.js";
+import { isConfigured, loadCredentials } from "../_lib/lightroomConfig.js";
 
 /** The albums in the connected catalogue, as a flat list with parent ids. */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -19,12 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-  if (!isLightroomConfigured()) {
-    return res.status(503).json({ error: "Lightroom is not configured" });
-  }
 
   try {
     const sql = getSql();
+    if (!isConfigured(await loadCredentials(sql))) {
+      return res.status(503).json({ error: "Lightroom is not configured" });
+    }
     const connection = await connectionFor(sql, user.userId);
     if (!connection) {
       return res.status(409).json({ error: "Lightroom is not connected" });

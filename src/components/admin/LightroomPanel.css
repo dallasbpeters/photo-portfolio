@@ -187,3 +187,102 @@
   border: var(--border-hairline) solid var(--color-border);
   border-radius: var(--radius-control);
 }
+
+/*
+ * Setting the integration up: the steps, then the credentials.
+ *
+ * The steps are on the screen rather than in a README because this is where
+ * somebody is standing when they need them — and because the order is
+ * load-bearing: the redirect URI has to be registered at Adobe before the first
+ * handshake, and Adobe reports a mismatch as an error that does not name the
+ * field that disagreed.
+ */
+
+.lightroom-setup {
+  max-width: calc(var(--spacing) * 160);
+  padding: calc(var(--spacing) * 4);
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.lightroom-setup__steps {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2.5);
+  margin-block-start: var(--spacing);
+}
+
+.lightroom-setup__step {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: flex-start;
+}
+
+/* Numbered, because these are steps in an order rather than a list of links. */
+.lightroom-setup__step-number {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-foreground) 60%, transparent);
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.lightroom-setup__link {
+  display: inline-flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: var(--text-micro-md);
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(
+    in oklch,
+    var(--color-foreground) 30%,
+    transparent
+  );
+  text-underline-offset: 0.2em;
+}
+
+.lightroom-setup__link:hover {
+  text-decoration-color: var(--color-foreground);
+}
+
+.lightroom-setup__field {
+  display: block;
+  margin-block-start: calc(var(--spacing) * 2.5);
+}
+
+/* The URI beside its copy button: it exists to be pasted somewhere else. */
+.lightroom-setup__row {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+/* A value currently coming from the deployment rather than from this form. */
+.lightroom-setup__from-env {
+  color: color-mix(in oklch, var(--color-foreground) 45%, transparent);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* A secret is stored. Never its value — the API does not return it. emerald-400. */
+.lightroom-setup__stored {
+  display: inline-flex;
+  gap: calc(var(--spacing) * 0.75);
+  align-items: center;
+  margin-inline-start: var(--spacing);
+  color: oklch(84.5% 0.143 164.978);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* The URI has to be readable in full to be checked against Adobe's console,
+   so the input takes the row's slack rather than sitting at its intrinsic size. */
+.lightroom-setup__row .admin-field {
+  flex: 1;
+  min-width: 0;
+}

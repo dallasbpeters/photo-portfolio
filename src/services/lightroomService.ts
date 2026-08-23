@@ -37,7 +37,29 @@ export interface LightroomAsset {
  * env var on the deployment, `connected` is an OAuth handshake, and `entitled`
  * is whether the connected Adobe account has a Lightroom subscription at all.
  */
-export interface LightroomStatus {
+/** Where each half of the credentials came from. */
+export interface LightroomCredentialSource {
+  clientId: "database" | "environment" | "none";
+  clientSecret: "database" | "environment" | "none";
+}
+
+/**
+ * The credentials as the panel may know them.
+ *
+ * No secret, ever — the API reports whether one is stored, never its value.
+ * The client id is not a secret: it travels in the authorize URL in plain sight.
+ */
+export interface LightroomCredentials {
+  clientId: string;
+  hasSecret: boolean;
+  /** Shown so it can be pasted into Adobe's console, where it must match. */
+  redirectUri: string;
+  /** "default" means nobody has chosen one, so the panel offers this origin. */
+  redirectUriSource: "database" | "default" | "environment";
+  source: LightroomCredentialSource;
+}
+
+export interface LightroomStatus extends LightroomCredentials {
   accountEmail?: string | null;
   catalogId?: string | null;
   configured: boolean;
@@ -45,8 +67,8 @@ export interface LightroomStatus {
   entitled?: boolean;
   /** A connection that exists but cannot be used, with the reason. */
   error?: string;
-  /** Which env var to set, when `configured` is false. */
-  missingEnv?: string | null;
+  /** Which half is missing, when `configured` is false. */
+  missing?: string | null;
 }
 
 export interface LightroomImportResult {
@@ -101,6 +123,17 @@ export const lightroomApi = {
     };
   },
 
+  /** Forgets the stored credentials, falling back to the environment. */
+  clearCredentials: async (): Promise<void> => {
+    const res = await fetch(`${apiBase()}/api/lightroom/credentials`, {
+      headers: jsonHeaders(),
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not clear them"));
+    }
+  },
+
   /** The consent URL to send the browser to. */
   connect: async (returnTo: string): Promise<{ url: string }> => {
     const res = await fetch(
@@ -113,6 +146,16 @@ export const lightroomApi = {
       );
     }
     return (await res.json()) as { url: string };
+  },
+
+  credentials: async (): Promise<LightroomCredentials> => {
+    const res = await fetch(`${apiBase()}/api/lightroom/credentials`, {
+      headers: jsonHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not read them"));
+    }
+    return (await res.json()) as LightroomCredentials;
   },
 
   disconnect: async (): Promise<void> => {
@@ -154,6 +197,29 @@ export const lightroomApi = {
       throw new Error(await readPageError(res, "The import failed"));
     }
     return (await res.json()) as LightroomImportResult;
+  },
+
+  /**
+   * Saves what was filled in.
+   *
+   * An omitted or blank secret keeps the stored one, because the panel is never
+   * given it and so cannot send it back — correcting a typo in the client id
+   * must not wipe the secret.
+   */
+  saveCredentials: async (next: {
+    clientId?: string;
+    clientSecret?: string;
+    redirectUri?: string;
+  }): Promise<LightroomCredentials> => {
+    const res = await fetch(`${apiBase()}/api/lightroom/credentials`, {
+      body: JSON.stringify(next),
+      headers: jsonHeaders(),
+      method: "PUT",
+    });
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not save them"));
+    }
+    return (await res.json()) as LightroomCredentials;
   },
 
   status: async (): Promise<LightroomStatus> => {

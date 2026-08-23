@@ -5,10 +5,10 @@ import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { authorizeUrl, pkcePair } from "../_lib/lightroom.js";
 import {
-  adobeRedirectUri,
-  isLightroomConfigured,
-  lightroomMissingEnv,
-} from "../_lib/lightroomEnv.js";
+  isConfigured,
+  loadCredentials,
+  missingHalf,
+} from "../_lib/lightroomConfig.js";
 
 /**
  * Starts the Adobe handshake: parks a state/verifier pair, then hands back the
@@ -17,8 +17,8 @@ import {
  *
  * The state carries where to land afterwards, base64url'd behind a random
  * prefix, so connecting from the photos screen returns to the photos screen.
- * The same construction Canva's connect uses, and it is the reason the callback
- * can redirect somewhere useful without a second round trip.
+ * The same construction Canva's connect uses, and the reason the callback can
+ * redirect somewhere useful without a second round trip.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {
@@ -32,9 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-  if (!isLightroomConfigured()) {
+
+  const sql = getSql();
+  const credentials = await loadCredentials(sql);
+  if (!isConfigured(credentials)) {
     return res.status(503).json({
-      error: `Lightroom is not configured — set ${lightroomMissingEnv()} on the project. The token exchange needs the client secret, so the id alone is not enough.`,
+      error: `Lightroom needs ${missingHalf(credentials)} — enter it under Lightroom in the admin.`,
     });
   }
 
@@ -46,13 +49,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const state = `${randomBytes(24).toString("base64url")}.${Buffer.from(returnTo).toString("base64url")}`;
   const { challenge, verifier } = pkcePair();
 
-  await getSql()`
+  await sql`
     INSERT INTO lightroom_oauth_states (state, user_id, code_verifier)
     VALUES (${state}, ${user.userId}, ${verifier})
   `;
 
   return res.status(200).json({
-    redirectUri: adobeRedirectUri(),
-    url: authorizeUrl(state, challenge),
+    // Echoed back so the panel can show exactly what must be registered at
+    // Adobe. A mismatch here is the most common cause of a failed handshake and
+    // Adobe's error does not say which part disagreed.
+    redirectUri: credentials.redirectUri,
+    url: authorizeUrl(credentials, state, challenge),
   });
 }
