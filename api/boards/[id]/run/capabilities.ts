@@ -142,6 +142,92 @@ const generationParams = (config: Record<string, unknown>) => ({
   size: typeof config.size === "string" ? config.size : null,
 });
 
+/** Analyse's branch: reads the wired images and returns words, not a picture. */
+const described = async (
+  item: RunnableItem,
+  sourceImageUrls: string[],
+  prompt: string
+): Promise<Produced> => {
+  if (sourceImageUrls.length === 0) {
+    throw new Error("Analyse needs an image wired into it");
+  }
+  const focus =
+    typeof item.config.focus === "string" ? item.config.focus : "style";
+  return {
+    kind: "text",
+    text: await describeImage(sourceImageUrls, focus, prompt),
+  };
+};
+
+/** The icon generator's branch. */
+const iconGenerated = async (
+  item: RunnableItem,
+  prompt: string
+): Promise<Produced> => {
+  const style = isIconStyle(item.config.style)
+    ? item.config.style
+    : ICON_STYLES[0];
+  // Required by every Magnific endpoint even though this polls for the
+  // result, so it points at our own sink — exactly as api/ai/icon.ts does.
+  const site = getSite();
+  const icon = await generateIcon(
+    prompt,
+    style,
+    `https://${site.domain}/api/ai/icon-webhook`
+  );
+  return {
+    description: null,
+    height: null,
+    isVector: icon.isVector,
+    kind: "image",
+    url: icon.url,
+    width: null,
+  };
+};
+
+/**
+ * The stamped picture, or the original plus the reason it is unstamped.
+ *
+ * A failure here does not fail the run — see the call site.
+ */
+const stampedWith = async (
+  url: string,
+  brandLogo: BrandLogo
+): Promise<{ url: string; warning: string | null }> => {
+  try {
+    const result = await stampLogo(url, brandLogo);
+    return { url: result.url, warning: result.warning ?? null };
+  } catch (e) {
+    return {
+      url,
+      warning:
+        e instanceof Error
+          ? `The logo could not be added: ${e.message}`
+          : "The logo could not be added.",
+    };
+  }
+};
+
+/**
+ * Whether to claim the result is a vector.
+ *
+ * Taken from the model's own entry rather than guessed from the file: the node
+ * shows a "came back as a raster" warning, and an SVG mislabelled as raster
+ * would raise it for no reason. Never a vector once a logo has been stamped:
+ * the composite is a PNG whatever the model returned, and claiming otherwise
+ * would raise that same notice on a file that is correctly a raster.
+ */
+const vectorClaim = (
+  models: readonly FalModelDef[],
+  model: string | null,
+  wasStamped: boolean
+): boolean | null => {
+  if (wasStamped) {
+    return null;
+  }
+  return isVectorModel(models, model) ? true : null;
+};
+
 export const produce = async (
   capability: NodeCapability,
   models: readonly FalModelDef[],
@@ -162,6 +248,14 @@ export const produce = async (
      * which is the failure a brand kit exists to prevent. See brandLogo.ts.
      */
     brandLogo?: BrandLogo | null;
+    /**
+     * The exact colours a wired Brand or Palette node is asking for.
+     *
+     * Hex, because `color_palette` wants numbers — the prompt beside it
+     * describes the same palette in words, since a hex code in a prompt gets
+     * lettered onto the picture.
+     */
+    palette?: readonly string[];
     /** Which of a batch this run is, for the capabilities that fan out. */
     variation?: number;
   }
@@ -183,39 +277,11 @@ export const produce = async (
     );
   }
   if (capability === "fal.describe") {
-    if (args.sourceImageUrls.length === 0) {
-      throw new Error("Analyse needs an image wired into it");
-    }
-    const focus =
-      typeof args.item.config.focus === "string"
-        ? args.item.config.focus
-        : "style";
-    return {
-      kind: "text",
-      text: await describeImage(args.sourceImageUrls, focus, args.prompt),
-    };
+    return described(args.item, args.sourceImageUrls, args.prompt);
   }
 
   if (capability === "magnific.icon") {
-    const style = isIconStyle(args.item.config.style)
-      ? args.item.config.style
-      : ICON_STYLES[0];
-    // Required by every Magnific endpoint even though this polls for the
-    // result, so it points at our own sink — exactly as api/ai/icon.ts does.
-    const site = getSite();
-    const icon = await generateIcon(
-      args.prompt,
-      style,
-      `https://${site.domain}/api/ai/icon-webhook`
-    );
-    return {
-      description: null,
-      height: null,
-      isVector: icon.isVector,
-      kind: "image",
-      url: icon.url,
-      width: null,
-    };
+    return iconGenerated(args.item, args.prompt);
   }
 
   // An image model reads pixels, and a wired SVG is not pixels — rasterize it
@@ -226,7 +292,10 @@ export const produce = async (
       ? await rasterizeSvgUrl(args.sourceImageUrl)
       : args.sourceImageUrl;
 
-  const params = generationParams(args.item.config);
+  const params = {
+    ...generationParams(args.item.config),
+    palette: args.palette ?? [],
+  };
   const loops = loopsOf(args.item.config);
 
   /*
@@ -275,33 +344,19 @@ export const produce = async (
   let stamped = image.url;
   let logoWarning: string | null = null;
   if (args.brandLogo) {
-    try {
-      const result = await stampLogo(image.url, args.brandLogo);
-      stamped = result.url;
-      logoWarning = result.warning ?? null;
-    } catch (e) {
-      logoWarning =
-        e instanceof Error
-          ? `The logo could not be added: ${e.message}`
-          : "The logo could not be added.";
-    }
+    const result = await stampedWith(image.url, args.brandLogo);
+    stamped = result.url;
+    logoWarning = result.warning;
   }
 
   return {
     description: image.description,
     height: image.height,
-    // Taken from the model's own entry rather than guessed from the file: the
-    // node shows a "came back as a raster" warning, and an SVG mislabelled as
-    // raster would raise it for no reason.
-    // Never a vector once a logo has been stamped: the composite is a PNG
-    // whatever the model returned, and claiming otherwise would raise the
-    // "came back as a raster" notice on a file that is correctly a raster.
-    isVector:
-      args.brandLogo && stamped !== image.url
-        ? null
-        : isVectorModel(models, args.model)
-          ? true
-          : null,
+    isVector: vectorClaim(
+      models,
+      args.model,
+      Boolean(args.brandLogo) && stamped !== image.url
+    ),
     kind: "image",
     logoWarning,
     url: stamped,

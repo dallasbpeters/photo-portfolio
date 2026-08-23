@@ -75,10 +75,18 @@ describe("withBrandKits", () => {
       brandKitId: KIT,
       brandKitVersionId: VERSION,
     });
-    // Quoted from kitPromptText rather than restated, so this test does not
-    // become a second definition of the prompt format.
-    expect(String(cfg(out[0]).brandText)).toContain("#101a2b");
-    expect(String(cfg(out[0]).brandText)).toContain("Plain and unhurried.");
+    /*
+     * Described, and containing no hex at all.
+     *
+     * The palette used to go in as `#101a2b` and the models that letter well
+     * drew it onto the picture. The exact value still travels — on
+     * `brandPalette`, for `color_palette` — but never in the words.
+     */
+    const said = String(cfg(out[0]).brandText);
+    expect(said).toContain("very dark blue");
+    expect(said).toContain("Plain and unhurried.");
+    expect(said).not.toContain("#");
+    expect(cfg(out[0]).brandPalette).toEqual(["#101a2b"]);
   });
 
   it("resolves a sub-brand against its parent", async () => {
@@ -97,8 +105,12 @@ describe("withBrandKits", () => {
       ]),
       [row({ config: { brandKitId: KIT } })]
     );
-    expect(String(cfg(out[0]).brandText)).toContain("#abcdef");
-    expect(String(cfg(out[0]).brandText)).toContain("Terse.");
+    const said = String(cfg(out[0]).brandText);
+    expect(said).toContain("pale blue");
+    expect(said).toContain("Terse.");
+    expect(said).not.toContain("#");
+    // The parent's exact value still reaches color_palette.
+    expect(cfg(out[0]).brandPalette).toEqual(["#abcdef"]);
   });
 
   it("contributes nothing for a kit that is gone, and keeps the run alive", async () => {
@@ -219,7 +231,7 @@ describe("resolving which logo a Brand node stamps", () => {
       ]
     );
     expect(cfg(out[0]).logoUrl).toBeNull();
-    expect(String(cfg(out[0]).brandText)).toContain("#101a2b");
+    expect(String(cfg(out[0]).brandText)).toContain("very dark blue");
   });
 
   it("asks the model to leave room only when a logo will be stamped", async () => {

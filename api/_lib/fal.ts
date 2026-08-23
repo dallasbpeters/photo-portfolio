@@ -14,7 +14,7 @@ import {
   type GenerationParams,
 } from "../../config/nodes/falParams.js";
 import { getSql } from "./db.js";
-import { PALETTE_MODELS, paletteFrom } from "./falPalette.js";
+import { PALETTE_MODELS, paletteFrom, paletteOf } from "./falPalette.js";
 import { loadModelDefs } from "./models.js";
 import { persistGenerated } from "./persistGenerated.js";
 
@@ -347,9 +347,18 @@ export const generateImage = async (
     body.mask_url = maskUrl;
   }
 
-  // A real constraint where the model has one, rather than a request in prose.
+  /*
+   * A real constraint where the model has one, rather than a request in prose.
+   *
+   * Taken from the parameters first and the prompt second. The prompt used to be
+   * the only source — the hexes were scraped back out of it — and that stopped
+   * working the moment prompts started describing colours in words instead of
+   * listing them, which they now do because a model that letters well drew the
+   * hex codes onto the picture. The scrape stays as a fallback for a prompt
+   * somebody typed hex into by hand.
+   */
   if (PALETTE_MODELS.has(model)) {
-    const palette = paletteFrom(prompt);
+    const palette = paletteOf(params?.palette ?? []) ?? paletteFrom(prompt);
     if (palette) {
       body.color_palette = palette;
     }

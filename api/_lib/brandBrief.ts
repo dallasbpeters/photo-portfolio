@@ -157,9 +157,10 @@ export const withBrandKits = async (
      * a different mark. The URL is the logo's identity, and a logo removed from
      * the kit simply stops resolving — which the node then says.
      */
-    const wanted = typeof config.logoUrl === "string" ? config.logoUrl : null;
-    const logo = wanted
-      ? doc?.logos.find((entry) => entry.url === wanted)
+    const wantedLogoUrl =
+      typeof config.logoUrl === "string" ? config.logoUrl : null;
+    const logo = wantedLogoUrl
+      ? doc?.logos.find((entry) => entry.url === wantedLogoUrl)
       : undefined;
     /*
      * The words, plus a request to leave room for the mark.
@@ -184,6 +185,13 @@ export const withBrandKits = async (
       config: {
         ...config,
         brandKitVersionId: versions.get(String(id)) ?? null,
+        /* The exact values, alongside the words.
+         *
+         * The prompt describes the palette — a hex code in a prompt gets
+         * lettered onto the picture — but `color_palette` on the endpoints that
+         * take one wants the real numbers, and that is where a palette stops
+         * being a request and becomes a constraint. */
+        brandPalette: doc ? doc.palette.map((entry) => entry.value) : [],
         brandText,
         logoClearSpace: logo?.clearSpace ?? null,
         logoMinWidth: logo?.minWidth ?? null,

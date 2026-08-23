@@ -13,6 +13,8 @@
  * Dependency-free and free of browser and Node globals, like every module here.
  */
 
+import { describePalette } from "./colourWords.js";
+
 /** Six-digit hex, the one colour notation this app writes and reads. */
 export const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -117,9 +119,20 @@ export const isHexColour = (value: unknown): value is string =>
 export const kitPromptText = (doc: BrandKitDoc): string => {
   const parts: string[] = [];
   if (doc.palette.length > 0) {
-    parts.push(
-      `using only these colors: ${doc.palette.map((entry) => entry.value).join(", ")}`
-    );
+    /*
+     * Described, not listed as hex.
+     *
+     * `using only these colors: #2e84f5, #ffcd75` went into prompts verbatim and
+     * the models that letter well drew the hex codes across the picture — a
+     * prompt is a description, and a hex triplet is a string of characters
+     * before it is a colour. The exact values still reach `color_palette` on the
+     * endpoints that take one, where they are a real constraint rather than
+     * prose. See config/colourWords.ts.
+     */
+    const said = describePalette(doc.palette.map((entry) => entry.value));
+    if (said) {
+      parts.push(`a colour palette of ${said}`);
+    }
   }
   if (doc.voice.trim()) {
     parts.push(doc.voice.trim());

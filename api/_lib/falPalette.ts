@@ -12,6 +12,43 @@ import { HEX_COLOUR } from "../../config/nodes/palette.js";
 /** Models that accept a color palette as a parameter rather than as prose. */
 export const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
 
+/** The shape Ideogram wants: RGB triplets, unweighted. */
+type FalPalette = { members: { rgb: { b: number; g: number; r: number } }[] };
+
+/** One hex as a triplet, or null if it is not a six-digit hex. */
+const triplet = (hex: string): { b: number; g: number; r: number } | null => {
+  const clean = hex.trim();
+  if (!/^#[0-9a-f]{6}$/i.test(clean)) {
+    return null;
+  }
+  return {
+    b: Number.parseInt(clean.slice(5, 7), 16),
+    g: Number.parseInt(clean.slice(3, 5), 16),
+    r: Number.parseInt(clean.slice(1, 3), 16),
+  };
+};
+
+/**
+ * A palette from values handed to us, rather than scraped out of a prompt.
+ *
+ * The preferred source now: the prompt describes colours in words, because a
+ * hex code in a prompt gets lettered onto the picture, so the numbers travel
+ * beside it instead. Null for an empty list so the caller can fall back.
+ *
+ * Weights are left at the default, for the reason paletteFrom gives: an even
+ * palette is what a brand palette usually means, and inferring a weighting from
+ * the order they happen to be listed in would be inventing intent.
+ */
+export const paletteOf = (hexes: readonly string[]): FalPalette | null => {
+  const members = hexes
+    .map(triplet)
+    .filter((rgb): rgb is NonNullable<typeof rgb> => rgb !== null)
+    // Ideogram takes at most eight, the same cap paletteFrom applies.
+    .slice(0, 8)
+    .map((rgb) => ({ rgb }));
+  return members.length > 0 ? { members } : null;
+};
+
 /**
  * The hex codes in a prompt, as the palette parameter Ideogram expects.
  *

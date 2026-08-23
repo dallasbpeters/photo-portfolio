@@ -24,6 +24,15 @@ import { QUALITY_OPENAI, QUALITY_STEPS, SIZE_AS_ASPECT } from "./generation.js";
  */
 export interface GenerationParams {
   outputFormat?: string | null;
+  /**
+   * The exact colours a wired Brand or Palette node is asking for.
+   *
+   * Hex, deliberately, and separate from the prompt: the prompt *describes* the
+   * palette because a hex code in a prompt gets lettered onto the picture, while
+   * `color_palette` on the endpoints that accept one wants the real numbers. One
+   * palette, two representations, each going where it works.
+   */
+  palette?: readonly string[] | null;
   quality?: string | null;
   size?: string | null;
 }

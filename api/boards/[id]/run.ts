@@ -28,6 +28,7 @@ import {
   type RunnableItem,
   resolveInputs,
 } from "./run/inputs.js";
+import { paletteHexesOf } from "./run/outputs.js";
 import { unmetRequirement, validatedJobs } from "./run/refusals.js";
 import {
   type Prepared,
@@ -365,6 +366,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         brandLogo: brandLogoOf(itemId, rows, wireRows),
         item,
         model,
+        /* The exact colours, for the endpoints that take a real palette. The
+           words for every other model are already in the prompt. */
+        palette: paletteHexesOf(itemId, rows, toGraphWires(wireRows)),
         // Per variation, because an Iterate node upstream gives each run its
         // own prompt — the node's own text is only the fallback.
         prompt: jobs[variation]?.prompt ?? prompt,

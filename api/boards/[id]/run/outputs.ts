@@ -1,3 +1,4 @@
+import { describePalette } from "../../../../config/colourWords.js";
 import { containedBy, type GraphWire } from "../../../../config/graph.js";
 import { DEFAULT_PLACEHOLDER } from "../../../../config/nodes/iterate.js";
 import { HEX_COLOUR } from "../../../../config/nodes/palette.js";
@@ -133,7 +134,55 @@ export const paletteTextOf = (
     return null;
   }
   const strict = config.strictness === "mostly" ? "predominantly" : "only";
-  return `using ${strict} these colors: ${colors.join(", ")}`;
+  // Described rather than listed as hex, for the reason kitPromptText gives: a
+  // model that letters well draws `#2e84f5` onto the picture. The exact values
+  // still travel to `color_palette` where an endpoint accepts one.
+  const said = describePalette(colors);
+  return said ? `using ${strict} these colours: ${said}` : null;
+};
+
+/**
+ * Every exact colour feeding a node, from a Brand or a Palette wired into it.
+ *
+ * Read off the wires the way elementStyleOf is, by target and ignoring the port.
+ * These are the values for `color_palette` — the one place a palette is honoured
+ * exactly rather than described — so they stay hex all the way through while the
+ * prompt talks in words.
+ */
+export const paletteHexesOf = (
+  itemId: string,
+  rows: BoardItemRow[],
+  wires: GraphWire[]
+): string[] => {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const found: string[] = [];
+  for (const wire of wires) {
+    if (wire.targetItemId !== itemId) {
+      continue;
+    }
+    const source = byId.get(wire.sourceItemId);
+    if (!source) {
+      continue;
+    }
+    const config = asObject(source.config);
+    // A Brand node: the resolved kit's palette, folded on by withBrandKits.
+    if (source.node_type === "brand" && Array.isArray(config.brandPalette)) {
+      for (const value of config.brandPalette) {
+        if (typeof value === "string" && !found.includes(value)) {
+          found.push(value);
+        }
+      }
+    }
+    // A Palette node: the colours typed on it.
+    if (source.node_type === "palette" && typeof config.colors === "string") {
+      for (const value of config.colors.match(HEX_COLOUR) ?? []) {
+        if (!found.includes(value)) {
+          found.push(value);
+        }
+      }
+    }
+  }
+  return found;
 };
 
 /**
