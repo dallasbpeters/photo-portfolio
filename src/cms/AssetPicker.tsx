@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { isVideoUrl } from "../boards/io/isVideo";
 import { useCollections } from "../hooks/useCollections";
 import { usePhotos } from "../hooks/usePhotos";
-import { collectionsApi } from "../services/portfolioService";
+import { collectionsApi } from "../services/libraryService";
 import type { CollectionItem } from "../types";
 
 /**

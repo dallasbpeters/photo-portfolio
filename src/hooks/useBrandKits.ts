@@ -1,5 +1,6 @@
 import useSWR from "swr";
-import { authStorage, brandKitsApi } from "../services/portfolioService";
+import { brandKitsApi } from "../services/brandKitService";
+import { authStorage } from "../services/portfolioService";
 
 /**
  * The brand kits, shared by everything that reads them.

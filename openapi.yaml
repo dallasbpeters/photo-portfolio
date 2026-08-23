@@ -3114,6 +3114,141 @@ paths:
       summary: Create a board.
       tags:
         - boards
+  /api/brand-kits/{id}:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_brand-kits__id_
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/brand-kits/{id}
+      tags:
+        - brand-kits
+      x-undocumented: true
+    patch:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: patch_api_brand-kits__id_
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: PATCH /api/brand-kits/{id}
+      tags:
+        - brand-kits
+      x-undocumented: true
+    delete:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: delete_api_brand-kits__id_
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: DELETE /api/brand-kits/{id}
+      tags:
+        - brand-kits
+      x-undocumented: true
+  /api/brand-kits:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_brand-kits
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/brand-kits
+      tags:
+        - brand-kits
+      x-undocumented: true
+    post:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: post_api_brand-kits
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: POST /api/brand-kits
+      tags:
+        - brand-kits
+      x-undocumented: true
   /api/canva/callback:
     get:
       description: The OAuth redirect target. Answers a redirect, not JSON.
@@ -4114,6 +4249,268 @@ paths:
       summary: What the Google Drive picker needs to open.
       tags:
         - google
+  /api/lightroom/albums:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_albums
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/albums
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/assets:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_assets
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/assets
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/callback:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_callback
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/callback
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/connect:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_connect
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/connect
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/credentials:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_credentials
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/credentials
+      tags:
+        - lightroom
+      x-undocumented: true
+    put:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: put_api_lightroom_credentials
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: PUT /api/lightroom/credentials
+      tags:
+        - lightroom
+      x-undocumented: true
+    delete:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: delete_api_lightroom_credentials
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: DELETE /api/lightroom/credentials
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/disconnect:
+    post:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: post_api_lightroom_disconnect
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: POST /api/lightroom/disconnect
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/import:
+    post:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: post_api_lightroom_import
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: POST /api/lightroom/import
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/status:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_status
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/status
+      tags:
+        - lightroom
+      x-undocumented: true
+  /api/lightroom/thumb:
+    get:
+      description: Not yet described in schemas/routes.ts — path and method were read from the handler.
+      operationId: get_api_lightroom_thumb
+      responses:
+        "200":
+          description: Success
+        4XX:
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        5XX:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security: []
+      summary: GET /api/lightroom/thumb
+      tags:
+        - lightroom
+      x-undocumented: true
   /api/manifest:
     get:
       operationId: get_api_manifest

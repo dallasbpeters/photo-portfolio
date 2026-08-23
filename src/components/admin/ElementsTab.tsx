@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { ElementModal } from "../../boards/panels/ElementModal";
-import { elementsApi } from "../../services/portfolioService";
+import { elementsApi } from "../../services/libraryService";
 import type { Element } from "../../types";
 import { Button } from "../ui/button";
 import { useConfirm } from "./ConfirmProvider";

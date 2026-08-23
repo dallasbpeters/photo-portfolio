@@ -3,7 +3,7 @@ import { Album02Icon } from "@hugeicons-pro/core-stroke-standard";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCollections } from "../../hooks/useCollections";
-import { collectionsApi } from "../../services/portfolioService";
+import { collectionsApi } from "../../services/libraryService";
 import { isVideoUrl } from "../io/isVideo";
 import "../boardChrome.css";
 import "./CollectionPanel.css";

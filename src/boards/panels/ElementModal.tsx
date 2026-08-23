@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MAX_ELEMENT_IMAGES } from "../../../config/elements.js";
 import { Button } from "../../components/ui/button";
-import { elementsApi } from "../../services/portfolioService";
+import { elementsApi } from "../../services/libraryService";
 import type { Element } from "../../types";
 import "../boardChrome.css";
 import "./ElementModal.css";

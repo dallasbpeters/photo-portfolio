@@ -1,5 +1,6 @@
 import useSWR from "swr";
-import { authStorage, collectionsApi } from "../services/portfolioService";
+import { collectionsApi } from "../services/libraryService";
+import { authStorage } from "../services/portfolioService";
 import type { Collection } from "../types";
 
 /**

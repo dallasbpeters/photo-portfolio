@@ -21,13 +21,16 @@ jobs:
     name: Typecheck, lint, test, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5 runs on Node 24; v4 targeted Node 20, which the runners now force
+      # onto 24 anyway and warn about. See the deprecation notice in the
+      # GitHub changelog, 19 September 2025.
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
