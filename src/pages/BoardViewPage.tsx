@@ -1,9 +1,14 @@
 import "./BoardViewPage.css";
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { frameForSlug, frameSlugs } from "../../config/frameSlug";
+import { containedBy } from "../../config/graph";
 import { nodeTypeFor } from "../../config/nodeTypes";
 import { BoardCanvas } from "../boards/BoardCanvas";
+import { FrameOpenProvider } from "../boards/FrameOpenContext";
+import { FrameViewer } from "../boards/FrameViewer";
+import { currentImageUrl } from "../boards/itemOutput";
 import { CommentDialog } from "../boards/panels/CommentDialog";
 import { CommentsPanel } from "../boards/panels/CommentsPanel";
 import { ShareButtons } from "../components/ShareButtons";
@@ -79,7 +84,8 @@ function PublishedActions({
  * are public; marking one resolved is not.
  */
 export function BoardViewPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { frameSlug, slug } = useParams<{ frameSlug?: string; slug: string }>();
+  const navigate = useNavigate();
   const { settings } = useSiteSettings();
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +94,14 @@ export function BoardViewPage() {
   const [commentMode, setCommentMode] = useState(false);
   const [commentTarget, setCommentTarget] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /*
+   * Which picture in the open frame is being looked at.
+   *
+   * Not in the URL. The frame is the thing worth sharing — "look at the deck
+   * mockups" — and putting the index there too would mean every arrow press
+   * pushed a history entry, so leaving the viewer took eleven Backs.
+   */
+  const [shownIndex, setShownIndex] = useState(0);
 
   useEffect(() => {
     if (!slug) {
@@ -142,6 +156,62 @@ export function BoardViewPage() {
     [board, commentTarget]
   );
 
+  /*
+   * Which frame the address names, and what is in it.
+   *
+   * Memoised on the items rather than recomputed per render: `containedBy` walks
+   * every item against every nested frame, and this runs on a board that is also
+   * panning and zooming under the pointer.
+   */
+  const items = board?.items ?? [];
+  const frames = useMemo(
+    () => items.filter((item) => item.kind === "frame"),
+    [items]
+  );
+  const openFrame = useMemo(
+    () =>
+      frameSlug
+        ? (frameForSlug(
+            frames.map((frame) => ({ id: frame.id, name: frame.body })),
+            frameSlug
+          ) ?? null)
+        : null,
+    [frames, frameSlug]
+  );
+  const framed = useMemo(() => {
+    const frame = openFrame && frames.find((one) => one.id === openFrame.id);
+    if (!frame) {
+      return [];
+    }
+    // Only what has a picture: a frame may also hold a note or a prompt node,
+    // and paging onto one of those would look like the viewer breaking.
+    return containedBy(frame, items).filter((item) =>
+      Boolean(currentImageUrl(item))
+    );
+  }, [items, frames, openFrame]);
+
+  const openFrameSlug = useCallback(
+    (frameId: string) => {
+      const slugs = frameSlugs(
+        frames.map((frame) => ({ id: frame.id, name: frame.body }))
+      );
+      const named = slugs.get(frameId);
+      if (named && slug) {
+        setShownIndex(0);
+        navigate(`/board/${slug}/${named}`);
+      }
+    },
+    [frames, navigate, slug]
+  );
+
+  // Back to the board. `navigate` rather than a history pop so closing works
+  // the same whether the frame was opened here or arrived at by a shared link.
+  const closeFrame = useCallback(() => {
+    if (slug) {
+      navigate(`/board/${slug}`);
+    }
+  }, [navigate, slug]);
+
   if (error) {
     return (
       <div className="page board-view-page__error">
@@ -179,27 +249,41 @@ export function BoardViewPage() {
       </header>
 
       <div className="board-view-page__canvas">
-        <BoardCanvas
-          // A visitor runs no tools, so there is no result to write back.
-          boardId={null}
-          commentMode={commentMode}
-          comments={comments}
-          items={board?.items ?? []}
-          keyOf={(item: BoardItem) => item.id}
-          // Nothing here can change the board; the setter exists only because
-          // the canvas is shared with the editor.
-          onChange={() => undefined}
-          onCommentItem={(itemId) => {
-            setCommentTarget(itemId);
-            setCommentMode(false);
-          }}
-          readOnly
-          // Wires render for a visitor too. On a graph they are the account of
-          // how the images were made, which is most of the reason to publish
-          // one — and `readOnly` is what keeps them un-draggable. Running is
-          // refused by the API regardless of what this page offers.
-          wires={board?.wires ?? []}
-        />
+        {/* Frames on a published board open as their own view; the provider is
+            what tells them so. See FrameOpenContext. */}
+        <FrameOpenProvider onOpenFrame={openFrameSlug}>
+          <BoardCanvas
+            // A visitor runs no tools, so there is no result to write back.
+            boardId={null}
+            commentMode={commentMode}
+            comments={comments}
+            items={board?.items ?? []}
+            keyOf={(item: BoardItem) => item.id}
+            // Nothing here can change the board; the setter exists only because
+            // the canvas is shared with the editor.
+            onChange={() => undefined}
+            onCommentItem={(itemId) => {
+              setCommentTarget(itemId);
+              setCommentMode(false);
+            }}
+            readOnly
+            // Wires render for a visitor too. On a graph they are the account of
+            // how the images were made, which is most of the reason to publish
+            // one — and `readOnly` is what keeps them un-draggable. Running is
+            // refused by the API regardless of what this page offers.
+            wires={board?.wires ?? []}
+          />
+        </FrameOpenProvider>
+
+        {openFrame ? (
+          <FrameViewer
+            index={Math.min(shownIndex, Math.max(framed.length - 1, 0))}
+            items={framed}
+            name={openFrame.name?.trim() || "Frame"}
+            onClose={closeFrame}
+            onIndex={setShownIndex}
+          />
+        ) : null}
 
         {showComments && board ? (
           <CommentsPanel

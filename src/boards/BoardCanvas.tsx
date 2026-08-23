@@ -182,6 +182,12 @@ interface BoardCanvasProps {
   onExportItem?: (itemId: string) => void;
   onGroupIntoFrame?: (items: BoardItem[]) => void;
   onMaskStroke?: (itemId: string, stroke: MaskStroke) => void;
+  /**
+   * Viewing rather than editing. Pan and zoom remain, since a published board
+   * is still something you explore; selection, dragging and the item chrome go.
+   * Wires still render — on a graph they are the explanation of how the images
+   * were made, which is most of the reason to publish one.
+   */
   /** Sends a node's SVG to Affinity and syncs its edits back. */
   onOpenInAffinity?: (itemId: string) => void;
   /** Deletes one stored version of a node's output. */
@@ -209,12 +215,6 @@ interface BoardCanvasProps {
   /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
   onVectorize?: (itemId: string) => void;
   onWiresChange?: (wires: BoardWire[]) => void;
-  /**
-   * Viewing rather than editing. Pan and zoom remain, since a published board
-   * is still something you explore; selection, dragging and the item chrome go.
-   * Wires still render — on a graph they are the explanation of how the images
-   * were made, which is most of the reason to publish one.
-   */
   readOnly?: boolean;
   /** The recipe groups on this board, so their outlines can be drawn. */
   recipeUses?: RecipeGroupViewProps["uses"];
@@ -981,10 +981,10 @@ export function BoardCanvas({
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the pan/zoom surface is scenery, not a control — keyboard users reach the items themselves, which are focusable */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: same — this element exists to receive pointer gestures and file drops aimed at the board as a whole */}
       <div
-        // The cursor is hidden in the stylesheet, and has to be: this is the
-        // element the pointer is over, so `cursor: none` on `.board` alone
-        // never wins. See .board-canvas__surface.
-        className="board-canvas__surface"
+        // Hiding the pointer belongs on *this* element, and only where
+        // CustomCursor draws a replacement — which is the editor, not a
+        // published board. See .board-canvas__surface--custom-cursor.
+        className={`board-canvas__surface ${readOnly ? "" : "board-canvas__surface--custom-cursor"}`}
         onContextMenu={openMenu}
         onDragOver={
           onDropFiles || onDropImage

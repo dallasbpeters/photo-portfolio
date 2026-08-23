@@ -59,6 +59,11 @@ export default function App() {
             <Route element={<ResetPasswordPage />} path="/reset-password" />
             <Route element={<PhotoPage />} path="/photo/:id" />
             <Route element={<BoardViewPage />} path="/board/:slug" />
+            {/* A frame on a published board, at its own address. The same page:
+                it reads the extra segment and opens that frame, so the board is
+                still behind the viewer and closing it is a navigation rather
+                than a reload. */}
+            <Route element={<BoardViewPage />} path="/board/:slug/:frameSlug" />
             {/* Reserved before the CMS splat: a legal page must never be
                 shadowed by a page with the same slug. */}
             <Route element={<LegalPage kind="privacy" />} path="/privacy" />

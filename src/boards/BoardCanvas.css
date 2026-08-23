@@ -29,14 +29,23 @@
  * `touch-action: none` so a two-finger pan zooms the board instead of scrolling
  * the page underneath it.
  *
- * No cursor, because CustomCursor draws the pointer and two of them is one too
- * many. It has to be stated *here*: this is the element the pointer is over, so
- * a `cursor` on `.board` alone never wins — see the note at the call site.
+ * The pointer is hidden only where CustomCursor draws a replacement, and two of
+ * them is one too many. It has to be stated *here*: this is the element the
+ * pointer is over, so a `cursor` on `.board` alone never wins — see the note at
+ * the call site.
+ *
+ * Unconditionally hiding it was a bug with an obvious symptom and no obvious
+ * cause: CustomCursor is rendered by the admin's BoardEditor and nowhere else,
+ * so a published board hid the pointer and drew nothing in its place. A visitor
+ * had no cursor at all.
  */
 .board-canvas__surface {
   width: 100%;
   height: 100%;
   touch-action: none;
+}
+
+.board-canvas__surface--custom-cursor {
   cursor: none;
 }
 

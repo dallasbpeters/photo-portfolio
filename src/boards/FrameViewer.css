@@ -1,0 +1,107 @@
+/*
+ * One frame of a published board, full screen.
+ *
+ * Fixed to the window rather than to the canvas: the board underneath pans and
+ * zooms, and a viewer that moved with it would be a panel rather than a way of
+ * looking at something.
+ *
+ * Stated in fixed colours rather than board tokens, unlike the rest of
+ * src/boards. The board inverts between the editor's paper and a published
+ * board's black; a viewer that inverted with it would show a photograph on white
+ * in one place and on black in the other. A picture is looked at on a dark
+ * ground.
+ */
+
+.frame-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--spacing) * 16) calc(var(--spacing) * 6);
+  background: color-mix(in oklch, oklch(0 0 0) 94%, transparent);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+/* The name and the count, along the top. Never over the picture: a caption that
+   overlaps what it describes is a caption in the way. */
+.frame-viewer__bar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+}
+
+.frame-viewer__title {
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: baseline;
+  font-size: var(--text-micro-md);
+  color: oklch(1 0 0);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.frame-viewer__count {
+  font-size: var(--text-micro-xs);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, oklch(1 0 0) 50%, transparent);
+  letter-spacing: var(--tracking-micro);
+}
+
+/*
+ * The picture.
+ *
+ * `object-fit: contain` inside the padded box, so a tall photograph and a wide
+ * one are both shown whole — the point of opening a frame is to see what is in
+ * it, not to crop it to the window.
+ */
+.frame-viewer__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.frame-viewer__empty {
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, oklch(1 0 0) 60%, transparent);
+}
+
+.frame-viewer__button {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 11);
+  height: calc(var(--spacing) * 11);
+  color: color-mix(in oklch, oklch(1 0 0) 70%, transparent);
+  border-radius: var(--radius-pill);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.frame-viewer__button:hover {
+  color: oklch(1 0 0);
+  background: color-mix(in oklch, oklch(1 0 0) 12%, transparent);
+}
+
+/* Centred vertically against the window, not the picture: the controls should
+   not move when a portrait is followed by a landscape. */
+.frame-viewer__button--prev,
+.frame-viewer__button--next {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.frame-viewer__button--prev {
+  left: calc(var(--spacing) * 3);
+}
+
+.frame-viewer__button--next {
+  right: calc(var(--spacing) * 3);
+}

@@ -9,6 +9,7 @@ import {
   type ShaderLayer,
 } from "./shaders/shaderConfig";
 import "./itemBodies.css";
+import { useFrameOpener } from "./FrameOpenContext";
 
 /**
  * What the kinds of item that are not nodes look like on the board.
@@ -51,6 +52,38 @@ export function FrameBody({
   onEditBody: (body: string) => void;
   readOnly: boolean;
 }) {
+  /*
+   * Whether this frame can be opened, taken from context rather than a prop.
+   *
+   * The title is the only part of a frame that takes a pointer — the rest is
+   * deliberately transparent so the items inside stay clickable — which puts
+   * this handle six levels below the page that owns the URL. See
+   * FrameOpenContext on why that is a context and not a callback threaded
+   * through the canvas.
+   */
+  const openFrame = useFrameOpener();
+  /*
+   * On a published board the name is a way in rather than a field.
+   *
+   * A disabled input is the right thing while there is nothing to open: it says
+   * "this has a name and you may not change it". Once a frame has an address, the
+   * name is the handle for it, and a button is what a handle is.
+   */
+  if (readOnly && openFrame) {
+    return (
+      <div className="frame-body">
+        <button
+          className="frame-body__name frame-body__name--open"
+          onClick={() => openFrame(item.id)}
+          onPointerDown={(e) => e.stopPropagation()}
+          type="button"
+        >
+          {item.body?.trim() || "Frame"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="frame-body">
       <input
