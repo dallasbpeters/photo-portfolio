@@ -79,7 +79,7 @@
   display: grid;
   place-items: center;
   width: calc(var(--spacing) * 14);
-  height: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 18);
   padding: var(--spacing);
   background-color: oklch(1 0 0);
   background-image:
@@ -109,4 +109,10 @@
    not move the tile by a pixel. */
 .brand-preview__logo--on {
   box-shadow: 0 0 0 2px var(--color-sky-600);
+}
+
+/* A logo carrying its own background. Amber, because stamping an icon lockup is
+   a legitimate choice — this is worth noticing, not a failure. */
+.brand-preview__note--warn {
+  color: var(--color-amber-600);
 }

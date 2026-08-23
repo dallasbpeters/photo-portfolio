@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { kitPromptText } from "../../../config/brandKit.js";
 import { useBrandKits } from "../../hooks/useBrandKits";
+import { type Backdrop, readBackdrop } from "./logoBackdrop";
 import "./BrandPreview.css";
 
 /**
@@ -31,6 +33,36 @@ export interface BrandPreviewProps {
   onPickLogo?: (url: string | null) => void;
 }
 
+/**
+ * Whether the chosen logo has a plate baked in, once it has been looked at.
+ *
+ * "unknown" until the answer arrives and whenever it cannot be had, which the
+ * caller renders as nothing — a warning that might be wrong is worse than none
+ * on a screen somebody is working on.
+ */
+const useBackdrop = (url: string | null): Backdrop => {
+  const [backdrop, setBackdrop] = useState<Backdrop>("unknown");
+  useEffect(() => {
+    if (!url) {
+      setBackdrop("unknown");
+      return;
+    }
+    let alive = true;
+    // Reset first: the previous logo's verdict must not be shown against a new
+    // one while this resolves.
+    setBackdrop("unknown");
+    readBackdrop(url).then((found) => {
+      if (alive) {
+        setBackdrop(found);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  return backdrop;
+};
+
 export function BrandPreview({
   brandKitId,
   logoUrl,
@@ -39,6 +71,12 @@ export function BrandPreview({
   const { isLoading, kits } = useBrandKits();
   const id = typeof brandKitId === "string" ? brandKitId : "";
   const kit = id ? kits.find((candidate) => candidate.id === id) : undefined;
+  const chosen = typeof logoUrl === "string" ? logoUrl : null;
+  /* Above every early return, because hooks may not be conditional — this sat
+     below them at first and React counted a different number of hooks per
+     render, which blanks the whole board rather than degrading. It reads only
+     from props, so there is nothing to wait for. */
+  const backdrop = useBackdrop(chosen);
 
   // Nothing chosen: the picker below already says to choose one, and a second
   // notice saying the same thing is noise on a node this small.
@@ -60,7 +98,6 @@ export function BrandPreview({
 
   const doc = kit.resolvedDoc;
   const prompt = kitPromptText(doc);
-  const chosen = typeof logoUrl === "string" ? logoUrl : null;
 
   return (
     <div className="brand-preview">
@@ -110,7 +147,14 @@ export function BrandPreview({
               }
               type="button"
             >
-              <img alt={logo.label || "Logo"} src={logo.url} />
+              {/* The tile's interior, so the row lays out before the marks
+                  load. object-fit keeps each logo's own proportions. */}
+              <img
+                alt={logo.label || "Logo"}
+                height={64}
+                src={logo.url}
+                width={48}
+              />
             </button>
           ))}
         </div>
@@ -120,6 +164,21 @@ export function BrandPreview({
         <p className="brand-preview__note">
           This logo is composited onto the picture after it is generated, so it
           arrives exactly as drawn. Position and size are in the panel.
+        </p>
+      ) : null}
+
+      {/*
+        A logo with a plate baked into it, said before a run is paid for.
+        
+        An icon lockup — the mark on a filled square — is a legitimate thing to
+        stamp, so this is a warning and not a refusal. But it reads as a sticker
+        on a photograph, and the sibling files in the same folder are usually
+        transparent, so the choice is worth putting in front of somebody.
+      */}
+      {backdrop === "opaque" ? (
+        <p className="brand-preview__note brand-preview__note--warn">
+          This file has a solid background of its own, so it will stamp as a
+          filled tile. If you want just the mark, pick a transparent version.
         </p>
       ) : null}
 
