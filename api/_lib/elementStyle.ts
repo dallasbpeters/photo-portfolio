@@ -177,6 +177,17 @@ export interface JobShape {
  * produced a copy of its own cover — the style applied to itself. An element is
  * a look to work in, not a picture to rework.
  */
+/**
+ * The prompt text a node holds itself.
+ *
+ * A Prompt node keeps it under `text`, Generate and Icon under `prompt` — both
+ * are read so either can contribute, the same pair promptFor looks at.
+ */
+const typedTextOf = (config: Record<string, unknown>): string => {
+  const held = config.prompt ?? config.text;
+  return typeof held === "string" ? held.trim() : "";
+};
+
 export const jobsFor = ({
   capability,
   config,
@@ -241,11 +252,24 @@ export const jobsFor = ({
   const rows = promptWires.length
     ? Math.max(...promptWires.map((list) => list.length))
     : 0;
+  /*
+   * The text typed on the node is a part too, not a fallback.
+   *
+   * It used to be dropped the moment anything was wired to the prompt port, on
+   * the reasoning that wiring is the more deliberate act. A Brand node broke
+   * that: a brand is a *modifier* — "using only these colors: …" — so wiring one
+   * in left the node unable to say what the picture was of, and the field on its
+   * face was disabled to match. The port is `arity: "many"` precisely so parts
+   * combine; the typed text is simply the first of them.
+   *
+   * Read from the config rather than from `typedPrompt`, which is promptFor's
+   * answer and is already the wired value whenever there is one.
+   */
+  const typed = typedTextOf(config);
   const prompts =
     rows > 0
       ? Array.from({ length: rows }, (_, row) =>
-          promptWires
-            .map((list) => list[row % list.length] ?? "")
+          [typed, ...promptWires.map((list) => list[row % list.length] ?? "")]
             .filter((part) => part.trim())
             .join(", ")
         )

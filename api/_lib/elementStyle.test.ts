@@ -388,3 +388,89 @@ describe("styleBriefKey", () => {
     );
   });
 });
+
+describe("a wired prompt joins the typed one rather than replacing it", () => {
+  /*
+   * The bug these exist for. A Brand node contributes a modifier — "using only
+   * these colors: …" — so when a wired prompt replaced the typed one, wiring a
+   * brand into a Generate node left it unable to say what the picture was *of*,
+   * and the field on the node was disabled to match. Nothing threw; the run
+   * simply billed for a picture of nothing in the right colours.
+   */
+  it("puts the typed text first, then each wired part", () => {
+    const jobs = jobsFor(
+      shape({
+        config: { prompt: "a coffee shop logo" },
+        lists: { prompt: [["using only these colors: #2e84f5"]] },
+        typedPrompt: "using only these colors: #2e84f5",
+        values: { prompt: ["using only these colors: #2e84f5"] },
+      })
+    );
+    expect(jobs.map((job) => job.prompt)).toEqual([
+      "a coffee shop logo, using only these colors: #2e84f5",
+    ]);
+  });
+
+  it("joins several wires after the typed text, in wire order", () => {
+    const jobs = jobsFor(
+      shape({
+        config: { prompt: "a portrait" },
+        lists: { prompt: [["shot on 35mm"], ["muted greens"]] },
+        typedPrompt: "shot on 35mm",
+        values: { prompt: ["shot on 35mm", "muted greens"] },
+      })
+    );
+    expect(jobs.map((job) => job.prompt)).toEqual([
+      "a portrait, shot on 35mm, muted greens",
+    ]);
+  });
+
+  it("adds the typed text to every row an Iterate node produces", () => {
+    // Breadth from the wire, a shared modifier from the node.
+    const jobs = jobsFor(
+      shape({
+        config: { prompt: "in the style of a woodcut" },
+        lists: { prompt: [["a fox", "a heron", "a stag"]] },
+        typedPrompt: "a fox",
+        values: { prompt: ["a fox", "a heron", "a stag"] },
+      })
+    );
+    expect(jobs.map((job) => job.prompt)).toEqual([
+      "in the style of a woodcut, a fox",
+      "in the style of a woodcut, a heron",
+      "in the style of a woodcut, a stag",
+    ]);
+  });
+
+  it("sends only the wire when nothing is typed", () => {
+    // The state every existing board is in: a wired prompt and an empty field.
+    // This is what makes the change safe to make.
+    const jobs = jobsFor(
+      shape({
+        config: {},
+        lists: { prompt: [["a fox"]] },
+        typedPrompt: "a fox",
+        values: { prompt: ["a fox"] },
+      })
+    );
+    expect(jobs.map((job) => job.prompt)).toEqual(["a fox"]);
+  });
+
+  it("reads a Prompt node's own key as well", () => {
+    // Generate and Icon keep it under `prompt`, a Prompt node under `text`.
+    const jobs = jobsFor(
+      shape({
+        config: { text: "a portrait" },
+        lists: { prompt: [["muted greens"]] },
+        typedPrompt: "muted greens",
+        values: { prompt: ["muted greens"] },
+      })
+    );
+    expect(jobs.map((job) => job.prompt)).toEqual(["a portrait, muted greens"]);
+  });
+
+  it("still sends the typed text alone when no wire feeds it", () => {
+    const jobs = jobsFor(shape({ config: { prompt: "a portrait" } }));
+    expect(jobs.map((job) => job.prompt)).toEqual(["a portrait"]);
+  });
+});

@@ -221,21 +221,17 @@ export function OpNodeView({
 }
 
 /**
- * What a setting's field shows.
+ * What a setting's field shows: the value stored on the node.
  *
- * A wired prompt is shown in the field it replaces, rather than leaving the
- * typed text on screen while something else is actually used. Seeing the words
- * arrive is the only way to tell a wire is live — a note saying one exists
- * proves nothing about what it carries.
+ * It used to substitute the wired prompt here, because a wire replaced the
+ * typed text and leaving the old text on screen would have been a lie. Both are
+ * sent now, so the field shows what it edits and the notice above says a wire is
+ * contributing as well.
  */
 const fieldValue = (
   key: string,
-  config: Record<string, unknown>,
-  wiredPrompt?: string | null
+  config: Record<string, unknown>
 ): string | undefined => {
-  if (key === "prompt" && wiredPrompt) {
-    return wiredPrompt;
-  }
   const stored = config[key];
   // Undefined rather than "" for a key the node has never carried, so the field
   // can tell "never set" from "just cleared". See SettingFieldProps.value.
@@ -334,7 +330,7 @@ function NodeBody({
               so is better than leaving a field that looks live but is ignored. */}
       {hasWiredPrompt ? (
         <p className="op-node-view__notice op-node-view__notice--wired">
-          Prompt is wired in; the text below is not used.
+          A wire is adding to this prompt. What you type here comes first.
         </p>
       ) : null}
 
@@ -388,14 +384,18 @@ function NodeBody({
           return (
             <SettingField
               onChange={(value) => set(setting.key, value)}
-              // Only the prompt is superseded by a wire. Disabling every
-              // setting locked the model and variation count too, which have
-              // nothing to do with where the prompt came from.
-              readOnly={
-                readOnly || (hasWiredPrompt && setting.key === "prompt")
-              }
+              /* Never disabled by a wire any more. A wired prompt used to
+                 supersede the typed one, so the field was locked to match — and
+                 a Brand node, which contributes a modifier rather than a
+                 subject, then left the node unable to say what the picture was
+                 of at all. The parts are joined now; see jobsFor. */
+              readOnly={readOnly}
               setting={setting}
-              value={fieldValue(setting.key, config, wiredPrompt)}
+              /* The typed text, not the wired text. Showing the arriving
+                 words in the field made sense while they replaced it; now that
+                 both are sent, the field has to be the thing it edits. What the
+                 wire carries is said in the notice above. */
+              value={fieldValue(setting.key, config)}
             />
           );
         };
