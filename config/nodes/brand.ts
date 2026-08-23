@@ -1,5 +1,13 @@
 import type { NodeType } from "../nodeTypes.js";
 import { OUTPUT_PORT_KEY } from "../ports.js";
+import {
+  DEFAULT_LOGO_PLACEMENT,
+  DEFAULT_LOGO_WIDTH,
+  LOGO_PLACEMENT_LABELS,
+  LOGO_PLACEMENTS,
+  LOGO_WIDTH_MAX,
+  LOGO_WIDTH_MIN,
+} from "./logoPlacement.js";
 
 /**
  * A brand kit, on the board.
@@ -46,6 +54,37 @@ export const BRAND: NodeType = {
       key: "brandKitId",
       kind: "brandKit",
       label: "Brand kit",
+    },
+    /*
+     * Where the logo goes, and how big.
+     *
+     * Settings on the node rather than on the kit, because they are about *this
+     * use* — the same brand puts its mark small in a corner on a photograph and
+     * large in the centre on a title card. What belongs to the brand is the
+     * clear space and the minimum width, and those are stored against the logo
+     * in the library where they cannot be overridden per node.
+     *
+     * Which logo is chosen is not here: it is picked by clicking one of the
+     * kit's marks on the node itself, because a dropdown of "Logo 2" is a worse
+     * way to choose between pictures than the pictures.
+     */
+    {
+      default: DEFAULT_LOGO_PLACEMENT,
+      key: "logoPlacement",
+      kind: "select",
+      label: "Logo position",
+      optionLabels: LOGO_PLACEMENT_LABELS,
+      options: LOGO_PLACEMENTS,
+      panel: true,
+    },
+    {
+      default: DEFAULT_LOGO_WIDTH,
+      key: "logoWidth",
+      kind: "number",
+      label: "Logo width (% of picture)",
+      max: LOGO_WIDTH_MAX,
+      min: LOGO_WIDTH_MIN,
+      panel: true,
     },
   ],
 };

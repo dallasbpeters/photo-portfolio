@@ -118,6 +118,11 @@ export const OWNED_TEXT_KEYS = [
   { key: "description", max: 2000 },
   { key: "elementId", max: 100 },
   { key: "imageUrl", max: 2000 },
+  /* Which of the kit's logos a Brand node stamps. Chosen by clicking one of the
+     marks on the node, so it is written by the app rather than declared as a
+     setting — and matched by URL rather than index, because an index into the
+     kit's list points at a different logo the moment one is deleted. */
+  { key: "logoUrl", max: 2000 },
   { key: "maskUrl", max: 2000 },
   { key: "name", max: 200 },
   // Which element wrote this node's prompt; `elementStyleOf` reads it so the

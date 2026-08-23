@@ -80,6 +80,11 @@ export const buildImageResult = (
     history: [...priorHistoryOf(previous), produced].slice(-MAX_HISTORY),
     isVector: produced.isVector,
     kind: "image" as const,
+    /* Why the brand's logo is missing, when one was asked for. Kept on the
+       result rather than in `runError` because the run succeeded and was
+       billed — only the stamp did not happen. Null clears a warning from a
+       previous run, so a fixed placement stops complaining. */
+    logoWarning: produced.logoWarning ?? null,
     ranAt: new Date().toISOString(),
     url: primaryUrl,
     variations,

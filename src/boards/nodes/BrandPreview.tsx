@@ -21,9 +21,21 @@ import "./BrandPreview.css";
 export interface BrandPreviewProps {
   /** The chosen kit's id, from the node's config. */
   brandKitId: unknown;
+  /** The chosen logo's URL, or absent for none. */
+  logoUrl?: unknown;
+  /**
+   * Picks the logo to stamp, or clears it.
+   *
+   * Absent on a published board, where there is nothing to choose.
+   */
+  onPickLogo?: (url: string | null) => void;
 }
 
-export function BrandPreview({ brandKitId }: BrandPreviewProps) {
+export function BrandPreview({
+  brandKitId,
+  logoUrl,
+  onPickLogo,
+}: BrandPreviewProps) {
   const { isLoading, kits } = useBrandKits();
   const id = typeof brandKitId === "string" ? brandKitId : "";
   const kit = id ? kits.find((candidate) => candidate.id === id) : undefined;
@@ -48,6 +60,7 @@ export function BrandPreview({ brandKitId }: BrandPreviewProps) {
 
   const doc = kit.resolvedDoc;
   const prompt = kitPromptText(doc);
+  const chosen = typeof logoUrl === "string" ? logoUrl : null;
 
   return (
     <div className="brand-preview">
@@ -67,6 +80,47 @@ export function BrandPreview({ brandKitId }: BrandPreviewProps) {
             />
           ))}
         </div>
+      ) : null}
+
+      {/*
+        The kit's marks, chosen by clicking one.
+        
+        Pictures rather than a dropdown, because "Logo 2" is a worse way to
+        choose between images than the images. The chosen one is stamped onto
+        whatever this node's Generate makes — composited, not described, so it
+        arrives exactly as drawn. See stampLogo.
+      */}
+      {doc.logos.length > 0 && onPickLogo ? (
+        <div className="brand-preview__logos">
+          {doc.logos.map((logo) => (
+            <button
+              className={`brand-preview__logo ${
+                chosen === logo.url ? "brand-preview__logo--on" : ""
+              }`}
+              key={logo.url}
+              // Clicking the chosen one clears it: stamping is opt-in, and a
+              // brand wired in for its colours alone should not gain a logo
+              // that cannot be removed.
+              onClick={() => onPickLogo(chosen === logo.url ? null : logo.url)}
+              onPointerDown={(event) => event.stopPropagation()}
+              title={
+                logo.label
+                  ? `${logo.label}${logo.rules ? ` — ${logo.rules}` : ""}`
+                  : "Logo"
+              }
+              type="button"
+            >
+              <img alt={logo.label || "Logo"} src={logo.url} />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {chosen ? (
+        <p className="brand-preview__note">
+          This logo is composited onto the picture after it is generated, so it
+          arrives exactly as drawn. Position and size are in the panel.
+        </p>
       ) : null}
 
       {/* Quoted, not summarised. This is the text that will be joined into the

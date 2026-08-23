@@ -104,6 +104,14 @@ export interface BoardItemVariation {
   height: number | null;
   /** False when an icon fell back to a raster because the vectoriser was down. */
   isVector: boolean | null;
+  /**
+   * Why the brand's logo is not on this picture, when a Brand node asked for it.
+   *
+   * On the result rather than in `runError` because the run succeeded and was
+   * billed — the picture is there and only the stamp is missing, which is a
+   * different thing to say. Null once a run manages it.
+   */
+  logoWarning?: string | null;
   url: string;
   width: number | null;
 }
@@ -139,6 +147,14 @@ export interface BoardItemResult {
    * images by definition.
    */
   kind?: "image" | "text";
+  /**
+   * Why the brand's logo is not on this picture, when a Brand node asked for it.
+   *
+   * On the result rather than in `runError` because the run succeeded and was
+   * billed — the picture is there and only the stamp is missing, which is a
+   * different thing to say. Null once a run manages it.
+   */
+  logoWarning?: string | null;
   ranAt: string;
   /** The words an Analyse node produced. Absent on every image result. */
   text?: string;

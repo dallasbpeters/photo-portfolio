@@ -9,6 +9,7 @@ import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import { getBearerUser } from "../../_lib/auth.js";
 import type { BoardItemRow, BoardWireRow } from "../../_lib/boards.js";
 import { brandVersionOf, withBrandKits } from "../../_lib/brandBrief.js";
+import { brandLogoOf } from "../../_lib/brandLogo.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
 import { withElements } from "../../_lib/elementBrief.js";
@@ -358,6 +359,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       const produced = await produce(capability, models, {
+        /* The mark a wired Brand node offers, read off the same rows the brand
+           words came from. Resolved per run rather than hoisted, because a
+           board edited between variations should stamp what it now says. */
+        brandLogo: brandLogoOf(itemId, rows, wireRows),
         item,
         model,
         // Per variation, because an Iterate node upstream gives each run its

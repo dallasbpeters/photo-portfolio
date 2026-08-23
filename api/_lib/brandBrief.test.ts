@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BoardItemRow } from "./boards.js";
 import { brandVersionOf, withBrandKits } from "./brandBrief.js";
+import { brandLogoOf } from "./brandLogo.js";
 
 /**
  * The behaviour worth pinning here is what happens when the library and the
@@ -160,5 +161,160 @@ describe("brandVersionOf", () => {
         row({ config: { brandKitVersionId: VERSION } }),
       ])
     ).toBe(a);
+  });
+});
+
+describe("resolving which logo a Brand node stamps", () => {
+  const KIT_WITH_LOGOS = {
+    logos: [
+      {
+        clearSpace: 0.5,
+        label: "Primary",
+        minWidth: 120,
+        rules: "never recoloured",
+        url: "https://blob/primary.svg",
+      },
+      {
+        clearSpace: 0.25,
+        label: "Mark only",
+        minWidth: 48,
+        rules: "",
+        url: "https://blob/mark.svg",
+      },
+    ],
+    palette: [{ name: "Ink", role: "", value: "#101a2b" }],
+    voice: "",
+  };
+
+  it("matches the chosen logo by URL and carries its own rules", async () => {
+    /*
+     * By URL, not by index. An index moves: delete the first logo and every
+     * node pointing at "the second one" silently starts stamping a different
+     * mark, which is the kind of wrong nobody notices until it is printed.
+     */
+    const out = await withBrandKits(
+      sqlReturning([
+        { doc: KIT_WITH_LOGOS, id: KIT, parent_doc: null, version_id: VERSION },
+      ]),
+      [row({ config: { brandKitId: KIT, logoUrl: "https://blob/mark.svg" } })]
+    );
+    expect(cfg(out[0])).toMatchObject({
+      logoClearSpace: 0.25,
+      logoMinWidth: 48,
+      logoUrl: "https://blob/mark.svg",
+    });
+  });
+
+  it("stops resolving a logo that has left the kit", async () => {
+    // The node keeps its pointer; the stamp simply does not happen, and the
+    // words still travel. Better than stamping whatever took its place.
+    const out = await withBrandKits(
+      sqlReturning([
+        { doc: KIT_WITH_LOGOS, id: KIT, parent_doc: null, version_id: VERSION },
+      ]),
+      [
+        row({
+          config: { brandKitId: KIT, logoUrl: "https://blob/deleted.svg" },
+        }),
+      ]
+    );
+    expect(cfg(out[0]).logoUrl).toBeNull();
+    expect(String(cfg(out[0]).brandText)).toContain("#101a2b");
+  });
+
+  it("asks the model to leave room only when a logo will be stamped", async () => {
+    // The instruction is the opposite of "use this logo" — see
+    // logoReservationText. Wasted on a picture that will never receive one.
+    const withLogo = await withBrandKits(
+      sqlReturning([
+        { doc: KIT_WITH_LOGOS, id: KIT, parent_doc: null, version_id: VERSION },
+      ]),
+      [
+        row({
+          config: {
+            brandKitId: KIT,
+            logoPlacement: "top-left",
+            logoUrl: "https://blob/primary.svg",
+          },
+        }),
+      ]
+    );
+    const said = String(cfg(withLogo[0]).brandText);
+    expect(said).toContain("top left");
+    expect(said).toContain("do not draw any logo");
+
+    const withoutLogo = await withBrandKits(
+      sqlReturning([
+        { doc: KIT_WITH_LOGOS, id: KIT, parent_doc: null, version_id: VERSION },
+      ]),
+      [row({ config: { brandKitId: KIT } })]
+    );
+    expect(String(cfg(withoutLogo[0]).brandText)).not.toContain(
+      "do not draw any logo"
+    );
+  });
+});
+
+describe("brandLogoOf", () => {
+  const wire = (from: string, to: string) => ({
+    source_item_id: from,
+    target_item_id: to,
+  });
+
+  it("finds the logo a wired Brand node offers", () => {
+    const brand = row({
+      config: {
+        logoClearSpace: 0.5,
+        logoMinWidth: 120,
+        logoPlacement: "top-left",
+        logoUrl: "https://blob/primary.svg",
+        logoWidth: 20,
+      },
+      id: "brand-1",
+    });
+    const gen = row({ id: "gen-1", node_type: "generate" });
+    expect(
+      brandLogoOf("gen-1", [brand, gen], [wire("brand-1", "gen-1")])
+    ).toEqual({
+      clearSpace: 0.5,
+      minWidth: 120,
+      placement: "top-left",
+      url: "https://blob/primary.svg",
+      widthPercent: 20,
+    });
+  });
+
+  it("is null for a brand with no logo chosen", () => {
+    // A brand wired in for its colours alone contributes words and no stamp.
+    const brand = row({ config: { brandKitId: KIT }, id: "brand-1" });
+    const gen = row({ id: "gen-1", node_type: "generate" });
+    expect(
+      brandLogoOf("gen-1", [brand, gen], [wire("brand-1", "gen-1")])
+    ).toBeNull();
+  });
+
+  it("falls back to defaults for a placement it does not recognise", () => {
+    const brand = row({
+      config: {
+        logoPlacement: "somewhere-else",
+        logoUrl: "https://blob/a.svg",
+      },
+      id: "brand-1",
+    });
+    const gen = row({ id: "gen-1", node_type: "generate" });
+    const found = brandLogoOf(
+      "gen-1",
+      [brand, gen],
+      [wire("brand-1", "gen-1")]
+    );
+    expect(found?.placement).toBe("bottom-right");
+    // And a missing width becomes the declared default rather than zero.
+    expect(found?.widthPercent).toBe(12);
+  });
+
+  it("ignores wires that end somewhere else", () => {
+    const brand = row({ config: { logoUrl: "https://blob/a.svg" }, id: "b" });
+    const gen = row({ id: "gen-1", node_type: "generate" });
+    expect(brandLogoOf("gen-1", [brand, gen], [wire("b", "other")])).toBeNull();
   });
 });

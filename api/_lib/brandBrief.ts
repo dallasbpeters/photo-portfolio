@@ -4,6 +4,12 @@ import {
   resolveKitDoc,
   sanitizeKitDoc,
 } from "../../config/brandKit.js";
+import {
+  DEFAULT_LOGO_PLACEMENT,
+  LOGO_PLACEMENTS,
+  type LogoPlacement,
+  logoReservationText,
+} from "../../config/nodes/logoPlacement.js";
 import { UUID_RE } from "./boardItemParse.js";
 import type { BoardItemRow } from "./boards.js";
 
@@ -57,6 +63,18 @@ export interface BrandBrief {
   brandKitVersionId: string | null;
   /** The resolved kit as prompt material, or "" when there is nothing to say. */
   brandText: string;
+  /**
+   * The chosen logo's own rules, resolved from the library.
+   *
+   * Carried onto the row so the compositor gets them from the same place the
+   * text came from. They are guidelines about an object that has to arrive
+   * intact — a minimum legible width and a clear-space margin — so they end up
+   * as arithmetic rather than as prose in a prompt. See stampLogo.
+   */
+  logoClearSpace: number | null;
+  logoMinWidth: number | null;
+  /** Resolved from the id the node stores, so a renamed logo still follows. */
+  logoUrl: string | null;
 }
 
 const asObject = (value: unknown): Record<string, unknown> =>
@@ -115,28 +133,61 @@ export const withBrandKits = async (
     WHERE k.id = ANY(${wanted}::uuid[])
   `.catch(() => [])) as KitRow[];
 
-  const briefs = new Map<string, BrandBrief>();
+  const resolved = new Map<string, BrandKitDoc>();
+  const versions = new Map<string, string | null>();
   for (const row of found) {
     const own: BrandKitDoc = sanitizeKitDoc(row.doc);
     const parent = row.parent_doc ? sanitizeKitDoc(row.parent_doc) : null;
-    briefs.set(row.id, {
-      brandKitVersionId: row.version_id,
-      brandText: kitPromptText(resolveKitDoc(own, parent)),
-    });
+    resolved.set(row.id, resolveKitDoc(own, parent));
+    versions.set(row.id, row.version_id);
   }
 
   return rows.map((row) => {
     if (row.node_type !== "brand") {
       return row;
     }
-    const id = asObject(row.config).brandKitId;
-    const brief = typeof id === "string" ? briefs.get(id) : undefined;
+    const config = asObject(row.config);
+    const id = config.brandKitId;
+    const doc = typeof id === "string" ? resolved.get(id) : undefined;
+    /*
+     * The logo is matched by URL rather than by index.
+     *
+     * An index into the kit's list is a reference that moves: delete the first
+     * logo and every node pointing at "the second one" silently starts stamping
+     * a different mark. The URL is the logo's identity, and a logo removed from
+     * the kit simply stops resolving — which the node then says.
+     */
+    const wanted = typeof config.logoUrl === "string" ? config.logoUrl : null;
+    const logo = wanted
+      ? doc?.logos.find((entry) => entry.url === wanted)
+      : undefined;
+    /*
+     * The words, plus a request to leave room for the mark.
+     *
+     * Only when a logo is actually going to be stamped: asking a model to keep a
+     * corner clear on a picture that will never receive one is a constraint paid
+     * for and wasted. See logoReservationText on why the instruction is the
+     * opposite of "use this logo".
+     */
+    const words = doc ? kitPromptText(doc) : "";
+    const placement = LOGO_PLACEMENTS.includes(
+      config.logoPlacement as LogoPlacement
+    )
+      ? (config.logoPlacement as LogoPlacement)
+      : DEFAULT_LOGO_PLACEMENT;
+    const brandText = logo
+      ? [words, logoReservationText(placement)].filter(Boolean).join(", ")
+      : words;
+
     return {
       ...row,
       config: {
-        ...asObject(row.config),
-        brandKitVersionId: brief?.brandKitVersionId ?? null,
-        brandText: brief?.brandText ?? "",
+        ...config,
+        brandKitVersionId: versions.get(String(id)) ?? null,
+        brandText,
+        logoClearSpace: logo?.clearSpace ?? null,
+        logoMinWidth: logo?.minWidth ?? null,
+        logoUrl: logo?.url ?? null,
       },
     };
   });

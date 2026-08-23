@@ -39,7 +39,11 @@ interface OpNodeViewProps {
   readOnly: boolean;
   /** The rows a List node's Fill input is offering, already flattened. */
   wiredItems?: readonly string[];
-  /** The words that wire is carrying, so the node can show them. */
+  /**
+   * The words that wire is carrying. Accepted from the canvas but not drawn:
+   * the typed prompt stays on the node and hasWiredPrompt says a wire is adding
+   * to it, so there is nothing left for the text itself to show.
+   */
   wiredPrompt?: string | null;
 }
 
@@ -96,7 +100,6 @@ function PublishedResult({
 }
 export function OpNodeView({
   hasWiredPrompt,
-  wiredPrompt,
   imageCount,
   imageUrl,
   item,
@@ -172,7 +175,6 @@ export function OpNodeView({
           state={state}
           type={type}
           wiredItems={wiredItems}
-          wiredPrompt={wiredPrompt}
         />
 
         {readOnly || isSource ? null : (
@@ -258,7 +260,6 @@ interface NodeBodyProps {
   state: string;
   type: NonNullable<ReturnType<typeof nodeTypeFor>>;
   wiredItems?: readonly string[];
-  wiredPrompt?: string | null;
 }
 
 /**
@@ -284,7 +285,6 @@ function NodeBody({
   state,
   type,
   wiredItems,
-  wiredPrompt,
 }: NodeBodyProps) {
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
@@ -313,7 +313,15 @@ function NodeBody({
           dropdown, and there would be no way to tell a kit with six colours
           from an empty one. */}
       {item.nodeType === "brand" ? (
-        <BrandPreview brandKitId={config.brandKitId} />
+        <BrandPreview
+          brandKitId={config.brandKitId}
+          logoUrl={config.logoUrl}
+          onPickLogo={
+            readOnly
+              ? undefined
+              : (url) => onConfigChange({ ...config, logoUrl: url })
+          }
+        />
       ) : null}
 
       <ResultImages
@@ -424,6 +432,16 @@ function NodeBody({
       {item.result?.isVector === false ? (
         <p className="op-node-view__notice op-node-view__notice--warn">
           Came back as a raster, not vector. It will not stay sharp zoomed in.
+        </p>
+      ) : null}
+
+      {/* The picture arrived and was billed; only the brand's mark is missing.
+          A warning rather than an error, for exactly that reason. */}
+      {typeof item.result?.logoWarning === "string" &&
+      item.result.logoWarning ? (
+        <p className="op-node-view__notice op-node-view__notice--warn">
+          <HugeiconsIcon aria-hidden icon={Alert02Icon} size={11} />
+          {item.result.logoWarning}
         </p>
       ) : null}
     </div>

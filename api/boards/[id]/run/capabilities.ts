@@ -4,6 +4,8 @@ import { isVectorModel } from "../../../../config/falModels.js";
 import { ICON_STYLES, isIconStyle } from "../../../../config/iconStyles.js";
 import { MAX_LOOPS } from "../../../../config/nodes/generation.js";
 import type { NodeCapability } from "../../../../config/nodeTypes.js";
+import type { BrandLogo } from "../../../_lib/brandLogo.js";
+import { stampLogo } from "../../../_lib/brandStamp.js";
 import {
   describeImage,
   generateImage,
@@ -85,6 +87,14 @@ export type Produced =
       /** Null when the concept does not apply — every raster generator. */
       isVector: boolean | null;
       kind: "image";
+      /**
+       * Why the brand's logo is not on this picture, when one was asked for.
+       *
+       * Separate from `runError` because the run did not fail: the picture was
+       * generated and billed, and only the stamp is missing. Reported so the
+       * node can say so rather than leaving somebody to notice.
+       */
+      logoWarning?: string | null;
       url: string;
       width: number | null;
     }
@@ -145,6 +155,13 @@ export const produce = async (
     sourceImageUrl: string | null;
     /** Every wired image, for the one capability that reads them together. */
     sourceImageUrls: string[];
+    /**
+     * A wired Brand node's logo, stamped onto the finished picture.
+     *
+     * Composited rather than described: asked to draw a logo a model redraws it,
+     * which is the failure a brand kit exists to prevent. See brandLogo.ts.
+     */
+    brandLogo?: BrandLogo | null;
     /** Which of a batch this run is, for the capabilities that fan out. */
     variation?: number;
   }
@@ -243,15 +260,51 @@ export const produce = async (
     );
   }
 
+  /*
+   * The brand's mark, stamped on last.
+   *
+   * After the loop rather than inside it: a logo composited on pass one would
+   * be fed back in as pass two's source image, and the model would then treat
+   * it as part of the picture to rework — smearing the exact mark the stamp
+   * exists to preserve.
+   *
+   * A failure here does not fail the run. The picture is generated and paid for
+   * either way, and losing it over a stamp would throw away the expensive half;
+   * the warning travels back so the node can say the logo is missing.
+   */
+  let stamped = image.url;
+  let logoWarning: string | null = null;
+  if (args.brandLogo) {
+    try {
+      const result = await stampLogo(image.url, args.brandLogo);
+      stamped = result.url;
+      logoWarning = result.warning ?? null;
+    } catch (e) {
+      logoWarning =
+        e instanceof Error
+          ? `The logo could not be added: ${e.message}`
+          : "The logo could not be added.";
+    }
+  }
+
   return {
     description: image.description,
     height: image.height,
     // Taken from the model's own entry rather than guessed from the file: the
     // node shows a "came back as a raster" warning, and an SVG mislabelled as
     // raster would raise it for no reason.
-    isVector: isVectorModel(models, args.model) ? true : null,
+    // Never a vector once a logo has been stamped: the composite is a PNG
+    // whatever the model returned, and claiming otherwise would raise the
+    // "came back as a raster" notice on a file that is correctly a raster.
+    isVector:
+      args.brandLogo && stamped !== image.url
+        ? null
+        : isVectorModel(models, args.model)
+          ? true
+          : null,
     kind: "image",
-    url: image.url,
+    logoWarning,
+    url: stamped,
     width: image.width,
   };
 };
