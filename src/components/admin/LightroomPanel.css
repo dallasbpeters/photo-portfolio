@@ -311,3 +311,34 @@
   border: var(--border-hairline) solid var(--color-border);
   border-radius: var(--radius-control);
 }
+
+/*
+ * The picture on an asset tile.
+ *
+ * A fixed 4:3 box whatever the photograph's own shape, so the grid stays a grid
+ * — a column of mixed portrait and landscape thumbnails that each set their own
+ * height is much harder to scan than one that does not.
+ */
+.lightroom__thumb {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: color-mix(in oklch, var(--color-foreground) 8%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/* `contain`, not `cover`: this is for recognising a picture before importing it,
+   and a cropped thumbnail hides what is at the edges. */
+.lightroom__thumb-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Which state the tile is in — still coming, or never coming. A blank box reads
+   as broken in both cases. */
+.lightroom__thumb-empty {
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-foreground) 35%, transparent);
+}

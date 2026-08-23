@@ -13,6 +13,7 @@ import type { Category } from "../../types";
 import { Button } from "../ui/button";
 import { ConnectionState } from "./LightroomConnectionState";
 import { LightroomSetup } from "./LightroomSetup";
+import { LightroomThumb } from "./LightroomThumb";
 import "./LightroomPanel.css";
 
 /**
@@ -366,15 +367,19 @@ function AlbumAssets({ album }: { album: LightroomAlbum }) {
             type="button"
           >
             {/*
-              Deliberately not a thumbnail.
+              The picture, which a picker for photographs obviously needs.
 
-              A rendition needs the bearer token and the API key, so it cannot
-              be loaded by an image element directly; showing one would mean
-              proxying every thumbnail
-              through our own API — a hundred authenticated round trips to draw
-              one grid. The filename and date are what a person culls by here,
-              and the pictures are in Lightroom, already being looked at.
+              This first shipped as filenames only, reasoning that a rendition
+              needs the bearer token and the API key so it cannot be an image
+              element's src. True, and the wrong conclusion — the answer is to
+              proxy it. LightroomThumb fetches it with the token, keeps it out of
+              flight until the tile is nearly visible, and caps how many are in
+              the air at once.
             */}
+            <LightroomThumb
+              alt={asset.fileName ?? "Lightroom asset"}
+              assetId={asset.id}
+            />
             <span className="lightroom__asset-name">
               {asset.fileName ?? asset.id.slice(0, 10)}
             </span>

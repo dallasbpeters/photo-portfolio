@@ -231,4 +231,27 @@ export const lightroomApi = {
     }
     return (await res.json()) as LightroomStatus;
   },
+
+  /**
+   * A blob URL for one asset's thumbnail, or null when there is none.
+   *
+   * Fetched rather than used as an `<img src>` because every Lightroom route is
+   * admin-only and an image element cannot send an Authorization header. The
+   * response carries a long private cache header, so a second call for the same
+   * asset is served by the browser without touching the network.
+   */
+  thumbUrl: async (assetId: string): Promise<string | null> => {
+    const res = await fetch(
+      `${apiBase()}/api/lightroom/thumb?assetId=${encodeURIComponent(assetId)}`,
+      { headers: jsonHeaders() }
+    );
+    if (res.status === 404) {
+      // Adobe has not rendered this size yet. A real answer, not a failure.
+      return null;
+    }
+    if (!res.ok) {
+      throw new Error(await readPageError(res, "Could not load the thumbnail"));
+    }
+    return URL.createObjectURL(await res.blob());
+  },
 };
