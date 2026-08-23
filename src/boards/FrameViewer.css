@@ -105,3 +105,10 @@
 .frame-viewer__button--next {
   right: calc(var(--spacing) * 3);
 }
+
+/* Copy and close, together at the end of the bar. */
+.frame-viewer__actions {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+}

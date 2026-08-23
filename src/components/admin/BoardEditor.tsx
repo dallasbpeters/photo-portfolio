@@ -15,6 +15,7 @@ import {
   type DrawTool,
   NO_FILL,
 } from "../../boards/drawing/drawing";
+import { FrameOpenProvider, frameLink } from "../../boards/FrameOpenContext";
 import { useBoardHistory } from "../../boards/hooks/useBoardHistory";
 import { useGraphRun } from "../../boards/hooks/useGraphRun";
 import { useVideoNode } from "../../boards/hooks/useVideoNode";
@@ -30,10 +31,9 @@ import type {
   BoardWire,
   Photo,
 } from "../../types";
+import { BoardEditorDialogs } from "./BoardEditorDialogs";
 import { BoardInsertPanel } from "./BoardInsertPanel";
 import { CustomCursor } from "./CustomCursor";
-import { SendToCanvaModal } from "./SendToCanvaModal";
-import { SvgImportDialog } from "./SvgImportDialog";
 import "./BoardEditor.css";
 
 import { BoardHeaderActions } from "./boardEditor/BoardHeaderActions";
@@ -342,63 +342,60 @@ export function BoardEditor({
             onTogglePicker={() => setIsPicking((v) => !v)}
           />
 
-          <BoardCanvas
-            autoEditId={autoEditId}
-            boardId={boardId}
-            comments={comments}
-            drawStyle={drawStyle}
-            drawTool={drawTool}
-            items={items}
-            keyOf={keyOf}
-            onArrangeFrame={autoArrange}
-            onBringToFront={bringToFront}
-            onCancel={graphRun.cancel}
-            onChange={change}
-            onConfigChange={changeConfig}
-            onCopyFrame={(frame, title) => void copyFrameToBoard(frame, title)}
-            onCreateFromPort={createFromPort}
-            onDraw={addDrawing}
-            onDrawTool={setDrawTool}
-            onDropFiles={(files, point) => void dropFiles(files, point)}
-            onDropImage={dropImage}
-            onEditImage={openEditor}
-            onExportItem={(itemId) => void exportItem(itemId)}
-            onGroupIntoFrame={groupIntoFrame}
-            onMaskStroke={addMaskStroke}
-            onOpenInAffinity={(itemId) => void openItemInAffinity(itemId)}
-            onRemoveVersion={(itemId, index) =>
-              void removeVersion(itemId, index)
-            }
-            onRun={(itemId, force) => void runNode(itemId, force)}
-            onSaveElement={beginElement}
-            onSaveRecipe={(chosen, name) => void saveRecipe(chosen, name)}
-            onSelectionChange={selection.select}
-            onSendToBack={sendToBack}
-            onSendToCanva={openSendToCanva}
-            onSendVersions={sendVersions}
-            onVectorize={(itemId) => void vectorizeItem(itemId)}
-            onWiresChange={changeWires}
-            recipeUses={uses}
-            viewCentreRef={viewCentreRef}
-            wires={wires}
+          {/* A frame offers its link once published. Nothing to open: that is
+              the published board's own view. */}
+          <FrameOpenProvider linkFor={(id) => frameLink(publicUrl, items, id)}>
+            <BoardCanvas
+              autoEditId={autoEditId}
+              boardId={boardId}
+              comments={comments}
+              drawStyle={drawStyle}
+              drawTool={drawTool}
+              items={items}
+              keyOf={keyOf}
+              onArrangeFrame={autoArrange}
+              onBringToFront={bringToFront}
+              onCancel={graphRun.cancel}
+              onChange={change}
+              onConfigChange={changeConfig}
+              onCopyFrame={(frame, title) =>
+                void copyFrameToBoard(frame, title)
+              }
+              onCreateFromPort={createFromPort}
+              onDraw={addDrawing}
+              onDrawTool={setDrawTool}
+              onDropFiles={(files, point) => void dropFiles(files, point)}
+              onDropImage={dropImage}
+              onEditImage={openEditor}
+              onExportItem={(itemId) => void exportItem(itemId)}
+              onGroupIntoFrame={groupIntoFrame}
+              onMaskStroke={addMaskStroke}
+              onOpenInAffinity={(itemId) => void openItemInAffinity(itemId)}
+              onRemoveVersion={(itemId, index) =>
+                void removeVersion(itemId, index)
+              }
+              onRun={(itemId, force) => void runNode(itemId, force)}
+              onSaveElement={beginElement}
+              onSaveRecipe={(chosen, name) => void saveRecipe(chosen, name)}
+              onSelectionChange={selection.select}
+              onSendToBack={sendToBack}
+              onSendToCanva={openSendToCanva}
+              onSendVersions={sendVersions}
+              onVectorize={(itemId) => void vectorizeItem(itemId)}
+              onWiresChange={changeWires}
+              recipeUses={uses}
+              viewCentreRef={viewCentreRef}
+              wires={wires}
+            />
+          </FrameOpenProvider>
+
+          <BoardEditorDialogs
+            canvaTarget={canvaTarget}
+            onCloseCanva={() => setCanvaTarget(null)}
+            onDismissSvg={() => setPendingSvg(null)}
+            onImportSvg={importSvg}
+            pendingSvg={pendingSvg}
           />
-
-          {canvaTarget ? (
-            <SendToCanvaModal
-              imageUrl={canvaTarget.imageUrl}
-              name={canvaTarget.name}
-              onClose={() => setCanvaTarget(null)}
-            />
-          ) : null}
-
-          {pendingSvg ? (
-            <SvgImportDialog
-              count={pendingSvg.files.length}
-              onCancel={() => setPendingSvg(null)}
-              onConvertPng={() => void importSvg(false)}
-              onKeepSvg={() => void importSvg(true)}
-            />
-          ) : null}
 
           {showComments ? (
             <CommentsPanel

@@ -6,7 +6,7 @@ import { frameForSlug, frameSlugs } from "../../config/frameSlug";
 import { containedBy } from "../../config/graph";
 import { nodeTypeFor } from "../../config/nodeTypes";
 import { BoardCanvas } from "../boards/BoardCanvas";
-import { FrameOpenProvider } from "../boards/FrameOpenContext";
+import { FrameOpenProvider, frameLink } from "../boards/FrameOpenContext";
 import { FrameViewer } from "../boards/FrameViewer";
 import { currentImageUrl } from "../boards/itemOutput";
 import { CommentDialog } from "../boards/panels/CommentDialog";
@@ -251,7 +251,16 @@ export function BoardViewPage() {
       <div className="board-view-page__canvas">
         {/* Frames on a published board open as their own view; the provider is
             what tells them so. See FrameOpenContext. */}
-        <FrameOpenProvider onOpenFrame={openFrameSlug}>
+        <FrameOpenProvider
+          linkFor={(frameId) =>
+            frameLink(
+              slug ? `${window.location.origin}/board/${slug}` : null,
+              items,
+              frameId
+            )
+          }
+          onOpenFrame={openFrameSlug}
+        >
           <BoardCanvas
             // A visitor runs no tools, so there is no result to write back.
             boardId={null}
@@ -279,6 +288,15 @@ export function BoardViewPage() {
           <FrameViewer
             index={Math.min(shownIndex, Math.max(framed.length - 1, 0))}
             items={framed}
+            link={
+              slug
+                ? frameLink(
+                    `${window.location.origin}/board/${slug}`,
+                    items,
+                    openFrame.id
+                  )
+                : null
+            }
             name={openFrame.name?.trim() || "Frame"}
             onClose={closeFrame}
             onIndex={setShownIndex}

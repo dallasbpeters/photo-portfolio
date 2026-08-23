@@ -1,3 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Link01Icon } from "@hugeicons-pro/core-stroke-standard";
+import { toast } from "sonner";
 import type { BoardItem } from "../types";
 import { ShaderView } from "./shaders/ShaderView";
 import {
@@ -9,7 +12,7 @@ import {
   type ShaderLayer,
 } from "./shaders/shaderConfig";
 import "./itemBodies.css";
-import { useFrameOpener } from "./FrameOpenContext";
+import { useFrameActions } from "./FrameOpenContext";
 
 /**
  * What the kinds of item that are not nodes look like on the board.
@@ -53,15 +56,50 @@ export function FrameBody({
   readOnly: boolean;
 }) {
   /*
-   * Whether this frame can be opened, taken from context rather than a prop.
+   * What this frame can do, taken from context rather than props.
    *
    * The title is the only part of a frame that takes a pointer — the rest is
    * deliberately transparent so the items inside stay clickable — which puts
    * this handle six levels below the page that owns the URL. See
-   * FrameOpenContext on why that is a context and not a callback threaded
+   * FrameOpenContext on why that is a context and not callbacks threaded
    * through the canvas.
    */
-  const openFrame = useFrameOpener();
+  const { linkFor, open: openFrame } = useFrameActions();
+  const link = linkFor?.(item.id) ?? null;
+
+  /*
+   * The copy button, offered wherever there is a link to copy.
+   *
+   * Which is the editor once the board is published — the moment somebody wants
+   * to send "look at the deck mockups" — and the published board itself. On an
+   * unpublished board there is no link and no button, rather than a button that
+   * yields a URL which 404s.
+   */
+  const copyLink = link
+    ? async () => {
+        try {
+          await navigator.clipboard.writeText(link);
+          toast.success("Frame link copied");
+        } catch {
+          // A denied clipboard is not worth an error; the link is not secret,
+          // so showing it is a usable fallback.
+          toast.message(link);
+        }
+      }
+    : null;
+
+  const copyButton = copyLink ? (
+    <button
+      aria-label="Copy this frame's link"
+      className="frame-body__link"
+      onClick={() => void copyLink()}
+      onPointerDown={(e) => e.stopPropagation()}
+      title={link ?? ""}
+      type="button"
+    >
+      <HugeiconsIcon aria-hidden icon={Link01Icon} size={12} />
+    </button>
+  ) : null;
   /*
    * On a published board the name is a way in rather than a field.
    *
@@ -80,6 +118,7 @@ export function FrameBody({
         >
           {item.body?.trim() || "Frame"}
         </button>
+        {copyButton}
       </div>
     );
   }
@@ -95,6 +134,7 @@ export function FrameBody({
         placeholder="Frame"
         value={item.body ?? ""}
       />
+      {copyButton}
     </div>
   );
 }

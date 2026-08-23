@@ -3,9 +3,11 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Cancel01Icon,
+  Link01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import type { BoardItem } from "../types";
 import { currentImageUrl } from "./itemOutput";
 import "./FrameViewer.css";
@@ -32,6 +34,8 @@ export interface FrameViewerProps {
   index: number;
   /** Everything the frame owns that has a picture, in board order. */
   items: BoardItem[];
+  /** This frame's own URL, offered for copying. Absent when unpublished. */
+  link?: string | null;
   /** The frame's own name, for the caption and the document title. */
   name: string;
   onClose: () => void;
@@ -42,6 +46,7 @@ export interface FrameViewerProps {
 export function FrameViewer({
   index,
   items,
+  link,
   name,
   onClose,
   onIndex,
@@ -109,33 +114,48 @@ export function FrameViewer({
               </span>
             ) : null}
           </span>
-          <button
-            aria-label="Close"
-            className="frame-viewer__button"
-            onClick={onClose}
-            type="button"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} size={18} />
-          </button>
+          <span className="frame-viewer__actions">
+            {/* The address bar already holds this, but somebody looking at a
+                picture is not looking at the address bar. */}
+            {link ? (
+              <button
+                aria-label="Copy this frame's link"
+                className="frame-viewer__button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(link);
+                    toast.success("Frame link copied");
+                  } catch {
+                    toast.message(link);
+                  }
+                }}
+                type="button"
+              >
+                <HugeiconsIcon icon={Link01Icon} size={16} />
+              </button>
+            ) : null}
+            <button
+              aria-label="Close"
+              className="frame-viewer__button"
+              onClick={onClose}
+              type="button"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+            </button>
+          </span>
         </header>
 
         {url ? (
+          // biome-ignore lint/correctness/useImageSize: the viewer is position:fixed inset:0, so its box is the window and never depends on the picture — there is no layout for a dimension hint to stabilise. Worse, the only dimensions available here are the item's *board box* in canvas units, which for a pinned photograph is nothing like its pixel size: as presentational hints they pinned a 1600px picture to 205px in the middle of a black screen
           <motion.img
             alt={shown?.body ?? name}
             className="frame-viewer__image"
-            // The run's own pixels when it has them, the item's box on the
-            // board otherwise — a pinned photograph stores no intrinsic size.
-            // Either way it is the right shape, which is what the browser needs
-            // to hold the space before the picture arrives. Both sides of the
-            // pair, or the browser has an edge and no ratio to reserve from.
-            height={shown?.result?.height ?? shown?.height}
             // Keyed on the URL so moving between pictures animates rather than
             // swapping the same element's src, which shows the old picture
             // stretched to the new one's box for a frame.
             key={url}
             src={url}
             transition={{ duration: 0.15 }}
-            width={shown?.result?.width ?? shown?.width}
           />
         ) : (
           <p className="frame-viewer__empty">
