@@ -286,3 +286,28 @@
   flex: 1;
   min-width: 0;
 }
+
+/*
+ * The generated redirect-URI pattern.
+ *
+ * Read-only and monospaced: it exists to be copied into Adobe's console
+ * verbatim, and it is long — three sites, apex and www — so it wraps and
+ * scrolls rather than pushing the panel wider.
+ */
+.lightroom-setup__pattern {
+  flex: 1;
+  min-width: 0;
+  max-height: calc(var(--spacing) * 24);
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-xs);
+  line-height: 1.6;
+  color: var(--color-foreground);
+  overflow-wrap: anywhere;
+  user-select: all;
+  background: color-mix(in oklch, var(--color-foreground) 6%, transparent);
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-control);
+}

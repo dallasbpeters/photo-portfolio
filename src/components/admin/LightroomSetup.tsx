@@ -7,6 +7,10 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+  lightroomRedirectPattern,
+  lightroomRedirectUris,
+} from "../../../config/lightroomRedirect.js";
+import {
   type LightroomCredentials,
   lightroomApi,
 } from "../../services/lightroomService";
@@ -103,16 +107,14 @@ export function LightroomSetup({ credentials, onSaved }: LightroomSetupProps) {
     }
   };
 
-  const copyRedirect = async () => {
+  const copy = async (value: string, what: string) => {
     try {
-      // What is in the field, not what was last saved — the point is to paste
-      // the value being registered, which may not be stored yet.
-      await navigator.clipboard.writeText(redirectUri);
-      toast.success("Redirect URI copied.");
+      await navigator.clipboard.writeText(value);
+      toast.success(`${what} copied.`);
     } catch {
-      // A denied clipboard permission is not worth an error toast — the field
+      // A denied clipboard permission is not worth an error toast — the value
       // is selectable and right there.
-      toast.error("Could not copy — select the field instead.");
+      toast.error("Could not copy — select the text instead.");
     }
   };
 
@@ -176,7 +178,7 @@ export function LightroomSetup({ credentials, onSaved }: LightroomSetupProps) {
               value={redirectUri}
             />
             <Button
-              onClick={() => void copyRedirect()}
+              onClick={() => void copy(redirectUri, "Redirect URI")}
               type="button"
               variant="ghost"
             >
@@ -185,6 +187,41 @@ export function LightroomSetup({ credentials, onSaved }: LightroomSetupProps) {
             </Button>
           </span>
         </label>
+
+        {/*
+          What Adobe's console asks for, which is not one URI per site.
+          There is a single "Default redirect URI" slot and a single "Redirect
+          URI pattern" slot — and the pattern takes a comma-separated list of
+          regexes, so one integration covers all three sites. Generated rather
+          than typed, because the escaping is the part that goes wrong: an
+          unescaped period is a wildcard.
+        */}
+        <div className="lightroom-setup__field">
+          <span className="admin-field-label">
+            Redirect URI pattern — paste into Adobe's second slot
+          </span>
+          <span className="lightroom-setup__row">
+            <code className="lightroom-setup__pattern">
+              {lightroomRedirectPattern()}
+            </code>
+            <Button
+              onClick={() => void copy(lightroomRedirectPattern(), "Pattern")}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden icon={Copy01Icon} size={14} />
+              Copy
+            </Button>
+          </span>
+          <p className="admin-note">
+            Covers every site this codebase serves, apex and www —{" "}
+            {lightroomRedirectUris().length} URIs across{" "}
+            {new Set(lightroomRedirectUris().map((u) => new URL(u).host)).size}{" "}
+            hosts. Periods are escaped because the field is a regular
+            expression; Adobe allows wildcards only in the path, never in a
+            host.
+          </p>
+        </div>
 
         <label className="lightroom-setup__field admin-field-group">
           <span className="admin-field-label">
