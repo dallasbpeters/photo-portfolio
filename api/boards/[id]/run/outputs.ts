@@ -149,6 +149,22 @@ export const paletteTextOf = (
  * exactly rather than described — so they stay hex all the way through while the
  * prompt talks in words.
  */
+/** The exact colours one upstream node carries, in the order it holds them. */
+const sourceHexesOf = (source: BoardItemRow): string[] => {
+  const config = asObject(source.config);
+  // A Brand node: the resolved kit's palette, folded on by withBrandKits.
+  if (source.node_type === "brand" && Array.isArray(config.brandPalette)) {
+    return config.brandPalette.filter(
+      (value): value is string => typeof value === "string"
+    );
+  }
+  // A Palette node: the colours typed on it.
+  if (source.node_type === "palette" && typeof config.colors === "string") {
+    return config.colors.match(HEX_COLOUR) ?? [];
+  }
+  return [];
+};
+
 export const paletteHexesOf = (
   itemId: string,
   rows: BoardItemRow[],
@@ -161,24 +177,9 @@ export const paletteHexesOf = (
       continue;
     }
     const source = byId.get(wire.sourceItemId);
-    if (!source) {
-      continue;
-    }
-    const config = asObject(source.config);
-    // A Brand node: the resolved kit's palette, folded on by withBrandKits.
-    if (source.node_type === "brand" && Array.isArray(config.brandPalette)) {
-      for (const value of config.brandPalette) {
-        if (typeof value === "string" && !found.includes(value)) {
-          found.push(value);
-        }
-      }
-    }
-    // A Palette node: the colours typed on it.
-    if (source.node_type === "palette" && typeof config.colors === "string") {
-      for (const value of config.colors.match(HEX_COLOUR) ?? []) {
-        if (!found.includes(value)) {
-          found.push(value);
-        }
+    for (const value of source ? sourceHexesOf(source) : []) {
+      if (!found.includes(value)) {
+        found.push(value);
       }
     }
   }

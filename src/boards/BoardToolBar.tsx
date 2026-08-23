@@ -1,7 +1,9 @@
 import type { RefObject } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BoardItem } from "../types";
+import { useFrameActions } from "./FrameOpenContext";
 import { PANEL_GAP } from "./geometry/panelPlacement";
 import { downloadImage } from "./io/downloadImage";
 import { isVideoUrl } from "./io/isVideo";
@@ -82,6 +84,13 @@ export function BoardToolBar({
   const [pending, setPending] = useState<Tool | null>(null);
   const { panelRef, placement } = useAnchoredPanel(anchor);
   const above = placement === "above";
+
+  /*
+   * This frame's link, when there is one. Null for every other kind of item and
+   * for an unpublished board.
+   */
+  const { linkFor } = useFrameActions();
+  const frameHref = item.kind === "frame" ? (linkFor?.(item.id) ?? null) : null;
 
   const context = toolContextOf(item);
   /*
@@ -178,6 +187,30 @@ export function BoardToolBar({
           re-ran the above/below decision and moved the whole thing mid-click —
           the menu appearing somewhere unrelated to the button that opened it. */}
       <div className="board-toolbar__bar">
+        {/*
+         * A frame's own address, on the frame.
+         *
+         * First shipped as an icon beside the frame's name, which was the wrong
+         * place twice over: it did not counter-scale, so at a board's usual zoom
+         * it was a seven-pixel unlabelled square, and the name is board content
+         * rather than chrome. Here it is labelled, one size at every zoom, and
+         * in the row where an item's other actions already live.
+         *
+         * Only for a frame, and only once the board is published — an
+         * unpublished one has no public URL, and a button handing over a link
+         * that 404s is worse than no button. The context is read here rather
+         * than threaded through the canvas; see FrameOpenContext.
+         */}
+        {item.kind === "frame" && frameHref ? (
+          <Button
+            onClick={() => void copyFrameLink(frameHref)}
+            size="xs"
+            title={frameHref}
+            variant="ghost"
+          >
+            Copy link
+          </Button>
+        ) : null}
         {isRunning ? (
           <span className="board-toolbar__status">Working…</span>
         ) : (
@@ -264,3 +297,18 @@ export function BoardToolBar({
     </div>
   );
 }
+
+/**
+ * Puts a frame's link on the clipboard, or shows it when that is refused.
+ *
+ * A denied clipboard permission is not an error worth a red toast — the link is
+ * not a secret, so displaying it is a usable fallback rather than a dead end.
+ */
+const copyFrameLink = async (href: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(href);
+    toast.success("Frame link copied");
+  } catch {
+    toast.message(href);
+  }
+};

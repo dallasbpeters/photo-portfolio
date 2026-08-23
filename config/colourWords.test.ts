@@ -12,6 +12,8 @@ import {
  * triplet is a string of characters before it is a colour.
  */
 
+const CONTRADICTORY_PALE_VIVID = /pale vivid|very pale vivid/;
+
 describe("describeColour", () => {
   it("names the hues a brand actually uses", () => {
     // The palette from the tokens file that produced the lettered pictures.
@@ -52,7 +54,7 @@ describe("describeColour", () => {
      */
     for (const hex of ["#ffcd75", "#fe8585", "#96e9f8", "#fcf397", "#ffe4b5"]) {
       const said = describeColour(hex) ?? "";
-      expect(said, hex).not.toMatch(/pale vivid|very pale vivid/);
+      expect(said, hex).not.toMatch(CONTRADICTORY_PALE_VIVID);
     }
   });
 

@@ -171,30 +171,8 @@
   outline: 0;
 }
 
-/*
- * A frame's link, offered beside its name.
- *
- * Present only where there is a link to copy — in the editor once the board is
- * published, and on the published board itself. On an unpublished board there is
- * nothing to share and no button, rather than a button yielding a URL that 404s.
- */
-.frame-body__link {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: calc(var(--spacing) * 5);
-  height: calc(var(--spacing) * 5);
-  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
-  border-radius: var(--radius-control);
-  transition: color var(--default-transition-duration) var(--ease-in-out);
-}
-
-.frame-body__link:hover {
-  color: var(--color-board-ink);
-  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
-}
-
-/* The name and the link sit on one row. */
+/* The name sits on its own row; the link lives in the item's toolbar, where
+   it is labelled and holds its size at any zoom. */
 .frame-body {
   display: flex;
   gap: var(--spacing);

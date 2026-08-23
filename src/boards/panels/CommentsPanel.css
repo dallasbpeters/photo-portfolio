@@ -85,7 +85,7 @@
   margin-block-start: calc(var(--spacing) * 0.5);
   font-size: var(--text-micro-md);
   line-height: 1.625;
-  color: color-mix(in oklch, #fff 85%, transparent);
+  color: var(--color-board-ink);
   overflow-wrap: break-word;
 }
 

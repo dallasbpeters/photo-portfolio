@@ -13,12 +13,17 @@ import { HEX_COLOUR } from "../../config/nodes/palette.js";
 export const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
 
 /** The shape Ideogram wants: RGB triplets, unweighted. */
-type FalPalette = { members: { rgb: { b: number; g: number; r: number } }[] };
+interface FalPalette {
+  members: { rgb: { b: number; g: number; r: number } }[];
+}
+
+/** A whole six-digit hex and nothing else, either case. */
+const SIX_DIGIT_HEX = /^#[0-9a-f]{6}$/i;
 
 /** One hex as a triplet, or null if it is not a six-digit hex. */
 const triplet = (hex: string): { b: number; g: number; r: number } | null => {
   const clean = hex.trim();
-  if (!/^#[0-9a-f]{6}$/i.test(clean)) {
+  if (!SIX_DIGIT_HEX.test(clean)) {
     return null;
   }
   return {

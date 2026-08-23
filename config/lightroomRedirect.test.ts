@@ -13,6 +13,8 @@ import { SITES } from "./sites.js";
  * send must be matched by the pattern this app tells somebody to paste.
  */
 
+const WILDCARD_IN_HOST = /[*+?()[\]]/;
+
 describe("lightroomRedirectUris", () => {
   it("covers every origin of every site, apex and www", () => {
     const uris = lightroomRedirectUris();
@@ -84,8 +86,8 @@ describe("lightroomRedirectPattern", () => {
 
   it("uses no wildcard in a host, which Adobe refuses", () => {
     for (const part of lightroomRedirectPattern().split(",")) {
-      const host = part.slice("https://".length).split("/")[0];
-      expect(host, part).not.toMatch(/[*+?()[\]]/);
+      const [host] = part.slice("https://".length).split("/");
+      expect(host, part).not.toMatch(WILDCARD_IN_HOST);
     }
   });
 });

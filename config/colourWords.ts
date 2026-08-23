@@ -164,10 +164,10 @@ export const describeColour = (hex: string): string | null => {
  * How different two colours must be to be worth naming separately.
  *
  * On the same redmean scale `brandCheck` uses, and deliberately small: the
- * *word* does most of the collapsing, since two colours that describe the same
- * way are the same instruction however far apart they measure. This only catches
- * the near-identical pairs a tokens file is full of — three steps of one blue,
- * a hairline apart — that happen to land on different words.
+ * choice of *word* does most of the collapsing, since two colours that describe
+ * the same way are the same instruction however far apart they measure. This
+ * only catches the near-identical pairs a tokens file is full of — three steps
+ * of one blue, a hairline apart — that happen to land on different words.
  *
  * It started at 40, which measured half a brand's palette as duplicates: nine
  * genuinely different hues came out as three. Distance is the wrong primary
