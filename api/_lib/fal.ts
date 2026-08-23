@@ -9,8 +9,12 @@ import {
   falModelLora,
   falModelMasks,
 } from "../../config/falModels.js";
-import { HEX_COLOUR } from "../../config/nodes/palette.js";
+import {
+  applyFalParams,
+  type GenerationParams,
+} from "../../config/nodes/falParams.js";
 import { getSql } from "./db.js";
+import { PALETTE_MODELS, paletteFrom } from "./falPalette.js";
 import { loadModelDefs } from "./models.js";
 import { persistGenerated } from "./persistGenerated.js";
 
@@ -190,39 +194,6 @@ const bodyFor = (
  */
 const LORA_STRENGTH = 0.7;
 
-/** Models that accept a color palette as a parameter rather than as prose. */
-const PALETTE_MODELS = new Set(["fal-ai/ideogram/v3"]);
-
-/**
- * The hex codes in a prompt, as the palette parameter Ideogram expects.
- *
- * Lifted back out of the prompt rather than carried on a wire of their own.
- * A palette node writes its colors into the text so that every model gets
- * something to go on — most can only be asked — and this turns the same line
- * into an actual constraint for the one model that can honour it.
- *
- * Weights are left at the default: an even palette is what a brand palette
- * usually means, and guessing a weighting from the order they were typed in
- * would be inventing intent.
- */
-const paletteFrom = (
-  prompt: string
-): { members: { rgb: { b: number; g: number; r: number } }[] } | null => {
-  const found = prompt.match(HEX_COLOUR);
-  if (!found || found.length === 0) {
-    return null;
-  }
-  return {
-    members: found.slice(0, 8).map((hex) => ({
-      rgb: {
-        b: Number.parseInt(hex.slice(5, 7), 16),
-        g: Number.parseInt(hex.slice(3, 5), 16),
-        r: Number.parseInt(hex.slice(1, 3), 16),
-      },
-    })),
-  };
-};
-
 /**
  * Which fal endpoint this run actually goes to.
  *
@@ -320,7 +291,15 @@ export const generateImage = async (
    * inpainting is a separate endpoint on fal rather than a parameter. Ignored
    * without a source image, since there would be nothing to repaint *into*.
    */
-  maskUrl?: string | null
+  maskUrl?: string | null,
+  /**
+   * Size, output format and quality, as the node's panel set them.
+   *
+   * Absent — and every field "auto" — reproduces the behaviour that existed
+   * before these controls did, which is what makes them safe to add to a call
+   * that spends money. See applyParams.
+   */
+  params?: GenerationParams
 ): Promise<GeneratedImage> => {
   const key = falKey();
   if (!key) {
@@ -385,6 +364,11 @@ export const generateImage = async (
   if (model === "openai/gpt-image-2" || model === "openai/gpt-image-2/edit") {
     body.image_size = "square";
   }
+
+  // Last, so an explicit choice on the node wins over the defaults above —
+  // including the square this function has always forced on the GPT family.
+  // Somebody who has gone to the panel and picked portrait means it.
+  applyFalParams(body, model, params);
 
   const res = await fetch(`https://fal.run/${model}`, {
     body: JSON.stringify(body),

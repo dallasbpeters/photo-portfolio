@@ -6,6 +6,7 @@ import {
   MagicWand01Icon,
   NotebookIcon,
   PaintBoardIcon,
+  PaintBucketIcon,
   RepeatIcon,
   SearchVisualIcon,
   SparklesIcon,
@@ -14,6 +15,7 @@ import {
 import { motion } from "motion/react";
 import type { NodeTypeId } from "../../../../config/nodeTypes.js";
 import { Button } from "../../ui/button";
+import "./boardEditorChrome.css";
 
 /**
  * The insert rail down the left of the board.
@@ -43,13 +45,13 @@ export function BoardToolPanel({
   return (
     <motion.div
       animate={{ opacity: 1, x: 0 }}
-      className="board-panel board-panel--column top-20 left-4 z-20 grid place-items-stretch justify-stretch gap-2 rounded bg-board-surface text-board-ink"
+      className="board-panel board-panel--column board-tool-rail"
       initial={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.5 }}
     >
       <Button
-        fullWidthLeft
         onClick={() => onAddWritable("note")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -57,26 +59,21 @@ export function BoardToolPanel({
         Note
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddWritable("text")}
+        stacked
         type="button"
         variant="noborder"
       >
         <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
         Text
       </Button>
-      <Button
-        fullWidthLeft
-        onClick={onTogglePicker}
-        type="button"
-        variant="noborder"
-      >
+      <Button onClick={onTogglePicker} stacked type="button" variant="noborder">
         <HugeiconsIcon aria-hidden icon={Image01Icon} size={14} />
         Image
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("generate")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -84,8 +81,8 @@ export function BoardToolPanel({
         Generate
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("describe")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -93,8 +90,8 @@ export function BoardToolPanel({
         Analyse
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("join")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -102,8 +99,8 @@ export function BoardToolPanel({
         Combine
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("iterate")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -111,8 +108,8 @@ export function BoardToolPanel({
         Iterate
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("icon")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -120,8 +117,8 @@ export function BoardToolPanel({
         Icon
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("palette")}
+        stacked
         type="button"
         variant="noborder"
       >
@@ -129,20 +126,27 @@ export function BoardToolPanel({
         Palette
       </Button>
       <Button
-        fullWidthLeft
         onClick={() => onAddNode("prompt")}
+        stacked
         type="button"
         variant="noborder"
       >
         <HugeiconsIcon aria-hidden icon={TextIcon} size={14} />
         Prompt
       </Button>
+      {/* Next to Palette rather than at the end: a brand kit is the same kind of
+          thing one rung up — a palette states colours, a brand states colours,
+          voice, type and a look together. */}
       <Button
-        fullWidthLeft
-        onClick={onAddFrame}
+        onClick={() => onAddNode("brand")}
+        stacked
         type="button"
         variant="noborder"
       >
+        <HugeiconsIcon aria-hidden icon={PaintBucketIcon} size={14} />
+        Brand
+      </Button>
+      <Button onClick={onAddFrame} stacked type="button" variant="noborder">
         <HugeiconsIcon aria-hidden icon={FrameIcon} size={14} />
         Frame
       </Button>

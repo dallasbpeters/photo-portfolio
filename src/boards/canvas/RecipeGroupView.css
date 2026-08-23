@@ -1,0 +1,47 @@
+/*
+ * The outline around the nodes a recipe put on the board.
+ *
+ * Dashed rather than solid, and behind everything: this describes an
+ * arrangement instead of being part of it. Position and size come from the
+ * component, computed from wherever the members currently sit — see the note
+ * there on why the boundary is never stored.
+ *
+ * Amber marks a group placed from a recipe that has since moved on. Not an
+ * error, so not red: the board holds the real nodes and keeps working exactly
+ * as it did, and this only says a newer version exists.
+ */
+
+.recipe-group {
+  position: absolute;
+  pointer-events: none;
+  border: var(--border-hairline) dashed
+    color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+/* amber-400. */
+.recipe-group--stale {
+  border-color: color-mix(in oklch, oklch(82.8% 0.189 84.429) 60%, transparent);
+}
+
+/*
+ * The recipe's name and version, sitting above its own outline.
+ *
+ * Outside the box rather than inside it, so it never covers the first node.
+ * Unwrapped, because a name folding onto a second line would collide with the
+ * nodes it labels.
+ */
+.recipe-group__label {
+  position: absolute;
+  top: calc(var(--spacing) * -5);
+  left: 0;
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+  letter-spacing: var(--tracking-micro-tight);
+  white-space: nowrap;
+}
+
+/* amber-500 — a step darker than the outline, to stay legible as text. */
+.recipe-group__label--stale {
+  color: oklch(76.9% 0.188 70.08);
+}

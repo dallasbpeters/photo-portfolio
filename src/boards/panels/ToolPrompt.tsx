@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ModelSetting } from "../nodes/SettingField";
 import type { Tool } from "../tools/types";
+import "../boardChrome.css";
+import "./ToolPrompt.css";
 
 /**
  * The words a prompt-needing tool is run with, collected as it is picked.
@@ -79,16 +81,14 @@ export function ToolPrompt({
   };
 
   return (
-    <div className="px-3 pt-2.5 pb-2.5">
-      <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-        {tool.label}
-      </span>
+    <div className="panel-section">
+      <span className="panel-label">{tool.label}</span>
       <textarea
         // Autofocused: the field is opened by an explicit pick, and typing is
         // the only reason it appeared.
         aria-label={`Prompt for ${tool.label}`}
         autoFocus
-        className="w-full resize-none rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none placeholder:text-board-ink/35 focus:border-board-ink/45"
+        className="panel-field panel-field--fixed-size"
         maxLength={setting?.kind === "text" ? setting.maxLength : undefined}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
@@ -113,7 +113,7 @@ export function ToolPrompt({
         value={value}
       />
       {modelSetting ? (
-        <div className="mt-2">
+        <div className="tool-prompt__extra">
           <ModelSetting
             onChange={setModel}
             setting={modelSetting}
@@ -121,22 +121,16 @@ export function ToolPrompt({
           />
         </div>
       ) : null}
-      <p className="mt-1.5 text-[10px] text-board-ink/40 leading-relaxed">
-        {tool.description}
-      </p>
-      <div className="mt-2 flex justify-end gap-1.5">
-        <button
-          className="rounded px-2 py-1 text-[11px] text-board-ink/50 hover:text-board-ink"
-          onClick={onCancel}
-          type="button"
-        >
+      <p className="panel-hint">{tool.description}</p>
+      <div className="panel-actions">
+        <button className="panel-button" onClick={onCancel} type="button">
           Cancel
         </button>
         {/* Disabled rather than hidden, and refusing again inside `submit`:
             the empty case is the whole reason this step exists, and a run
             started without words costs money and produces nothing. */}
         <button
-          className="rounded bg-board-ink/15 px-2.5 py-1 text-[11px] text-board-ink hover:bg-board-ink/25 disabled:opacity-40"
+          className="panel-button panel-button--tinted"
           disabled={words.length === 0}
           onClick={submit}
           type="button"

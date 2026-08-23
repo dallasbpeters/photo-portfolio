@@ -7,6 +7,8 @@ import {
 import type { Editor } from "@tiptap/react";
 import type { ImageAlign } from "./imageAttributes";
 import { IMAGE_WIDTHS } from "./imageAttributes";
+import "../styles/adminChrome.css";
+import "./MediaToolbar.css";
 
 /**
  * The row that appears when a picture or a clip is selected.
@@ -54,10 +56,8 @@ function ToolButton({
     <button
       aria-label={label}
       aria-pressed={isActive}
-      className={`flex size-8 items-center justify-center transition-colors ${
-        isActive
-          ? "bg-white/10 text-white"
-          : "text-white/90 hover:bg-white/6 hover:text-white"
+      className={`media-toolbar__button ${
+        isActive ? "media-toolbar__button--on" : ""
       }`}
       onClick={onClick}
       title={label}
@@ -76,10 +76,8 @@ function Row({
   label: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 border-white/10 border-b bg-white/2 px-2 py-1">
-      <span className="px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
-        {label}
-      </span>
+    <div className="media-toolbar">
+      <span className="media-toolbar__group-label">{label}</span>
       {children}
     </div>
   );
@@ -113,7 +111,7 @@ function Layout({
         </ToolButton>
       ))}
 
-      <span aria-hidden className="mx-1 h-4 w-px bg-white/10" />
+      <span aria-hidden className="admin-divider" />
 
       {IMAGE_WIDTHS.map((value) => (
         <ToolButton
@@ -122,7 +120,7 @@ function Layout({
           label={`Width ${value}%`}
           onClick={() => set({ width: value })}
         >
-          <span className="text-[10px] tabular-nums">{value}%</span>
+          <span className="media-toolbar__value">{value}%</span>
         </ToolButton>
       ))}
     </>
@@ -149,12 +147,10 @@ export function MediaToolbar({
         {/* The page prints this under the photograph, so it needs to be typed
             rather than inherited from the upload. On its own line because a
             caption is a sentence, not a toggle. */}
-        <label className="mt-1 flex w-full items-center gap-2">
-          <span className="shrink-0 px-1 text-[10px] text-white/40 uppercase tracking-[0.18em]">
-            Caption
-          </span>
+        <label className="media-toolbar__caption-row">
+          <span className="media-toolbar__field-label">Caption</span>
           <input
-            className="min-h-8 flex-1 border border-white/10 bg-black/40 px-2 text-[12px] text-white/85 outline-none focus:border-white/40"
+            className="media-toolbar__input"
             onChange={(e) =>
               editor
                 .chain()
@@ -183,7 +179,7 @@ export function MediaToolbar({
         width={state.videoWidth}
       />
 
-      <span aria-hidden className="mx-1 h-4 w-px bg-white/10" />
+      <span aria-hidden className="admin-divider" />
 
       {/* Labelled by what the reader gets, not by what pressing it does — the
           two are opposite, and a button that says "Hide controls" while the
@@ -203,7 +199,7 @@ export function MediaToolbar({
             .run()
         }
       >
-        <span className="text-[10px]">
+        <span className="media-toolbar__value">
           {state.videoControls ? "Controls" : "Bare"}
         </span>
       </ToolButton>

@@ -94,6 +94,10 @@ const buttonVariants = cva(
         // Dense toolbars, where a 44px target would not fit. Use sparingly.
         xs: "min-h-9 gap-1.5 px-2 text-[10px] uppercase tracking-widest",
       },
+      stacked: {
+        false: "",
+        true: "w-full flex-col justify-center gap-1.5",
+      },
       /**
        * Danger is a tone, not a variant.
        *
@@ -134,6 +138,7 @@ function Button({
   className,
   variant,
   size,
+  stacked,
   tone,
   fullWidth,
   fullWidthLeft,
@@ -147,6 +152,7 @@ function Button({
           fullWidth,
           fullWidthLeft,
           size,
+          stacked,
           tone,
           variant,
         })

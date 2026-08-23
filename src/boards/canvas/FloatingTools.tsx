@@ -5,8 +5,10 @@ import type { DrawStyle } from "../drawing/DrawToolbar";
 import type { DrawTool } from "../drawing/drawing";
 import { MaskControls } from "../drawing/MaskControls";
 import type { MaskConfig } from "../drawing/mask";
+import { NodeSettingsPanel } from "../panels/NodeSettingsPanel";
 import { ShaderPanel } from "../shaders/ShaderPanel";
 import { wiredImageFor } from "./wiredPreviews";
+import "./FloatingTools.css";
 
 /**
  * The tools that float over the canvas, near whatever is selected.
@@ -55,8 +57,8 @@ export function FloatingTools({
 }: FloatingToolsProps) {
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
-        <div className="pointer-events-auto">
+      <div className="floating-tools-bottom">
+        <div className="floating-tools-bottom__content">
           <AutoplayToggle items={items} />
           <MaskControls onChange={onMaskChange} selected={selected} />
           <BoardDrawTools
@@ -70,7 +72,15 @@ export function FloatingTools({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute top-24 right-4 bottom-4 z-20 flex w-72 justify-end">
+      {/* Both panels live in the one column and only one can be showing: each
+          renders null unless the selected item is its own kind, and there is
+          only ever one selection. A shader gets ShaderPanel, a generation node
+          gets its model and parameters. */}
+      <div className="floating-tools-side">
+        <NodeSettingsPanel
+          onConfigChange={onConfigChange}
+          selected={selected}
+        />
         <ShaderPanel
           imageUrl={
             selected ? wiredImageFor(selected.id, { items, wires }) : null

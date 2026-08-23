@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { Category } from "@/types";
+import "../../styles/adminChrome.css";
+import "./CategoryPicker.css";
 
 export interface CategoryPickerProps {
   categories: Category[];
@@ -144,14 +146,8 @@ export const CategoryPicker = ({
   };
 
   return (
-    <div
-      className={cn("relative flex flex-col gap-3", className)}
-      ref={containerRef}
-    >
-      <Label
-        className="text-[10px] text-white/90 uppercase tracking-widest"
-        htmlFor={id}
-      >
+    <div className={cn("category-picker", className)} ref={containerRef}>
+      <Label className="admin-caps" htmlFor={id}>
         {label}
       </Label>
       <Input
@@ -159,7 +155,7 @@ export const CategoryPicker = ({
         aria-controls={listboxId}
         aria-expanded={open}
         autoComplete="off"
-        className="min-h-11 border-white/10 bg-black/40 text-base focus:border-white/40 sm:text-sm"
+        className="admin-control category-picker__field"
         disabled={disabled}
         id={id}
         onChange={(e) => {
@@ -173,18 +169,14 @@ export const CategoryPicker = ({
         value={query}
       />
       {open && !disabled ? (
-        <div
-          className="absolute top-full z-200 mt-1 max-h-48 w-full min-w-60 overflow-auto rounded-md border border-white/10 bg-neutral-950 py-1 shadow-xl ring-1 ring-black/40"
-          id={listboxId}
-          role="listbox"
-        >
+        <div className="admin-listbox" id={listboxId} role="listbox">
           {filtered.length === 0 && !showAddNew ? (
-            <p className="px-3 py-2 text-white/90 text-xs">No matches</p>
+            <p className="admin-listbox__empty">No matches</p>
           ) : null}
           {filtered.map((cat) => (
             <button
               aria-selected={cat.id === value}
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-white/90 hover:bg-white/10"
+              className="admin-listbox__option"
               key={cat.id}
               onClick={() => pick(cat)}
               onMouseDown={(e) => e.preventDefault()}
@@ -192,13 +184,11 @@ export const CategoryPicker = ({
               type="button"
             >
               <span>{cat.label}</span>
-              <span className="shrink-0 text-[10px] text-white/90 uppercase tracking-wider">
-                {cat.slug}
-              </span>
+              <span className="admin-listbox__count">{cat.slug}</span>
             </button>
           ))}
           {showAddNew ? (
-            <div className="border-white/10 border-t p-2">
+            <div className="admin-listbox__footer">
               <Button
                 disabled={isCreating}
                 fullWidth

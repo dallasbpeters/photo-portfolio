@@ -1,0 +1,17 @@
+/*
+ * A board item's picture, filling its box.
+ *
+ * Cover for a photograph — the item's shape is the crop, and letterboxing a
+ * reference inside its own tile wastes the space it was sized to. Contain for an
+ * icon, which is a shape on a transparent ground and would be cropped into
+ * nonsense by cover.
+ */
+.item-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-media--contain {
+  object-fit: contain;
+}

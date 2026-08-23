@@ -7,6 +7,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SettingDef } from "../../../config/nodeTypes.js";
+
+/*
+ * The "no kit" option's value.
+ *
+ * Base UI's Select cannot carry "" as an item value — an empty string is how it
+ * spells "nothing selected" — so the absence of a kit needs a token of its own,
+ * translated back to "" on the way out.
+ */
+const NO_KIT = "__none__";
+
+import { useBrandKits } from "../../hooks/useBrandKits";
 import { ColorWell } from "../ColorWell";
 import { useModels } from "../ModelsContext";
 import "./SettingField.css";
@@ -18,6 +29,20 @@ import "./SettingField.css";
  * a header, a body, a result strip and a settings form, and the settings are
  * the part that neither reads nor writes anything else on the node.
  */
+
+/**
+ * What a select shows for a value.
+ *
+ * Falls back to the value itself, which is right for every option list that is
+ * already readable — and is what the trigger showed before this existed.
+ */
+const labelOf = (
+  setting: Extract<SettingDef, { kind: "select" }>,
+  value: unknown
+): string => {
+  const key = typeof value === "string" ? value : String(setting.default);
+  return setting.optionLabels?.[key] ?? key;
+};
 
 interface SettingFieldProps {
   onChange: (value: string) => void;
@@ -100,6 +125,10 @@ export function SettingField({
     return <ModelSetting {...{ onChange, setting, value }} />;
   }
 
+  if (setting.kind === "brandKit") {
+    return <BrandKitSetting {...{ onChange, readOnly, setting, value }} />;
+  }
+
   if (setting.kind === "select") {
     return (
       <div className="setting-field">
@@ -114,7 +143,14 @@ export function SettingField({
             value={shown}
           >
             <SelectTrigger>
-              <SelectValue />
+              {/* Base UI renders the raw value unless told otherwise — it has
+                  no way to know an option's text without being handed it. That
+                  is invisible while a value is its own label, which is true of
+                  every select on the board except the ones carrying fal's own
+                  vocabulary. */}
+              <SelectValue>
+                {(selected: unknown) => labelOf(setting, selected)}
+              </SelectValue>
             </SelectTrigger>
             {/* Positioning left to the default: forcing `side="top"` put the
                 menu above the node, which on a node near the top of the view
@@ -124,7 +160,7 @@ export function SettingField({
               <SelectGroup>
                 {setting.options.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option}
+                    {setting.optionLabels?.[option] ?? option}
                   </SelectItem>
                 ))}
               </SelectGroup>
@@ -155,6 +191,77 @@ export function SettingField({
         value={value}
       />
     </label>
+  );
+}
+
+/**
+ * The brand kit setting: which kit from the library this node spends.
+ *
+ * The same shape as the model picker below and for the same reason — the choices
+ * are rows somebody edits in the admin, so the registry declares the control and
+ * the control asks for what to offer.
+ *
+ * Empty is a real state with its own label, not a blank select. A Brand node
+ * with no kit chosen produces nothing and says so, because silently defaulting
+ * to the first kit in the library would put someone else's brand on a board.
+ */
+export function BrandKitSetting({
+  onChange,
+  readOnly,
+  setting,
+  value,
+}: SettingFieldProps & {
+  setting: Extract<SettingDef, { kind: "brandKit" }>;
+}) {
+  const { kits } = useBrandKits();
+  const chosen = kits.find((kit) => kit.id === value);
+
+  return (
+    <div className="setting-field">
+      <p className="setting-field__caption">{setting.label}</p>
+      <Select
+        disabled={readOnly}
+        onValueChange={(next) => {
+          if (next !== null) {
+            onChange(next === NO_KIT ? "" : next);
+          }
+        }}
+        value={value || NO_KIT}
+      >
+        <SelectTrigger className="setting-field__trigger" data-size="lg">
+          {/* Base UI renders the raw value unless handed the text, and here the
+              raw value is a uuid. See the note on ModelSetting's trigger. */}
+          <SelectValue>
+            {(id: unknown) =>
+              id === NO_KIT || !id
+                ? "No kit"
+                : (kits.find((kit) => kit.id === id)?.name ??
+                  /* A kit deleted from the library, or a list that has not
+                     landed. Saying the node still points at something beats
+                     showing an empty control that reads as "no brand". */
+                  "Unknown kit")
+            }
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={NO_KIT}>No kit</SelectItem>
+            {kits.map((kit) => (
+              <SelectItem key={kit.id} value={kit.id}>
+                {kit.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {chosen ? null : (
+        <p className="setting-field__note">
+          {value
+            ? "This kit is no longer in the library."
+            : "Pick a kit for this node to contribute anything."}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -193,7 +300,16 @@ export function ModelSetting({
         value={value}
       >
         <SelectTrigger className="setting-field__trigger" data-size="lg">
-          <SelectValue />
+          {/* The model's label, not its id. Base UI shows the raw value unless
+              handed the text, and a model id is the one value on the board that
+              is genuinely unreadable — "fal-ai/recraft/vectorize" where the row
+              says "Recraft · Vectorize". */}
+          <SelectValue>
+            {(id: unknown) =>
+              options.find((model) => model.id === id)?.label ??
+              String(id ?? "")
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

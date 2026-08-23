@@ -1,0 +1,83 @@
+/*
+ * The canvas: the pan/zoom surface, its dot grid, and the marks drawn on top.
+ *
+ * Three layers, and the order matters. The grid is scenery and takes no pointer
+ * events. The gesture surface above it receives every pan, drag and drop aimed
+ * at the board as a whole. The transformed layer inside carries the items, and
+ * is what actually pans and zooms.
+ */
+
+.board-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-board-ground);
+}
+
+/* The dots. Painted from `--dot-bg` and `--dot-color` — see the note in
+   index.css on why those names read backwards. */
+.board-canvas__grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/*
+ * Where gestures land.
+ *
+ * `touch-action: none` so a two-finger pan zooms the board instead of scrolling
+ * the page underneath it.
+ *
+ * No cursor, because CustomCursor draws the pointer and two of them is one too
+ * many. It has to be stated *here*: this is the element the pointer is over, so
+ * a `cursor` on `.board` alone never wins — see the note at the call site.
+ */
+.board-canvas__surface {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: none;
+}
+
+/*
+ * The layer that pans and zooms.
+ *
+ * `transform-origin: top left` so the transform the viewport computes lands
+ * where it expects; from the centre, every pan would be offset by half the
+ * canvas. The hairline outline says where the canvas ends, which matters when
+ * zoomed out far enough to see past it.
+ */
+.board-canvas__layer {
+  position: relative;
+  outline: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 5%, transparent);
+  transform-origin: top left;
+}
+
+/*
+ * An alignment guide, shown while dragging.
+ *
+ * Its length and position are set inline in canvas units — only the drag knows
+ * them. Hairline at any zoom, and pulled back by half its own width so it sits
+ * centred on the edge it marks.
+ */
+.board-canvas__guide {
+  position: absolute;
+  pointer-events: none;
+  background: var(--color-selection-bright);
+}
+
+/*
+ * The marquee.
+ *
+ * Drawn inside the transform, in canvas units, so it stays exactly under the
+ * pointer at any zoom. A tinted fill as well as a border: an outline alone
+ * disappears over a busy board.
+ */
+.board-canvas__marquee {
+  position: absolute;
+  pointer-events: none;
+  background: color-mix(in oklch, var(--color-selection-soft) 10%, transparent);
+  border: var(--border-hairline) solid var(--color-selection-soft);
+}

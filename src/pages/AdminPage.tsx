@@ -5,9 +5,11 @@ import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { Admin, AdminGate } from "../components/Admin";
 import { BoardsPanel } from "../components/admin/BoardsPanel";
+import { BrandKitsPanel } from "../components/admin/BrandKitsPanel";
 import { ChangePasswordForm } from "../components/admin/ChangePasswordForm";
 import { CollectionsPanel } from "../components/admin/CollectionsPanel";
 import { ConfirmProvider } from "../components/admin/ConfirmProvider";
+import { LightroomPanel } from "../components/admin/LightroomPanel";
 import { ModelsPanel } from "../components/admin/ModelsPanel";
 import { PagesPanel } from "../components/admin/PagesPanel";
 import { SiteSettingsPanel } from "../components/admin/SiteSettingsPanel";
@@ -35,6 +37,8 @@ const SECTIONS = [
   { end: true, label: "Photos", to: "/admin" },
   { end: false, label: "Moodboards", to: "/admin/boards" },
   { end: false, label: "Collections", to: "/admin/collections" },
+  { end: false, label: "Brand kits", to: "/admin/brand-kits" },
+  { end: false, label: "Lightroom", to: "/admin/lightroom" },
   { end: false, label: "Pages", to: "/admin/pages" },
   { end: false, label: "Models", to: "/admin/models" },
   { end: false, label: "Settings", to: "/admin/settings" },
@@ -83,9 +87,17 @@ export function AdminPage() {
     };
   }, [authState]);
 
-  const handleLogin = () => setAuthState("signedIn");
+  const handleLogin = () => {
+    const user = authStorage.getUser();
+    if (user) {
+      posthog.identify(user.id, { email: user.email });
+      posthog.capture("admin_login_succeeded");
+    }
+    setAuthState("signedIn");
+  };
 
   const handleLogout = () => {
+    posthog.capture("admin_logged_out");
     posthog.reset();
     authStorage.setToken(null);
     setAuthState("out");
@@ -144,6 +156,8 @@ export function AdminPage() {
               <Route element={<Admin />} index />
               <Route element={<BoardsPanel />} path="boards" />
               <Route element={<CollectionsPanel />} path="collections" />
+              <Route element={<BrandKitsPanel />} path="brand-kits" />
+              <Route element={<LightroomPanel />} path="lightroom" />
               <Route element={<PagesPanel />} path="pages" />
               <Route element={<ModelsPanel />} path="models" />
               {/* Same component: it reads the slug and opens that page, so the

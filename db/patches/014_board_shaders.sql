@@ -16,17 +16,36 @@
 ALTER TABLE board_items DROP CONSTRAINT IF EXISTS board_items_kind_check;
 ALTER TABLE board_items DROP CONSTRAINT IF EXISTS board_items_shape;
 
-ALTER TABLE board_items
-  ADD CONSTRAINT board_items_kind_check
-  CHECK (kind IN ('photo', 'reference', 'note', 'text', 'op', 'frame', 'shader'));
+-- Guarded because every patch replays on every migrate. This one narrows
+-- `kind` to the set that existed when it was written, and a later patch widens
+-- it again — so on a database that already holds a newer kind, re-adding the
+-- narrow constraint would fail on rows that are perfectly valid. Adding it only
+-- when the data satisfies it lets the later patch own the wider set, and keeps
+-- a fresh database getting the constraint it expects.
+DO $$
+BEGIN
+  ALTER TABLE board_items
+    ADD CONSTRAINT board_items_kind_check
+    CHECK (
+      kind IN ('photo', 'reference', 'note', 'text', 'op', 'frame', 'shader')
+    );
+EXCEPTION
+  WHEN check_violation THEN NULL;
+END $$;
 
 /* A shader is defined entirely by its config; without one there is nothing to
-   render, so an empty shader item is malformed rather than merely blank. */
-ALTER TABLE board_items
-  ADD CONSTRAINT board_items_shape CHECK (
-    (kind = 'photo' AND photo_id IS NOT NULL)
-    OR (kind = 'reference' AND image_url IS NOT NULL)
-    OR (kind IN ('note', 'text', 'frame') AND body IS NOT NULL)
-    OR (kind = 'op' AND node_type IS NOT NULL)
-    OR (kind = 'shader' AND config IS NOT NULL)
-  );
+   render, so an empty shader item is malformed rather than merely blank.
+   Guarded for the same reason as the kind check above. */
+DO $$
+BEGIN
+  ALTER TABLE board_items
+    ADD CONSTRAINT board_items_shape CHECK (
+      (kind = 'photo' AND photo_id IS NOT NULL)
+      OR (kind = 'reference' AND image_url IS NOT NULL)
+      OR (kind IN ('note', 'text', 'frame') AND body IS NOT NULL)
+      OR (kind = 'op' AND node_type IS NOT NULL)
+      OR (kind = 'shader' AND config IS NOT NULL)
+    );
+EXCEPTION
+  WHEN check_violation THEN NULL;
+END $$;

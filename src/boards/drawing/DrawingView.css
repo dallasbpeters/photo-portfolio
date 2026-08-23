@@ -1,0 +1,13 @@
+/*
+ * A board item's finished drawing.
+ *
+ * Fills its item and takes no pointer events, so the item beneath stays
+ * draggable and selectable through it. `overflow: visible` for the same reason
+ * as StrokePreview: caps and joins reach past their geometry.
+ */
+.drawing-view {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}

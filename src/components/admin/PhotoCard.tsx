@@ -15,6 +15,7 @@ import type { Photo } from "../../types";
 import { OptimizedImage } from "../OptimizedImage";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
+import "./PhotoCard.css";
 
 interface PhotoCardProps {
   isDragging: boolean;
@@ -59,7 +60,9 @@ export const PhotoCard = ({
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: HTML5 drag needs its handlers on the dragged element itself
     // biome-ignore lint/a11y/noStaticElementInteractions: as above — the keyboard path is the Order field
     <div
-      className={`group relative aspect-3/4 rounded-lg p-0.5 transition-opacity ${isNew ? "animate-photo-enter" : ""} ${isDragging ? "opacity-40" : ""}`}
+      className={`group photo-card ${isNew ? "animate-photo-enter" : ""} ${
+        isDragging ? "photo-card--dragging" : ""
+      }`}
       draggable
       onDragEnd={onDragEnd}
       onDragOver={(e) => {
@@ -73,7 +76,7 @@ export const PhotoCard = ({
     >
       <div
         aria-hidden
-        className="absolute inset-0 animate-gradient-spin rounded-lg opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        className="photo-card__glow animate-gradient-spin"
         style={{
           background:
             "conic-gradient(from calc(var(--gradient-angle) + 335deg), transparent 0deg, oklch(89.62% 0.16 184.25deg) 30deg, oklch(88.7% 0.25 138.31deg) 60deg, transparent 100deg, transparent 360deg)",
@@ -81,38 +84,35 @@ export const PhotoCard = ({
         }}
       />
       <div
-        className={`relative h-full overflow-hidden rounded-md border bg-black/40 transition-colors ${
-          selected ? "border-white/40" : "border-white/10"
+        className={`photo-card__frame ${
+          selected ? "photo-card__frame--selected" : ""
         }`}
       >
         <OptimizedImage
           alt=""
-          className={`absolute inset-0 h-full w-full object-cover ${
-            photo.showChrome ? "object-left-top" : ""
+          className={`photo-card__image ${
+            photo.showChrome ? "photo-card__image--chrome" : ""
           }`}
           referrerPolicy="no-referrer"
           sizes="(min-width: 1024px) 300px, (min-width: 640px) 45vw, 90vw"
           src={photo.url}
         />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-black/20"
-        />
+        <div aria-hidden className="photo-card__scrim" />
 
         <label
-          className="absolute top-1 left-1 z-10 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md"
+          className="photo-card__select"
           htmlFor={`select-photo-${photo.id}`}
         >
           <Checkbox
             aria-label={`Select ${photo.title}`}
             checked={selected}
-            className="h-5 w-5"
+            className="photo-card__checkbox"
             id={`select-photo-${photo.id}`}
             onChange={() => selection.toggle(photo.id)}
           />
         </label>
 
-        <div className="absolute top-1 right-0.5 z-10 flex flex-col gap-0.5">
+        <div className="photo-card__actions">
           <Button
             aria-label={`Edit title and category for ${photo.title}`}
             onClick={() => onEditDetails(photo)}
@@ -201,27 +201,21 @@ export const PhotoCard = ({
           </Button>
         </div>
 
-        <div className="absolute right-0 bottom-0 left-0 z-10 p-2 pt-6">
-          <p className="line-clamp-2 font-light text-[10px] text-white uppercase leading-tight tracking-wider drop-shadow-md">
-            {photo.title}
-          </p>
-          <p className="mt-0.5 truncate text-[9px] text-white/75 uppercase tracking-wider drop-shadow">
-            {photo.categoryLabel}
-          </p>
-          <p className="mt-0.5 font-mono text-[9px] text-white/55 drop-shadow">
-            #{photo.order}
-          </p>
+        <div className="photo-card__caption">
+          <p className="photo-card__title">{photo.title}</p>
+          <p className="photo-card__meta">{photo.categoryLabel}</p>
+          <p className="photo-card__id">#{photo.order}</p>
           {photo.isPublished ? null : (
-            <p className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-200 uppercase tracking-wider">
+            <p className="photo-card__badge">
               <HugeiconsIcon icon={EyeOffIcon} size={10} />
               Hidden
             </p>
           )}
           {photo.isFeatured ? (
-            <p className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-200 uppercase tracking-wider">
+            <p className="photo-card__badge">
               <svg
                 aria-hidden="true"
-                className="size-3 text-amber-400"
+                className="photo-card__badge-icon"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >

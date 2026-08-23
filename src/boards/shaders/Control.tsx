@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import type { ControlType, ShaderProp } from "./shaderConfig";
+import "./Control.css";
 
 /**
  * One editable property of a shader layer.
@@ -34,13 +35,13 @@ function RangeControl({ onChange, prop, current }: ResolvedControlProps) {
     const max = prop.max ?? 1;
     const n = asNumber(current, asNumber(prop.default, min));
     return (
-      <label className="block space-y-1">
-        <span className="flex items-center justify-between text-[10px] text-board-ink/45">
+      <label className="control--stacked">
+        <span className="control__label-row">
           {prop.label}
-          <span className="text-board-ink/70 tabular-nums">{n}</span>
+          <span className="control__value">{n}</span>
         </span>
         <input
-          className="w-full accent-sky-400"
+          className="control__range"
           max={max}
           min={min}
           onChange={(e) => onChange(Number(e.target.value))}
@@ -58,10 +59,10 @@ function ColorControl({ onChange, prop, current }: ResolvedControlProps) {
   {
     const hex = typeof current === "string" ? current : "#ffffff";
     return (
-      <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/45">
+      <label className="control--inline">
         {prop.label}
         <input
-          className="h-6 w-10 cursor-pointer rounded border border-board-ink/15 bg-transparent"
+          className="control__swatch"
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           type="color"
@@ -74,10 +75,10 @@ function ColorControl({ onChange, prop, current }: ResolvedControlProps) {
 
 function SelectControl({ onChange, prop, current }: ResolvedControlProps) {
   return (
-    <label className="block space-y-1">
-      <span className="text-[10px] text-board-ink/45">{prop.label}</span>
+    <label className="control--stacked">
+      <span className="control__label">{prop.label}</span>
       <select
-        className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink outline-none focus:border-board-ink/40"
+        className="control__field"
         onChange={(e) => onChange(e.target.value)}
         onPointerDown={(e) => e.stopPropagation()}
         value={typeof current === "string" ? current : ""}
@@ -94,11 +95,11 @@ function SelectControl({ onChange, prop, current }: ResolvedControlProps) {
 
 function CheckboxControl({ onChange, prop, current }: ResolvedControlProps) {
   return (
-    <label className="flex items-center justify-between gap-2 text-[10px] text-board-ink/45">
+    <label className="control--inline">
       {prop.label}
       <input
         checked={current === true}
-        className="size-3.5 accent-sky-400"
+        className="control__checkbox"
         onChange={(e) => onChange(e.target.checked)}
         onPointerDown={(e) => e.stopPropagation()}
         type="checkbox"
@@ -112,12 +113,12 @@ function PositionControl({ onChange, prop, current }: ResolvedControlProps) {
   {
     const point = (current ?? { x: 0.5, y: 0.5 }) as { x?: number; y?: number };
     return (
-      <div className="space-y-1">
-        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
-        <div className="flex gap-1">
+      <div className="control--stacked">
+        <span className="control__label">{prop.label}</span>
+        <div className="control__pair">
           {(["x", "y"] as const).map((axis) => (
             <input
-              className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink tabular-nums outline-none focus:border-board-ink/40"
+              className="control__field control__field--numeric"
               key={axis}
               onChange={(e) =>
                 onChange({ ...point, [axis]: Number(e.target.value) })
@@ -148,10 +149,10 @@ function OriginControl({ onChange, prop, current }: ResolvedControlProps) {
       "bottom-right",
     ];
     return (
-      <label className="block space-y-1">
-        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
+      <label className="control--stacked">
+        <span className="control__label">{prop.label}</span>
         <select
-          className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink outline-none focus:border-board-ink/40"
+          className="control__field"
           onChange={(e) => onChange(e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           value={typeof current === "string" ? current : "center"}
@@ -173,11 +174,11 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
       ? (current as { color: string; position: number }[])
       : [];
     return (
-      <div className="space-y-1">
-        <span className="text-[10px] text-board-ink/45">{prop.label}</span>
+      <div className="control--stacked">
+        <span className="control__label">{prop.label}</span>
         {stops.length === 0 ? (
           <button
-            className="w-full rounded border border-board-ink/15 py-1 text-[10px] text-board-ink/50 hover:text-board-ink"
+            className="control__add"
             onClick={() =>
               onChange([
                 { color: "#ffffff", position: 0 },
@@ -192,9 +193,9 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
         ) : (
           stops.map((stop, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: a gradient stop has no identity but its place in the ramp — two stops may share a color and a position, and reordering is what editing one means
-            <div className="flex items-center gap-1" key={index}>
+            <div className="control__row" key={index}>
               <input
-                className="h-6 w-8 cursor-pointer rounded border border-board-ink/15 bg-transparent"
+                className="control__swatch control__swatch--stop"
                 onChange={(e) => {
                   const next = [...stops];
                   next[index] = { ...stop, color: e.target.value };
@@ -205,7 +206,7 @@ function GradientControl({ onChange, prop, current }: ResolvedControlProps) {
                 value={stop.color}
               />
               <input
-                className="w-full rounded border border-board-ink/10 bg-board-surface/50 px-2 py-1 text-[11px] text-board-ink tabular-nums outline-none"
+                className="control__field control__field--numeric"
                 max={1}
                 min={0}
                 onChange={(e) => {
@@ -250,9 +251,7 @@ export function Control({ onChange, prop, value }: ControlProps) {
   const current = value === undefined ? prop.default : value;
   if (!Chosen) {
     return (
-      <p className="text-[10px] text-board-ink/25">
-        {prop.label} — not editable here
-      </p>
+      <p className="control__unsupported">{prop.label} — not editable here</p>
     );
   }
   return <Chosen current={current} onChange={onChange} prop={prop} />;

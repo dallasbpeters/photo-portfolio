@@ -1,0 +1,84 @@
+/*
+ * The model-and-parameters panel, down the right of the canvas.
+ *
+ * Shares .floating-tools-side with ShaderPanel and so shares its shape: paint
+ * comes from .panel-surface, the column owns the position. Only one of the two
+ * can ever be showing, because both are driven by the single selected item.
+ */
+
+.node-settings-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+/*
+ * Which node this is, restated.
+ *
+ * The panel is reached by selecting a card somewhere on a board of similar
+ * cards, so it has to name what it is editing — a column of unlabelled selects
+ * is how the wrong node gets changed. Never shrinks, for the same reason the
+ * panel header does not: this is the part that says where you are.
+ */
+.node-settings-panel__identity {
+  display: flex;
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.node-settings-panel__identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+  /* min-width: 0 so a long model label wraps or ellipsises inside the flex row
+     instead of pushing the panel wider than its column. */
+  min-width: 0;
+}
+
+.node-settings-panel__model {
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+}
+
+.node-settings-panel__provider {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/*
+ * The scrolling controls.
+ *
+ * `overscroll-behavior: contain` so reaching the end of the list does not hand
+ * the wheel back to the canvas and start zooming mid-scroll — the same reason
+ * ShaderPanel's body has it.
+ */
+.node-settings-panel__body {
+  flex: 1;
+  min-height: 0;
+  padding: calc(var(--spacing) * 3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.node-settings-panel__body > * + * {
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+.node-settings-panel__setting {
+  display: block;
+}
+
+/* Tighter to its own control than a standalone hint, so the pair reads as one
+   thing rather than as a note that happens to follow a field. */
+.node-settings-panel__hint {
+  margin-block-start: var(--spacing);
+}

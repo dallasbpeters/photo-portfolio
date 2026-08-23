@@ -3,6 +3,7 @@ import { PauseIcon, PlayIcon } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem } from "../types";
 import { setAutoplay, useAutoplay } from "./autoplayPref";
 import { isVideoUrl } from "./io/isVideo";
+import "./AutoplayToggle.css";
 
 /**
  * Whether clips on this canvas play by themselves.
@@ -29,7 +30,7 @@ export function AutoplayToggle({ items }: { items: readonly BoardItem[] }) {
   return (
     <button
       aria-pressed={playing}
-      className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-board-ink/10 bg-board-surface/80 px-2 py-1.5 text-[11px] text-board-ink/70 backdrop-blur hover:text-board-ink"
+      className="autoplay-toggle"
       onClick={() => setAutoplay(!playing)}
       // Says what pressing it does, since the icon alone leaves you working
       // out whether it shows the state or the action.

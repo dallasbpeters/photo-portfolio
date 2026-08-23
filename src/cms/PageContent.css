@@ -1,0 +1,163 @@
+/*
+ * A CMS page's prose, as the public site renders it.
+ *
+ * Stated in `--foreground`, not in white. This is the front end, and a
+ * published site's palette comes from the database at runtime — background,
+ * foreground and accent are all editable per site. The whites these replaced
+ * were correct only because every site happens to be dark today, which is the
+ * hazard primitives.css names at the top of the file.
+ *
+ * Verified rather than assumed: on this site `--foreground` resolves to
+ * #ffffff, so every value below renders exactly as the utility did.
+ *
+ * The 15px body and 1.75 leading are their own step. Page prose is the one
+ * place in this app meant to be *read* at length rather than scanned, and the
+ * type scale is built for headings and instrument labels — `--text-base` is
+ * 0.738rem, which is a caption.
+ */
+
+.page-content__paragraph {
+  margin-block-end: calc(var(--spacing) * 5);
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+/*
+ * A heading, tracked wide and set light.
+ *
+ * Uppercase at this tracking is the site's voice — the same treatment as the
+ * masthead — so a heading reads as a label on a section rather than as a
+ * sentence introducing one.
+ */
+.page-content__heading {
+  margin-block-start: calc(var(--spacing) * 12);
+  margin-block-end: calc(var(--spacing) * 4);
+  font-weight: 300;
+  color: var(--foreground);
+  text-transform: uppercase;
+}
+
+.page-content__heading--2 {
+  font-size: var(--text-base-ui);
+  letter-spacing: var(--tracking-heading);
+}
+
+.page-content__heading--3 {
+  font-size: var(--text-sm-ui);
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.page-content__list {
+  padding-inline-start: calc(var(--spacing) * 5);
+  margin-block-end: calc(var(--spacing) * 5);
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+.page-content__list > * + * {
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+.page-content__list--bullet {
+  list-style-type: disc;
+}
+
+.page-content__list--ordered {
+  list-style-type: decimal;
+}
+
+/* The marker matches the text rather than the theme's default. */
+.page-content__list::marker,
+.page-content__list > li::marker {
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+}
+
+/* A rule down the side rather than quotation marks: the mark is punctuation the
+   author may already have used. */
+.page-content__quote {
+  padding-inline-start: calc(var(--spacing) * 5);
+  margin-block-end: calc(var(--spacing) * 6);
+  font-size: var(--text-prose);
+  font-style: italic;
+  line-height: var(--leading-prose);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  border-inline-start: var(--border-hairline) solid
+    color-mix(in oklch, var(--foreground) 20%, transparent);
+}
+
+/* Scrolls rather than wraps: a wrapped line of code is a different line. */
+.page-content__code-block {
+  padding: calc(var(--spacing) * 4);
+  margin-block-end: calc(var(--spacing) * 6);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--foreground) 90%, transparent);
+  background: color-mix(in oklch, var(--foreground) 3%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+/* Inline code. `em`-relative so it stays proportional to whatever it sits in. */
+.page-content__code {
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: color-mix(in oklch, var(--foreground) 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/*
+ * A link.
+ *
+ * Underlined always, and the underline darkens on hover rather than appearing:
+ * a link that only becomes a link when pointed at cannot be found by reading.
+ */
+.page-content__link {
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(
+    in oklch,
+    var(--foreground) 30%,
+    transparent
+  );
+  text-underline-offset: calc(var(--spacing) * 1);
+  transition: text-decoration-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.page-content__link:hover {
+  text-decoration-color: var(--foreground);
+}
+
+.page-content__rule {
+  margin-block: calc(var(--spacing) * 10);
+  border-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+.page-content__figure {
+  margin-block: calc(var(--spacing) * 8);
+}
+
+.page-content__image {
+  width: 100%;
+  height: auto;
+}
+
+.page-content__caption {
+  margin-block-start: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* Shown to an editor looking at a page they have not written yet. */
+.page-content__empty {
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}

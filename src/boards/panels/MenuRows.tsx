@@ -18,6 +18,7 @@ import { frameSummary } from "../io/copyToBoard";
 import { outputImageOf, outputImagesOf } from "../itemOutput";
 import type { CanvasMenuTarget } from "./CanvasMenu";
 import { CollectionRow, hasTools, ToolsRow } from "./CanvasMenuPanels";
+import "../boardChrome.css";
 
 /**
  * Every row the canvas menu can offer, and the rules for which apply.
@@ -195,7 +196,7 @@ function GroupRows({ count, onGroup }: { count: number; onGroup: () => void }) {
           into a frame
         </span>
       </button>
-      <p className="px-3 pb-2 text-[10px] text-board-ink/40 leading-relaxed">
+      <p className="panel-row-note">
         Arrange them inside, then wire the frame into a Composite node.
       </p>
     </>
@@ -222,7 +223,7 @@ function FrameRows({
     <>
       {canArrange ? (
         <button
-          className={`${rowClass} border-board-ink/10 ${canGroup ? "border-t" : ""}`}
+          className={`${rowClass} ${canGroup ? "panel-row--divided" : ""}`}
           onClick={onArrange}
           type="button"
         >
@@ -231,7 +232,7 @@ function FrameRows({
         </button>
       ) : null}
       <button
-        className={`${rowClass} border-board-ink/10 ${canGroup || canArrange ? "border-t" : ""}`}
+        className={`${rowClass} ${canGroup || canArrange ? "panel-row--divided" : ""}`}
         onClick={onExport}
         type="button"
       >
@@ -239,7 +240,7 @@ function FrameRows({
         <span>Download {count === 1 ? "it" : `all ${count}`}</span>
       </button>
       <button
-        className={`${rowClass} border-board-ink/10 border-t`}
+        className={`${rowClass} panel-row--divided`}
         onClick={onCopy}
         type="button"
       >
@@ -250,8 +251,9 @@ function FrameRows({
   );
 }
 
-const rowClass =
-  "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-board-ink/85 transition-colors hover:bg-board-ink/10 hover:text-board-ink";
+/* The shared menu row — see .panel-row in boardChrome.css. Kept as a constant
+   because fifteen call sites here pass it down as a prop. */
+const rowClass = "panel-row";
 
 /** Everything on offer before a name is being typed. */
 export function MenuRows({
@@ -343,7 +345,7 @@ export function MenuRows({
           no way of working in it to keep. */}
       {onSaveRecipe && nodes.length > 0 ? (
         <button
-          className={`${rowClass} border-board-ink/10 border-t`}
+          className={`${rowClass} panel-row--divided`}
           onClick={() => onSaveRecipe(selection)}
           type="button"
         >
@@ -359,7 +361,7 @@ export function MenuRows({
           pictures, so a selection of notes and wires has nothing to save. */}
       {pictures.length > 0 ? (
         <button
-          className={`${rowClass} border-board-ink/10 border-t`}
+          className={`${rowClass} panel-row--divided`}
           onClick={() => onSaveElement(selection)}
           type="button"
         >

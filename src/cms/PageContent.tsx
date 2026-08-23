@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import { OptimizedImage } from "../components/OptimizedImage";
 import { usePrefersReducedMotion } from "../lib/reducedMotion";
 import { imageLayout, isImageAlign } from "./imageAttributes";
+import "./PageContent.css";
 
 /**
  * Renders a TipTap document.
@@ -68,10 +69,7 @@ const applyMarks = (
         return <s key={markKey}>{acc}</s>;
       case "code":
         return (
-          <code
-            className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]"
-            key={markKey}
-          >
+          <code className="page-content__code" key={markKey}>
             {acc}
           </code>
         );
@@ -82,7 +80,7 @@ const applyMarks = (
         }
         return (
           <a
-            className="underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
+            className="page-content__link"
             href={href}
             key={markKey}
             rel="noopener noreferrer"
@@ -116,19 +114,20 @@ const renderImage = (node: Node): ReactNode => {
   const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
   const layout = mediaLayout(node.attrs);
   return (
-    <figure className={`my-8 ${layout.className}`} style={layout.style}>
+    <figure
+      className={`page-content__figure ${layout.className}`}
+      style={layout.style}
+    >
       {/* Routed through image optimization like the gallery, so page media
           is not served at full resolution either. */}
       <OptimizedImage
         alt={alt}
-        className="h-auto w-full"
+        className="page-content__image"
         sizes="(min-width: 768px) 720px, 100vw"
         src={src}
       />
       {alt ? (
-        <figcaption className="mt-2 text-[10px] text-white/80 uppercase tracking-[0.18em]">
-          {alt}
-        </figcaption>
+        <figcaption className="page-content__caption">{alt}</figcaption>
       ) : null}
     </figure>
   );
@@ -162,7 +161,10 @@ function PageVideo({ node }: { node: Node }) {
   }
   const layout = mediaLayout(node.attrs);
   return (
-    <figure className={`my-8 ${layout.className}`} style={layout.style}>
+    <figure
+      className={`page-content__figure ${layout.className}`}
+      style={layout.style}
+    >
       <video
         autoPlay={!still}
         className="h-auto w-full"
@@ -195,9 +197,7 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "paragraph":
       return (
-        <p
-          className={`mb-5 text-[15px] text-white/90 leading-[1.75] ${alignClass(node.attrs)}`}
-        >
+        <p className={`page-content__paragraph ${alignClass(node.attrs)}`}>
           {renderNodes(node.content, key)}
         </p>
       );
@@ -206,12 +206,10 @@ const renderNode = (node: Node, key: string): ReactNode => {
       const level = Number(node.attrs?.level) === 3 ? 3 : 2;
       const Tag = level === 3 ? "h3" : "h2";
       const size =
-        level === 3
-          ? "text-sm tracking-[0.2em]"
-          : "text-base tracking-[0.24em]";
+        level === 3 ? "page-content__heading--3" : "page-content__heading--2";
       return (
         <Tag
-          className={`mt-12 mb-4 uppercase ${size} font-light text-white ${alignClass(node.attrs)}`}
+          className={`page-content__heading ${size} ${alignClass(node.attrs)}`}
         >
           {renderNodes(node.content, key)}
         </Tag>
@@ -220,14 +218,14 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "bulletList":
       return (
-        <ul className="mb-5 list-disc space-y-2 pl-5 text-[15px] text-white/90 leading-[1.75] marker:text-white/90">
+        <ul className="page-content__list page-content__list--bullet">
           {renderNodes(node.content, key)}
         </ul>
       );
 
     case "orderedList":
       return (
-        <ol className="mb-5 list-decimal space-y-2 pl-5 text-[15px] text-white/90 leading-[1.75] marker:text-white/90">
+        <ol className="page-content__list page-content__list--ordered">
           {renderNodes(node.content, key)}
         </ol>
       );
@@ -237,20 +235,20 @@ const renderNode = (node: Node, key: string): ReactNode => {
 
     case "blockquote":
       return (
-        <blockquote className="mb-6 border-white/20 border-l pl-5 text-[15px] text-white/90 italic leading-[1.75]">
+        <blockquote className="page-content__quote">
           {renderNodes(node.content, key)}
         </blockquote>
       );
 
     case "codeBlock":
       return (
-        <pre className="mb-6 overflow-x-auto border border-white/10 bg-white/3 p-4 font-mono text-[12px] text-white/90">
+        <pre className="page-content__code-block">
           <code>{renderNodes(node.content, key)}</code>
         </pre>
       );
 
     case "horizontalRule":
-      return <hr className="my-10 border-white/10" />;
+      return <hr className="page-content__rule" />;
 
     case "hardBreak":
       return <br />;
@@ -274,11 +272,7 @@ export function PageContent({ doc }: { doc: unknown }) {
     !Array.isArray(root.content) ||
     root.content.length === 0
   ) {
-    return (
-      <p className="text-[11px] text-white/80 uppercase tracking-[0.2em]">
-        This page has no content yet.
-      </p>
-    );
+    return <p className="page-content__empty">This page has no content yet.</p>;
   }
   return <>{renderNodes(root.content)}</>;
 }

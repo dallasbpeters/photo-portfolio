@@ -1,0 +1,165 @@
+/*
+ * Leaving a comment on a board, as a modal.
+ *
+ * On the admin's own dark chrome rather than the board's inverting paper — the
+ * one surface in this directory that does not follow `--color-board-*`. That is
+ * why white and black appear here as literals: the same reason index.css states
+ * them literally for the fixed admin chrome, which is dark whatever the machine
+ * prefers, so a token that inverts would turn this dialog inside out.
+ *
+ * A modal rather than a popover because it takes two fields and a decision, and
+ * because losing a half-written comment to a stray click on the canvas is worse
+ * than having to dismiss something.
+ */
+
+.comment-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--spacing) * 6);
+}
+
+/* Dark enough to take the board out of the reading, and blurred so it reads as
+   behind rather than merely dimmed. */
+.comment-dialog__scrim {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+  background: color-mix(in oklch, #000 60%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+}
+
+/*
+ * The dialog itself.
+ *
+ * Width is the smaller of most of the window and 30rem: wide enough for a
+ * sentence of comment, and never wider than the phone it is being read on.
+ */
+.comment-dialog__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 30rem);
+  overflow: hidden;
+  background: var(--color-admin-panel);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 15%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+}
+
+/* Header and footer keep their height while the body between them grows. */
+.comment-dialog__header {
+  flex-shrink: 0;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+.comment-dialog__title {
+  font-size: var(--text-micro-sm);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.comment-dialog__note {
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-sm);
+  line-height: 1.625;
+  color: color-mix(in oklch, #fff 50%, transparent);
+}
+
+.comment-dialog__body {
+  padding: calc(var(--spacing) * 4);
+}
+
+.comment-dialog__body > * + * {
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+.comment-dialog__field-group {
+  display: block;
+}
+
+/* panel-label's twin on the fixed surface — see panel-label--fixed. */
+.comment-dialog__label {
+  display: block;
+  margin-block-end: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.comment-dialog__field {
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-lg);
+  color: #fff;
+  outline: none;
+  background: color-mix(in oklch, #000 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.comment-dialog__field:focus {
+  border-color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+/*
+ * The comment itself.
+ *
+ * Resizable vertically and only vertically: a comment runs long often enough to
+ * want the room, and horizontal resizing would break out of the dialog.
+ */
+.comment-dialog__field--multiline {
+  min-height: calc(var(--spacing) * 24);
+  line-height: 1.625;
+  resize: vertical;
+}
+
+.comment-dialog__footer {
+  display: flex;
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: flex-end;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+}
+
+.comment-dialog__button {
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2.5);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, #fff 60%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.comment-dialog__button:hover {
+  color: #fff;
+}
+
+.comment-dialog__button--primary {
+  padding-inline: calc(var(--spacing) * 3);
+  color: #fff;
+  background: color-mix(in oklch, #fff 15%, transparent);
+}
+
+.comment-dialog__button--primary:hover {
+  background: color-mix(in oklch, #fff 25%, transparent);
+}
+
+.comment-dialog__button:disabled {
+  opacity: 0.4;
+}

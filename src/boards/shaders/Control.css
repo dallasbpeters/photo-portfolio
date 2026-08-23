@@ -1,0 +1,151 @@
+/*
+ * One shader parameter, in whichever shape its metadata asks for.
+ *
+ * Seven controls — range, colour, select, checkbox, position, origin, gradient
+ * — and they were seven copies of the same four declarations. They are one
+ * block here: a label, a field, and two layouts. That is the whole reason to
+ * group them, and the reason a new control type should not need a new
+ * stylesheet.
+ *
+ * Every field stops pointer events reaching the canvas at the call site rather
+ * than here, because a drag that starts on a slider must not pan the board.
+ */
+
+/* Label above field. */
+.control--stacked {
+  display: block;
+}
+
+.control--stacked > * + * {
+  margin-block-start: var(--spacing);
+}
+
+/* Label and field on one line, for a control narrow enough to sit beside it. */
+.control--inline {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+.control__label {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/* A label with its current value pushed to the far end — the range control. */
+.control__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/*
+ * The live number beside a slider.
+ *
+ * Tabular figures so the label does not twitch sideways as the value runs
+ * through 9 to 10, which is exactly when someone is watching it.
+ */
+.control__value {
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+.control__range {
+  width: 100%;
+  /* sky-400 — the one accent on the board, and the same one the canvas uses
+     for a selected node's ring. */
+  accent-color: oklch(74.6% 0.16 232.661);
+}
+
+.control__checkbox {
+  width: calc(var(--spacing) * 3.5);
+  height: calc(var(--spacing) * 3.5);
+  accent-color: oklch(74.6% 0.16 232.661);
+}
+
+/* Text, number and select all share one field. */
+.control__field {
+  width: 100%;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: var(--color-board-ink);
+  outline: none;
+  background: color-mix(in oklch, var(--color-board-surface) 50%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.control__field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.control__field--numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A colour well.
+ *
+ * Transparent ground on purpose: the swatch is the value, and a background
+ * behind it would sit inside the border and read as part of the colour.
+ */
+.control__swatch {
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 6);
+  cursor: pointer;
+  background: transparent;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/* Narrower, because a gradient stop's number sits beside it. */
+.control__swatch--stop {
+  width: calc(var(--spacing) * 8);
+}
+
+/* Two fields side by side — x and y, or a stop's colour and position. */
+.control__pair {
+  display: flex;
+  gap: var(--spacing);
+}
+
+.control__row {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+/* Offered when a gradient has no stops yet, in place of an empty ramp. */
+.control__add {
+  width: 100%;
+  padding-block: var(--spacing);
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.control__add:hover {
+  color: var(--color-board-ink);
+}
+
+/*
+ * A parameter the registry describes but no control here can draw.
+ *
+ * Said rather than skipped: a shader quietly missing one of its settings looks
+ * like the shader being wrong.
+ */
+.control__unsupported {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}

@@ -1,0 +1,85 @@
+/*
+ * A shader node's picture, and the three things it says when there is none.
+ *
+ * Each of the three fills the node rather than sitting in a corner of it: an
+ * empty box reads as a broken shader, and the whole point of these is to say
+ * which of "nothing chosen", "nothing in it" and "runtime missing" it is.
+ */
+
+.shader-view {
+  width: 100%;
+  height: 100%;
+}
+
+/* The states share a centred box on the node's own ground. */
+.shader-view__state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  background: var(--color-board-panel);
+}
+
+/* The runtime being absent is a fault, not an empty state. */
+.shader-view__state--error {
+  /* red-300. */
+  color: oklch(80.8% 0.114 19.571);
+}
+
+/*
+ * An effect with nothing in it, which needs room for a sentence and a button.
+ *
+ * A column rather than the single-line states above, and it offers the fix here
+ * rather than pointing at the panel.
+ */
+.shader-view__empty {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--spacing) * 3);
+  text-align: center;
+  background: var(--color-board-panel);
+}
+
+.shader-view__empty-text {
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+/* The effect's own name, louder than the sentence around it. */
+.shader-view__empty-name {
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+}
+
+.shader-view__empty-action {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-view__empty-action:hover {
+  color: var(--color-board-ink);
+  border-color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+/* The shader itself, clipped to the node. */
+.shader-view__canvas {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-board-surface);
+}

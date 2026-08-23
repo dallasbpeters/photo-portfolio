@@ -1,0 +1,36 @@
+/*
+ * The wires between nodes.
+ *
+ * Above everything, and deaf to the pointer except on the wires themselves: the
+ * layer spans the whole canvas, so a layer that took events would swallow every
+ * click on the board underneath. Each wire re-enables its own.
+ *
+ * `overflow: visible` because a wire's curve bows outside the box its endpoints
+ * describe, and clipping it cuts the middle out of the line.
+ */
+.wire-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-wires);
+  overflow: visible;
+  pointer-events: none;
+}
+
+/*
+ * Only the width transitions here, and that is deliberate.
+ *
+ * This was `transition: all`, converted faithfully from `transition-all
+ * duration-300` — which was harmless until the wire started animating. Framer
+ * Motion drives `stroke-dashoffset` frame by frame, and a CSS transition on
+ * *all* properties interpolates every one of those steps, damping the travelling
+ * dash into something that barely moves. Motion's own `transition` prop owns
+ * opacity, pathLength, stroke and dashoffset; this owns the one thing it does
+ * not touch.
+ */
+.wire-layer__wire {
+  transition: stroke-width var(--duration-wire) var(--ease-in-out);
+}
+
+.wire-layer__hit {
+  cursor: pointer;
+}

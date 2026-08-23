@@ -9,6 +9,7 @@ const PICKER_WIDTH = 220;
 const PICKER_HEIGHT = 300;
 
 import { isTransparent } from "./drawing/drawing";
+import "./ColorWell.css";
 
 /**
  * A color swatch that opens the project's SketchPicker.
@@ -129,10 +130,10 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
   };
 
   return (
-    <div className="relative">
+    <div className="color-well">
       <button
         aria-label={label}
-        className="size-6 overflow-hidden rounded border border-board-ink/20"
+        className="color-well__swatch"
         onClick={open}
         onPointerDown={(e) => e.stopPropagation()}
         title={label}
@@ -141,7 +142,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
         {/* A chequerboard under the swatch, so a transparent or translucent
             color reads as see-through rather than as black. */}
         <span
-          className="block size-full"
+          className="color-well__fill"
           style={{
             backgroundColor: clear ? "transparent" : value,
             backgroundImage: clear
@@ -160,12 +161,12 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                   over everything else. */}
               <button
                 aria-label={`Close ${label}`}
-                className="fixed inset-0 z-60 cursor-default"
+                className="color-well__scrim"
                 onClick={() => setAt(null)}
                 type="button"
               />
               <div
-                className="fixed z-61"
+                className="color-well__picker"
                 onPointerDown={(e) => e.stopPropagation()}
                 style={{ left: at.left, top: at.top }}
               >
@@ -180,7 +181,7 @@ export function ColorWell({ label, onChange, value }: ColorWellProps) {
                     than one that is not offered. */}
                 {canSample ? (
                   <button
-                    className="flex w-full items-center justify-center gap-1 bg-board-ink py-1.5 text-[10px] text-board-surface/70 uppercase tracking-[0.14em] hover:text-board-surface"
+                    className="color-well__sample"
                     onClick={() => void sample()}
                     type="button"
                   >

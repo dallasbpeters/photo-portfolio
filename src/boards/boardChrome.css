@@ -1,0 +1,399 @@
+/*
+ * The shapes every board panel and popover is built from.
+ *
+ * One level above panels/ because the shader panel wants them too, and a
+ * stylesheet reaching sideways into a sibling directory is worse than one
+ * sitting above both.
+ *
+ * Here rather than in styles/primitives.css because all of them are stated in
+ * `--color-board-ink` and `--color-board-surface`, which invert with the board
+ * and mean nothing on a page. The app-wide file is for shapes a page can use;
+ * this is the same idea one surface down.
+ *
+ * Each earns its place the same way a primitive does — three independent uses,
+ * counted before promoting it. The field label had seven, the section padding
+ * three, the text field and the scrim two apiece and are here because they are
+ * the field and the scrim rather than one panel's version of them.
+ */
+
+/* A panel's own padding. Wider than it is tall, so a label sits close to the
+   edge it is aligned to and clear of the one above. */
+.panel-section {
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+/*
+ * A label above a field.
+ *
+ * The board's smallest caps — a rung below `.label`, which is a page's size.
+ * `display: block` and the margin are part of it: it is always above something,
+ * never beside it.
+ */
+.panel-label {
+  display: block;
+  margin-block-end: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* The same label on the admin's own dark chrome, which does not invert. */
+.panel-label--fixed {
+  color: color-mix(in oklch, oklch(1 0 0) 40%, transparent);
+}
+
+/* Text in, of any length: input, textarea, select. */
+.panel-field {
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+  outline: none;
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.panel-field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+.panel-field::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+/* A textarea that grows by being dragged is worse than one that does not:
+   the panel it sits in has its own height. */
+.panel-field--fixed-size {
+  resize: none;
+}
+
+/* A row of choices at the end of a panel — cancel on the left of confirm. */
+.panel-actions {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  justify-content: flex-end;
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+.panel-actions--roomy {
+  gap: calc(var(--spacing) * 2);
+}
+
+/* The quiet half of a pair: dismissing, cancelling, going back. */
+.panel-button {
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.panel-button:hover {
+  color: var(--color-board-ink);
+}
+
+.panel-button--louder {
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+}
+
+/*
+ * The committing half, which inverts.
+ *
+ * Same reasoning as the drawing toolbar's selected tool: an action that changes
+ * the board makes a bigger claim than a tint does.
+ */
+.panel-button--primary {
+  padding-inline: calc(var(--spacing) * 2.5);
+  color: var(--color-board-surface);
+  background: var(--color-board-ink);
+}
+
+.panel-button--primary:hover {
+  color: var(--color-board-surface);
+}
+
+/* The same commit, tinted rather than inverted, where a panel already sits on
+   a strong ground and an inversion would shout. */
+.panel-button--tinted {
+  padding-inline: calc(var(--spacing) * 2.5);
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+}
+
+.panel-button--tinted:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}
+
+.panel-button:disabled {
+  opacity: 0.4;
+}
+
+/* A note under a field, explaining what it will do. */
+.panel-hint {
+  margin-block-start: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/*
+ * Click-away.
+ *
+ * Covers the window under the menu it dismisses, and keeps the ordinary cursor:
+ * this is a way out, not something to be aimed at.
+ */
+.panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  cursor: default;
+}
+
+/*
+ * The paint on anything that floats over the canvas.
+ *
+ * Four things wore this independently — the shader panel, the port and canvas
+ * menus, the layers panel and the comments panel — and each had written out the
+ * same six declarations. Composed rather than inherited: a block adds its own
+ * position and size and takes the surface from here.
+ *
+ * Translucent over a blur, so what is underneath stays legible as *context*
+ * without competing with the controls on top.
+ */
+.panel-surface {
+  overflow: hidden;
+  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+/* Docked to the canvas, and taking pointer events back from the shell. */
+.panel-docked {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+/*
+ * A panel's title bar.
+ *
+ * Never shrinks: the list below it scrolls, and a header that gave up height
+ * first would be the thing to disappear.
+ */
+.panel-header {
+  display: flex;
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  justify-content: space-between;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* The title, which usually carries an icon. */
+.panel-header__title {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  align-items: center;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/* A square button holding one glyph — close, collapse, add. */
+.panel-icon-button {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.panel-icon-button:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* Already the panel's colour, so hovering only lifts the ground. */
+.panel-icon-button--plain {
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+/* A scrolling body that may actually shrink — `min-height: 0` or the content
+   forces the panel past its own height and nothing scrolls. */
+.panel-list {
+  flex: 1;
+  min-height: 0;
+  padding: calc(var(--spacing) * 2);
+  overflow-y: auto;
+}
+
+/* Said in place of a list, when there is none. */
+.panel-empty {
+  padding-block: calc(var(--spacing) * 6);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-align: center;
+}
+
+/* A floating menu, above its own scrim. Takes its paint from .panel-surface. */
+.panel-popover {
+  position: absolute;
+  z-index: var(--z-popover);
+  min-width: calc(var(--spacing) * 40);
+}
+
+.panel-popover__title {
+  padding-block-start: calc(var(--spacing) * 2);
+  padding-block-end: var(--spacing);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+/*
+ * A row in a menu.
+ *
+ * One definition and one variant, where there were two near-copies: the canvas
+ * menu's rows and the port menu's options were the same row 2px and 5% apart,
+ * which is the kind of difference nobody chose. The full-height row is the
+ * default because it is the one used fifteen times.
+ */
+.panel-row {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-md);
+  color: color-mix(in oklch, var(--color-board-ink) 85%, transparent);
+  text-align: left;
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.panel-row:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* Tighter and a shade quieter, for a menu that is a list of destinations
+   rather than a list of actions. */
+.panel-row--compact {
+  padding-block: calc(var(--spacing) * 2);
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+}
+
+/* Starts a new group of rows. */
+.panel-row--divided {
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* A note between groups of rows, explaining what the group below will do. */
+.panel-row-note {
+  padding-block-end: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/* A line saying what a setting will cost or change. amber-300. */
+.panel-warning {
+  display: block;
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 70%, transparent);
+}
+
+/*
+ * A modal, and the scrim under it.
+ *
+ * Four things wanted this: the element editor, the insert palette, the comment
+ * dialog and the SVG import dialog. Three of them had written it out.
+ *
+ * The scrim is a button, not a div, at every call site — a way out has to be
+ * reachable by keyboard, and `cursor: default` says it is a surface to leave
+ * through rather than a target to aim at.
+ */
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Anchored near the top instead of centred, for a palette that grows downward
+   as it filters — centring makes the first result jump as you type. */
+.modal-layer--top {
+  z-index: var(--z-popover);
+  align-items: flex-start;
+  padding-block-start: 12vh;
+}
+
+.modal-scrim {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+  background: color-mix(in oklch, var(--color-board-surface) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+}
+
+/* Over the board rather than over the admin: darker, because the canvas behind
+   it is busy. */
+.modal-scrim--heavy {
+  background: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+}
+
+/*
+ * The dialog itself.
+ *
+ * Width is the smaller of a fixed measure and most of the viewport, so it never
+ * has to be scrolled sideways on a phone. Each dialog states its own measure;
+ * the pattern is here.
+ */
+.modal-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-board-panel);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+}
+
+.modal-panel--column {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+/* Translucent over the blur, for a palette that wants the board readable
+   behind it. */
+.modal-panel--veiled {
+  background: color-mix(in oklch, var(--color-board-panel) 95%, transparent);
+}

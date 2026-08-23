@@ -1,0 +1,202 @@
+/*
+ * Editing a brand element: its pictures, its name, and a note on how to use it.
+ *
+ * A modal because it is a form with a decision at the end, and because the
+ * pictures are chosen by eye — a popover that closes on a stray click is the
+ * wrong shape for that.
+ */
+
+/* Above the board's own popovers but below a comment dialog opened from it. */
+.element-modal__layer {
+  padding: calc(var(--spacing) * 6);
+}
+
+.element-modal {
+  width: min(92vw, 44rem);
+}
+
+.element-modal__header {
+  flex-shrink: 0;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.element-modal__title {
+  font-size: var(--text-micro-sm);
+  color: var(--color-board-ink);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.element-modal__note {
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-sm);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/*
+ * A warning that the element will not do what is expected.
+ *
+ * amber-500 on light, amber-300 on dark — the 500 is legible on paper and the
+ * 300 on the inverted board, and one value cannot serve both. The board's own
+ * `.dark` selector picks between them.
+ */
+.element-modal__warning {
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-sm);
+  line-height: 1.625;
+  color: oklch(76.9% 0.188 70.08);
+}
+
+.dark .element-modal__warning {
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 80%, transparent);
+}
+
+/* The scrolling middle, between a header and footer that keep their height. */
+.element-modal__body {
+  flex: 1;
+  min-height: 0;
+  padding: calc(var(--spacing) * 4);
+  overflow-y: auto;
+}
+
+/*
+ * The pictures.
+ *
+ * `auto-fill` at a 7rem floor rather than a fixed column count: the dialog is
+ * as wide as the viewport allows, and a fixed grid either wastes a column on a
+ * laptop or crushes them on a phone.
+ */
+.element-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: calc(var(--spacing) * 2);
+}
+
+.element-modal__cell {
+  position: relative;
+}
+
+/*
+ * One picture, square whatever shape it is.
+ *
+ * The tile is the button: choosing the key image is the main thing done here,
+ * so the whole picture is the target rather than a control on top of it.
+ */
+.element-modal__tile {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.element-modal__tile:hover {
+  border-color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+/* The one that represents the element everywhere else. */
+.element-modal__tile--key {
+  border-color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+}
+
+.element-modal__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Says which tile is the key image, over the foot of the picture itself. */
+.element-modal__tile-label {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding-block: calc(var(--spacing) * 0.5);
+  font-size: var(--text-micro-2xs);
+  color: var(--color-board-ink);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-wide);
+  background: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+}
+
+/*
+ * The tray holding the remove button.
+ *
+ * A sibling of the tile rather than a child: the tile is already a button. The
+ * tray carries the ground so the button itself stays a plain variant — see the
+ * note at the call site.
+ */
+.element-modal__remove {
+  position: absolute;
+  top: var(--spacing);
+  right: var(--spacing);
+  padding: calc(var(--spacing) * 0.5);
+  background: color-mix(in oklch, var(--color-board-surface) 70%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--blur-xs));
+}
+
+.element-modal__field-group {
+  display: block;
+  margin-block-start: calc(var(--spacing) * 4);
+}
+
+.element-modal__field-group--tight {
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+.element-modal__field {
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-lg);
+  color: var(--color-board-ink);
+  outline: none;
+  background: color-mix(in oklch, var(--color-board-surface) 30%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.element-modal__field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/*
+ * The usage note.
+ *
+ * Tall and resizable vertically: this is prose a model reads, and writing it in
+ * a two-line box is writing it blind.
+ */
+.element-modal__field--prose {
+  height: calc(var(--spacing) * 40);
+  font-size: var(--text-micro-md);
+  line-height: 1.625;
+  resize: vertical;
+}
+
+.element-modal__field-hint {
+  display: block;
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.element-modal__footer {
+  display: flex;
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 1.5);
+  justify-content: flex-end;
+  padding-block: calc(var(--spacing) * 3);
+  padding-inline: calc(var(--spacing) * 4);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}

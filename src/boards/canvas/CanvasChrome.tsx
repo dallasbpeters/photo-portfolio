@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { BoardItem } from "../../types";
 import type { CanvasViewport } from "../hooks/useCanvasViewport";
 import { LayersPanel } from "../panels/LayersPanel";
+import "./CanvasChrome.css";
 
 /**
  * The bottom-right chrome: zoom controls, and the layers panel's toggle.
@@ -39,14 +40,14 @@ export function CanvasChrome({
           selectedId={selectedId}
         />
       ) : null}
-      <div className="pointer-events-none absolute right-4 bottom-4 flex items-center gap-2">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
+      <div className="canvas-chrome">
+        <div className="canvas-chrome__bar">
           {readOnly ? null : (
             <button
               aria-label="Layers"
               aria-pressed={showLayers}
-              className={`grid min-h-9 min-w-9 place-items-center text-xs uppercase tracking-widest transition-colors hover:text-board-ink ${
-                showLayers ? "text-board-ink" : "text-board-ink/70"
+              className={`canvas-chrome__button canvas-chrome__button--layers ${
+                showLayers ? "canvas-chrome__button--on" : ""
               }`}
               onClick={() => setShowLayers((open) => !open)}
               type="button"
@@ -56,25 +57,25 @@ export function CanvasChrome({
           )}
           <button
             aria-label="Zoom out"
-            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
+            className="canvas-chrome__button"
             onClick={() => view.zoomBy(1 / 1.25)}
             type="button"
           >
             −
           </button>
-          <span className="w-12 text-center text-[10px] text-board-ink/50 tabular-nums">
+          <span className="canvas-chrome__scale">
             {Math.round(view.viewport.scale * 100)}%
           </span>
           <button
             aria-label="Zoom in"
-            className="min-h-9 min-w-9 text-board-ink/70 text-xs uppercase tracking-widest hover:text-board-ink"
+            className="canvas-chrome__button"
             onClick={() => view.zoomBy(1.25)}
             type="button"
           >
             +
           </button>
           <button
-            className="min-h-9 px-2 text-[10px] text-board-ink/70 uppercase tracking-widest hover:text-board-ink"
+            className="canvas-chrome__button canvas-chrome__button--fit"
             onClick={view.fit}
             type="button"
           >

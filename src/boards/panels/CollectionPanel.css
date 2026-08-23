@@ -1,0 +1,131 @@
+/*
+ * Adding the board's selection to a collection, or making a new one.
+ *
+ * A list with a header above and a create-field below, both of which keep their
+ * height while the list between them scrolls. Capped rather than growing: this
+ * opens inside a menu, and a list of forty collections would run off the
+ * bottom of the window.
+ */
+
+.collection-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(var(--spacing) * 72);
+}
+
+.collection-panel__header {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.collection-panel__icon {
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+.collection-panel__title {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-wide);
+}
+
+/* `min-height: 0` so the flex child may actually shrink and scroll — without it
+   the list forces the panel past its own max-height. */
+.collection-panel__list {
+  flex: 1;
+  min-height: 0;
+  padding-block: var(--spacing);
+  overflow-y: auto;
+}
+
+.collection-panel__message {
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+}
+
+.collection-panel__message--wrapped {
+  line-height: 1.625;
+}
+
+/*
+ * One collection.
+ *
+ * Baseline-aligned rather than centred: the name and its count are different
+ * sizes, and centring them left the number sitting visibly high.
+ */
+.collection-panel__option {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+  text-align: left;
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.collection-panel__option:hover {
+  background: color-mix(in oklch, var(--color-board-ink) 8%, transparent);
+}
+
+.collection-panel__option:disabled {
+  opacity: 0.4;
+}
+
+.collection-panel__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tabular so the counts form a column instead of jittering. */
+.collection-panel__count {
+  flex-shrink: 0;
+  font-size: var(--text-micro-xs);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
+}
+
+.collection-panel__create {
+  display: flex;
+  gap: calc(var(--spacing) * 1.5);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  border-top: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* `min-width: 0` so a long placeholder cannot push the button out of the row. */
+.collection-panel__create-field {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-md);
+  color: var(--color-board-ink);
+  outline: none;
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.collection-panel__create-field:focus {
+  border-color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+.collection-panel__create-field::placeholder {
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+}

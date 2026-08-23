@@ -11,6 +11,7 @@ import { useAnchoredPanel } from "./panels/useAnchoredPanel";
 import { imageOf, toolContextOf } from "./tools/itemContext";
 import { blockedReason, toolsForKind } from "./tools/registry";
 import type { Tool } from "./tools/types";
+import "./BoardToolBar.css";
 
 /**
  * The tools for the item you have selected, on the item.
@@ -142,7 +143,7 @@ export function BoardToolBar({
     />
   ) : (
     <ToolPicker
-      className="border-0 shadow-none"
+      className="board-toolbar__picker"
       context={collecting}
       kind={item.kind}
       onClose={() => setPicking(false)}
@@ -159,11 +160,10 @@ export function BoardToolBar({
     // control as the start of a drag, and the item slides out from under the
     // pointer mid-click.
     <div
-      // z-50 so it clears the items around it. An item's box is a stacking
-      // context (`contain`), so a neighbour drawn later sat over the bar — which
-      // reads as the bar being in the wrong place, because the half of it that
-      // was covered was the half being aimed at.
-      className={`absolute left-0 z-50 w-max ${above ? "bottom-full origin-bottom-left" : "top-full origin-top-left"}`}
+      // Stacking and anchoring are in the stylesheet — see .board-toolbar.
+      className={`board-toolbar ${
+        above ? "board-toolbar--above" : "board-toolbar--below"
+      }`}
       onPointerDown={(e) => e.stopPropagation()}
       ref={panelRef}
       style={{
@@ -177,11 +177,9 @@ export function BoardToolBar({
           Swapping the bar *for* the panel changed this element's height, which
           re-ran the above/below decision and moved the whole thing mid-click —
           the menu appearing somewhere unrelated to the button that opened it. */}
-      <div className="flex items-center gap-0.5 rounded-lg border border-board-ink/10 bg-board-surface/90 p-1 backdrop-blur">
+      <div className="board-toolbar__bar">
         {isRunning ? (
-          <span className="px-2 text-[10px] text-sky-300 uppercase tracking-widest">
-            Working…
-          </span>
+          <span className="board-toolbar__status">Working…</span>
         ) : (
           quick.map((tool) => (
             <Button
@@ -254,8 +252,10 @@ export function BoardToolBar({
           it always reads as belonging to the button that opened it. */}
       {picking || pending ? (
         <div
-          className={`absolute left-0 w-max rounded-lg border border-board-ink/15 bg-board-panel/95 shadow-xl backdrop-blur ${
-            above ? "bottom-full mb-1" : "top-full mt-1"
+          className={`board-toolbar__panel ${
+            above
+              ? "board-toolbar__panel--above"
+              : "board-toolbar__panel--below"
           }`}
         >
           {panel}

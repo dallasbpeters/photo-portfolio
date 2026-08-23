@@ -1,0 +1,497 @@
+/*
+ * The brand kit library, and the kit being edited.
+ *
+ * The editor is two columns: what the kit *is* on the left, what it *produces*
+ * on the right. A kit is only judgeable whole — a palette that reads well as
+ * five rectangles can still put unreadable type on its own ground, and the only
+ * way to see that is to look at the output beside the input.
+ *
+ * One column below the large breakpoint, previews first: on a narrow screen the
+ * fields run long, and a preview pushed below all of them is a preview nobody
+ * scrolls back to. 1024px written out, because a media query cannot read
+ * `--breakpoint-lg`.
+ */
+
+.brand-kit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--spacing) * 6);
+}
+
+@media (width >= 1024px) {
+  .brand-kit {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.brand-kit__editor {
+  min-width: 0;
+}
+
+/* Sticks while the fields scroll past it, so the output stays in view while the
+   input is being changed — the whole point of having both. */
+.brand-kit__aside {
+  min-width: 0;
+}
+
+@media (width >= 1024px) {
+  .brand-kit__aside {
+    position: sticky;
+    top: calc(var(--spacing) * 4);
+  }
+}
+
+/* The name is the widest field and the least interesting; it takes the room
+   that is left rather than a share of it. */
+.brand-kit__name {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * A row in the palette or typeface editor.
+ *
+ * The swatch and the delete keep their size; the two text fields share what is
+ * left. `min-width: 0` on the row so those fields can actually shrink instead
+ * of pushing the delete off the edge.
+ */
+.brand-kit__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  min-width: 0;
+}
+
+/*
+ * The colour input.
+ *
+ * A native `<input type="color">` rather than a custom picker: it is the one
+ * control where the operating system's own eyedropper is available, and a kit's
+ * colours usually already exist somewhere on screen.
+ */
+.brand-kit__colour {
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 8);
+  cursor: pointer;
+  background: transparent;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/* An "Aa" set in the typeface being named, so a wrong name is visible as a
+   fallback rather than only discovered later. */
+.brand-kit__specimen {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 8);
+  font-size: var(--text-base-ui);
+  color: color-mix(in oklch, #fff 90%, transparent);
+  background: color-mix(in oklch, #fff 5%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.brand-kit__voice {
+  width: 100%;
+  min-height: calc(var(--spacing) * 28);
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-size: var(--text-sm-ui);
+  line-height: 1.625;
+  color: #fff;
+  resize: vertical;
+  border-radius: var(--radius-control);
+}
+
+.brand-kit__count {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-align: right;
+}
+
+/*
+ * What the kit contributes to a generation, quoted back verbatim.
+ *
+ * Monospaced because it is a string being sent somewhere, not prose — the
+ * difference matters when checking whether a stray comma made it in.
+ */
+.brand-kit__prompt {
+  padding: calc(var(--spacing) * 3);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-md);
+  line-height: 1.625;
+  color: color-mix(in oklch, #fff 80%, transparent);
+  background: color-mix(in oklch, #000 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.brand-kit__empty-note {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+/* The palette, as colour and nothing else. */
+.brand-kit__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+}
+
+.brand-kit__swatch {
+  display: block;
+  width: calc(var(--spacing) * 7);
+  height: calc(var(--spacing) * 7);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/* The three output formats, side by side so their proportions can be compared. */
+.brand-kit__previews {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--spacing) * 2);
+}
+
+.brand-kit__preview {
+  position: relative;
+  min-width: 0;
+}
+
+/* Names the aspect, because a 9:16 and a 4:5 at thumbnail size are easy to
+   mistake for each other. */
+.brand-kit__preview-chip {
+  position: absolute;
+  top: var(--spacing);
+  left: var(--spacing);
+  z-index: var(--z-canvas-item);
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: var(--spacing);
+  font-size: var(--text-micro-3xs);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  background: color-mix(in oklch, #000 60%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+/*
+ * The mock itself.
+ *
+ * Its ground, ink and accent come from the kit at runtime, so everything here
+ * is layout only — the colours are the thing being tested and must not be
+ * decided by this file.
+ */
+.brand-kit__preview-frame {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: calc(var(--spacing) * 3);
+  /*
+   * Room at the top for the aspect chip, which is positioned over this frame
+   * rather than beside it. Without it the chip sits on the wordmark and clips
+   * it — and the wordmark is the one part of the mock that has to be legible,
+   * since it is standing in for the logo.
+   */
+  padding-block-start: calc(var(--spacing) * 8);
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.brand-kit__preview-logo {
+  max-width: 60%;
+  max-height: calc(var(--spacing) * 8);
+  margin-block-end: auto;
+  object-fit: contain;
+}
+
+.brand-kit__preview-wordmark {
+  margin-block-end: auto;
+  font-size: var(--text-micro-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+.brand-kit__preview-headline {
+  font-size: var(--text-micro-md);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.brand-kit__preview-cta {
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 2.5);
+  font-size: var(--text-micro-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  border-radius: var(--radius-pill);
+}
+
+/* The library. */
+/*
+ * One column, because the list is a tree.
+ *
+ * It was a three-across grid when every kit was a peer. Sub-brands made that
+ * wrong: a child card has to sit directly under its parent, and columns put it
+ * beside an unrelated brand instead.
+ */
+.brand-kit__list {
+  display: grid;
+  gap: calc(var(--spacing) * 4);
+}
+
+.brand-kit__card {
+  position: relative;
+  min-width: 0;
+  background: color-mix(in oklch, #000 20%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.brand-kit__card:hover {
+  border-color: color-mix(in oklch, #fff 30%, transparent);
+}
+
+/* The whole card opens the kit; the delete sits over it as a sibling. */
+.brand-kit__open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  width: 100%;
+  padding: calc(var(--spacing) * 4);
+  text-align: left;
+}
+
+.brand-kit__card-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-sm-ui);
+  font-weight: 300;
+  color: color-mix(in oklch, #fff 90%, transparent);
+  white-space: nowrap;
+}
+
+.brand-kit__card-meta {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-widest);
+}
+
+/*
+ * The look families, as a strip of their own signature colours.
+ *
+ * The same shape the photo editor's look strip uses, because it is the same
+ * catalogue — a brand's grade and a photograph's grade are the same kind of
+ * thing, and two different pickers for one set of looks would be two things to
+ * learn.
+ */
+.brand-kit__families {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+}
+
+.brand-kit__family {
+  display: grid;
+  place-items: center;
+  width: calc(var(--spacing) * 8);
+  height: calc(var(--spacing) * 8);
+  font-size: var(--text-micro-xs);
+  font-weight: 600;
+  /* Black on the family's own colour: every signature is a light, saturated
+     tone, so one ink reads on all eight. */
+  color: #000;
+  border: calc(var(--border-hairline) * 2) solid transparent;
+  border-radius: var(--radius-control);
+  opacity: 0.55;
+  transition:
+    opacity var(--default-transition-duration) var(--ease-in-out),
+    border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.brand-kit__family:hover {
+  opacity: 0.8;
+}
+
+/* The open family, ringed rather than merely brighter — the strip is eight
+   saturated colours and brightness alone does not read as "selected". */
+.brand-kit__family--on {
+  border-color: #fff;
+  opacity: 1;
+}
+
+.brand-kit__looks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+}
+
+.brand-kit__look {
+  min-height: calc(var(--spacing) * 7);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, #fff 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  background: color-mix(in oklch, #fff 5%, transparent);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.brand-kit__look:hover {
+  color: #fff;
+}
+
+.brand-kit__look--on {
+  color: #000;
+  background: #fff;
+}
+
+.brand-kit__strength {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+.brand-kit__strength input {
+  width: 100%;
+  accent-color: oklch(74.6% 0.16 232.661);
+}
+
+/* The CSS paste box. Monospaced, because what goes in it is code. */
+.brand-kit__css {
+  width: 100%;
+  min-height: calc(var(--spacing) * 24);
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-md);
+  line-height: 1.625;
+  color: #fff;
+  resize: vertical;
+  border-radius: var(--radius-control);
+}
+
+/*
+ * The logos.
+ *
+ * On a chequerboard, because a mark is usually transparent and a transparent
+ * logo on a flat panel is indistinguishable from a white one — which is exactly
+ * the mistake that ships.
+ */
+.brand-kit__logos {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+}
+
+.brand-kit__logo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+}
+
+.brand-kit__logo-image {
+  width: calc(var(--spacing) * 24);
+  height: calc(var(--spacing) * 16);
+  object-fit: contain;
+  background-color: color-mix(in oklch, #fff 8%, transparent);
+  background-image:
+    linear-gradient(
+      45deg,
+      color-mix(in oklch, #fff 10%, transparent) 25%,
+      transparent 25%,
+      transparent 75%,
+      color-mix(in oklch, #fff 10%, transparent) 75%
+    ),
+    linear-gradient(
+      45deg,
+      color-mix(in oklch, #fff 10%, transparent) 25%,
+      transparent 25%,
+      transparent 75%,
+      color-mix(in oklch, #fff 10%, transparent) 75%
+    );
+  background-position:
+    0 0,
+    6px 6px;
+  background-size: 12px 12px;
+  border-radius: var(--radius-control);
+}
+
+/*
+ * What a sub-brand is taking from its parent.
+ *
+ * Stated because a palette that looks unset but paints the previews is the most
+ * confusing state this panel can reach — the fields are empty and the output is
+ * not, and without this line that reads as a bug.
+ */
+.brand-kit__inherits {
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  font-size: var(--text-micro-xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, oklch(86.5% 0.127 207.078) 90%, transparent);
+  background: color-mix(in oklch, oklch(86.5% 0.127 207.078) 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+/*
+ * Sub-brands, indented under their parent.
+ *
+ * The rule down the left is doing the work a second grid column would: it says
+ * these belong to the thing above them without making the cards narrower than
+ * the ones they sit under.
+ */
+.brand-kit__subs {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  padding-inline-start: calc(var(--spacing) * 4);
+  margin-block-start: calc(var(--spacing) * 2);
+  margin-inline-start: calc(var(--spacing) * 4);
+  border-inline-start: var(--border-hairline) solid
+    color-mix(in oklch, #fff 15%, transparent);
+}
+
+.brand-kit__sub-form {
+  margin-block-start: calc(var(--spacing) * 2);
+  margin-inline-start: calc(var(--spacing) * 8);
+}
+
+.brand-kit__card-actions {
+  position: absolute;
+  top: calc(var(--spacing) * 2);
+  right: calc(var(--spacing) * 2);
+  display: flex;
+  gap: calc(var(--spacing) * 0.5);
+}
+
+/*
+ * "There is unsaved work on this screen."
+ *
+ * The editor holds the only copy of everything typed into it — every save
+ * writes a version, deliberately, so nothing is written until asked. That rule
+ * cost a whole kit once: the only sign was the Save button changing from grey to
+ * black, which nobody reads as "this will be thrown away if you leave".
+ *
+ * Amber rather than red: this is a state to notice, not a failure. Beside the
+ * button that resolves it, so the notice and the fix are one glance apart.
+ */
+.brand-kit__unsaved {
+  align-self: center;
+  font-size: var(--text-micro-xs);
+  /* amber-300, the same warning colour .panel-warning uses on the board. */
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 85%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}

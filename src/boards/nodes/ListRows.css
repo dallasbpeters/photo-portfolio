@@ -28,7 +28,7 @@
  * the length is the most useful thing about the list before pressing Run.
  */
 .list-rows__count {
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   font-variant-numeric: tabular-nums;
   color: color-mix(in oklch, var(--color-board-ink) 35%, transparent);
   text-transform: uppercase;
@@ -69,7 +69,8 @@
   text-transform: none;
   letter-spacing: normal;
   background-color: color-mix(in oklch, var(--color-amber-600) 5%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-amber-600) 30%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-amber-600) 30%, transparent);
   border-radius: var(--radius-xs);
 }
 
@@ -106,7 +107,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 
@@ -114,7 +116,7 @@
   flex-shrink: 0;
   width: 1.25rem;
   padding-top: var(--spacing);
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   font-variant-numeric: tabular-nums;
   color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
 }
@@ -139,7 +141,7 @@
 .list-rows__delete {
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 150ms ease-out;
+  transition: opacity var(--default-transition-duration) var(--ease-in-out) -out;
 }
 
 .list-rows__move {
@@ -165,7 +167,7 @@
 
 .list-rows__nudge {
   padding-inline: calc(var(--spacing) * 0.5);
-  font-size: 9px;
+  font-size: var(--text-micro-2xs);
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
 }
 

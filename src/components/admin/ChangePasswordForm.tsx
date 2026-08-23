@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import posthog from "../../lib/posthog";
 import { authApi } from "../../services/portfolioService";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import "../../styles/adminChrome.css";
 
 /** Mirrors MIN_PASSWORD_LENGTH in api/_lib/resetToken.ts. */
 const MIN_PASSWORD_LENGTH = 8;
 
 /** Matches the settings panel's inputs — soft border on translucent black,
  * rather than the bright default border-input the shared component uses. */
-const inputClass =
-  "min-h-11 text-base bg-black/40 border-white/10 focus:border-white/40 transition-colors";
+/* The shared admin control — see .admin-control in styles/adminChrome.css. */
+const inputClass = "admin-control admin-control--touch";
 
 /**
  * Changing the password of the account you are signed in as.
@@ -38,6 +40,7 @@ export function ChangePasswordForm() {
       setCurrent("");
       setNext("");
       setConfirm("");
+      posthog.capture("admin_password_changed");
       toast.success("Password changed");
     } catch (err) {
       toast.error(
@@ -49,11 +52,9 @@ export function ChangePasswordForm() {
   };
 
   return (
-    <form className="space-y-3" onSubmit={(e) => void handleSubmit(e)}>
-      <Label className="block">
-        <span className="mb-1 block text-[10px] text-white/50 uppercase tracking-[0.18em]">
-          Current password
-        </span>
+    <form className="stack stack--mid" onSubmit={(e) => void handleSubmit(e)}>
+      <Label className="admin-field-group">
+        <span className="admin-field-label">Current password</span>
         <Input
           autoComplete="current-password"
           className={inputClass}
@@ -63,10 +64,8 @@ export function ChangePasswordForm() {
           value={current}
         />
       </Label>
-      <Label className="block">
-        <span className="mb-1 block text-[10px] text-white/50 uppercase tracking-[0.18em]">
-          New password
-        </span>
+      <Label className="admin-field-group">
+        <span className="admin-field-label">New password</span>
         <Input
           autoComplete="new-password"
           className={inputClass}
@@ -78,10 +77,8 @@ export function ChangePasswordForm() {
           value={next}
         />
       </Label>
-      <Label className="block">
-        <span className="mb-1 block text-[10px] text-white/50 uppercase tracking-[0.18em]">
-          Confirm new password
-        </span>
+      <Label className="admin-field-group">
+        <span className="admin-field-label">Confirm new password</span>
         <Input
           autoComplete="new-password"
           onChange={(e) => setConfirm(e.target.value)}

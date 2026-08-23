@@ -5,6 +5,7 @@ import {
   isTransparent,
   pathFor,
 } from "./drawing";
+import "./DrawingView.css";
 
 /**
  * A drawn mark, rendered as SVG inside its own item box.
@@ -51,7 +52,7 @@ export function DrawingView({ config, height, width }: DrawingViewProps) {
     }));
     return (
       <svg
-        className="pointer-events-none h-full w-full overflow-visible"
+        className="drawing-view"
         preserveAspectRatio="none"
         viewBox={`0 0 ${Math.max(width, 1)} ${Math.max(height, 1)}`}
       >
@@ -71,7 +72,7 @@ export function DrawingView({ config, height, width }: DrawingViewProps) {
   const inset = strokeWidth / 2;
   return (
     <svg
-      className="pointer-events-none h-full w-full overflow-visible"
+      className="drawing-view"
       viewBox={`0 0 ${Math.max(width, 1)} ${Math.max(height, 1)}`}
     >
       <title>Drawing</title>

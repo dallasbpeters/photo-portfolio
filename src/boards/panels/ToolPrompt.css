@@ -1,0 +1,10 @@
+/*
+ * The prompt a tool asks for before it runs.
+ *
+ * Everything here is panelChrome's; the one thing that is not is the gap above
+ * whatever a tool adds below its prompt — a model picker, a count — which is
+ * spaced from the field rather than crowding it.
+ */
+.tool-prompt__extra {
+  margin-block-start: calc(var(--spacing) * 2);
+}

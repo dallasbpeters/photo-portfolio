@@ -1,0 +1,197 @@
+/*
+ * One photograph in the library grid.
+ *
+ * 3:4 whatever the picture's own shape, so the grid stays even. The card is the
+ * drag handle — HTML5 drag needs its handlers on the dragged element itself —
+ * which is why the whole thing is draggable and the keyboard path is the Order
+ * field instead.
+ */
+
+.photo-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  padding: calc(var(--spacing) * 0.5);
+  border-radius: var(--radius-lg);
+  transition: opacity var(--default-transition-duration) var(--ease-in-out);
+}
+
+/* Being carried. Faded so the gap it will leave is readable. */
+.photo-card--dragging {
+  opacity: 0.4;
+}
+
+/*
+ * The spinning gradient behind the card, on hover.
+ *
+ * The conic gradient itself stays inline: it names two specific oklch stops and
+ * an angle offset that only mean anything together, and `--gradient-angle` is
+ * what the keyframes animate. This is the geometry around it.
+ */
+.photo-card__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  opacity: 0;
+  transition: opacity var(--duration-glow) var(--ease-in-out);
+  animation: var(--animate-gradient-spin);
+}
+
+.group:hover .photo-card__glow {
+  opacity: 1;
+}
+
+.photo-card__frame {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: color-mix(in oklch, #000 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, #fff 10%, transparent);
+  border-radius: var(--radius-md);
+  transition: border-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.photo-card__frame--selected {
+  border-color: color-mix(in oklch, #fff 40%, transparent);
+}
+
+.photo-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * A screenshot crops from its top left rather than its middle.
+ *
+ * `object-cover` takes the centre, which on a full-page screenshot is a band
+ * somewhere down the page — no header, no context, nothing saying what the page
+ * is. A photograph's subject is in the middle; a screenshot's is at the top.
+ */
+.photo-card__image--chrome {
+  object-position: left top;
+}
+
+/* Darkens the foot of the picture so the caption over it stays legible whatever
+   the photograph is. */
+.photo-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    #000,
+    color-mix(in oklch, #000 50%, transparent),
+    color-mix(in oklch, #000 20%, transparent)
+  );
+}
+
+/*
+ * The select checkbox's target.
+ *
+ * A 44px hit area around a 20px box: this is the control used most on a phone,
+ * and the box itself is far smaller than a fingertip.
+ */
+.photo-card__select {
+  position: absolute;
+  top: var(--spacing);
+  left: var(--spacing);
+  z-index: var(--z-canvas-item);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(var(--spacing) * 11);
+  min-height: calc(var(--spacing) * 11);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.photo-card__checkbox {
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
+}
+
+/* The card's own controls, stacked down its right edge. */
+.photo-card__actions {
+  position: absolute;
+  top: var(--spacing);
+  right: calc(var(--spacing) * 0.5);
+  z-index: var(--z-canvas-item);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+}
+
+/* Over the scrim, with room above it for the gradient to fade through. */
+.photo-card__caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--z-canvas-item);
+  padding: calc(var(--spacing) * 2);
+  padding-block-start: calc(var(--spacing) * 6);
+}
+
+/* Two lines at most, then clipped: a title is a label here, not the content. */
+.photo-card__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  font-size: var(--text-micro-xs);
+  font-weight: 300;
+  line-height: 1.25;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+}
+
+.photo-card__meta {
+  margin-block-start: calc(var(--spacing) * 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, #fff 75%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35));
+}
+
+.photo-card__id {
+  margin-block-start: calc(var(--spacing) * 0.5);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, #fff 55%, transparent);
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35));
+}
+
+/*
+ * A badge on the picture — featured, edited.
+ *
+ * Amber, which on this card means "we did something to this" rather than
+ * "something is wrong". amber-200 on amber-400 at 15%.
+ */
+.photo-card__badge {
+  display: inline-flex;
+  gap: var(--spacing);
+  align-items: center;
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  margin-block-start: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: oklch(92.4% 0.12 95.746);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  background: color-mix(in oklch, oklch(82.8% 0.189 84.429) 15%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.photo-card__badge-icon {
+  width: calc(var(--spacing) * 3);
+  height: calc(var(--spacing) * 3);
+  color: oklch(82.8% 0.189 84.429);
+}

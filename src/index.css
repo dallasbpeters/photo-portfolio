@@ -82,7 +82,8 @@
     0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
-  --spacing: 0.25rem;
+  --spacing: 0.28rem;
+  --spacing-lg: 0.48rem;
 
   /*
    * The board's palette, which is not the site's.
@@ -211,6 +212,33 @@
   --btn-danger-solid-bg: oklch(0.637 0.237 25.331);
   --btn-danger-solid-fg: rgb(255 255 255);
   --btn-danger-solid-hover-bg: oklch(0.577 0.245 27.325);
+
+  /*
+   * The ground a modal sits on, on that same fixed dark chrome.
+   *
+   * One use today — the comment dialog, which had it as a bare `#181818` at the
+   * call site. Named rather than left there because it is a surface colour, and
+   * a surface the next dialog will want too. Literal for the same reason the
+   * buttons above are: this chrome does not follow the light/dark switch, and a
+   * token that inverted would turn the dialog inside out.
+   */
+  /* Kept as the hex it was, not converted: this is a straight rename, and a
+     hand-converted oklch would be a colour change dressed as a refactor. */
+  --color-admin-panel: #181818;
+
+  /*
+   * What "selected" is drawn in, on the canvas.
+   *
+   * blue-500, which the resize grips, the selection ring and the wire being
+   * drawn all used independently as a bare `blue-500`. One name, because they
+   * are one idea: this is the colour of the thing you are pointing at.
+   */
+  --color-selection: oklch(62.3% 0.214 259.815);
+  /* The same idea a shade brighter, for marks drawn *over* the board rather
+     than around an item: alignment guides and the marquee. sky-400 and
+     sky-300, which were bare utilities at five call sites. */
+  --color-selection-bright: oklch(74.6% 0.16 232.661);
+  --color-selection-soft: oklch(82.8% 0.111 230.318);
 }
 
 /*
@@ -364,7 +392,7 @@
   --dot-space: 16px;
 
   --breakpoint-sm: 568px;
-  --breakpoint-md: 786px;
+  --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
@@ -389,6 +417,133 @@
   --text-7xl: 8.346rem;
   --text-8xl: 10.458rem;
   --text-9xl: 12.606rem;
+
+  /*
+   * The micro ladder: instrument type, below the scale above.
+   *
+   * Seven steps because seven were already in use — the board's chrome and the
+   * pages' micro-caps had accumulated 8, 9, 10, 11, 12, 13 and 14px written as
+   * literals across 111 call sites, and `.label` a 10px one of its own. They are
+   * gathered here unchanged rather than flattened: collapsing them is a visible
+   * redesign of every panel on the board, and this file is the place a raw value
+   * is allowed to be invented, so it is the place they belong until that
+   * decision is taken deliberately.
+   *
+   * In rem, so they answer to the root size like everything else. As px they
+   * could not: a reader who enlarges type got a board whose chrome stayed
+   * exactly as small as before.
+   *
+   * `--text-micro-xs` is `.label`'s step, shared with the pages. The rest are
+   * the board's own.
+   */
+  --text-micro-3xs: 0.5rem;
+  --text-micro-2xs: 0.5625rem;
+  --text-micro-xs: 0.625rem;
+  --text-micro-sm: 0.6875rem;
+  --text-micro-md: 0.75rem;
+  --text-micro-lg: 0.8125rem;
+  --text-micro-xl: 0.875rem;
+
+  /*
+   * Interface text on the admin chrome.
+   *
+   * Tailwind's own `text-sm` and `text-xs`, which the app was using directly
+   * because the type scale above starts too small for a form field and jumps
+   * from 0.738rem to 1.15rem with nothing in between. Named rather than left as
+   * bare utilities; whether the page scale should grow a rung here is a real
+   * question, and now it is one line rather than forty call sites.
+   */
+  --text-sm-ui: 0.875rem;
+  --text-xs-ui: 0.75rem;
+  --text-base-ui: 1rem;
+  --text-xl-ui: 1.25rem;
+  --text-2xl-ui: 1.5rem;
+
+  /*
+   * Prose: the one thing in this app meant to be read at length.
+   *
+   * Its own step because the scale above is built for headings and instrument
+   * labels — `--text-base` is 0.738rem, which is a caption, not a paragraph.
+   * 15px with 1.75 leading is what the CMS pages have always set.
+   */
+  --text-prose: 0.9375rem;
+  --leading-prose: 1.75;
+
+  /*
+   * Tracking for that ladder. Tailwind's own stops at `widest` (0.1em), and
+   * every one of these is wider — small uppercase type needs the room, which is
+   * why four of them had been written out by hand.
+   */
+  --tracking-micro-tight: 0.08em;
+  --tracking-micro: 0.14em;
+  --tracking-micro-wide: 0.16em;
+  --tracking-micro-caps: 0.18em;
+  /* The widest the app goes, for a single word standing alone — `.label--stamped`. */
+  --tracking-stamped: 0.3em;
+  /* Between --tracking-micro-caps and --tracking-stamped. The CMS headings use
+     it; it had been written out as `tracking-[0.2em]` at twenty-one sites. */
+  --tracking-micro-widest: 0.2em;
+  /* A page heading, wider still than the label steps. */
+  --tracking-heading: 0.24em;
+  /* The gate screens, which track wider than anything else in the admin. */
+  --tracking-gate: 0.25em;
+  --tracking-gate-tight: 0.15em;
+
+  /*
+   * Control corners.
+   *
+   * `--radius-control` is Tailwind's bare `rounded` — 0.25rem — and is NOT
+   * `--radius-sm`, which this project re-points to `calc(var(--radius) - 4px)`
+   * = 6px. The two are half again apart, so a control reaching for the wrong
+   * one is a visible change. `--radius-glyph` is for a borrowed icon that has
+   * to look like a rounded rectangle at 18px.
+   */
+  --radius-control: 0.25rem;
+  --radius-glyph: 0.1875rem;
+  /* Fully round, whatever the box. `infinity` rather than a big number, which
+     is what 9999px was pretending to be. */
+  --radius-pill: calc(infinity * 1px);
+
+  /* A single-pixel rule. Named because it is a decision, not an accident. */
+  --border-hairline: 1px;
+
+  /* Long enough to read as the same wire moving, short enough not to lag the
+     node it follows. */
+  --duration-wire: 300ms;
+  /* Slower than a state change: the hover glow is decoration, and it should
+     arrive after the thing it decorates. */
+  --duration-glow: 500ms;
+
+  /*
+   * What sits in front of what.
+   *
+   * Named by role, because the numbers were the problem. The app had eleven
+   * distinct z-indexes written as literals — 4, 10, 20, 40, 50, 60, 61, 70,
+   * 100, 200, 1000 — and a `61` only means anything if you already know what
+   * 60 is. A stack this shallow needs six rungs, and anything reaching for a
+   * bigger number than the layer above it is answering the wrong question.
+   *
+   * The gaps are deliberate: room to slot a layer in without renumbering.
+   */
+  --z-canvas-item: 10;
+  --z-canvas-chrome: 20;
+  --z-scrim: 40;
+  --z-popover: 50;
+  --z-modal-scrim: 60;
+  --z-modal: 70;
+  /* Wires sit above every node so a connection is never hidden behind the box
+     it runs to. Its own rung rather than a big number: this was `z-1000`. */
+  /* The board editor is a fixed surface over the admin; its own floating panels
+     sit above the photo editor that can open on top of it. These were 50, 100
+     and 200 as literals, in three different files. */
+  --z-board: 50;
+  --z-photo-editor: 100;
+  --z-board-panel: 200;
+  --z-wires: 1000;
+  /* One rung above --z-modal-scrim, for the colour picker that portals itself
+     over a scrim of its own. This was the `z-61` that made the ladder
+     unreadable. */
+  --z-color-picker: 61;
 }
 
 /* Register --gradient-angle as a typed property so browsers can interpolate it */

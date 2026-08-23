@@ -240,6 +240,39 @@ const storedImageOf = (row: BoardItemRow): string | null => {
 };
 
 /**
+ * A value read off a node's own settings. Blank is absent: an empty field
+ * leaves the wire silent rather than joining an empty string into a prompt.
+ */
+const settingTextOf = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value : null;
+
+/**
+ * What a node that has run hands over.
+ *
+ * Words if it produced words, otherwise the picture: the version the author
+ * picked, or failing that the newest one. Choosing a version is choosing the
+ * node's output, not merely what it displays.
+ */
+const resultOutputOf = (row: BoardItemRow): string | null => {
+  const result = asObject(row.result);
+  // A node that produced words hands the words along. The port type decides
+  // what a string means, so text and a URL travel the same way.
+  if (typeof result.text === "string" && result.text.trim()) {
+    return result.text;
+  }
+  const history = Array.isArray(result.history)
+    ? (result.history as { url?: string }[])
+    : [];
+  const { selectedVersion } = asObject(row.config);
+  const selected = Number(selectedVersion);
+  const chosen = Number.isFinite(selected) ? history[selected]?.url : undefined;
+  if (typeof chosen === "string") {
+    return chosen;
+  }
+  return typeof result.url === "string" ? result.url : null;
+};
+
+/**
  * What an item hands to whatever it feeds.
  *
  * A photograph resolves through its join rather than a stored copy, so
@@ -282,31 +315,27 @@ export const singleOutputOf = (
   if (row.node_type === "element") {
     return row.image_url;
   }
+  /*
+   * A Brand node hands over the kit as prompt material.
+   *
+   * Read from `brandText`, which withBrandKits resolved from the library before
+   * the walk began — never from the node's own config, which holds only an id.
+   * Empty means no kit chosen, or a kit since deleted; both contribute nothing
+   * rather than a stale brand, and returning null keeps the wire silent instead
+   * of joining an empty string into somebody's prompt.
+   */
+  if (row.node_type === "brand") {
+    return settingTextOf(asObject(row.config).brandText);
+  }
   // A source node produces its value without ever running, so it is read from
   // its settings rather than from a result it will never have.
   if (!isRunnableNodeType(row.node_type)) {
     const config = asObject(row.config);
-    const text = config.text ?? config.prompt;
-    return typeof text === "string" && text.trim() ? text : null;
+    return settingTextOf(config.text ?? config.prompt);
   }
-  const result = asObject(row.result);
-  // A node that produced words hands the words along. The port type decides
-  // what a string means, so text and a URL travel the same way.
-  if (typeof result.text === "string" && result.text.trim()) {
-    return result.text;
-  }
-  // A node that has had a version picked hands that one downstream: choosing a
-  // version is choosing the node's output, not merely what it displays.
-  const history = Array.isArray(result.history)
-    ? (result.history as { url?: string }[])
-    : [];
-  const { selectedVersion } = asObject(row.config);
-  const selected = Number(selectedVersion);
-  const chosen = Number.isFinite(selected) ? history[selected]?.url : undefined;
-  if (typeof chosen === "string") {
-    return chosen;
-  }
-  return typeof result.url === "string" ? result.url : null;
+  // Everything left is a node that runs, so what it hands over is whatever the
+  // run left on it.
+  return resultOutputOf(row);
 };
 
 /**

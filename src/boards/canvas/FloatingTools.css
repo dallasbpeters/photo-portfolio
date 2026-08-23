@@ -1,0 +1,43 @@
+/*
+ * The two places a tool can float over the canvas.
+ *
+ * Both are positioning shells and nothing else — the strips and panels inside
+ * bring their own appearance. Both are also `pointer-events: none` with the
+ * content re-enabling itself, because each covers a wide band of canvas that
+ * is mostly empty, and an invisible shell that swallows drags is indist-
+ * inguishable from a board that has stopped responding.
+ */
+
+/* A centred strip along the bottom: brush, mask, autoplay. */
+.floating-tools-bottom {
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(var(--spacing) * 4);
+  z-index: var(--z-canvas-chrome);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.floating-tools-bottom__content {
+  pointer-events: auto;
+}
+
+/*
+ * A full-height column down the right, for the shader settings.
+ *
+ * A column rather than a strip because the panel holds fifteen to twenty
+ * controls: anchored along the bottom it ran out of height and the last group
+ * could not be scrolled to. See the note in FloatingTools.tsx.
+ */
+.floating-tools-side {
+  position: absolute;
+  top: calc(var(--spacing) * 24);
+  right: calc(var(--spacing) * 4);
+  bottom: calc(var(--spacing) * 4);
+  z-index: var(--z-canvas-chrome);
+  display: flex;
+  justify-content: flex-end;
+  width: calc(var(--spacing) * 72);
+  pointer-events: none;
+}

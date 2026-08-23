@@ -40,10 +40,11 @@
   height: 0.875rem;
   color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
   background-color: var(--color-board-surface);
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 20%, transparent);
-  border-radius: 9999px;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-pill);
   opacity: 0;
-  transition: opacity 150ms ease-out;
+  transition: opacity var(--default-transition-duration) var(--ease-in-out) -out;
 }
 
 .palette-swatches__swatch:hover .palette-swatches__remove,
@@ -61,7 +62,7 @@
   width: 1.5rem;
   height: 1.5rem;
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
-  border: 1px dashed
+  border: var(--border-hairline) dashed
     color-mix(in oklch, var(--color-board-ink) 20%, transparent);
   border-radius: var(--radius-xs);
 }
@@ -87,7 +88,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 

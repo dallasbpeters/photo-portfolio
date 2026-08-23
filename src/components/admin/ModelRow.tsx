@@ -3,6 +3,8 @@ import { PROTECTED_MODEL_ID } from "../../../config/models";
 import type { AiModel } from "../../types";
 import { Button } from "../ui/button";
 import { inputLabel, loraSummary } from "./modelSummary";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
 
 /**
  * One model in the list.
@@ -34,35 +36,27 @@ export function ModelRow({
   const isAuto = model.id === PROTECTED_MODEL_ID;
   const summary = loraSummary(model);
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-white/90">
-            {model.label}
-          </span>
+    <div className="admin-row">
+      <div className="admin-row__body">
+        <div className="row">
+          <span className="admin-row__name">{model.label}</span>
           {model.vector ? (
-            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-300 uppercase tracking-wider">
-              Vector
-            </span>
+            <span className="admin-chip admin-chip--kind">Vector</span>
           ) : null}
           {model.enabled ? null : (
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50 uppercase tracking-wider">
-              Off
-            </span>
+            <span className="admin-chip admin-chip--plain">Off</span>
           )}
           {isAuto ? (
-            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300 uppercase tracking-wider">
-              Default
-            </span>
+            <span className="admin-chip admin-chip--on">Default</span>
           ) : null}
         </div>
-        <p className="truncate font-mono text-white/40 text-xs">{model.id}</p>
-        <p className="text-white/60 text-xs">
+        <p className="admin-row__id">{model.id}</p>
+        <p className="admin-row__note">
           {inputLabel(model.input)}
           {summary ? ` · ${summary}` : ""}
         </p>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="row row--snug">
         <Button
           aria-label={`Move ${model.label} up`}
           disabled={isFirst}

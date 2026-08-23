@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { collectionsApi } from "../services/portfolioService";
+import { authStorage, collectionsApi } from "../services/portfolioService";
 import type { Collection } from "../types";
 
 /**
@@ -19,7 +19,14 @@ import type { Collection } from "../types";
  * instead of leaving a failure cached under the same key.
  */
 const collectionsKey = (): readonly [string, boolean] =>
-  ["collections", Boolean(localStorage.getItem("cyan_admin_token"))] as const;
+  // Asked of `authStorage` rather than of `localStorage`, which is what the
+  // comment above always claimed. Reading the key directly duplicated its name
+  // -- so renaming it in one place would have left this silently watching a
+  // key nothing writes -- and skipped the sessionStorage fallback inside
+  // `getToken`, so on a session still carrying a token from before the move to
+  // localStorage this said "signed out" while `usePhotos` said "signed in", and
+  // the two cached opposite answers.
+  ["collections", Boolean(authStorage.getToken())] as const;
 
 export interface UseCollectionsResult {
   collections: Collection[];

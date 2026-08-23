@@ -28,6 +28,7 @@
  */
 
 import { BATCH } from "./nodes/batch.js";
+import { BRAND } from "./nodes/brand.js";
 import { COMPOSITE } from "./nodes/composite.js";
 import { DESCRIBE } from "./nodes/describe.js";
 import { ELEMENT } from "./nodes/element.js";
@@ -73,12 +74,29 @@ export interface InputPort extends Port {
   required: boolean;
 }
 
+/**
+ * A setting, and where it is edited.
+ *
+ * `panel` is the only cross-cutting field: it says a control belongs in the side
+ * panel beside the board rather than on the node itself. Declared per setting
+ * rather than decided by whoever renders it, for the same reason the rest of
+ * this registry exists — the node and the panel both read one list, so a
+ * setting cannot end up in both places or in neither.
+ *
+ * The model picker is the reason it exists. A model choice is a long label in a
+ * menu of thirty, and on a node it was both the widest thing on the card and
+ * the least often changed. The generation parameters that arrived with it —
+ * size, output format, quality, how many passes — have the same shape: set once
+ * for a node, then left alone while the prompt is worked on.
+ */
 export type SettingDef =
   | {
       key: string;
       kind: "text";
       label: string;
       maxLength: number;
+      /** Edited in the side panel rather than on the node. See SettingDef. */
+      panel?: boolean;
       placeholder: string;
     }
   | {
@@ -86,15 +104,40 @@ export type SettingDef =
       key: string;
       kind: "select";
       label: string;
+      /**
+       * What each option is called, where the stored value is not presentable.
+       *
+       * fal's size vocabulary is the reason: `portrait_16_9` is the string the
+       * endpoint requires and cannot be prettified on the way out, but it is
+       * not what a control should say. Absent means the value is its own label,
+       * which is true of every other select on the board.
+       */
+      optionLabels?: Readonly<Record<string, string>>;
       options: readonly string[];
+      panel?: boolean;
     }
   | {
       default: string;
       key: string;
       kind: "model";
       label: string;
+      panel?: boolean;
       /** Offer only video endpoints; an image one refuses after billing. */
       video?: boolean;
+    }
+  | {
+      /**
+       * A brand kit from the library, chosen by id.
+       *
+       * Data rather than options, exactly like `kind: "model"` — the choices are
+       * rows in `brand_kits`, so the registry declares the control and the
+       * control asks for what to offer.
+       */
+      default: string;
+      key: string;
+      kind: "brandKit";
+      label: string;
+      panel?: boolean;
     }
   | {
       default: number;
@@ -103,6 +146,7 @@ export type SettingDef =
       label: string;
       max: number;
       min: number;
+      panel?: boolean;
       /**
        * The smallest change worth making. Absent means whole numbers.
        *
@@ -119,6 +163,7 @@ export type SettingDef =
       key: string;
       kind: "color";
       label: string;
+      panel?: boolean;
     };
 
 /**
@@ -137,6 +182,7 @@ export type NodeCapability =
 
 export type NodeTypeId =
   | "batch"
+  | "brand"
   | "composite"
   | "describe"
   | "element"
@@ -162,6 +208,7 @@ export interface NodeType {
 
 export const NODE_TYPES: Record<NodeTypeId, NodeType> = {
   batch: BATCH,
+  brand: BRAND,
   composite: COMPOSITE,
   describe: DESCRIBE,
   element: ELEMENT,

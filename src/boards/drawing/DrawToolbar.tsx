@@ -14,6 +14,7 @@ import {
   isTransparent,
   NO_FILL,
 } from "./drawing";
+import "./DrawToolbar.css";
 
 /**
  * The drawing tools, and the colors the next mark is made in.
@@ -71,11 +72,7 @@ const MASK_DEFAULT_WIDTH = 48;
 const WIDEST_PEN = 16;
 
 const buttonClass = (isActive: boolean): string =>
-  `grid size-8 place-items-center rounded transition-colors ${
-    isActive
-      ? "bg-board-ink text-board-surface"
-      : "text-board-ink/60 hover:bg-board-ink/10"
-  }`;
+  `draw-toolbar__button ${isActive ? "draw-toolbar__button--on" : ""}`;
 
 export function DrawToolbar({
   onStyle,
@@ -86,7 +83,7 @@ export function DrawToolbar({
   const hasFill = !isTransparent(style.fill);
 
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
+    <div className="draw-toolbar">
       <button
         aria-label="Select"
         aria-pressed={tool === null}
@@ -101,12 +98,10 @@ export function DrawToolbar({
       {/* Said out loud while a tool is on, because that is exactly when a
           person is wondering why nothing can be dragged any more. */}
       {tool === null ? null : (
-        <span className="px-1 text-[9px] text-board-ink/35 uppercase tracking-[0.14em]">
-          esc to select
-        </span>
+        <span className="draw-toolbar__hint">esc to select</span>
       )}
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
+      <span aria-hidden className="draw-toolbar__divider" />
 
       {TOOLS.map((entry) => (
         <button
@@ -133,18 +128,22 @@ export function DrawToolbar({
           {/* The rounded rectangle borrows the square's glyph with its own
               corners, which reads more clearly than a third similar outline. */}
           <HugeiconsIcon
-            className={entry.tool === "rounded" ? "rounded-[3px]" : undefined}
+            className={
+              entry.tool === "rounded"
+                ? "draw-toolbar__icon--rounded"
+                : undefined
+            }
             icon={entry.icon}
             size={entry.tool === "rounded" ? 18 : 20}
           />
         </button>
       ))}
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
+      <span aria-hidden className="draw-toolbar__divider" />
 
       {/* Stroke and fill as separate wells, labelled, because "which color am
           I setting" is the question a single swatch always raises. */}
-      <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
+      <span className="draw-toolbar__well">
         Line
         <ColorWell
           label="Stroke color"
@@ -153,7 +152,7 @@ export function DrawToolbar({
         />
       </span>
 
-      <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
+      <span className="draw-toolbar__well">
         Fill
         <ColorWell
           label="Fill color"
@@ -167,10 +166,8 @@ export function DrawToolbar({
       <button
         aria-label={hasFill ? "Remove fill" : "Add fill"}
         aria-pressed={hasFill}
-        className={`rounded px-1.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
-          hasFill
-            ? "text-board-ink/70 hover:text-board-ink"
-            : "text-board-ink/30 hover:text-board-ink/60"
+        className={`draw-toolbar__fill ${
+          hasFill ? "draw-toolbar__fill--on" : "draw-toolbar__fill--off"
         }`}
         onClick={() =>
           onStyle({ ...style, fill: hasFill ? NO_FILL : "#ffffff" })
@@ -180,24 +177,22 @@ export function DrawToolbar({
         {hasFill ? "On" : "Off"}
       </button>
 
-      <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
+      <span aria-hidden className="draw-toolbar__divider" />
 
-      <div className="flex items-center gap-0.5">
+      <div className="draw-toolbar__weights">
         {(tool === "mask" ? MASK_WIDTHS : WIDTHS).map((width) => (
           <button
             aria-label={`Line weight ${width}`}
             aria-pressed={style.strokeWidth === width}
-            className={`grid size-7 place-items-center rounded transition-colors ${
-              style.strokeWidth === width
-                ? "bg-board-ink/15"
-                : "hover:bg-board-ink/10"
+            className={`draw-toolbar__weight ${
+              style.strokeWidth === width ? "draw-toolbar__weight--on" : ""
             }`}
             key={width}
             onClick={() => onStyle({ ...style, strokeWidth: width })}
             type="button"
           >
             <span
-              className="block rounded-full bg-board-ink"
+              className="draw-toolbar__dot"
               style={{
                 height: Math.min(width, 10),
                 width: Math.min(width, 10),

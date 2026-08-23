@@ -1,0 +1,102 @@
+/*
+ * The type controls that hang off a selected text item.
+ *
+ * The same anchoring as BoardToolBar — above or below depending on room, with
+ * the gap applied after the counter-scale so it is ten screen pixels at any
+ * zoom rather than ten canvas units that shrink to two. See the note at the
+ * call site.
+ *
+ * Two rows: the common controls always, and a second row of typographic detail
+ * that folds away. Wrapping, because the row is wider than a narrow item and
+ * the controls should stack rather than run off the side.
+ */
+
+.board-text-tools {
+  position: absolute;
+  left: 0;
+  width: max-content;
+  padding: var(--spacing);
+  background: color-mix(in oklch, var(--color-board-surface) 90%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+.board-text-tools--below {
+  top: 100%;
+  transform-origin: top left;
+}
+
+.board-text-tools--above {
+  bottom: 100%;
+  transform-origin: bottom left;
+}
+
+/* The folding row of typographic detail, ruled off from the row below it. */
+.board-text-tools__detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  padding-block-end: var(--spacing);
+  padding-inline: var(--spacing);
+  margin-block-end: var(--spacing);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.board-text-tools__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  align-items: center;
+}
+
+/* A labelled control — "Leading", "Tracking" — with its stepper beside it. */
+.board-text-tools__field {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+}
+
+.board-text-tools__stepper {
+  display: flex;
+  gap: calc(var(--spacing) * 0.5);
+  align-items: center;
+}
+
+/*
+ * The stepper's value.
+ *
+ * Tabular and given a floor width, so the buttons either side do not shuffle
+ * as the number goes from 1 to 1.25 — which is exactly while it is being
+ * stepped and watched.
+ */
+.board-text-tools__value {
+  min-width: calc(var(--spacing) * 8);
+  font-size: var(--text-micro-xs);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  text-align: center;
+}
+
+.board-text-tools__divider {
+  width: var(--border-hairline);
+  height: calc(var(--spacing) * 5);
+  margin-inline: var(--spacing);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* The two shadcn selects keep their own chrome; only their width is ours. */
+.board-text-tools__select-font {
+  width: calc(var(--spacing) * 40);
+}
+
+.board-text-tools__select-weight {
+  width: calc(var(--spacing) * 28);
+}

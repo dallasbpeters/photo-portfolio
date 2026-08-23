@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import ThemeToggle from "../../ThemeToggle";
 import { Button } from "../../ui/button";
+import "./boardEditorChrome.css";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
@@ -60,10 +61,8 @@ export function BoardHeaderActions({
       ) : null}
       <Button
         aria-label="Comments"
-        className={`min-h-11 rounded px-2 text-[10px] uppercase tracking-[0.18em] transition-colors ${
-          showComments
-            ? "bg-cyan-300/15 text-cyan-200"
-            : "text-board-ink/70 hover:text-board-ink"
+        className={`board-header-action ${
+          showComments ? "board-header-action--on" : "board-header-action--off"
         }`}
         onClick={onToggleComments}
         type="button"
@@ -73,7 +72,7 @@ export function BoardHeaderActions({
       </Button>
       {publicUrl ? (
         <button
-          className="max-w-40 truncate text-[10px] text-emerald-500 underline-offset-2 hover:underline"
+          className="board-header-link"
           onClick={() => {
             void navigator.clipboard.writeText(publicUrl);
             toast.success("Link copied");

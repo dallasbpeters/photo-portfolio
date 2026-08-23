@@ -176,11 +176,11 @@
 }
 
 /*
- * The project's `md` is 786px, not Tailwind's 768 — see `--breakpoint-md` in
- * index.css. Written out because a media query cannot read a custom property,
- * so this is the one number here that has to be kept in step by hand.
+ * `md` — `--breakpoint-md` in index.css. Written out because a media query
+ * cannot read a custom property, so this is the one number here that has to be
+ * kept in step by hand.
  */
-@media (width >= 786px) {
+@media (width >= 768px) {
   .photo-page__masthead,
   .photo-page__main,
   .photo-page__footer {

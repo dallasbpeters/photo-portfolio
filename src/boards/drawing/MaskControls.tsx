@@ -5,6 +5,7 @@ import {
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem } from "../../types";
 import { type MaskConfig, maskOf } from "./mask";
+import "./MaskControls.css";
 
 /**
  * What to do with the mask on the selected picture.
@@ -31,34 +32,32 @@ export function MaskControls({ onChange, selected }: MaskControlsProps) {
   }
 
   return (
-    <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-board-ink/10 bg-board-surface/80 p-1 backdrop-blur">
-      <span className="px-1.5 text-[9px] text-board-ink/40 uppercase tracking-[0.16em]">
-        Mask
-      </span>
+    <div className="mask-controls">
+      <span className="mask-controls__title">Mask</span>
 
       {/* Says what the paint currently means, rather than what the button
           does. "Change" and "Keep" are the two states; a button labelled
           "Invert" leaves you working out which way round you are. */}
       <button
         aria-pressed={mask.invert}
-        className={`rounded px-2 py-1 text-[11px] ${
+        className={`mask-controls__invert ${
           mask.invert
-            ? "bg-sky-400/20 text-sky-200"
-            : "bg-rose-400/20 text-rose-200"
+            ? "mask-controls__invert--keep"
+            : "mask-controls__invert--change"
         }`}
         onClick={() => onChange(selected.id, { ...mask, invert: !mask.invert })}
         title="What the painted area means"
         type="button"
       >
         <HugeiconsIcon aria-hidden icon={ExchangeIcon} size={11} />
-        <span className="ml-1.5">
+        <span className="mask-controls__invert-text">
           {mask.invert ? "Painted = keep" : "Painted = change"}
         </span>
       </button>
 
       <button
         aria-label="Clear the mask"
-        className="rounded px-1.5 py-1 text-board-ink/50 hover:text-red-300"
+        className="mask-controls__clear"
         onClick={() => onChange(selected.id, null)}
         title="Clear the mask"
         type="button"

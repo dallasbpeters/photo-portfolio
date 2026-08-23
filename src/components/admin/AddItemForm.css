@@ -1,0 +1,75 @@
+/*
+ * Adding one photograph, at the top of the photos tab.
+ *
+ * A single column that grows its gap from the medium breakpoint up, and fields
+ * aligned to their baselines rather than their tops — the file input is taller
+ * than the text ones, and top-aligning left its label floating.
+ *
+ * 768px written out: a media query cannot read `--breakpoint-md`.
+ */
+
+.add-item {
+  height: 100%;
+  overflow: visible;
+  background: color-mix(in oklch, #fff 5%, transparent);
+  border-color: color-mix(in oklch, #fff 10%, transparent);
+}
+
+.add-item__title {
+  font-size: var(--text-sm-ui);
+  font-weight: 300;
+  color: color-mix(in oklch, #fff 90%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-stamped);
+}
+
+.add-item__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--spacing) * 5);
+  align-items: end;
+}
+
+@media (width >= 768px) {
+  .add-item__form {
+    gap: calc(var(--spacing) * 6);
+  }
+}
+
+/* The chosen file's name, and the note under it. */
+.add-item__file-name {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+}
+
+.add-item__file-note {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, #fff 90%, transparent);
+}
+
+.add-item__truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The title field.
+ *
+ * 16px below the small breakpoint and 14 above it, which is not a style choice:
+ * iOS zooms the page when a focused field is under 16px, and that zoom does not
+ * come back.
+ */
+.add-item__field {
+  min-height: calc(var(--spacing) * 11);
+  font-size: var(--text-base-ui);
+}
+
+@media (width >= 568px) {
+  .add-item__field {
+    font-size: var(--text-sm-ui);
+  }
+}

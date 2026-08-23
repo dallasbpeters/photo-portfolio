@@ -1,0 +1,53 @@
+/*
+ * The four corner grips on a selected item.
+ *
+ * Small, because they sit on top of the picture being resized and a large grip
+ * hides the corner it is adjusting. Each is nudged half its own width outward so
+ * it straddles the edge rather than sitting inside it — the corner of the item
+ * is what the pointer is aiming at.
+ *
+ * `transform-origin` matters as much as position: the canvas scales this chrome
+ * against the zoom, and a handle scaling from its centre drifts off the corner
+ * it belongs to.
+ */
+
+.resize-handle {
+  position: absolute;
+  width: calc(var(--spacing) * 2);
+  height: calc(var(--spacing) * 2);
+  background: var(--color-selection);
+  border: var(--border-hairline) solid var(--color-selection);
+  border-radius: var(--radius-xs);
+}
+
+.resize-handle--nw {
+  top: calc(var(--spacing) * -1.5);
+  left: calc(var(--spacing) * -1.5);
+  cursor: nwse-resize;
+
+  transform-origin: top left;
+}
+
+.resize-handle--ne {
+  top: calc(var(--spacing) * -1.5);
+  right: calc(var(--spacing) * -1.5);
+  cursor: nesw-resize;
+  transform: translateY(-50%);
+  transform-origin: top right;
+}
+
+.resize-handle--sw {
+  bottom: calc(var(--spacing) * -1.5);
+  left: calc(var(--spacing) * -1.5);
+  cursor: nesw-resize;
+  transform: translateY(50%);
+  transform-origin: bottom left;
+}
+
+.resize-handle--se {
+  right: calc(var(--spacing) * -1.5);
+  bottom: calc(var(--spacing) * -1.5);
+  cursor: nwse-resize;
+  transform: translateY(50%);
+  transform-origin: bottom right;
+}

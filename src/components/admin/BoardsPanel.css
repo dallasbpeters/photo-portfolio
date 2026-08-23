@@ -1,0 +1,122 @@
+/*
+ * The moodboards, as a grid of covers.
+ *
+ * Up to five across on a wide screen, because a board is recognised by its cover
+ * and the point of this grid is scanning for one. Two from the small breakpoint,
+ * one below it.
+ *
+ * The breakpoints are written out: a media query cannot read
+ * `--breakpoint-sm` / `--breakpoint-lg`, and this project sets sm to 568 rather
+ * than Tailwind's 640.
+ */
+.boards-panel__grid {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+}
+
+@media (width >= 568px) {
+  .boards-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width >= 1024px) {
+  .boards-panel__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Darker than `.admin-tile`'s default: a cover sits on it, and a light ground
+   behind a photograph reads as a border the photograph does not have. */
+.boards-panel__tile {
+  background: color-mix(in oklch, #000 40%, transparent);
+}
+
+.boards-panel__count {
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, #fff 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.boards-panel__note {
+  font-size: var(--text-micro-md);
+  line-height: 1.625;
+  color: color-mix(in oklch, #fff 60%, transparent);
+}
+
+/*
+ * Delete, revealed on hover over a cover.
+ *
+ * Its own ground rather than the shared hover tray, because it sits on a
+ * photograph rather than on a panel — a translucent tray over a busy image
+ * leaves the glyph unreadable. Focus reveals it too: a control that cannot be
+ * reached by keyboard is its own bug.
+ */
+.boards-panel__delete {
+  position: absolute;
+  top: calc(var(--spacing) * 2);
+  right: calc(var(--spacing) * 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 9);
+  height: calc(var(--spacing) * 9);
+  color: color-mix(in oklch, #fff 60%, transparent);
+  background: color-mix(in oklch, #000 70%, transparent);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  transition: opacity var(--default-transition-duration) var(--ease-in-out);
+}
+
+.boards-panel__delete:hover {
+  color: #fff;
+}
+
+.boards-panel__delete:focus-visible,
+.group:hover .boards-panel__delete {
+  opacity: 1;
+}
+
+/*
+ * The board editor is loading.
+ *
+ * An indeterminate bar, because the wait has no measurable progress to report:
+ * it is a dynamic import, which resolves when it resolves. What matters is that
+ * something is *moving* — the whole reason opening a board felt broken was that
+ * a click produced a completely static screen for as long as the chunk took, so
+ * a still label alone would only half fix it.
+ *
+ * Across the foot of the cover rather than over it: the cover is what confirms
+ * which board was pressed, so covering it up would remove the other half of the
+ * feedback.
+ */
+.boards-panel__opening {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: calc(var(--spacing) * 0.75);
+  overflow: hidden;
+  background: color-mix(in oklch, #fff 10%, transparent);
+}
+
+.boards-panel__opening::after {
+  position: absolute;
+  inset-block: 0;
+  /* Wide enough to read as a sweep rather than a dot, narrow enough that the
+     travel is obvious. */
+  width: 40%;
+  content: "";
+  background: var(--color-selection-bright);
+  animation: boards-panel-sweep 1.1s var(--ease-in-out) infinite;
+}
+
+@keyframes boards-panel-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(350%);
+  }
+}

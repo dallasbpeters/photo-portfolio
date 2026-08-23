@@ -11,6 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Category } from "@/types";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
+import "./CategoriesManageDialog.css";
 
 export interface CategoriesManageDialogProps {
   categories: Category[];
@@ -64,31 +67,26 @@ export const CategoriesManageDialog = ({
   const renderCategories = () => {
     if (loading) {
       return (
-        <p className="p-4 text-center text-white/90 text-xs uppercase tracking-widest">
+        <p className="categories-dialog__state categories-dialog__state--caps">
           Loading…
         </p>
       );
     }
     if (filtered.length === 0) {
       return (
-        <p className="p-4 text-center text-white/90 text-xs">
+        <p className="categories-dialog__state">
           {trimmed ? "No categories match." : "No categories yet."}
         </p>
       );
     }
     return (
-      <ul aria-label="Categories" className="divide-y divide-white/5">
+      <ul aria-label="Categories" className="admin-list">
         {filtered.map((cat) => (
-          <li
-            className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm"
-            key={cat.id}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="font-light text-white">{cat.label}</span>
-              <span className="ml-2 text-[10px] text-white/90 uppercase tracking-wider">
-                {cat.slug}
-              </span>
-              <span className="ml-2 text-white/90 text-xs">
+          <li className="admin-list__row" key={cat.id}>
+            <div className="admin-row__body">
+              <span className="categories-dialog__label">{cat.label}</span>
+              <span className="categories-dialog__slug">{cat.slug}</span>
+              <span className="categories-dialog__count">
                 · {cat.photoCount} photos
               </span>
             </div>
@@ -122,29 +120,26 @@ export const CategoriesManageDialog = ({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="max-h-[min(32rem,85dvh)] w-[calc(100vw-1.5rem)] max-w-md overflow-hidden border-white/10 bg-neutral-950 text-white sm:w-full"
+        className="admin-dialog admin-dialog--wide"
         showCloseButton
       >
         <DialogHeader>
-          <DialogTitle className="font-light text-white uppercase tracking-[0.2em]">
+          <DialogTitle className="admin-dialog__heading">
             Categories
           </DialogTitle>
-          <DialogDescription className="text-white/90 text-xs uppercase tracking-widest">
+          <DialogDescription className="admin-dialog__subtitle">
             Search, add a new name, or remove categories that have no photos.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label
-              className="text-[10px] text-white/90 uppercase tracking-widest"
-              htmlFor={inputId}
-            >
+        <div className="stack stack--mid">
+          <div className="stack stack--tight">
+            <Label className="admin-caps" htmlFor={inputId}>
               Find or add
             </Label>
             <Input
               autoComplete="off"
-              className="border-white/10 bg-black/40 focus:border-white/40"
+              className="admin-control"
               disabled={loading}
               id={inputId}
               onChange={(e) => setQuery(e.target.value)}
@@ -165,9 +160,7 @@ export const CategoriesManageDialog = ({
             </Button>
           ) : null}
 
-          <div className="max-h-52 overflow-y-auto rounded-md border border-white/10">
-            {renderCategories()}
-          </div>
+          <div className="admin-inset-list">{renderCategories()}</div>
         </div>
       </DialogContent>
     </Dialog>

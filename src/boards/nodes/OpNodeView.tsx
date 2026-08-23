@@ -3,15 +3,15 @@ import {
   Alert02Icon,
   PlayIcon,
   RefreshIcon,
-  SparklesIcon,
   StopIcon,
-  TextIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../../types";
 import { HalftonePreview } from "../canvas/HalftonePreview";
 import { pickImages, selectedIndex } from "../itemOutput";
+import { BrandPreview } from "./BrandPreview";
 import { ListRows } from "./ListRows";
+import { NodeHeader } from "./NodeHeader";
 import { PaletteSwatches } from "./PaletteSwatches";
 import { ResultImages } from "./ResultImages";
 import { SettingField } from "./SettingField";
@@ -42,29 +42,6 @@ interface OpNodeViewProps {
   /** The words that wire is carrying, so the node can show them. */
   wiredPrompt?: string | null;
 }
-
-const STATE_LABEL: Record<string, string> = {
-  failed: "Failed",
-  idle: "Ready",
-  running: "Running…",
-  skipped: "Unchanged",
-  succeeded: "Done",
-};
-
-/*
- * The modifier each run state wears.
- *
- * Idle and skipped have none: the base class already means "nothing is
- * happening", and a modifier that restates the default is one that can drift
- * from it.
- */
-const STATE_CLASS: Record<string, string> = {
-  failed: "op-node-view__state--failed",
-  idle: "",
-  running: "op-node-view__state--running",
-  skipped: "",
-  succeeded: "op-node-view__state--succeeded",
-};
 
 /**
  * The rotating glow that marks a node as working.
@@ -173,21 +150,12 @@ export function OpNodeView({
       {isRunning ? <RunningGlow /> : null}
 
       <div className="op-node-view">
-        <header className="op-node-view__header">
-          <span className="op-node-view__title">
-            <HugeiconsIcon
-              aria-hidden
-              icon={isSource ? TextIcon : SparklesIcon}
-              size={11}
-            />
-            {type.label}
-          </span>
-          {isSource ? null : (
-            <span className={`op-node-view__state ${STATE_CLASS[state]}`}>
-              {STATE_LABEL[state]}
-            </span>
-          )}
-        </header>
+        <NodeHeader
+          config={config}
+          isSource={isSource}
+          state={state}
+          typeLabel={type.label}
+        />
 
         <NodeBody
           analysed={analysed}
@@ -344,6 +312,14 @@ function NodeBody({
         />
       ) : null}
 
+      {/* A Brand node shows the kit it will spend, for the same reason the
+          halftone shows its render: the node is otherwise a name and a
+          dropdown, and there would be no way to tell a kit with six colours
+          from an empty one. */}
+      {item.nodeType === "brand" ? (
+        <BrandPreview brandKitId={config.brandKitId} />
+      ) : null}
+
       <ResultImages
         images={images}
         onRemove={onRemoveVersion}
@@ -365,8 +341,16 @@ function NodeBody({
       {/* A node with thirty-two controls cannot hold them: they render in the
           floating panel beside the board instead, for the same reason the
           shader settings moved there. Everything else keeps its settings on the
-          node, where they are one glance from what they change. */}
-      {(item.nodeType === "standard" ? [] : type.settings).map((setting) => {
+          node, where they are one glance from what they change.
+          
+          `panel` settings are filtered out here and rendered by
+          NodeSettingsPanel instead — the model picker and the generation
+          parameters beside it, which are set once and then left alone. The
+          registry decides which is which; see SettingDef. */}
+      {(item.nodeType === "standard"
+        ? []
+        : type.settings.filter((setting) => !setting.panel)
+      ).map((setting) => {
         // Chosen by name rather than by a chain of ternaries: there are three
         // now, and the linter is right that a fourth would nest deeper than
         // anyone can read. The same move CanvasMenu made for its panels.

@@ -55,13 +55,36 @@
   animation: var(--animate-gradient-spin);
 }
 
+/*
+ * A node's title bar.
+ *
+ * Four parts across one row: the lab's mark, the two lines naming the node and
+ * its model, what the model does to what it is given, and how the last run
+ * went. The mark leads because it is the only part legible at the zoom the
+ * board is actually worked at.
+ */
 .op-node-view__header {
   display: flex;
-  gap: var(--spacing);
+  flex-shrink: 0;
+  gap: calc(var(--spacing) * 2);
   align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-lg);
+  border-bottom: var(--border-hairline) solid var(--color-border);
+}
+
+/*
+ * The two stacked lines: node type over model.
+ *
+ * `min-width: 0` is load-bearing — without it a long model label refuses to
+ * shrink and pushes the badge and the status pip out past the node's edge,
+ * where `contain: paint` on the node then clips them away entirely.
+ */
+.op-node-view__heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 0.5);
+  min-width: 0;
 }
 
 .op-node-view__title {
@@ -75,6 +98,59 @@
 }
 
 /*
+ * Which model, under the node's own name.
+ *
+ * Truncated rather than wrapped: these labels run to "Mockup · place in a scene
+ * (max)", and a header that grows a second line changes the node's proportions
+ * depending on which model is chosen.
+ */
+.op-node-view__model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+  white-space: nowrap;
+}
+
+/*
+ * Where a lab's mark would go, on a node that calls no model.
+ *
+ * Same box as .provider-logo so the header keeps one geometry whether or not
+ * there is a model to name.
+ */
+.op-node-view__mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 10);
+  color: color-mix(in oklch, var(--color-board-ink) 55%, transparent);
+  background: color-mix(in oklch, var(--color-board-ink) 8%, transparent);
+  border-radius: var(--radius-md);
+}
+
+/*
+ * What the model does to what it is given: Edit, Generate, Process, Video.
+ *
+ * Read off the model's declared input shape rather than typed per row — see
+ * MODE_LABEL. A pill because it is a category rather than a value: the node
+ * either needs a picture wired in or it does not.
+ */
+.op-node-view__badge {
+  flex-shrink: 0;
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+  white-space: nowrap;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 20%, transparent);
+  border-radius: var(--radius-pill);
+}
+
+/*
  * What the node is doing.
  *
  * A modifier per state rather than a colour passed in from TypeScript: the
@@ -82,10 +158,37 @@
  * the palette in the stylesheet where the rest of the palette is.
  */
 .op-node-view__state {
-  font-size: var(--text-xs);
-  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  /* The word it replaced is on the title attribute; this is only the colour. */
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}
+
+/*
+ * How the last run went, as one dot.
+ *
+ * Spelled out, the state sat at the far end of the header competing with the
+ * model's name for the same glance — and "Ready" is the answer three quarters
+ * of the time, which is not worth the widest word in the row. `currentColor`
+ * so the state modifiers keep working unchanged.
+ */
+.op-node-view__pip {
+  width: calc(var(--spacing) * 2);
+  height: calc(var(--spacing) * 2);
+  background: currentcolor;
+  border-radius: var(--radius-pill);
+}
+
+/* Running pulses, because a still dot cannot say "still going". */
+.op-node-view__state--running .op-node-view__pip {
+  animation: op-node-pip-pulse 1.4s var(--ease-in-out) infinite;
+}
+
+@keyframes op-node-pip-pulse {
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .op-node-view__state--running {
@@ -128,7 +231,8 @@
     var(--color-board-surface) 40%,
     transparent
   );
-  border: 1px solid color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
   border-radius: var(--radius-xs);
 }
 
@@ -165,7 +269,7 @@
   gap: var(--spacing);
   align-items: center;
   padding: var(--spacing);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-hairline) solid var(--color-border);
 }
 
 /*

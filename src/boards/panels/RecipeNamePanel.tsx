@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { MAX_RECIPE_NAME } from "../../../config/recipes.js";
+import "../boardChrome.css";
 
 /**
  * Naming a recipe on the way to saving it.
@@ -46,13 +47,13 @@ export function RecipeNamePanel({
   };
 
   return (
-    <div className="px-3 pt-2.5 pb-2.5">
-      <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
+    <div className="panel-section">
+      <span className="panel-label">
         Save {nodeCount === 1 ? "1 node" : `${nodeCount} nodes`} as a recipe
       </span>
       <input
         aria-label="Recipe name"
-        className="w-full rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
+        className="panel-field"
         maxLength={MAX_RECIPE_NAME}
         onChange={(e) => onType(e.target.value)}
         onKeyDown={(e) => {
@@ -68,16 +69,16 @@ export function RecipeNamePanel({
         ref={field}
         value={name}
       />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="panel-actions panel-actions--roomy">
         <button
-          className="rounded px-2 py-1 text-[11px] text-board-ink/60 hover:text-board-ink"
+          className="panel-button panel-button--louder"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="rounded bg-board-ink px-2.5 py-1 text-[11px] text-board-surface disabled:opacity-40"
+          className="panel-button panel-button--primary"
           disabled={!trimmed}
           onClick={submit}
           type="button"

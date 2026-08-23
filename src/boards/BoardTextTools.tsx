@@ -47,6 +47,7 @@ import { isTransparent, NO_FILL } from "./drawing/drawing";
 import { PANEL_GAP } from "./geometry/panelPlacement";
 import { useTextFont } from "./hooks/useTextFont";
 import { useAnchoredPanel } from "./panels/useAnchoredPanel";
+import "./BoardTextTools.css";
 
 /**
  * How a selected text or note item is set.
@@ -153,7 +154,7 @@ function Stepper({
   value: string;
 }) {
   return (
-    <span className="flex items-center gap-0.5">
+    <span className="board-text-tools__stepper">
       <Button
         aria-label={`Decrease ${label}`}
         onClick={() => onStep(-1)}
@@ -164,9 +165,7 @@ function Stepper({
       >
         <HugeiconsIcon icon={MinusSignIcon} />
       </Button>
-      <span className="min-w-8 text-center text-[10px] text-board-ink/60 tabular-nums">
-        {value}
-      </span>
+      <span className="board-text-tools__value">{value}</span>
       <Button
         aria-label={`Increase ${label}`}
         onClick={() => onStep(1)}
@@ -216,8 +215,8 @@ export function BoardTextTools({
     // slides out from under the pointer — the same guard the delete button and
     // every resize handle carry.
     <div
-      className={`absolute left-0 w-max rounded-lg border border-board-ink/10 bg-board-surface/90 p-1 backdrop-blur ${
-        above ? "bottom-full origin-bottom-left" : "top-full origin-top-left"
+      className={`board-text-tools ${
+        above ? "board-text-tools--above" : "board-text-tools--below"
       }`}
       onPointerDown={(e) => e.stopPropagation()}
       ref={panelRef}
@@ -229,7 +228,7 @@ export function BoardTextTools({
       }}
     >
       {showMore ? (
-        <div className="mb-1 flex flex-wrap items-center gap-2 border-board-ink/10 border-b px-1 pb-1">
+        <div className="board-text-tools__detail">
           <Button
             aria-label="Italic"
             aria-pressed={css.fontStyle === "italic"}
@@ -265,7 +264,7 @@ export function BoardTextTools({
             </SelectContent>
           </Select>
 
-          <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
+          <span className="board-text-tools__field">
             Leading
             <Stepper
               label="line height"
@@ -282,7 +281,7 @@ export function BoardTextTools({
             />
           </span>
 
-          <span className="flex items-center gap-1 text-[9px] text-board-ink/40 uppercase tracking-[0.14em]">
+          <span className="board-text-tools__field">
             Tracking
             <Stepper
               label="letter spacing"
@@ -304,7 +303,7 @@ export function BoardTextTools({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="board-text-tools__row">
         {/* Chequered when nothing is set, because nothing set is a real state:
             the words take the board's ink, which inverts with the theme. Pull
             the alpha to zero in the picker to hand it back. */}
@@ -325,7 +324,11 @@ export function BoardTextTools({
           }
           value={style?.family ?? INHERIT}
         >
-          <SelectTrigger aria-label="Font" className="w-40" size="sm">
+          <SelectTrigger
+            aria-label="Font"
+            className="board-text-tools__select-font"
+            size="sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -356,7 +359,11 @@ export function BoardTextTools({
           onValueChange={(value) => set({ weight: Number(value) })}
           value={String(weight?.value ?? css.fontWeight)}
         >
-          <SelectTrigger aria-label="Weight" className="w-28" size="sm">
+          <SelectTrigger
+            aria-label="Weight"
+            className="board-text-tools__select-weight"
+            size="sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -384,7 +391,7 @@ export function BoardTextTools({
           value={String(Math.round(css.fontSize))}
         />
 
-        <span aria-hidden className="mx-1 h-5 w-px bg-board-ink/10" />
+        <span aria-hidden className="board-text-tools__divider" />
 
         {TEXT_ALIGNS.map((align) => (
           <Button

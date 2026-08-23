@@ -6,6 +6,8 @@ import { MAX_ELEMENT_IMAGES } from "../../../config/elements.js";
 import { Button } from "../../components/ui/button";
 import { elementsApi } from "../../services/portfolioService";
 import type { Element } from "../../types";
+import "../boardChrome.css";
+import "./ElementModal.css";
 
 /** Saving a new element out of what is selected on the board. */
 interface ElementDraftProps {
@@ -102,33 +104,29 @@ function PictureGrid({
   urls: string[];
 }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
+    <div className="element-modal__grid">
       {urls.map((url) => (
-        <div className="relative" key={url}>
+        <div className="element-modal__cell" key={url}>
           <button
             aria-label={
               url === cover ? "The key image" : "Make this the key image"
             }
-            className={`block aspect-square w-full overflow-hidden rounded-lg border transition-colors ${
-              url === cover
-                ? "border-board-ink/70"
-                : "border-board-ink/10 hover:border-board-ink/40"
+            className={`element-modal__tile ${
+              url === cover ? "element-modal__tile--key" : ""
             }`}
             onClick={() => onPick(url)}
             type="button"
           >
             <img
               alt=""
-              className="h-full w-full object-cover"
+              className="element-modal__image"
               draggable={false}
               height={112}
               src={url}
               width={112}
             />
             {url === cover ? (
-              <span className="absolute inset-x-0 bottom-0 bg-board-surface/70 py-0.5 text-[9px] text-board-ink uppercase tracking-[0.16em] backdrop-blur-sm">
-                Key image
-              </span>
+              <span className="element-modal__tile-label">Key image</span>
             ) : null}
           </button>
           {/* A sibling of the tile rather than a child of it: the tile is
@@ -136,7 +134,7 @@ function PictureGrid({
               an element with none is refused, and rightly. The tray carries
               the backdrop so the button stays a plain variant. */}
           {onDrop && urls.length > 1 ? (
-            <div className="absolute top-1 right-1 rounded-lg bg-board-surface/70 p-0.5 backdrop-blur-sm">
+            <div className="element-modal__remove">
               <Button
                 aria-label="Remove this picture from the element"
                 onClick={() => onDrop(url)}
@@ -272,21 +270,21 @@ export function ElementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-6">
+    <div className="modal-layer element-modal__layer">
       <button
         aria-label="Cancel"
-        className="absolute inset-0 cursor-default bg-board-surface/70 backdrop-blur-sm"
+        className="modal-scrim modal-scrim--heavy"
         onClick={onCancel}
         tabIndex={-1}
         type="button"
       />
 
-      <div className="relative flex max-h-full w-[min(92vw,44rem)] flex-col overflow-hidden rounded-xl border border-board-ink/15 bg-board-panel shadow-2xl">
-        <header className="shrink-0 border-board-ink/10 border-b px-4 py-3">
-          <h2 className="text-[11px] text-board-ink uppercase tracking-[0.18em]">
+      <div className="modal-panel modal-panel--column element-modal">
+        <header className="element-modal__header">
+          <h2 className="element-modal__title">
             {element ? "Edit this element" : "Save as an element"}
           </h2>
-          <p className="mt-1 text-[11px] text-board-ink/45 leading-relaxed">
+          <p className="element-modal__note">
             {pictures.length === 1
               ? "One picture, kept for reuse on any board."
               : `${pictures.length} pictures, kept for reuse on any board.`}{" "}
@@ -303,7 +301,7 @@ export function ElementModal({
               is a style, not an archive, and a selection can easily be a whole
               frame — so the cap is reached by ordinary use. */}
           {dropping > 0 ? (
-            <p className="mt-1 text-[11px] text-amber-500 leading-relaxed dark:text-amber-300/80">
+            <p className="element-modal__warning">
               An element holds {MAX_ELEMENT_IMAGES}. The first{" "}
               {MAX_ELEMENT_IMAGES} will be kept, starting with the key image;
               the other {dropping} will not.
@@ -311,7 +309,7 @@ export function ElementModal({
           ) : null}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="element-modal__body">
           <PictureGrid
             cover={cover}
             onDrop={element ? drop : undefined}
@@ -319,12 +317,10 @@ export function ElementModal({
             urls={pictures}
           />
 
-          <label className="mt-4 block">
-            <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-              Name
-            </span>
+          <label className="element-modal__field-group">
+            <span className="panel-label">Name</span>
             <input
-              className="w-full rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[13px] text-board-ink outline-none focus:border-board-ink/45"
+              className="element-modal__field"
               maxLength={120}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
@@ -339,25 +335,23 @@ export function ElementModal({
             />
           </label>
 
-          <label className="mt-3 block">
-            <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-              What they have in common
-            </span>
+          <label className="element-modal__field-group element-modal__field-group--tight">
+            <span className="panel-label">What they have in common</span>
             <textarea
-              className="h-40 w-full resize-y rounded border border-board-ink/15 bg-board-surface/30 px-2 py-1.5 text-[12px] text-board-ink leading-relaxed outline-none focus:border-board-ink/45"
+              className="element-modal__field element-modal__field--prose"
               maxLength={2000}
               onChange={(e) => setWords(e.target.value)}
               placeholder="muted greens, soft overcast light, shallow depth of field, 35mm…"
               value={words}
             />
-            <span className="mt-1 block text-[10px] text-board-ink/40 leading-relaxed">
+            <span className="element-modal__field-hint">
               These words travel down the wire into the prompt of whatever this
               element feeds. An Analyse node's reading is the usual source.
             </span>
           </label>
         </div>
 
-        <footer className="flex shrink-0 justify-end gap-1.5 border-board-ink/10 border-t px-4 py-3">
+        <footer className="element-modal__footer">
           <Button onClick={onCancel} size="sm" type="button" variant="ghost">
             Cancel
           </Button>

@@ -8,6 +8,9 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { BatchUploader } from "./BatchUploader";
 import { CategoryPicker } from "./CategoryPicker";
+import "../../styles/primitives.css";
+import "../../styles/adminChrome.css";
+import "./AddItemForm.css";
 
 // ── Add new item ──────────────────────────────────────────────────────────────
 
@@ -22,29 +25,24 @@ export const AddItemForm = ({
   data,
   newPhoto,
 }: AddItemFormProps) => (
-  <Card className="h-full overflow-visible border-white/10 bg-white/5">
+  <Card className="add-item">
     <CardHeader>
-      <CardTitle className="font-light text-sm text-white/90 uppercase tracking-[0.3em]">
-        Add New Item
-      </CardTitle>
+      <CardTitle className="add-item__title">Add New Item</CardTitle>
     </CardHeader>
     <CardContent>
       <form
-        className="grid grid-cols-1 items-end gap-5 md:gap-6"
+        className="add-item__form"
         onSubmit={(e) => void newPhoto.handleAdd(e)}
       >
-        <div className="space-y-3 lg:col-span-2">
-          <Label
-            className="text-[10px] text-white/90 uppercase tracking-widest"
-            htmlFor="add-image-file"
-          >
+        <div className="stack stack--mid">
+          <Label className="admin-caps" htmlFor="add-image-file">
             Image
           </Label>
-          <div className="flex flex-col gap-2">
+          <div className="stack stack--tight">
             <input
               accept="image/jpeg,image/png,image/webp,image/gif"
               aria-label="Upload image from device"
-              className="min-h-11 w-full text-[11px] text-white/90 file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2.5 file:font-medium file:text-[10px] file:text-white/90 file:uppercase file:tracking-widest hover:file:bg-white/15"
+              className="admin-file"
               id="add-image-file"
               onChange={(e) =>
                 newPhoto.setUploadDraftFile(e.target.files?.[0] ?? null)
@@ -54,29 +52,26 @@ export const AddItemForm = ({
               type="file"
             />
             {newPhoto.uploadDraftFile ? (
-              <p className="flex items-center gap-1 text-[10px] text-white/90">
+              <p className="add-item__file-name">
                 <HugeiconsIcon icon={Upload02Icon} size={12} />
-                <span className="truncate">
+                <span className="add-item__truncate">
                   {newPhoto.uploadDraftFile.name}
                 </span>
               </p>
             ) : (
-              <p className="text-[10px] text-white/90">
+              <p className="add-item__file-note">
                 JPEG, PNG, WebP, or GIF (max 8MB).
               </p>
             )}
           </div>
         </div>
 
-        <div className="space-y-3 lg:col-span-2">
-          <Label
-            className="text-[10px] text-white/90 uppercase tracking-widest"
-            htmlFor="title"
-          >
+        <div className="stack stack--mid">
+          <Label className="admin-caps" htmlFor="title">
             Title
           </Label>
           <Input
-            className="min-h-11 border-white/10 bg-black/40 text-base transition-colors focus:border-white/40 sm:text-sm"
+            className="admin-control add-item__field"
             id="title"
             onChange={(e) =>
               newPhoto.setForm({
@@ -90,7 +85,7 @@ export const AddItemForm = ({
           />
         </div>
 
-        <div className="space-y-3 lg:col-span-2">
+        <div className="stack stack--mid">
           <BatchUploader
             categories={data.categories}
             categoryId={newPhoto.form.categoryId}

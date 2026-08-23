@@ -10,6 +10,7 @@ import { toolContextOf } from "../tools/itemContext";
 import { toolsForKind } from "../tools/registry";
 import type { Tool } from "../tools/types";
 import { ToolPicker } from "./ToolPicker";
+import "../boardChrome.css";
 
 /**
  * The two things the canvas menu turns itself into.
@@ -47,13 +48,11 @@ export function NamePanel({
   const submit = () => onConfirm(frame, title.trim() || frameBoardTitle(frame));
 
   return (
-    <div className="px-3 pt-2.5 pb-2.5">
-      <span className="mb-1 block text-[9px] text-board-ink/35 uppercase tracking-[0.18em]">
-        New board name
-      </span>
+    <div className="panel-section">
+      <span className="panel-label">New board name</span>
       <input
         aria-label="New board name"
-        className="w-full rounded border border-board-ink/15 bg-board-surface/40 px-2 py-1.5 text-[12px] text-board-ink outline-none focus:border-board-ink/45"
+        className="panel-field"
         onChange={(e) => onType(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -67,29 +66,25 @@ export function NamePanel({
         ref={field}
         value={title}
       />
-      <p className="mt-1.5 text-[10px] text-board-ink/40 leading-relaxed">
+      <p className="panel-hint">
         {summary?.count === 1
           ? "The frame alone"
           : `${summary?.count ?? 0} items`}
         , copied. This board keeps its own.
         {summary && summary.severed > 0 ? (
-          <span className="block text-amber-300/70">
+          <span className="panel-warning">
             {summary.severed === 1
               ? "1 wire leaves the frame and will not come across."
               : `${summary.severed} wires leave the frame and will not come across.`}
           </span>
         ) : null}
       </p>
-      <div className="mt-2 flex justify-end gap-1.5">
-        <button
-          className="rounded px-2 py-1 text-[11px] text-board-ink/50 hover:text-board-ink"
-          onClick={onCancel}
-          type="button"
-        >
+      <div className="panel-actions">
+        <button className="panel-button" onClick={onCancel} type="button">
           Cancel
         </button>
         <button
-          className="rounded bg-board-ink/15 px-2.5 py-1 text-[11px] text-board-ink hover:bg-board-ink/25"
+          className="panel-button panel-button--tinted"
           onClick={submit}
           type="button"
         >
@@ -169,7 +164,7 @@ export function ToolsPanel({
 }) {
   return (
     <ToolPicker
-      className="w-full rounded-none border-0 bg-transparent shadow-none backdrop-blur-none"
+      className="tool-picker--embedded"
       context={toolContextOf(item)}
       kind={item.kind}
       onClose={onClose}

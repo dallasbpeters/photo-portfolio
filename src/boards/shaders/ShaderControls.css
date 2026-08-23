@@ -1,0 +1,277 @@
+/*
+ * The shader stack: layers, what each applies to, and the picker for adding one.
+ *
+ * Three blocks in one file because they only exist together — a stack of layer
+ * rows, a row's own header and body, and the picker a row opens. Splitting them
+ * would put three stylesheets around one screenful of panel.
+ *
+ * Amber is used twice, for a stack that will render nothing: an effect with
+ * nothing inside it, and a shader missing from the installed package. Neither
+ * is an error — the stack is valid and simply unfinished — so neither takes the
+ * red that means "broken".
+ */
+
+/* The stack itself. */
+.shader-controls > * + * {
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+/* Sits on the board's surface rather than the panel's, so a row reads as a
+   thing on the panel instead of part of it. */
+.shader-layer {
+  background: color-mix(in oklch, var(--color-board-surface) 40%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.shader-layer__header {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/* The disclosure arrow, and the three controls at the far end. Kept from
+   shrinking so a long shader name truncates instead of squeezing them out. */
+.shader-layer__toggle {
+  flex-shrink: 0;
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-layer__toggle:hover {
+  color: var(--color-board-ink);
+}
+
+.shader-layer__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  white-space: nowrap;
+}
+
+/* Source or effect — the quietest thing in the row, and the one that explains
+   why it behaves as it does. */
+.shader-layer__kind {
+  flex-shrink: 0;
+  font-size: var(--text-micro-3xs);
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+}
+
+.shader-layer__spacer {
+  flex-grow: 1;
+}
+
+.shader-layer__control {
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-layer__control:hover {
+  color: var(--color-board-ink);
+}
+
+.shader-layer__control:disabled {
+  opacity: 0.2;
+}
+
+/* What an effect applies to: its children, or the wired picture. */
+.shader-layer__children {
+  padding: calc(var(--spacing) * 2);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+.shader-layer__children > * + * {
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+.shader-layer__group-title {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 30%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.shader-layer__note {
+  font-size: var(--text-micro-xs);
+  color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
+}
+
+/* Unfinished rather than broken — see the note at the top. amber-300. */
+.shader-layer__note--warn {
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 60%, transparent);
+}
+
+.shader-layer__note--missing {
+  color: color-mix(in oklch, oklch(87.9% 0.169 91.605) 70%, transparent);
+}
+
+.shader-layer__note--quiet {
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}
+
+.shader-layer__settings {
+  padding: calc(var(--spacing) * 2);
+}
+
+.shader-layer__settings > * + * {
+  margin-block-start: calc(var(--spacing) * 3);
+}
+
+.shader-layer__settings--closed {
+  display: none;
+}
+
+.shader-layer__prop-group > * + * {
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+/* Add source / add effect, side by side and equal. */
+.shader-controls__add-row {
+  display: flex;
+  gap: var(--spacing);
+}
+
+.shader-controls__add {
+  flex-grow: 1;
+  padding-block: var(--spacing);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-controls__add:hover {
+  color: var(--color-board-ink);
+}
+
+/* The stack's two buttons are a rung larger than a layer's own. */
+.shader-controls__add--root {
+  padding-block: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-xs);
+}
+
+/* What a source is and what an effect is, said once at the bottom. */
+.shader-controls__legend {
+  font-size: var(--text-micro-2xs);
+  line-height: 1.625;
+  color: color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+}
+
+.shader-controls__legend-term {
+  color: color-mix(in oklch, var(--color-board-ink) 50%, transparent);
+}
+
+/* Choosing a shader to add. */
+.shader-picker {
+  padding: calc(var(--spacing) * 2);
+  background: color-mix(in oklch, var(--color-board-surface) 60%, transparent);
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 15%, transparent);
+  border-radius: var(--radius-control);
+}
+
+.shader-picker > * + * {
+  margin-block-start: calc(var(--spacing) * 2);
+}
+
+.shader-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shader-picker__title {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}
+
+.shader-picker__cancel {
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-picker__cancel:hover {
+  color: var(--color-board-ink);
+}
+
+.shader-picker__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+}
+
+/* Tighter tracking than the labels around them: these are words to be read,
+   not stamps. */
+.shader-picker__category {
+  min-height: calc(var(--spacing) * 6);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);
+  letter-spacing: var(--tracking-micro-tight);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-picker__category:hover {
+  color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
+}
+
+.shader-picker__category--on {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}
+
+/*
+ * The list of shaders in the chosen category.
+ *
+ * Capped and scrolled: some categories hold thirty, and a picker as tall as the
+ * panel pushes the stack it is being added to off screen.
+ */
+.shader-picker__list {
+  max-height: calc(var(--spacing) * 40);
+  overflow-y: auto;
+}
+
+.shader-picker__list > * + * {
+  margin-block-start: calc(var(--spacing) * 0.5);
+}
+
+.shader-picker__option {
+  width: 100%;
+  padding-block: var(--spacing);
+  padding-inline: calc(var(--spacing) * 2);
+  font-size: var(--text-micro-sm);
+  color: color-mix(in oklch, var(--color-board-ink) 75%, transparent);
+  text-align: left;
+  border-radius: var(--radius-control);
+  transition:
+    color var(--default-transition-duration) var(--ease-in-out),
+    background-color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.shader-picker__option:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
+}

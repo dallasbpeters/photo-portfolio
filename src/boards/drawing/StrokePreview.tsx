@@ -9,6 +9,7 @@ import {
   pathFor,
 } from "./drawing";
 import { MASK_OPACITY, MASK_PAINT } from "./mask";
+import "./StrokePreview.css";
 
 /**
  * The mark as it is being made, drawn in canvas space.
@@ -37,7 +38,7 @@ export function StrokePreview({ points, style, tool }: StrokePreviewProps) {
   const masking = isMaskTool(tool);
   return (
     <svg
-      className="pointer-events-none absolute inset-0 overflow-visible"
+      className="stroke-preview"
       height={CANVAS_HEIGHT}
       style={{ zIndex: 9998 }}
       width={CANVAS_WIDTH}

@@ -9,7 +9,7 @@ import { siteConfig } from "../site";
  * toolbar and every "open in PostHog" link would point at the proxy, which
  * serves ingestion endpoints rather than the app.
  */
-const POSTHOG_APP_HOST = "https://us.posthog.com";
+const posthogAppHost = import.meta.env.VITE_POSTHOG_UI_HOST;
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
 
@@ -34,9 +34,9 @@ const reportMissingConfiguration = (variableName: string) => {
   }
 };
 
-// The host always resolves now that it falls back to the site's proxy, so the
-// key is the only piece that can still be missing.
-if (posthogKey) {
+// The ingestion host falls back to the site's proxy; the key and app host
+// remain required for a configured browser client.
+if (posthogKey && posthogAppHost) {
   posthog.init(posthogKey, {
     api_host: posthogHost,
     capture_exceptions: {
@@ -49,10 +49,12 @@ if (posthogKey) {
     // so route changes must register as pageviews rather than only the first
     // load.
     defaults: "2026-05-30",
-    ui_host: POSTHOG_APP_HOST,
+    ui_host: posthogAppHost,
   });
 } else {
-  reportMissingConfiguration("VITE_POSTHOG_KEY");
+  reportMissingConfiguration(
+    posthogKey ? "VITE_POSTHOG_UI_HOST" : "VITE_POSTHOG_KEY"
+  );
 }
 
 export default posthog;
