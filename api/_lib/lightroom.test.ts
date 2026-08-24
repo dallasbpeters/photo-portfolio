@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stripJsonGuard } from "./lightroom.js";
+import { stripJsonGuard } from "./lightroomTransport.js";
 
 /**
  * What can be tested without Adobe credentials — and it is the part most likely

@@ -2,7 +2,11 @@ import {
   LIGHTROOM_PAGE_SIZE,
   type LightroomRendition,
 } from "../../config/lightroom.js";
-import { type LightroomConnection, lrFetch, lrJson } from "./lightroom.js";
+import {
+  type LightroomConnection,
+  lrFetch,
+  lrJson,
+} from "./lightroomTransport.js";
 
 /**
  * Reading a Lightroom catalogue: the account, its albums, and what is in them.
