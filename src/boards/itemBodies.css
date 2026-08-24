@@ -22,8 +22,23 @@
   border-radius: var(--radius-lg);
 }
 
-/* The field re-enables its own events; the frame around it stays pass-through
-   so a drag inside the frame reaches the canvas. */
+/*
+ * The frame's title row: the name, and the link beside it.
+ *
+ * The row re-enables its own events; the frame around it stays pass-through so a
+ * drag inside the frame reaches the canvas — which is also why the row is the
+ * only place a frame's own controls can live.
+ */
+.frame-body__row {
+  display: flex;
+  gap: var(--spacing);
+  align-items: center;
+  pointer-events: auto;
+  /* Counter-scaled from the top left, so the row is one size at every zoom —
+     the same trick the delete badge and the tool bar use. */
+  transform-origin: top left;
+}
+
 .frame-body__name {
   width: 100%;
   padding-block: var(--spacing);
@@ -171,10 +186,30 @@
   outline: 0;
 }
 
-/* The name sits on its own row; the link lives in the item's toolbar, where
-   it is labelled and holds its size at any zoom. */
-.frame-body {
-  display: flex;
-  gap: var(--spacing);
-  align-items: center;
+/*
+ * A frame's own address, offered on the frame.
+ *
+ * Labelled rather than an icon, and counter-scaled with the row: the first
+ * attempt was a bare glyph that scaled with the board, which at a working zoom
+ * of 30% was a seven-pixel square nobody could see or hit. Present only once the
+ * board is published, since there is no link before that.
+ */
+.frame-body__link {
+  flex-shrink: 0;
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1.5);
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-board-ink) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+  white-space: nowrap;
+  border: var(--border-hairline) solid
+    color-mix(in oklch, var(--color-board-ink) 25%, transparent);
+  border-radius: var(--radius-control);
+  transition: color var(--default-transition-duration) var(--ease-in-out);
+}
+
+.frame-body__link:hover {
+  color: var(--color-board-ink);
+  background: color-mix(in oklch, var(--color-board-ink) 10%, transparent);
 }

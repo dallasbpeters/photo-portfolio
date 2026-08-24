@@ -117,3 +117,68 @@
 .board-header-link:hover {
   text-decoration-line: underline;
 }
+
+/*
+ * Every frame's link, in the header.
+ *
+ * On the frame itself this could not work: a frame is a backdrop drawn behind
+ * the items on it, so anything overlapping its corner covers the title row and
+ * eats the click. The header is never covered and never scaled.
+ */
+.frame-links {
+  position: relative;
+}
+
+.frame-links__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  cursor: default;
+}
+
+.frame-links__menu {
+  position: absolute;
+  top: calc(100% + var(--spacing));
+  right: 0;
+  z-index: var(--z-popover);
+  min-width: calc(var(--spacing) * 64);
+  overflow: hidden;
+  background: var(--color-admin-panel);
+  border: var(--border-hairline) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.frame-links__row {
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  text-align: left;
+  transition: background-color var(--default-transition-duration)
+    var(--ease-in-out);
+}
+
+.frame-links__row:hover {
+  background: color-mix(in oklch, oklch(1 0 0) 8%, transparent);
+}
+
+.frame-links__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-micro-md);
+  color: var(--color-foreground);
+  white-space: nowrap;
+}
+
+/* Says what the row does, since the whole row is the button. */
+.frame-links__copy {
+  flex-shrink: 0;
+  font-size: var(--text-micro-2xs);
+  color: color-mix(in oklch, var(--color-foreground) 45%, transparent);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro-caps);
+}

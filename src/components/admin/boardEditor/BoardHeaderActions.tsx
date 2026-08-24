@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import ThemeToggle from "../../ThemeToggle";
 import { Button } from "../../ui/button";
 import "./boardEditorChrome.css";
+import type { BoardItem } from "../../../types";
+import { FrameLinks } from "./FrameLinks";
 
 /** Strips the scheme so the shared link reads as a plain address. */
 const SCHEME = /^https?:\/\//;
@@ -24,6 +26,7 @@ export function BoardHeaderActions({
   onPublish,
   onRun,
   onToggleComments,
+  items,
   publicUrl,
   showComments,
 }: {
@@ -37,6 +40,8 @@ export function BoardHeaderActions({
   onPublish: () => void;
   onRun: () => void;
   onToggleComments: () => void;
+  /** The board's items, so each frame can offer its link. */
+  items: BoardItem[];
   publicUrl: string | null;
   showComments: boolean;
 }) {
@@ -82,6 +87,9 @@ export function BoardHeaderActions({
           {publicUrl.replace(SCHEME, "")}
         </button>
       ) : null}
+      {/* Each frame's own link, beside the board's. See FrameLinks on why it
+          cannot live on the frame itself. */}
+      <FrameLinks boardUrl={publicUrl} items={items} />
       <Button
         disabled={isPublishing}
         onClick={onPublish}

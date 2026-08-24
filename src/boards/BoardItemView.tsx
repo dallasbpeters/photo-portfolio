@@ -378,6 +378,8 @@ function BoardItemBody({
 }
 
 interface ItemContentProps {
+  /** Cancels the canvas zoom for a frame's title row. */
+  chromeScale?: { transform: string };
   fieldRef: RefObject<HTMLTextAreaElement | null>;
   hasWiredPrompt: boolean;
   imageCount?: number;
@@ -407,6 +409,7 @@ interface ItemContentProps {
  * selection and chrome rather than growing a branch per kind.
  */
 function ItemContent({
+  chromeScale,
   fieldRef,
   hasWiredPrompt,
   imageCount,
@@ -442,9 +445,7 @@ function ItemContent({
     return <ElementBody item={item} />;
   }
   if (item.kind === "frame") {
-    return (
-      <FrameBody item={item} onEditBody={onEditBody} readOnly={readOnly} />
-    );
+    return <FrameBody {...{ chromeScale, item, onEditBody, readOnly }} />;
   }
   if (item.kind === "drawing") {
     return isDrawingConfig(item.config) ? (
@@ -705,6 +706,7 @@ export function BoardItemView({
       }}
     >
       <ItemContent
+        chromeScale={chromeScale}
         fieldRef={fieldRef}
         hasWiredPrompt={hasWiredPrompt}
         imageCount={imageCount}

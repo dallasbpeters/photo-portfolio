@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import type { BoardItem } from "../types";
 import { ShaderView } from "./shaders/ShaderView";
 import {
@@ -44,10 +45,13 @@ const fillEmptyEffect = (
  * clicks across its whole area would swallow every item inside it.
  */
 export function FrameBody({
+  chromeScale,
   item,
   onEditBody,
   readOnly,
 }: {
+  /** Cancels the canvas zoom, so the row holds its size. See BoardItemView. */
+  chromeScale?: { transform: string };
   item: BoardItem;
   onEditBody: (body: string) => void;
   readOnly: boolean;
@@ -61,7 +65,36 @@ export function FrameBody({
    * FrameOpenContext on why that is a context and not callbacks threaded
    * through the canvas.
    */
-  const { open: openFrame } = useFrameActions();
+  const { linkFor, open: openFrame } = useFrameActions();
+  const href = linkFor?.(item.id) ?? null;
+
+  /*
+   * The link, on the frame's own title row.
+   *
+   * It has to be here: the frame is `pointer-events: none` everywhere else so a
+   * drag inside it reaches the canvas, which also means a frame cannot be
+   * clicked to select it — so the item toolbar, where an item's actions usually
+   * live, never appears for one.
+   */
+  const link = href ? (
+    <button
+      className="frame-body__link"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(href);
+          toast.success("Frame link copied");
+        } catch {
+          // Not secret, so showing it is a usable fallback.
+          toast.message(href);
+        }
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      title={href}
+      type="button"
+    >
+      Copy link
+    </button>
+  ) : null;
 
   /*
    * On a published board the name is a way in rather than a field.
@@ -73,29 +106,35 @@ export function FrameBody({
   if (readOnly && openFrame) {
     return (
       <div className="frame-body">
-        <button
-          className="frame-body__name frame-body__name--open"
-          onClick={() => openFrame(item.id)}
-          onPointerDown={(e) => e.stopPropagation()}
-          type="button"
-        >
-          {item.body?.trim() || "Frame"}
-        </button>
+        <div className="frame-body__row" style={chromeScale}>
+          <button
+            className="frame-body__name frame-body__name--open"
+            onClick={() => openFrame(item.id)}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            {item.body?.trim() || "Frame"}
+          </button>
+          {link}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="frame-body">
-      <input
-        aria-label="Frame name"
-        className="frame-body__name"
-        disabled={readOnly}
-        onChange={(e) => onEditBody(e.target.value)}
-        onPointerDown={(e) => e.stopPropagation()}
-        placeholder="Frame"
-        value={item.body ?? ""}
-      />
+      <div className="frame-body__row" style={chromeScale}>
+        <input
+          aria-label="Frame name"
+          className="frame-body__name"
+          disabled={readOnly}
+          onChange={(e) => onEditBody(e.target.value)}
+          onPointerDown={(e) => e.stopPropagation()}
+          placeholder="Frame"
+          value={item.body ?? ""}
+        />
+        {link}
+      </div>
     </div>
   );
 }

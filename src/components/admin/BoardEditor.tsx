@@ -308,6 +308,7 @@ export function BoardEditor({
             isPublic={board?.isPublic ?? false}
             isPublishing={isPublishing}
             isRunning={graphRun.isRunning}
+            items={items}
             onCancelRun={() => graphRun.cancel()}
             onClose={() => void close(onClose)}
             onPublish={() => void publish(!board?.isPublic)}
