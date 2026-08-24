@@ -109,19 +109,40 @@ export function BoardViewPage() {
     }
     let cancelled = false;
     void (async () => {
+      let loaded: Board;
       try {
-        const loaded = await boardsApi.get(slug);
+        loaded = await boardsApi.get(slug);
+      } catch {
         if (!cancelled) {
-          setBoard(loaded);
+          setError("This board is not available.");
         }
+        return;
+      }
+      if (cancelled) {
+        return;
+      }
+      setBoard(loaded);
+
+      /*
+       * The comments are fetched on their own, and are allowed to fail.
+       *
+       * They used to share the board's try, so a comments endpoint that answered
+       * 502 threw out a board that had already loaded perfectly and put "this
+       * board is not available" in front of a visitor looking at a live public
+       * board. The two requests are not one operation: the board is the page,
+       * and the comments are an annotation on it.
+       *
+       * Silent, because there is nothing a visitor can do about it and the
+       * sidebar showing none is the truthful state — the alternative is an error
+       * over a board they can otherwise read and share.
+       */
+      try {
         const list = await commentsApi.list(loaded.id);
         if (!cancelled) {
           setComments(list);
         }
       } catch {
-        if (!cancelled) {
-          setError("This board is not available.");
-        }
+        // Left empty; the board stands on its own.
       }
     })();
     return () => {
