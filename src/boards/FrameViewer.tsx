@@ -5,7 +5,7 @@ import {
   Cancel01Icon,
   Link01Icon,
 } from "@hugeicons-pro/core-stroke-standard";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, type PanInfo } from "motion/react";
 import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import type { BoardItem } from "../types";
@@ -28,7 +28,20 @@ import "./FrameViewer.css";
  * The contents are whatever the frame geometrically owns, resolved by the
  * caller with `containedBy` so the innermost-frame rule holds: a frame inside
  * this one keeps its own pictures.
+ *
+ * Three ways through it, because the three are how people actually hold the
+ * thing: arrow keys at a desk, the buttons with a pointer, a thumb on a phone.
  */
+
+/**
+ * How far, or how fast, a drag has to be to count as a swipe.
+ *
+ * Both deliberately low. The cost of over-reading a swipe is one picture in the
+ * wrong direction, undone by swiping back; the cost of under-reading one is a
+ * viewer that appears not to respond to touch at all.
+ */
+const SWIPE_DISTANCE = 56;
+const SWIPE_VELOCITY = 320;
 
 export interface FrameViewerProps {
   index: number;
@@ -66,6 +79,31 @@ export function FrameViewer({
       }
     },
     [count, index, onIndex]
+  );
+
+  /*
+   * A thumb, as the third way through.
+   *
+   * Distance *or* velocity, not distance alone: a fast flick barely travels
+   * before the finger leaves the glass, and requiring it to cross the picture
+   * makes the gesture feel unresponsive on exactly the device it exists for. A
+   * slow deliberate drag has no velocity to speak of, so it is judged on
+   * distance. Either one is enough.
+   */
+  const onDragEnd = useCallback(
+    (_event: MouseEvent | PointerEvent | TouchEvent, info: PanInfo) => {
+      const far = info.offset.x;
+      const fast = info.velocity.x;
+      if (far < -SWIPE_DISTANCE || fast < -SWIPE_VELOCITY) {
+        // Dragged left, so the next picture is being pulled into view — the
+        // content follows the finger, which is the direction every gallery on a
+        // phone has taught.
+        step(1);
+      } else if (far > SWIPE_DISTANCE || fast > SWIPE_VELOCITY) {
+        step(-1);
+      }
+    },
+    [step]
   );
 
   // Arrow keys and Escape. Registered on the window rather than on a focused
@@ -150,10 +188,22 @@ export function FrameViewer({
           <motion.img
             alt={shown?.body ?? name}
             className="frame-viewer__image"
+            // Only when there is somewhere to go: a lone picture that slid under
+            // the finger and sprang back would be promising a second one.
+            drag={count > 1 ? "x" : false}
+            // Pinned, so the picture never travels — it gives under the finger
+            // and returns. The gesture is a page turn, not a thing being moved.
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            // The browser's own image drag, which otherwise starts a ghost
+            // thumbnail mid-swipe and swallows the pointer.
+            draggable={false}
+            dragMomentum={false}
             // Keyed on the URL so moving between pictures animates rather than
             // swapping the same element's src, which shows the old picture
             // stretched to the new one's box for a frame.
             key={url}
+            onDragEnd={onDragEnd}
             src={url}
             transition={{ duration: 0.15 }}
           />

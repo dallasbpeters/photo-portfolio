@@ -89,13 +89,37 @@
   background: color-mix(in oklch, oklch(1 0 0) 12%, transparent);
 }
 
-/* Centred vertically against the window, not the picture: the controls should
-   not move when a portrait is followed by a landscape. */
+/*
+ * The two arrows, on their own disc.
+ *
+ * Centred vertically against the window, not the picture, so the controls do
+ * not move when a portrait is followed by a landscape.
+ *
+ * The disc is the whole point of them looking different from the bar's buttons.
+ * A bare white glyph is only visible over a dark picture, and the boards this
+ * gets used on are full of white shirts on cream — the arrows were sitting
+ * invisibly on top of them. Any single glyph colour has the same problem
+ * somewhere, because the thing behind it is a photograph and can be any colour
+ * at all. So the button brings its own ground: a light disc, a near-black
+ * arrow, and a shadow to lift it off whatever it happens to be over. Contrast
+ * stops depending on the picture.
+ */
 .frame-viewer__button--prev,
 .frame-viewer__button--next {
   position: absolute;
   top: 50%;
+  color: oklch(0.18 0 0);
+  background: color-mix(in oklch, oklch(1 0 0) 90%, transparent);
+  box-shadow: 0 2px 8px color-mix(in oklch, oklch(0 0 0) 40%, transparent);
   translate: 0 -50%;
+}
+
+/* Ahead of the shared hover, which lightens the glyph towards white — correct
+   for a button on the dark bar, and white-on-white here. */
+.frame-viewer__button--prev:hover,
+.frame-viewer__button--next:hover {
+  color: oklch(0.18 0 0);
+  background: oklch(1 0 0);
 }
 
 .frame-viewer__button--prev {
