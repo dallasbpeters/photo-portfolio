@@ -49,3 +49,9 @@ bruno/**/*.results.json
 .github/agents/
 .github/skills/
 .codex/
+
+# Electron output
+release/
+
+# Google OAuth client downloads — never commit
+client_secret_*.json

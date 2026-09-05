@@ -121,7 +121,32 @@ const cachedToken = (): string | null => {
   return token;
 };
 
-const requestToken = (clientId: string): Promise<string> =>
+/**
+ * Inside the desktop app, Google's popup is not an option: Google refuses to
+ * sign anyone in from an embedded window. The shell runs the consent through
+ * the system browser instead and hands back a token of the same shape, which
+ * the picker cannot tell apart. The shell keeps its own token cache, refresh
+ * token included, so nothing is stored here.
+ */
+const requestDesktopToken = async (
+  desktop: NonNullable<Window["photosDesktop"]>
+): Promise<string> => {
+  const response = await desktop.requestGoogleToken(SCOPE);
+  if (!response.access_token) {
+    throw new Error("Google did not grant access");
+  }
+  return response.access_token;
+};
+
+const requestToken = (clientId: string): Promise<string> => {
+  const desktop = window.photosDesktop;
+  if (desktop) {
+    return requestDesktopToken(desktop);
+  }
+  return requestPopupToken(clientId);
+};
+
+const requestPopupToken = (clientId: string): Promise<string> =>
   new Promise((resolve, reject) => {
     const oauth2 = window.google?.accounts?.oauth2;
     if (!oauth2) {

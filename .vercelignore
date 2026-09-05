@@ -8,3 +8,6 @@
 # Nothing in there is source or deployable — it is a local index that rebuilds
 # from `codegraph init` — so it should never reach a build either.
 .codegraph
+electron/
+electron-builder.yml
+client_secret_*.json

@@ -1,0 +1,19 @@
+appId: com.dallaspeters.photos
+productName: Photos
+directories:
+  output: release
+  buildResources: electron
+files:
+  - electron/main.mjs
+  - electron/googleAuth.mjs
+  - electron/preload.cjs
+  - scripts/affinity-bridge.mjs
+  - package.json
+  - "!node_modules/**/*"
+icon: electron/icon.png
+mac:
+  category: public.app-category.photography
+  target:
+    - target: dir
+  identity: null
+npmRebuild: false
