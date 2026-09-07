@@ -351,6 +351,29 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
     }
   };
 
+  /**
+   * Gives the board a new name.
+   *
+   * Its own call rather than part of the debounced save: that save replaces the
+   * arrangement wholesale and knows nothing about the title, so folding a
+   * rename into it would make naming a board wait on the canvas being idle.
+   *
+   * A blank name is refused rather than accepted and shown as an empty line —
+   * the title is how a board is found again in the list.
+   */
+  const rename = async (next: string) => {
+    const title = next.trim();
+    if (!title || title === board?.title) {
+      return;
+    }
+    try {
+      setBoard(await boardsApi.update(boardId, { title }));
+      toast.success("Board renamed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not rename");
+    }
+  };
+
   const publicUrl =
     board?.isPublic && board.slug
       ? `${window.location.origin}/board/${board.slug}`
@@ -387,6 +410,7 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
     pending,
     publicUrl,
     publish,
+    rename,
     save,
   };
 };

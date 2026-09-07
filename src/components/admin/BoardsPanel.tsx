@@ -3,6 +3,7 @@ import {
   Add01Icon,
   Delete02Icon,
   FrameIcon,
+  PencilEdit02Icon,
 } from "@hugeicons-pro/core-stroke-standard";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState, useTransition } from "react";
@@ -141,6 +142,32 @@ export function BoardsPanel() {
     }
   };
 
+  const rename = async (board: Board) => {
+    const title = await prompt({
+      confirmLabel: "Rename",
+      defaultValue: board.title,
+      placeholder: "Golden hour shoot",
+      title: "Rename board",
+    });
+    if (title === null) {
+      return;
+    }
+    const next = title.trim();
+    if (!next || next === board.title) {
+      return;
+    }
+    try {
+      await boardsApi.update(board.id, { title: next });
+      setBoards((prev) =>
+        prev.map((b) => (b.id === board.id ? { ...b, title: next } : b))
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not rename board"
+      );
+    }
+  };
+
   const remove = async (board: Board) => {
     const ok = await confirm({
       confirmLabel: "Delete",
@@ -271,6 +298,15 @@ export function BoardsPanel() {
                   {isOpening && openingId === board.id ? (
                     <span aria-hidden className="boards-panel__opening" />
                   ) : null}
+
+                  <button
+                    aria-label={`Rename ${board.title}`}
+                    className="boards-panel__rename"
+                    onClick={() => void rename(board)}
+                    type="button"
+                  >
+                    <HugeiconsIcon icon={PencilEdit02Icon} size={14} />
+                  </button>
 
                   <button
                     aria-label={`Delete ${board.title}`}

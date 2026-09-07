@@ -33,6 +33,7 @@ import type {
 } from "../../types";
 import { BoardEditorDialogs } from "./BoardEditorDialogs";
 import { BoardInsertPanel } from "./BoardInsertPanel";
+import { useConfirm } from "./ConfirmProvider";
 import { CustomCursor } from "./CustomCursor";
 import "./BoardEditor.css";
 
@@ -65,6 +66,7 @@ export function BoardEditor({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { prompt } = useConfirm();
   const { dropPoint, viewCentreRef } = useDropPoint();
   const [board, setBoard] = useState<Board | null>(null);
   const [items, setItems] = useState<BoardItem[]>([]);
@@ -135,6 +137,7 @@ export function BoardEditor({
     pending,
     publicUrl,
     publish,
+    rename,
     save,
   } = useBoardDocument({
     board,
@@ -158,6 +161,20 @@ export function BoardEditor({
     sources,
     wires,
   });
+
+  // The status bar's name is a button, but the name itself is typed somewhere
+  // else: the prompt dialog asks for it, and only a real answer reaches rename.
+  const askForName = useCallback(async () => {
+    const next = await prompt({
+      confirmLabel: "Rename",
+      defaultValue: board?.title ?? "",
+      placeholder: "Board name",
+      title: "Rename this board",
+    });
+    if (next !== null) {
+      await rename(next);
+    }
+  }, [board?.title, prompt, rename]);
 
   const { applyRun, createFromPort, flushBeforeRun } = useBoardRun({
     items,
@@ -298,6 +315,7 @@ export function BoardEditor({
         <BoardStatusBar
           isDirty={isDirty}
           isSaving={isSaving}
+          onRename={() => void askForName()}
           title={board?.title ?? "Board"}
         />
 

@@ -34,6 +34,36 @@
   white-space: nowrap;
 }
 
+/*
+ * The name as a rename button.
+ *
+ * Inherits every type property rather than restating them, so the button is
+ * invisible until pointed at: the heading is the affordance, and a button that
+ * looked like one here would compete with the tool rail for attention.
+ */
+.board-status__rename {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  cursor: text;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-xs);
+}
+
+.board-status__rename:hover,
+.board-status__rename:focus-visible {
+  color: var(--color-board-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .board-status__state {
   font-size: var(--text-micro-xs);
   color: color-mix(in oklch, var(--color-board-ink) 40%, transparent);

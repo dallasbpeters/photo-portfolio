@@ -53,10 +53,10 @@
  * leaves the glyph unreadable. Focus reveals it too: a control that cannot be
  * reached by keyboard is its own bug.
  */
-.boards-panel__delete {
+.boards-panel__delete,
+.boards-panel__rename {
   position: absolute;
   top: calc(var(--spacing) * 2);
-  right: calc(var(--spacing) * 2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,12 +69,25 @@
   transition: opacity var(--default-transition-duration) var(--ease-in-out);
 }
 
-.boards-panel__delete:hover {
+.boards-panel__delete {
+  right: calc(var(--spacing) * 2);
+}
+
+/* Left of delete, and by a clear gap: these two are next to each other and one
+   of them cannot be undone, so they must not read as one control. */
+.boards-panel__rename {
+  right: calc(var(--spacing) * 12);
+}
+
+.boards-panel__delete:hover,
+.boards-panel__rename:hover {
   color: #fff;
 }
 
 .boards-panel__delete:focus-visible,
-.group:hover .boards-panel__delete {
+.boards-panel__rename:focus-visible,
+.group:hover .boards-panel__delete,
+.group:hover .boards-panel__rename {
   opacity: 1;
 }
 

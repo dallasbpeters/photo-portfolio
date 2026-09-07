@@ -9,16 +9,23 @@ import "./boardEditorChrome.css";
  * save indicator is the honest half of saving on a debounce: there is no save
  * button to press, so this is the only thing telling anyone whether what they
  * just dragged has reached the server.
+ *
+ * The name is also where it is renamed, because it is the only place the name
+ * appears while the board is open — a rename buried in a menu would be looked
+ * for here first.
  */
 export interface BoardStatusBarProps {
   isDirty: boolean;
   isSaving: boolean;
+  /** Omitted for a read-only view, which then renders a plain heading. */
+  onRename?: () => void;
   title: string;
 }
 
 export function BoardStatusBar({
   isDirty,
   isSaving,
+  onRename,
   title,
 }: BoardStatusBarProps) {
   return (
@@ -29,7 +36,20 @@ export function BoardStatusBar({
         icon={GridViewIcon}
         size={14}
       />
-      <h2 className="board-status__title">{title}</h2>
+      <h2 className="board-status__title">
+        {onRename ? (
+          <button
+            className="board-status__rename"
+            onClick={onRename}
+            title="Rename this board"
+            type="button"
+          >
+            {title}
+          </button>
+        ) : (
+          title
+        )}
+      </h2>
       <p className="board-status__state">
         {isSaving ? "Saving…" : null}
         {!isSaving && isDirty ? "Unsaved changes" : null}
