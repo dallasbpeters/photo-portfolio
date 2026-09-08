@@ -17,6 +17,7 @@ import {
   type NodeTypeId,
   type PortType,
 } from "../../../config/nodeTypes.js";
+import { useAnchoredPanel } from "../hooks/useAnchoredPanel";
 import "../boardChrome.css";
 
 /** What clicking a port can create, and what to wire it into. */
@@ -108,6 +109,7 @@ export function PortMenu({
   point,
   portType,
 }: PortMenuProps) {
+  const { ref, style } = useAnchoredPanel(point);
   const targets = targetsFor(portType);
   if (targets.length === 0) {
     return null;
@@ -124,10 +126,8 @@ export function PortMenu({
         tabIndex={-1}
         type="button"
       />
-      <div
-        className="panel-surface panel-popover"
-        style={{ left: point.x + 10, top: point.y - 8 }}
-      >
+      {/* Placed at the cursor, then kept on screen. See useAnchoredPanel. */}
+      <div className="panel-surface panel-popover" ref={ref} style={style}>
         <p className="panel-popover__title">Send {portType} to</p>
         {targets.map((target) => (
           <button

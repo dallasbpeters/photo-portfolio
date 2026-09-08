@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { BoardItem, BoardWire } from "../../types";
+import { useAnchoredPanel } from "../hooks/useAnchoredPanel";
 import { frameBoardTitle, frameSummary } from "../io/copyToBoard";
 import type { Tool } from "../tools/types";
 import { NamePanel, ToolsPanel } from "./CanvasMenuPanels";
@@ -87,6 +88,7 @@ export function CanvasMenu({
   onVectorize,
   wires,
 }: CanvasMenuProps) {
+  const { ref, style } = useAnchoredPanel(menu?.point ?? { x: 0, y: 0 });
   /**
    * Null until "Copy frame to new board" is chosen; then the frame being
    * copied and the name typed for it.
@@ -133,7 +135,7 @@ export function CanvasMenu({
   const collectingNow = collecting?.for === menu ? collecting : null;
   const picked = picking?.for === menu ? picking : null;
 
-  const { frame, point, selection } = menu;
+  const { frame, selection } = menu;
   const canGroup = selection.length > 0;
   if (!(canGroup || frame)) {
     return null;
@@ -248,9 +250,11 @@ export function CanvasMenu({
         tabIndex={-1}
         type="button"
       />
+      {/* Placed at the cursor, then kept on screen. See useAnchoredPanel. */}
       <div
         className="panel-surface panel-popover canvas-menu"
-        style={{ left: point.x + 10, top: point.y - 8 }}
+        ref={ref}
+        style={style}
       >
         {rows}
       </div>
