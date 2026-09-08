@@ -55,3 +55,7 @@ release/
 
 # Google OAuth client downloads — never commit
 client_secret_*.json
+
+# Drizzle introspection leftovers — db/patches stays the source of truth for DDL
+db/meta/
+db/0*.sql
