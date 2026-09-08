@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { eq, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import {
   MAX_ELEMENT_DESCRIPTION,
   MAX_ELEMENT_IMAGES,
@@ -6,12 +8,10 @@ import {
 } from "../../config/elements.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
-import { type ElementRow, rowToElementDto } from "../_lib/elements.js";
+import { elementSelection, rowToElementDto } from "../_lib/elements.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
-
-type Sql = ReturnType<typeof getSql>;
 
 /**
  * The fields a PATCH may set, or a reason it may not.
@@ -87,7 +87,6 @@ const readPatch = (body: Record<string, unknown>): ElementPatch | string => {
 };
 
 async function handlePatch(
-  sql: Sql,
   id: string,
   req: VercelRequest,
   res: VercelResponse
@@ -97,26 +96,39 @@ async function handlePatch(
     return res.status(422).json({ error: patch });
   }
 
-  // COALESCE rather than a built statement: every field is sent as either its
-  // new value or null-meaning-unchanged, so one query covers all of them
-  // without string-building SQL. `description` is the exception — it is
-  // nullable *and* clearable — so it carries its own flag.
-  const rows = (await sql`
-    UPDATE elements
-    SET name = COALESCE(${patch.name ?? null}, name),
-        description = CASE
-          WHEN ${patch.description !== undefined} THEN ${patch.description ?? null}
-          ELSE description
-        END,
-        cover_url = COALESCE(${patch.coverUrl ?? null}, cover_url),
-        image_urls = COALESCE(
-          ${patch.imageUrls ? JSON.stringify(patch.imageUrls) : null}::jsonb,
-          image_urls
-        ),
-        updated_at = NOW()
-    WHERE id = ${id}
-    RETURNING id, name, description, cover_url, image_urls, created_at, updated_at
-  `) as ElementRow[];
+  /*
+   * Only the fields that were sent.
+   *
+   * The raw form wrote every column on every save, with COALESCE standing in
+   * for "unchanged" — and COALESCE cannot express "set this to NULL", which is
+   * why `description` needed its own CASE and its own boolean. Building the
+   * SET clause from the keys present says the same thing without the special
+   * case: an absent key is not written, and an explicit null is.
+   */
+  const changes: PgUpdateSetSource<typeof schema.elements> = {
+    // In the database, not in Node, so every row's timestamp comes from one
+    // clock.
+    updatedAt: sql`NOW()`,
+  };
+  if (patch.name !== undefined) {
+    changes.name = patch.name;
+  }
+  // Nullable and clearable, which is exactly what the CASE existed for.
+  if (patch.description !== undefined) {
+    changes.description = patch.description ?? null;
+  }
+  if (patch.coverUrl !== undefined) {
+    changes.coverUrl = patch.coverUrl;
+  }
+  if (patch.imageUrls !== undefined) {
+    changes.imageUrls = patch.imageUrls;
+  }
+
+  const rows = await getDb()
+    .update(schema.elements)
+    .set(changes)
+    .where(eq(schema.elements.id, id))
+    .returning(elementSelection);
 
   if (rows.length === 0) {
     return res.status(404).json({ error: "No such element" });
@@ -124,13 +136,14 @@ async function handlePatch(
   return res.status(200).json(rowToElementDto(rows[0]));
 }
 
-async function handleDelete(sql: Sql, id: string, res: VercelResponse) {
+async function handleDelete(id: string, res: VercelResponse) {
   // The pictures are deliberately left in blob storage. A node on some board
   // may still be showing one, and an element being deleted is a library
   // decision rather than an instruction to break every board that used it.
-  const rows = (await sql`
-    DELETE FROM elements WHERE id = ${id} RETURNING id
-  `) as { id: string }[];
+  const rows = await getDb()
+    .delete(schema.elements)
+    .where(eq(schema.elements.id, id))
+    .returning({ id: schema.elements.id });
 
   if (rows.length === 0) {
     return res.status(404).json({ error: "No such element" });
@@ -153,14 +166,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "An element id is required" });
   }
 
-  const sql = getSql();
-
   try {
     if (req.method === "PATCH") {
-      return await handlePatch(sql, id, req, res);
+      return await handlePatch(id, req, res);
     }
     if (req.method === "DELETE") {
-      return await handleDelete(sql, id, res);
+      return await handleDelete(id, res);
     }
     res.setHeader("Allow", "PATCH, DELETE");
     return res.status(405).json({ error: "Method not allowed" });

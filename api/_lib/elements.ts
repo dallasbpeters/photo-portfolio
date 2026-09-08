@@ -1,3 +1,4 @@
+import { schema } from "./orm.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
@@ -82,4 +83,24 @@ export const adoptImages = async (urls: string[]): Promise<AdoptedImage[]> => {
     }
   }
   return kept;
+};
+
+/**
+ * The columns an element response is built from, under the snake_case names
+ * `ElementRow` and `rowToElementDto` expect.
+ *
+ * Named once because three queries return it — the list, the create and the
+ * edit — and a column missing from one of them is a field that reads as
+ * undefined rather than as an error. `style_brief` is deliberately absent: it
+ * is the vision model's reading, managed by api/_lib/elementBrief.ts, and no
+ * client has any use for it.
+ */
+export const elementSelection = {
+  cover_url: schema.elements.coverUrl,
+  created_at: schema.elements.createdAt,
+  description: schema.elements.description,
+  id: schema.elements.id,
+  image_urls: schema.elements.imageUrls,
+  name: schema.elements.name,
+  updated_at: schema.elements.updatedAt,
 };

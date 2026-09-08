@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { desc } from "drizzle-orm";
 import {
   MAX_ELEMENT_DESCRIPTION,
   MAX_ELEMENT_IMAGES,
@@ -6,19 +7,18 @@ import {
 } from "../../config/elements.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import {
   adoptImages,
-  type ElementRow,
+  elementSelection,
   rowToElementDto,
 } from "../_lib/elements.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
-type Sql = ReturnType<typeof getSql>;
 type User = ReturnType<typeof getBearerUser>;
 
-async function handleGet(sql: Sql, user: User, res: VercelResponse) {
+async function handleGet(user: User, res: VercelResponse) {
   // Admin-only, like the board list. An element is a working library rather
   // than anything published, and the panel that reads it is behind the same
   // door.
@@ -26,11 +26,10 @@ async function handleGet(sql: Sql, user: User, res: VercelResponse) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const rows = (await sql`
-    SELECT id, name, description, cover_url, image_urls, created_at, updated_at
-    FROM elements
-    ORDER BY updated_at DESC
-  `) as ElementRow[];
+  const rows = await getDb()
+    .select(elementSelection)
+    .from(schema.elements)
+    .orderBy(desc(schema.elements.updatedAt));
 
   return res.status(200).json(rows.map((row) => rowToElementDto(row)));
 }
@@ -58,12 +57,7 @@ const wantedImages = (raw: unknown): string[] => {
   return urls.slice(0, MAX_ELEMENT_IMAGES);
 };
 
-async function handlePost(
-  sql: Sql,
-  user: User,
-  req: VercelRequest,
-  res: VercelResponse
-) {
+async function handlePost(user: User, req: VercelRequest, res: VercelResponse) {
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -111,17 +105,18 @@ async function handlePost(
     adopted[0].url;
 
   const urls = adopted.map((image) => image.url);
-  const rows = (await sql`
-    INSERT INTO elements (name, description, cover_url, image_urls, created_by)
-    VALUES (
-      ${name},
-      ${description || null},
-      ${cover},
-      ${JSON.stringify(urls)}::jsonb,
-      ${user.userId}
-    )
-    RETURNING id, name, description, cover_url, image_urls, created_at, updated_at
-  `) as ElementRow[];
+  const rows = await getDb()
+    .insert(schema.elements)
+    .values({
+      coverUrl: cover,
+      createdBy: user.userId,
+      description: description || null,
+      // jsonb, so the array goes over as an array rather than as a string
+      // cast in SQL — see db/patches/016_elements.sql.
+      imageUrls: urls,
+      name,
+    })
+    .returning(elementSelection);
 
   return res.status(201).json({
     ...rowToElementDto(rows[0]),
@@ -136,15 +131,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const sql = getSql();
   const user = getBearerUser(req.headers.authorization);
 
   try {
     if (req.method === "GET") {
-      return await handleGet(sql, user, res);
+      return await handleGet(user, res);
     }
     if (req.method === "POST") {
-      return await handlePost(sql, user, req, res);
+      return await handlePost(user, req, res);
     }
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "Method not allowed" });
