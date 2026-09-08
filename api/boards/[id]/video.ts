@@ -9,7 +9,7 @@ import {
   videoUrlOf,
 } from "../../_lib/falQueue.js";
 import { parsePublicHttpUrl } from "../../_lib/httpUrl.js";
-import { loadModelRows } from "../../_lib/models.js";
+import { loadModelRows } from "../../_lib/modelStore.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
 import { persistGenerated } from "../../_lib/persistGenerated.js";
 
@@ -90,7 +90,6 @@ const bodyFor = (
 const submit = async (
   res: VercelResponse,
   key: string,
-  sql: ReturnType<typeof getSql>,
   body: {
     duration?: unknown;
     imageUrl?: unknown;
@@ -109,7 +108,7 @@ const submit = async (
   }
 
   const model = typeof body.model === "string" ? body.model : "";
-  const rows = await loadModelRows(sql);
+  const rows = await loadModelRows();
   const known = rows.find((row) => row.id === model);
   if (!known) {
     return res.status(400).json({ error: "That model is not one we know." });
@@ -242,7 +241,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = parseJsonBody(req.body) as Record<string, unknown>;
   switch (body.action) {
     case "submit":
-      return submit(res, key, getSql(), body);
+      return submit(res, key, body);
     case "poll": {
       const statusUrl =
         typeof body.statusUrl === "string" ? body.statusUrl : "";

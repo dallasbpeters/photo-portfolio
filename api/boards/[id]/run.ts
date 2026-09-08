@@ -18,7 +18,7 @@ import {
   jobsFor,
   withElementWords,
 } from "../../_lib/elementStyle.js";
-import { loadModelDefs } from "../../_lib/models.js";
+import { loadModelDefs } from "../../_lib/modelStore.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
 import { produce, unconfiguredProvider } from "./run/capabilities.js";
 import { fingerprintFor } from "./run/fingerprint.js";
@@ -327,7 +327,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // nothing downstream knows a library was involved.
         .then((items) => withBrandKits(sql, items)),
       loadWires(sql, boardId),
-      loadModelDefs(sql),
+      loadModelDefs(),
     ]);
 
     const prepared = await prepare(rows, wireRows, itemId, force, models);

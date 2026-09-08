@@ -13,9 +13,8 @@ import {
   applyFalParams,
   type GenerationParams,
 } from "../../config/nodes/falParams.js";
-import { getSql } from "./db.js";
 import { PALETTE_MODELS, paletteFrom, paletteOf } from "./falPalette.js";
-import { loadModelDefs } from "./models.js";
+import { loadModelDefs } from "./modelStore.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
@@ -309,7 +308,7 @@ export const generateImage = async (
   // The models are data now, read per request rather than imported: they are
   // edited from the admin, and this function must behave exactly like the node
   // the board is showing, so both read the same rows.
-  const models = await loadModelDefs(getSql());
+  const models = await loadModelDefs();
 
   // A LoRA style is not its own endpoint. They all run on fal-ai/flux-lora and
   // differ only in the weights it loads, so the id chosen on the node is a

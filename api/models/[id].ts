@@ -1,19 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { eq, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { PROTECTED_MODEL_ID } from "../../config/models.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
-import {
-  type ModelRow,
-  readModelFields,
-  rowToModelDto,
-} from "../_lib/models.js";
+import { modelSelection } from "../_lib/modelStore.js";
+import { readModelFields, rowToModelDto } from "../_lib/models.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
-type Sql = ReturnType<typeof getSql>;
-
 async function handlePatch(
-  sql: Sql,
   id: string,
   req: VercelRequest,
   res: VercelResponse
@@ -37,47 +33,58 @@ async function handlePatch(
     });
   }
 
+  /*
+   * Only the columns that were actually sent.
+   *
+   * The raw form had to write every column on every save, using COALESCE to
+   * mean "leave it alone" — and COALESCE cannot express "set this to NULL",
+   * which is why clearing a LoRA needed five CASE expressions and a separate
+   * flag. Building the SET clause from the keys present says the same thing
+   * without the workaround: an absent key is not written, and an explicit null
+   * is.
+   */
   const { lora } = patch;
-  // Distinguishing "clear the LoRA" from "leave it alone" needs a flag, which
-  // is why the lora columns are written with CASE rather than COALESCE.
-  const loraProvided = lora !== undefined;
-  const loraValue = lora ?? null;
+  const changes: PgUpdateSetSource<typeof schema.models> = {
+    // In the database, not in Node: a function's clock is not the one every
+    // other row's timestamp was written against.
+    updatedAt: sql`NOW()`,
+  };
+  if (patch.label !== undefined) {
+    changes.label = patch.label;
+  }
+  if (patch.input !== undefined) {
+    changes.input = patch.input;
+  }
+  if (patch.output !== undefined) {
+    changes.output = patch.output;
+  }
+  if (patch.imageParam !== undefined) {
+    changes.imageParam = patch.imageParam;
+  }
+  if (patch.vector !== undefined) {
+    changes.vector = patch.vector;
+  }
+  if (patch.enabled !== undefined) {
+    changes.enabled = patch.enabled;
+  }
+  if (patch.sortOrder !== undefined) {
+    changes.sortOrder = patch.sortOrder;
+  }
+  // Absent leaves the weights alone; null clears them. Both are meaningful,
+  // and this is the distinction the CASE expressions existed to preserve.
+  if (lora !== undefined) {
+    changes.loraEndpoint = lora?.endpoint ?? null;
+    changes.loraImageEndpoint = lora?.imageEndpoint ?? null;
+    changes.loraPath = lora?.path ?? null;
+    changes.loraScale = lora?.scale ?? null;
+    changes.loraTrigger = lora?.trigger ?? null;
+  }
 
-  const rows = (await sql`
-    UPDATE models
-    SET label = COALESCE(${patch.label ?? null}, label),
-        input = COALESCE(${patch.input ?? null}, input),
-        output = COALESCE(${patch.output ?? null}, output),
-        image_param = COALESCE(${patch.imageParam ?? null}, image_param),
-        vector = COALESCE(${patch.vector ?? null}, vector),
-        enabled = COALESCE(${patch.enabled ?? null}, enabled),
-        sort_order = COALESCE(${patch.sortOrder ?? null}, sort_order),
-        lora_path = CASE
-          WHEN ${loraProvided} THEN ${loraValue?.path ?? null}
-          ELSE lora_path
-        END,
-        lora_scale = CASE
-          WHEN ${loraProvided} THEN ${loraValue?.scale ?? null}
-          ELSE lora_scale
-        END,
-        lora_trigger = CASE
-          WHEN ${loraProvided} THEN ${loraValue?.trigger ?? null}
-          ELSE lora_trigger
-        END,
-        lora_endpoint = CASE
-          WHEN ${loraProvided} THEN ${loraValue?.endpoint ?? null}
-          ELSE lora_endpoint
-        END,
-        lora_image_endpoint = CASE
-          WHEN ${loraProvided} THEN ${loraValue?.imageEndpoint ?? null}
-          ELSE lora_image_endpoint
-        END,
-        updated_at = NOW()
-    WHERE id = ${id}
-    RETURNING created_at, enabled, id, image_param, input, label, output,
-      lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-      sort_order, updated_at, vector
-  `) as ModelRow[];
+  const rows = await getDb()
+    .update(schema.models)
+    .set(changes)
+    .where(eq(schema.models.id, id))
+    .returning(modelSelection);
 
   if (rows.length === 0) {
     return res.status(404).json({ error: "No such model" });
@@ -85,15 +92,16 @@ async function handlePatch(
   return res.status(200).json(rowToModelDto(rows[0]));
 }
 
-async function handleDelete(sql: Sql, id: string, res: VercelResponse) {
+async function handleDelete(id: string, res: VercelResponse) {
   if (id === PROTECTED_MODEL_ID) {
     return res.status(422).json({
       error: `"${PROTECTED_MODEL_ID}" is the default and cannot be deleted.`,
     });
   }
-  const rows = (await sql`
-    DELETE FROM models WHERE id = ${id} RETURNING id
-  `) as { id: string }[];
+  const rows = await getDb()
+    .delete(schema.models)
+    .where(eq(schema.models.id, id))
+    .returning({ id: schema.models.id });
 
   if (rows.length === 0) {
     return res.status(404).json({ error: "No such model" });
@@ -116,14 +124,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "A model id is required" });
   }
 
-  const sql = getSql();
-
   try {
     if (req.method === "PATCH") {
-      return await handlePatch(sql, id, req, res);
+      return await handlePatch(id, req, res);
     }
     if (req.method === "DELETE") {
-      return await handleDelete(sql, id, res);
+      return await handleDelete(id, res);
     }
     res.setHeader("Allow", "PATCH, DELETE");
     return res.status(405).json({ error: "Method not allowed" });

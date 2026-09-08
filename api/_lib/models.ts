@@ -16,8 +16,6 @@ import {
 } from "../../config/models.js";
 import { parsePublicHttpUrl, sanitizeText } from "./httpUrl.js";
 
-type Sql = ReturnType<typeof import("./db.js").getSql>;
-
 /**
  * A row of the `models` table.
  *
@@ -62,49 +60,6 @@ export interface ModelDto {
   updatedAt: string;
   vector: boolean;
 }
-
-export const loadModelDefs = async (
-  sql: Sql
-): Promise<readonly FalModelDef[]> => {
-  const rows = (await sql`
-    SELECT created_at, enabled, id, image_param, input, label,
-      lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-      sort_order, updated_at, vector
-    FROM models
-    WHERE enabled
-    ORDER BY sort_order, id
-  `) as ModelRow[];
-  return rows.map(rowToModelDef);
-};
-
-/**
- * The full list, hidden models included, for the admin panel.
- *
- * The picker and the run path want only what is live; the panel has to show the
- * models that are switched off, or there would be no way to switch one back on.
- */
-export const loadModelRows = async (
-  sql: Sql,
-  enabledOnly = false
-): Promise<ModelRow[]> => {
-  const rows = enabledOnly
-    ? ((await sql`
-        SELECT created_at, enabled, id, image_param, input, label,
-          lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-          output, sort_order, updated_at, vector
-        FROM models
-        WHERE enabled
-        ORDER BY sort_order, id
-      `) as ModelRow[])
-    : ((await sql`
-        SELECT created_at, enabled, id, image_param, input, label,
-          lora_endpoint, lora_image_endpoint, lora_path, lora_scale, lora_trigger,
-          output, sort_order, updated_at, vector
-        FROM models
-        ORDER BY sort_order, id
-      `) as ModelRow[]);
-  return rows;
-};
 
 export const isModelImageParam = (
   value: unknown
@@ -157,11 +112,41 @@ export const rowToModelDef = (row: ModelRow): FalModelDef => {
   };
 };
 
+/**
+ * A timestamp as ISO 8601, whatever shape the driver handed over.
+ *
+ * The raw driver gives a Date; Drizzle reads timestamptz as the text Postgres
+ * prints — "2026-08-13 16:17:41.82435+00" — which is not ISO 8601 and which a
+ * browser's `new Date()` is not obliged to parse. Normalising here means the
+ * DTO promises one format regardless of which driver filled the row.
+ *
+ * The string is handed to `Date` exactly as it arrives. Tidying it into
+ * something ISO-looking first is the trap: `"…41.82435+00"` parses on Node's
+ * lenient path, while the same string with a `T` in place of the space does
+ * not parse at all — `+00` is not a valid ISO offset, so making it stricter
+ * makes the whole thing unparseable. That mistake is silent, because the
+ * fallback below then returns the raw text and the value still looks like a
+ * timestamp.
+ */
+const toIsoString = (value: string | Date): string => {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+};
+
 export const rowToModelDto = (row: ModelRow): ModelDto => {
   const def = rowToModelDef(row);
   const { lora } = def;
   return {
-    createdAt: row.created_at,
+    // Normalised rather than passed through, and this is not cosmetic. Under
+    // the raw driver these arrived as Date objects and JSON.stringify turned
+    // them into ISO strings for free. Drizzle reads timestamptz as the text
+    // Postgres prints — "2026-08-13 16:17:41.82435+00" — which is not ISO 8601
+    // and which `new Date()` in a browser is not obliged to parse. The DTO owes
+    // its consumers one format whichever driver filled the row.
+    createdAt: toIsoString(row.created_at),
     enabled: row.enabled,
     id: row.id,
     imageParam: row.image_param === "image_urls" ? "image_urls" : "image_url",
@@ -178,7 +163,7 @@ export const rowToModelDto = (row: ModelRow): ModelDto => {
       : null,
     output: def.output,
     sortOrder: row.sort_order,
-    updatedAt: row.updated_at,
+    updatedAt: toIsoString(row.updated_at),
     vector: row.vector,
   };
 };
@@ -221,6 +206,19 @@ export interface ModelPatch {
   sortOrder?: number;
   vector?: boolean;
 }
+
+/**
+ * A patch with the fields a new row cannot do without actually present.
+ *
+ * `readModelFields(body, true)` has always guaranteed these — `readId`,
+ * `readLabel` and `readInput` each refuse a create that omits one — but its
+ * return type said `ModelPatch`, where every field is optional. The raw INSERT
+ * interpolated them without complaint, so nothing said the guarantee was
+ * load-bearing. Drizzle types its `.values()` against the table, which is what
+ * turned an unstated assumption into something the compiler checks.
+ */
+export type ModelCreate = ModelPatch &
+  Required<Pick<ModelPatch, "id" | "input" | "label">>;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -407,10 +405,18 @@ const readBool = (
  * touched — and the protected default is refused the edits that would change
  * what the fallback means.
  */
-export const readModelFields = (
+export function readModelFields(
+  body: Record<string, unknown>,
+  create: true
+): ModelCreate | string;
+export function readModelFields(
   body: Record<string, unknown>,
   create: boolean
-): ModelPatch | string => {
+): ModelPatch | string;
+export function readModelFields(
+  body: Record<string, unknown>,
+  create: boolean
+): ModelPatch | string {
   const patch: ModelPatch = {};
 
   const id = readId(body, create);
@@ -460,4 +466,4 @@ export const readModelFields = (
   }
 
   return patch;
-};
+}

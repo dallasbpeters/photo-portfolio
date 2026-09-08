@@ -72,7 +72,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const [row] = inserted;
     return res.status(201).json({
-      user: { createdAt: row.createdAt, email: row.email, id: row.id },
+      user: {
+        // Drizzle reads timestamptz as the text Postgres prints, which is not
+        // ISO 8601; the raw driver used to hand over a Date that JSON turned
+        // into ISO for free. Normalised here so the response shape is the same
+        // either way.
+        createdAt: new Date(row.createdAt).toISOString(),
+        email: row.email,
+        id: row.id,
+      },
     });
   } catch (e) {
     console.error(e);

@@ -6,10 +6,9 @@ import {
 } from "../../config/falModels.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import { generateImage, isFalConfigured } from "../_lib/fal.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
-import { loadModelDefs } from "../_lib/models.js";
+import { loadModelDefs } from "../_lib/modelStore.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /** Long enough for a considered prompt, short enough to bound the request. */
@@ -132,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
    * have no model to offer, and the choice is an improvement on the default
    * rather than a requirement of it.
    */
-  const defs = await loadModelDefs(getSql());
+  const defs = await loadModelDefs();
   const requested = typeof body.model === "string" ? body.model.trim() : "";
   const model = requested && isFalModel(defs, requested) ? requested : null;
 
