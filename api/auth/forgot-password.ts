@@ -1,11 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import {
   EmailNotConfiguredError,
   passwordResetEmail,
   sendEmail,
 } from "../_lib/email.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 import {
   createResetToken,
@@ -53,26 +54,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sql = getSql();
+    const db = getDb();
     const site = getSite();
 
-    const users =
-      await sql`SELECT id, email FROM users WHERE email = ${email} LIMIT 1`;
-    const user = users[0] as { id: string; email: string } | undefined;
+    const [user] = await db
+      .select({ email: schema.users.email, id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
 
     // Unknown address: stop here, but still answer ACCEPTED.
     if (!user) {
       return res.status(200).json(ACCEPTED);
     }
 
-    const active = await sql`
-      SELECT COUNT(*)::int AS n
-      FROM password_reset_tokens
-      WHERE user_id = ${user.id} AND used_at IS NULL AND expires_at > now()
-    `;
-    if (
-      ((active[0] as { n: number } | undefined)?.n ?? 0) >= MAX_ACTIVE_TOKENS
-    ) {
+    const [active] = await db
+      .select({ n: count() })
+      .from(schema.passwordResetTokens)
+      .where(
+        and(
+          eq(schema.passwordResetTokens.userId, user.id),
+          isNull(schema.passwordResetTokens.usedAt),
+          gt(schema.passwordResetTokens.expiresAt, sql`now()`)
+        )
+      );
+    if ((active?.n ?? 0) >= MAX_ACTIVE_TOKENS) {
       return res.status(200).json(ACCEPTED);
     }
 
@@ -84,15 +90,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ?.split(",")[0]
         ?.trim() ?? null;
 
-    await sql`
-      INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, requested_ip)
-      VALUES (
-        ${user.id},
-        ${tokenHash},
-        now() + ${`${RESET_TOKEN_TTL_MINUTES} minutes`}::interval,
-        ${ip}
-      )
-    `;
+    await db.insert(schema.passwordResetTokens).values({
+      expiresAt: sql`now() + ${`${RESET_TOKEN_TTL_MINUTES} minutes`}::interval`,
+      requestedIp: ip,
+      tokenHash,
+      userId: user.id,
+    });
 
     const resetUrl = `https://${site.domain}/reset-password?token=${encodeURIComponent(token)}`;
     const { subject, html, text } = passwordResetEmail(

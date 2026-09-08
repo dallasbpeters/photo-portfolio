@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getBearerUser, hashPassword, verifyPassword } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 import { MIN_PASSWORD_LENGTH } from "../_lib/resetToken.js";
 
@@ -45,34 +46,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sql = getSql();
-    const rows = (await sql`
-      SELECT id, password_hash FROM users WHERE id = ${user.userId} LIMIT 1
-    `) as { id: string; password_hash: string }[];
+    const db = getDb();
+    const rows = await db
+      .select({
+        id: schema.users.id,
+        passwordHash: schema.users.passwordHash,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId))
+      .limit(1);
 
     const [row] = rows;
     if (!row) {
       return res.status(404).json({ error: "That account no longer exists" });
     }
-    if (!(await verifyPassword(current, row.password_hash))) {
+    if (!(await verifyPassword(current, row.passwordHash))) {
       return res
         .status(400)
         .json({ error: "Your current password is incorrect" });
     }
 
     const passwordHash = await hashPassword(next);
-    await sql`
-      UPDATE users SET password_hash = ${passwordHash}
-      WHERE id = ${row.id}
-    `;
+    await db
+      .update(schema.users)
+      .set({ passwordHash })
+      .where(eq(schema.users.id, row.id));
 
     // Any outstanding reset links for this user are now stale — a password that
     // was just set by hand should not be overridable by an old email.
-    await sql`
-      UPDATE password_reset_tokens
-      SET used_at = now()
-      WHERE user_id = ${row.id} AND used_at IS NULL
-    `;
+    await db
+      .update(schema.passwordResetTokens)
+      .set({ usedAt: sql`now()` })
+      .where(
+        and(
+          eq(schema.passwordResetTokens.userId, row.id),
+          isNull(schema.passwordResetTokens.usedAt)
+        )
+      );
 
     return res.status(200).json({ ok: true });
   } catch (e) {

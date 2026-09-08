@@ -1,8 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { eq } from "drizzle-orm";
 import { hashPassword } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 const safeEqual = (a: string, b: string): boolean => {
@@ -49,28 +50,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const sql = getSql();
-    const existing = await sql`
-      SELECT id FROM users WHERE email = ${email} LIMIT 1
-    `;
+    const db = getDb();
+    const existing = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
     if (existing.length > 0) {
       return res.status(409).json({ error: "Email already registered" });
     }
 
     const passwordHash = await hashPassword(password);
-    const inserted = await sql`
-      INSERT INTO users (email, password_hash)
-      VALUES (${email}, ${passwordHash})
-      RETURNING id, email, created_at
-    `;
+    const inserted = await db
+      .insert(schema.users)
+      .values({ email, passwordHash })
+      .returning({
+        createdAt: schema.users.createdAt,
+        email: schema.users.email,
+        id: schema.users.id,
+      });
 
-    const row = inserted[0] as {
-      id: string;
-      email: string;
-      created_at: string;
-    };
+    const [row] = inserted;
     return res.status(201).json({
-      user: { createdAt: row.created_at, email: row.email, id: row.id },
+      user: { createdAt: row.createdAt, email: row.email, id: row.id },
     });
   } catch (e) {
     console.error(e);

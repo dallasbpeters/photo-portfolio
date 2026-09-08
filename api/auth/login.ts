@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { eq } from "drizzle-orm";
 import { signToken, verifyPassword } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,18 +25,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const sql = getSql();
-    const rows = await sql`
-      SELECT id, email, password_hash
-      FROM users
-      WHERE email = ${email}
-      LIMIT 1
-    `;
+    const db = getDb();
+    const rows = await db
+      .select({
+        email: schema.users.email,
+        id: schema.users.id,
+        passwordHash: schema.users.passwordHash,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
 
-    const row = rows[0] as
-      | { id: string; email: string; password_hash: string }
-      | undefined;
-    if (!(row && (await verifyPassword(password, row.password_hash)))) {
+    const [row] = rows;
+    if (!(row && (await verifyPassword(password, row.passwordHash)))) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 

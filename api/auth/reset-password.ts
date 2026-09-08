@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { hashPassword, signToken } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 import { hashResetToken, MIN_PASSWORD_LENGTH } from "../_lib/resetToken.js";
 
@@ -33,45 +34,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sql = getSql();
+    const db = getDb();
     const tokenHash = hashResetToken(token);
 
     // Claim the token and read its owner in one statement. The `used_at IS NULL`
     // guard in the UPDATE makes this atomic: two concurrent submissions of the
     // same link cannot both match, so a link is genuinely single-use.
-    const claimed = await sql`
-      UPDATE password_reset_tokens
-      SET used_at = now()
-      WHERE token_hash = ${tokenHash}
-        AND used_at IS NULL
-        AND expires_at > now()
-      RETURNING user_id
-    `;
+    const claimed = await db
+      .update(schema.passwordResetTokens)
+      .set({ usedAt: sql`now()` })
+      .where(
+        and(
+          eq(schema.passwordResetTokens.tokenHash, tokenHash),
+          isNull(schema.passwordResetTokens.usedAt),
+          gt(schema.passwordResetTokens.expiresAt, sql`now()`)
+        )
+      )
+      .returning({ userId: schema.passwordResetTokens.userId });
 
-    const userId = (claimed[0] as { user_id: string } | undefined)?.user_id;
+    const userId = claimed[0]?.userId;
     if (!userId) {
       return res.status(400).json(INVALID);
     }
 
     const passwordHash = await hashPassword(password);
-    const updated = await sql`
-      UPDATE users
-      SET password_hash = ${passwordHash}
-      WHERE id = ${userId}
-      RETURNING id, email
-    `;
+    const updated = await db
+      .update(schema.users)
+      .set({ passwordHash })
+      .where(eq(schema.users.id, userId))
+      .returning({ email: schema.users.email, id: schema.users.id });
 
-    const user = updated[0] as { id: string; email: string } | undefined;
+    const [user] = updated;
     if (!user) {
       return res.status(400).json(INVALID);
     }
 
     // Any other outstanding link for this user is now stale.
-    await sql`
-      UPDATE password_reset_tokens
-      SET used_at = now()
-      WHERE user_id = ${userId} AND used_at IS NULL
-    `;
+    await db
+      .update(schema.passwordResetTokens)
+      .set({ usedAt: sql`now()` })
+      .where(
+        and(
+          eq(schema.passwordResetTokens.userId, userId),
+          isNull(schema.passwordResetTokens.usedAt)
+        )
+      );
 
     // Sign straight in — the user just proved control of the mailbox.
     const authToken = signToken({ email: user.email, sub: user.id });

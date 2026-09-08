@@ -1,11 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { eq } from "drizzle-orm";
 import { signToken } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import {
   GoogleNotConfiguredError,
   verifyGoogleIdToken,
 } from "../_lib/googleAuth.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -41,11 +42,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const sql = getSql();
-    const rows = await sql`
-      SELECT id, email FROM users WHERE email = ${identity.email} LIMIT 1
-    `;
-    const user = rows[0] as { id: string; email: string } | undefined;
+    const db = getDb();
+    const [user] = await db
+      .select({ email: schema.users.email, id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, identity.email))
+      .limit(1);
 
     // Google sign-in authenticates existing admins; it never creates one.
     // Otherwise anyone with a Google account could mint themselves access.
