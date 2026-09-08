@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { asc, eq, like, or, sql } from "drizzle-orm";
 import { getBearerUser } from "../_lib/auth.js";
 import {
   type CategoryRow,
@@ -6,20 +7,45 @@ import {
   slugifyLabel,
 } from "../_lib/categories.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
-type Sql = ReturnType<typeof getSql>;
+type Db = ReturnType<typeof getDb>;
 
 const MAX_SLUG_ATTEMPTS = 50;
 
-const listCategories = async (sql: Sql) =>
-  (await sql`
-    SELECT c.id, c.slug, c.label, c.sort_order, c.created_at,
-      (SELECT COUNT(*)::int FROM photos p WHERE p.category_id = c.id) AS photo_count
-    FROM categories c
-    ORDER BY c.sort_order ASC, c.label ASC
-  `) as CategoryRow[];
+/**
+ * The columns every category response is built from.
+ *
+ * `photo_count` stays a correlated subquery rather than becoming a join and a
+ * GROUP BY: a category with no photographs has to come back with a count of
+ * zero, and an inner join would drop it from the list entirely.
+ *
+ * The table and column names inside it are written out rather than
+ * interpolated, and that is not a shortcut. Drizzle renders an interpolated
+ * column *unqualified* inside a raw fragment, so the obvious
+ * `${schema.photos.categoryId} = ${schema.categories.id}` compiles to
+ * `"category_id" = "id"` — both of which resolve against `photos` inside the
+ * subquery, comparing a category id to a photo id. That is never true, so
+ * every count came back zero while the query itself succeeded. Nothing here
+ * is user input, so the literal carries no injection risk.
+ */
+const categorySelection = {
+  created_at: schema.categories.createdAt,
+  id: schema.categories.id,
+  label: schema.categories.label,
+  photo_count: sql<number>`(
+    SELECT COUNT(*)::int FROM photos p WHERE p.category_id = categories.id
+  )`,
+  slug: schema.categories.slug,
+  sort_order: schema.categories.sortOrder,
+};
+
+const listCategories = async (db: Db): Promise<CategoryRow[]> =>
+  await db
+    .select(categorySelection)
+    .from(schema.categories)
+    .orderBy(asc(schema.categories.sortOrder), asc(schema.categories.label));
 
 /**
  * Pulls every slug already derived from this base in one query, then picks the
@@ -27,11 +53,16 @@ const listCategories = async (sql: Sql) =>
  * per attempt. `baseSlug` comes from slugifyLabel, so it is [a-z0-9-] only and
  * carries no LIKE wildcards.
  */
-const findFreeSlug = async (sql: Sql, baseSlug: string) => {
-  const taken = (await sql`
-    SELECT slug FROM categories
-    WHERE slug = ${baseSlug} OR slug LIKE ${`${baseSlug}-%`}
-  `) as { slug: string }[];
+const findFreeSlug = async (db: Db, baseSlug: string) => {
+  const taken = await db
+    .select({ slug: schema.categories.slug })
+    .from(schema.categories)
+    .where(
+      or(
+        eq(schema.categories.slug, baseSlug),
+        like(schema.categories.slug, `${baseSlug}-%`)
+      )
+    );
   const used = new Set(taken.map((r) => r.slug));
   const candidates = Array.from({ length: MAX_SLUG_ATTEMPTS }, (_, attempt) =>
     attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
@@ -40,7 +71,7 @@ const findFreeSlug = async (sql: Sql, baseSlug: string) => {
 };
 
 const createCategory = async (
-  sql: Sql,
+  db: Db,
   req: VercelRequest,
   res: VercelResponse
 ) => {
@@ -64,26 +95,25 @@ const createCategory = async (
     return res.status(400).json({ error: "Invalid sortOrder" });
   }
 
-  const slug = await findFreeSlug(sql, slugifyLabel(slugRaw || label));
+  const slug = await findFreeSlug(db, slugifyLabel(slugRaw || label));
   if (!slug) {
     return res.status(409).json({ error: "Could not allocate unique slug" });
   }
 
-  const [row] = (await sql`
-    INSERT INTO categories (slug, label, sort_order)
-    VALUES (${slug}, ${label}, ${sortOrder})
-    RETURNING id, slug, label, sort_order, created_at
-  `) as CategoryRow[];
+  const [row] = await db
+    .insert(schema.categories)
+    .values({ label, slug, sortOrder })
+    .returning({ id: schema.categories.id });
   if (!row) {
     return res.status(500).json({ error: "Create failed" });
   }
 
-  const [out] = (await sql`
-    SELECT c.id, c.slug, c.label, c.sort_order, c.created_at,
-      (SELECT COUNT(*)::int FROM photos p WHERE p.category_id = c.id) AS photo_count
-    FROM categories c
-    WHERE c.id = ${row.id}
-  `) as CategoryRow[];
+  // Read back rather than answering from what was inserted: the response
+  // carries a photo count, and the row just written has no way to know it.
+  const [out] = await db
+    .select(categorySelection)
+    .from(schema.categories)
+    .where(eq(schema.categories.id, row.id));
   if (!out) {
     return res.status(500).json({ error: "Create failed" });
   }
@@ -96,15 +126,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sql = getSql();
+    const db = getDb();
 
     if (req.method === "GET") {
-      const rows = await listCategories(sql);
+      const rows = await listCategories(db);
       return res.status(200).json(rows.map(categoryRowToDto));
     }
 
     if (req.method === "POST") {
-      return await createCategory(sql, req, res);
+      return await createCategory(db, req, res);
     }
 
     res.setHeader("Allow", "GET, POST");

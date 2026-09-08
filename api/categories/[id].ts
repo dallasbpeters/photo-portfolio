@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { count, eq } from "drizzle-orm";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
+import { getDb, schema } from "../_lib/orm.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {
@@ -25,21 +26,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sql = getSql();
-    const usage = (await sql`
-      SELECT COUNT(*)::int AS c FROM photos WHERE category_id = ${id}
-    `) as { c: number }[];
-    const count = usage[0]?.c ?? 0;
-    if (count > 0) {
+    const db = getDb();
+    const usage = await db
+      .select({ c: count() })
+      .from(schema.photos)
+      .where(eq(schema.photos.categoryId, id));
+    const inUse = usage[0]?.c ?? 0;
+    if (inUse > 0) {
       return res.status(409).json({
-        detail: `${count} photo(s) use this category. Reassign them first.`,
+        detail: `${inUse} photo(s) use this category. Reassign them first.`,
         error: "Category is in use",
       });
     }
 
-    const removed = await sql`
-      DELETE FROM categories WHERE id = ${id} RETURNING id
-    `;
+    const removed = await db
+      .delete(schema.categories)
+      .where(eq(schema.categories.id, id))
+      .returning({ id: schema.categories.id });
 
     if (removed.length === 0) {
       return res.status(404).json({ error: "Category not found" });
