@@ -385,6 +385,11 @@ export interface AiModel {
   /** What it returns. A video endpoint is submitted to a queue and polled. */
   output: "image" | "video";
   sortOrder: number;
+  /** A training this app started, or null for a model added by hand. */
+  training: {
+    error: string | null;
+    status: "training" | "failed" | "ready";
+  } | null;
   updatedAt: string;
   /** True when the model returns vector art rather than a raster. */
   vector: boolean;

@@ -35,6 +35,8 @@ export const modelSelection = {
   lora_trigger: schema.models.loraTrigger,
   output: schema.models.output,
   sort_order: schema.models.sortOrder,
+  training_error: schema.models.trainingError,
+  training_status: schema.models.trainingStatus,
   updated_at: schema.models.updatedAt,
   vector: schema.models.vector,
 };

@@ -36,6 +36,10 @@ export interface ModelRow {
   lora_trigger: string | null;
   output?: string;
   sort_order: number;
+  /** Why a training stopped badly, when it did. */
+  training_error?: string | null;
+  /** Null on a model added by hand; only a trained row carries a status. */
+  training_status?: string | null;
   updated_at: string;
   vector: boolean;
 }
@@ -57,6 +61,17 @@ export interface ModelDto {
   } | null;
   output: "image" | "video";
   sortOrder: number;
+  /**
+   * A training run this app started, or null for a model added by hand.
+   *
+   * On the DTO because the panel has to tell a style that is still cooking
+   * from one that is merely switched off — they look identical otherwise, and
+   * the difference decides whether to wait or to try again.
+   */
+  training: {
+    error: string | null;
+    status: "training" | "failed" | "ready";
+  } | null;
   updatedAt: string;
   vector: boolean;
 }
@@ -136,6 +151,15 @@ const toIsoString = (value: string | Date): string => {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
 };
 
+/** The training state, narrowed to the three the column permits. */
+const trainingOf = (row: ModelRow): ModelDto["training"] => {
+  const status = row.training_status;
+  if (status !== "training" && status !== "failed" && status !== "ready") {
+    return null;
+  }
+  return { error: row.training_error ?? null, status };
+};
+
 export const rowToModelDto = (row: ModelRow): ModelDto => {
   const def = rowToModelDef(row);
   const { lora } = def;
@@ -163,6 +187,7 @@ export const rowToModelDto = (row: ModelRow): ModelDto => {
       : null,
     output: def.output,
     sortOrder: row.sort_order,
+    training: trainingOf(row),
     updatedAt: toIsoString(row.updated_at),
     vector: row.vector,
   };

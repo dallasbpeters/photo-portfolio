@@ -774,6 +774,24 @@ export const models = pgTable(
     loraTrigger: text("lora_trigger"),
     output: text().default("image").notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    /*
+     * A training run this app started. See db/patches/035_model_training.sql.
+     *
+     * Added by hand rather than by `pnpm db:pull`, because a pull rewrites this
+     * file and would undo the two edits documented at the top of it. Keep these
+     * in step with the patch by hand, or re-pull and re-apply all three.
+     *
+     * Null on every model added by hand, which is most of them: only a row this
+     * app trained carries a status.
+     */
+    trainingError: text("training_error"),
+    trainingResponseUrl: text("training_response_url"),
+    trainingStartedAt: timestamp("training_started_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    trainingStatus: text("training_status"),
+    trainingStatusUrl: text("training_status_url"),
     updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
       .defaultNow()
       .notNull(),

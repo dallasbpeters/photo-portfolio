@@ -419,6 +419,13 @@
   color: color-mix(in oklch, #fff 60%, transparent);
 }
 
+/* A note that reports a failure rather than a fact. Warmer than the rest of
+   the row so it reads as something to act on, without the alarm of an error
+   the admin cannot do anything about. */
+.admin-row__note--warn {
+  color: var(--color-warning, oklch(0.78 0.13 70));
+}
+
 /*
  * A card on the admin's ground.
  *

@@ -229,7 +229,8 @@ const endpointFor = ({
   return hasSourceImage ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
 };
 
-const falKey = (): string | null => process.env.FAL_API_KEY?.trim() || null;
+export const falKey = (): string | null =>
+  process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
 

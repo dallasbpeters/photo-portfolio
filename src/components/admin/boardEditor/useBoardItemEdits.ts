@@ -15,10 +15,11 @@ import {
   maskOf,
 } from "../../../boards/drawing/mask";
 import { copyOfFrame } from "../../../boards/io/copyToBoard";
-import { buildDataset } from "../../../boards/io/dataset";
+import { buildDataset, startTraining } from "../../../boards/io/dataset";
 import { newItemId } from "../../../boards/io/newItemId";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";
+import { useConfirm } from "../ConfirmProvider";
 import { BLANK_ITEM } from "./placement";
 
 /**
@@ -46,6 +47,7 @@ export interface BoardItemEditDeps {
 }
 
 export const useBoardItemEdits = (deps: BoardItemEditDeps) => {
+  const { prompt } = useConfirm();
   const {
     boardId,
     change,
@@ -143,48 +145,61 @@ export const useBoardItemEdits = (deps: BoardItemEditDeps) => {
   };
 
   /**
-   * Packs a frame's pictures into a dataset fal's LoRA trainer can read.
+   * Trains a style on a frame's pictures, end to end.
    *
-   * This is the missing first step of training a style, and deliberately only
-   * the first step: the training itself runs on fal, costs money and takes
-   * twenty minutes, so it is started there by a person rather than by a
-   * right-click here. What the board can do — and what was tedious by hand — is
-   * turn a gathered frame into one zip at a public URL.
+   * The whole round trip that used to be done by hand: pack the frame into an
+   * archive, hand it to fal's trainer, and — once it finishes — store the
+   * weights and add the model. Nothing to paste anywhere.
    *
-   * The URL is put on the clipboard rather than only shown, because the very
-   * next thing it is needed for is a paste into fal's form. It is also left in
-   * the toast, since a clipboard write can be refused and a URL nobody can see
-   * would strand the whole operation.
+   * Two calls, because the archive is worth having on its own. It is what
+   * makes a training reproducible, and what somebody pastes into fal by hand
+   * if they would rather drive the trainer there.
    *
-   * The rest of the round trip stays manual and is written up in
-   * scripts/upload-lora.ts: train on fal, upload the weights, then add a model
-   * in the Models panel pointing at them.
+   * Returns as soon as fal accepts the job. Training takes about twenty
+   * minutes, which nothing here waits for: the model appears in the Models
+   * panel straight away, switched off and marked as training, and becomes
+   * usable when the weights land. The panel is what collects it.
    */
   const trainOnFrame = async (itemId: string) => {
-    const toastId = toast.loading("Packing the training set…");
+    const name = await prompt({
+      confirmLabel: "Train",
+      description:
+        "Trains a style on the pictures in this frame. It takes about twenty minutes and is billed as fal usage. The style appears in Models when it is ready.",
+      placeholder: "Cruise shirts",
+      title: "Name this style",
+    });
+    const label = name?.trim();
+    if (!label) {
+      return;
+    }
+
+    const toastId = toast.loading("Packing the training set\u2026");
     try {
       const { count, images_data_url, skipped } = await buildDataset(
         boardId,
         itemId
       );
-      await navigator.clipboard?.writeText(images_data_url).catch(() => {
-        // Refused, or no permission. The URL is in the toast either way.
-      });
+      toast.loading(
+        `${count} image${count === 1 ? "" : "s"} packed. Starting the training\u2026`,
+        { id: toastId }
+      );
+      const model = await startTraining(images_data_url, label);
       toast.dismiss(toastId);
       toast.success(
-        `${count} image${count === 1 ? "" : "s"} packed${skipped > 0 ? `, ${skipped} could not be read` : ""}. Link copied — paste it into fal's LoRA trainer.`,
+        `Training "${label}" on ${count} image${count === 1 ? "" : "s"}${skipped > 0 ? ` (${skipped} could not be read)` : ""}. It will appear in Models when it is ready.`,
         {
           action: {
-            label: "Open",
-            onClick: () => window.open(images_data_url, "_blank", "noopener"),
+            label: "Models",
+            onClick: () => navigate("/admin/models"),
           },
-          duration: 30_000,
+          duration: 20_000,
         }
       );
+      return model;
     } catch (err) {
       toast.dismiss(toastId);
       toast.error(
-        err instanceof Error ? err.message : "Could not build the training set"
+        err instanceof Error ? err.message : "Could not start the training"
       );
     }
   };

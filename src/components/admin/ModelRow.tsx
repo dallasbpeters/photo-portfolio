@@ -43,7 +43,18 @@ export function ModelRow({
           {model.vector ? (
             <span className="admin-chip admin-chip--kind">Vector</span>
           ) : null}
-          {model.enabled ? null : (
+          {/* Training before Off, and instead of it. A style that is still
+              cooking is switched off for a reason, and "Off" alone reads as
+              something the author turned off. */}
+          {model.training?.status === "training" ? (
+            <span className="admin-chip admin-chip--kind">Training…</span>
+          ) : null}
+          {model.training?.status === "failed" ? (
+            <span className="admin-chip admin-chip--plain">
+              Training failed
+            </span>
+          ) : null}
+          {model.enabled || model.training?.status === "training" ? null : (
             <span className="admin-chip admin-chip--plain">Off</span>
           )}
           {isAuto ? (
@@ -55,6 +66,20 @@ export function ModelRow({
           {inputLabel(model.input)}
           {summary ? ` · ${summary}` : ""}
         </p>
+        {/* The reason, not just the fact. A training that failed silently is
+            indistinguishable from one still running, and knowing which decides
+            whether to wait or to start again. */}
+        {model.training?.status === "failed" && model.training.error ? (
+          <p className="admin-row__note admin-row__note--warn">
+            {model.training.error}
+          </p>
+        ) : null}
+        {model.training?.status === "training" ? (
+          <p className="admin-row__note">
+            Training on fal. Usually about twenty minutes; it turns itself on
+            when the weights arrive.
+          </p>
+        ) : null}
       </div>
       <div className="row row--snug">
         <Button
