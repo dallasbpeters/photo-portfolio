@@ -237,7 +237,12 @@ describe("shaping jobs around a style", () => {
     expect(images(jobs)).toEqual(["mine.jpg", "mine.jpg", "mine.jpg"]);
   });
 
-  it("gives a prompt-only model neither subject nor references", () => {
+  it("gives a prompt-only model no pictures, but still the style", () => {
+    // This used to assert `prompt: "a portrait"` — no style at all — which was
+    // the bug rather than the intent. The pictures are correctly withheld from
+    // a model with nowhere to put one; the brief is words and must still
+    // arrive, because run.ts has already dropped the element's description on
+    // the understanding that it does.
     const jobs = jobsFor(
       shape({
         briefs: ["oil on linen"],
@@ -246,7 +251,9 @@ describe("shaping jobs around a style", () => {
         values: { image: ["cover.jpg", "mine.jpg"] },
       })
     );
-    expect(jobs).toEqual([{ image: null, mask: null, prompt: "a portrait" }]);
+    expect(jobs).toEqual([
+      { image: null, mask: null, prompt: "a portrait, oil on linen" },
+    ]);
   });
 
   it("keeps the mask of the picture it belongs to", () => {
@@ -307,6 +314,56 @@ describe("shaping jobs around a style", () => {
       })
     );
     expect(jobs).toEqual([{ image: null, mask: null, prompt: "" }]);
+  });
+});
+
+describe("a style reaches a model that takes no picture", () => {
+  /*
+   * A text-to-image model is the case elements are most easily broken on, and
+   * the one that used to fail silently.
+   *
+   * The brief is words. Emptying the *image* lists for a model with nowhere to
+   * put a picture is right; emptying the brief alongside them left the element
+   * contributing nothing, because run.ts drops the element's description
+   * whenever a brief exists and trusts jobsFor to have placed it. The run went
+   * through and was billed with no style at all.
+   */
+  it("puts the brief in the prompt for a prompt-only model", () => {
+    const jobs = jobsFor(shape({ briefs: ["oil on linen"], shape: "prompt" }));
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].prompt).toBe("a portrait, oil on linen");
+  });
+
+  it("sends no picture to it, brief or not", () => {
+    const jobs = jobsFor(
+      shape({
+        briefs: ["oil on linen"],
+        elementImages: ["cover.jpg"],
+        shape: "prompt",
+        values: { image: ["cover.jpg", "mine.jpg"] },
+      })
+    );
+    expect(images(jobs)).toEqual([null]);
+    expect(jobs[0].prompt).toBe("a portrait, oil on linen");
+  });
+
+  it("styles every prompt a list supplies", () => {
+    const jobs = jobsFor(
+      shape({
+        briefs: ["oil on linen"],
+        lists: { prompt: [["a boat", "a harbour", "a lighthouse"]] },
+        shape: "prompt",
+        values: { prompt: ["a boat", "a harbour", "a lighthouse"] },
+      })
+    );
+    // No typed text on the node here (the helper's `typedPrompt` is only the
+    // fallback for a node with nothing wired), so each row is the list's own
+    // value with the style after it.
+    expect(jobs.map((job) => job.prompt)).toEqual([
+      "a boat, oil on linen",
+      "a harbour, oil on linen",
+      "a lighthouse, oil on linen",
+    ]);
   });
 });
 

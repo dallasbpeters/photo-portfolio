@@ -285,10 +285,24 @@ export const jobsFor = ({
       Array.from({ length: count }, () => ({
         image,
         mask: image ? (masks.get(image) ?? null) : null,
-        // The style is said, not shown. `briefs` is how the vision model read
-        // the element's pictures, so this is the one place the look actually
-        // reaches an endpoint that has room for a single image.
-        prompt: withElementWords(prompt, shape === "prompt" ? [] : briefs),
+        /*
+         * The style is said, not shown.
+         *
+         * `briefs` is how the vision model read the element's pictures, and it
+         * is *words* — which is the whole point of it. So it travels with every
+         * job regardless of what the model consumes.
+         *
+         * It used to be dropped when `shape === "prompt"`, copying the two
+         * lines above that empty the image lists for a model with nowhere to
+         * put a picture. Emptying the pictures is right; emptying the brief was
+         * exactly backwards. A text-to-image model is the one case where words
+         * are the *only* channel a style has, and dropping them there left the
+         * element contributing nothing at all — because run.ts suppresses the
+         * element's description whenever a brief exists, on the understanding
+         * that this line places it. Six enabled models take no image, so a
+         * style wired into any of them was silently ignored and billed in full.
+         */
+        prompt: withElementWords(prompt, briefs),
       }))
     )
   );

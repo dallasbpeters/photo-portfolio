@@ -1,3 +1,14 @@
+/*
+ * `./schema.js`, not `./schema`.
+ *
+ * `drizzle-kit pull` writes this import without an extension. `vercel dev`
+ * resolves that leniently, so it works locally and fails in production, where
+ * the functions run as real ESM and an extensionless specifier is not
+ * resolvable: every endpoint that touches the ORM answered
+ * FUNCTION_INVOCATION_FAILED with ERR_MODULE_NOT_FOUND for /var/task/db/schema.
+ *
+ * Re-apply after every `pnpm db:pull` — see db/README.md.
+ */
 import { relations } from "drizzle-orm/relations";
 import {
   boardComments,
@@ -27,7 +38,7 @@ import {
   recipeVersions,
   siteSettings,
   users,
-} from "./schema";
+} from "./schema.js";
 
 export const siteSettingsRelations = relations(siteSettings, ({ one }) => ({
   user: one(users, {

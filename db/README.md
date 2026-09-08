@@ -49,7 +49,14 @@ database. It also drops a `db/meta/` folder and a `db/0000_*.sql` file, which
 are Drizzle's own migration bookkeeping — both are gitignored and can be
 deleted.
 
-**Re-add the type annotations after every pull.** `recipes`, `recipeVersions`,
+**Two edits must be re-applied after every pull.**
+
+First, `db/relations.ts` imports `./schema` without an extension. That resolves
+under `vercel dev` and fails in production, where the functions run as real ESM
+— every endpoint touching the ORM answers `FUNCTION_INVOCATION_FAILED` with
+`ERR_MODULE_NOT_FOUND` for `/var/task/db/schema`. Add the `.js`.
+
+Second, the type annotations. `recipes`, `recipeVersions`,
 `brandKits` and `brandKitVersions` reference each other, and TypeScript cannot
 infer a type used inside its own definition. The generator omits the annotation
 that breaks the cycle, so `db/schema.ts` does not compile until it is put back.
