@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "sonner";
+import { useTrainingWatch } from "../boards/hooks/useTrainingWatch";
 import { BoardEditor } from "../components/admin/BoardEditor";
 import { ConfirmProvider } from "../components/admin/ConfirmProvider";
 import { authStorage } from "../services/portfolioService";
@@ -17,6 +18,16 @@ export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
   const [isAuthenticated] = useState(() => Boolean(authStorage.getToken()));
+
+  /*
+   * Collects a training that finished while this board was open.
+   *
+   * This is the screen a training is started from, so it is the screen most
+   * likely to be open when one lands. It used to be the Models panel's job
+   * alone, which meant the ordinary path — train from a board, stay on the
+   * board — never collected anything at all.
+   */
+  useTrainingWatch(isAuthenticated);
 
   useEffect(() => {
     // Signing in happens on the admin route; there is no board to show without

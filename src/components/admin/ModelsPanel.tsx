@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { pollTraining } from "../../boards/io/dataset";
+import { useTrainingWatch } from "../../boards/hooks/useTrainingWatch";
 import { modelsApi } from "../../services/portfolioService";
 import type { AiModel } from "../../types";
 import { Button } from "../ui/button";
@@ -20,16 +20,6 @@ import "../../styles/adminChrome.css";
  * default and is protected — it cannot be deleted, disabled, or given a
  * different shape.
  */
-/**
- * How often to ask fal whether a training has landed.
- *
- * A run takes minutes, so this is not about being quick — it is about
- * the row turning itself on within a minute of finishing rather than needing a
- * reload. Half a minute costs two requests a minute against a job that is
- * already paid for.
- */
-const TRAINING_POLL_MS = 30_000;
-
 export function ModelsPanel() {
   const [models, setModels] = useState<AiModel[]>([]);
   const [editing, setEditing] = useState<AiModel | "new" | null>(null);
@@ -50,48 +40,13 @@ export function ModelsPanel() {
   }, [refresh]);
 
   /*
-   * Collects any training fal has finished, while this panel is open.
+   * Collects a training that lands while this panel is open.
    *
-   * The panel rather than a timer somewhere central, because this is the screen
-   * where somebody is waiting — and because it means a training survives the
-   * app being closed: nothing is holding the job, so the next visit collects
-   * it. See api/models/training.ts.
-   *
-   * Only while something is actually training, so an admin editing models is
-   * not polling fal every half minute for nothing. `refresh` runs when a run
-   * lands, which is what makes the row switch itself on.
+   * The same hook the board mounts, rather than a second copy of the polling.
+   * The panel had the only implementation for a while, which is exactly why a
+   * training started from a board was never collected — see useTrainingWatch.
    */
-  const training = models.some((m) => m.training?.status === "training");
-
-  useEffect(() => {
-    if (!training) {
-      return;
-    }
-    let alive = true;
-    const check = async () => {
-      try {
-        const { finished } = await pollTraining();
-        if (alive && finished.length > 0) {
-          toast.success(
-            finished.length === 1
-              ? `"${finished[0].label}" is trained and ready.`
-              : `${finished.length} styles are trained and ready.`
-          );
-          await refresh();
-        }
-      } catch {
-        // A failed check is not a failed training. The next tick tries again,
-        // and saying so every thirty seconds would be noise about something
-        // the admin cannot act on.
-      }
-    };
-    void check();
-    const timer = setInterval(() => void check(), TRAINING_POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, [training, refresh]);
+  useTrainingWatch(true, refresh);
 
   const saved = useCallback(() => {
     setEditing(null);
