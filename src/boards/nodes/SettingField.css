@@ -123,3 +123,27 @@
   line-height: 1.5;
   color: color-mix(in oklch, var(--color-board-ink) 45%, transparent);
 }
+
+/*
+ * The model list failed to load.
+ *
+ * Above the picker rather than replacing it: the node is still set to
+ * something, and that choice still has to be visible and changeable. This says
+ * why the list beside it is one entry long.
+ */
+.setting-field__failed {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-amber-600);
+}
+
+.setting-field__retry {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}

@@ -23,7 +23,7 @@ import "../../styles/adminChrome.css";
 /**
  * How often to ask fal whether a training has landed.
  *
- * A run takes tens of minutes, so this is not about being quick — it is about
+ * A run takes minutes, so this is not about being quick — it is about
  * the row turning itself on within a minute of finishing rather than needing a
  * reload. Half a minute costs two requests a minute against a job that is
  * already paid for.

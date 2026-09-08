@@ -280,7 +280,7 @@ export function ModelSetting({
 }: Omit<SettingFieldProps, "readOnly"> & {
   setting: Extract<SettingDef, { kind: "model" }>;
 }) {
-  const { models } = useModels();
+  const { failed, models, reload } = useModels();
   // While the list is loading — or on a visitor's read-only board, where the
   // fetch is refused — the node still has to say what it is set to, even if
   // that means the raw id for a label.
@@ -291,6 +291,28 @@ export function ModelSetting({
   return (
     <div className="setting-field">
       <p className="setting-field__caption">{setting.label}</p>
+      {/*
+        Says the list did not arrive, rather than looking like a board with one
+        model on it.
+        
+        This fallback is indistinguishable from a real single-model setup, and
+        that is exactly how a five-minute API outage read as every model in the
+        app having vanished. The only clue was the label: an id where a name
+        should be. Now it says so, and offers the retry.
+      */}
+      {failed ? (
+        <p className="setting-field__failed">
+          The model list did not load.{" "}
+          <button
+            className="setting-field__retry"
+            onClick={reload}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+          >
+            Try again
+          </button>
+        </p>
+      ) : null}
       <Select
         onValueChange={(newValue) => {
           if (newValue !== null) {

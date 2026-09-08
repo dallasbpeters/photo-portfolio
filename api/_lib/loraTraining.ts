@@ -10,8 +10,9 @@ import { collectFromQueue, pollQueue, submitToQueue } from "./falQueue.js";
  * trainer, wait, download the weights, upload them somewhere public, then add a
  * model row pointing at them. Every part of that is here except the waiting.
  *
- * A run takes roughly twenty minutes, which no serverless function may sit
- * through, so it is deliberately split. `startTraining` submits and returns as
+ * A run takes minutes — five on sixteen images, longer on more — which is
+ * past what a serverless function may sit through, so it is deliberately
+ * split. `startTraining` submits and returns as
  * soon as fal has accepted the job; `advanceTraining` is called later — as
  * often as anyone likes — and finishes it if fal has. Nothing holds a
  * connection open in between.

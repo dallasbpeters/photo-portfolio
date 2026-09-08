@@ -308,3 +308,30 @@
   color: color-mix(in oklch, var(--color-board-ink) 80%, transparent);
   white-space: pre-wrap;
 }
+
+/*
+ * What the prompt wires are sending, under the notice that says they are.
+ *
+ * Scrolls rather than growing the node. A List node can feed fifty prompts,
+ * and a node tall enough to hold all of them would push its own settings and
+ * its result strip off the canvas — so the list is bounded and the node is not.
+ */
+.op-node-view__wired {
+  display: grid;
+  gap: var(--spacing);
+}
+
+.op-node-view__wired-text {
+  max-height: 8lh;
+  padding: calc(var(--spacing) * 1.5);
+  margin: 0;
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-sky-600) 85%, #fff);
+  white-space: pre-wrap;
+  /* Its own ground so it reads as quoted material rather than as more chrome. */
+  background: color-mix(in oklch, var(--color-sky-600) 12%, transparent);
+  border-radius: var(--radius-xs);
+}

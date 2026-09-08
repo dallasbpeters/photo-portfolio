@@ -10,10 +10,10 @@ import { getDb, schema } from "../_lib/orm.js";
 /**
  * Finishes any training run fal has finished, and reports on the rest.
  *
- * The other half of api/models/train.ts. A run takes twenty minutes, which no
- * serverless function may wait through, so nothing is holding the job — this is
- * called instead, as often as anyone likes, and each call advances whatever is
- * ready.
+ * The other half of api/models/train.ts. A run takes minutes, past what a
+ * serverless function may wait through, so nothing is holding the job — this
+ * is called instead, as often as anyone likes, and each call advances whatever
+ * is ready.
  *
  * Called by the Models panel rather than by a timer. That is the screen where
  * somebody is waiting, so it is the screen that should be asking; and it means
@@ -32,7 +32,7 @@ import { getDb, schema } from "../_lib/orm.js";
 /**
  * When a run is presumed lost.
  *
- * fal's fast trainer takes tens of minutes; two hours is far outside that and
+ * fal's fast trainer takes minutes; two hours is far outside that and
  * still well inside "somebody left it overnight". Without a bound a job fal
  * silently dropped stays `training` forever, and the row sits in the panel
  * looking like it is about to work.

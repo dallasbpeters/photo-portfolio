@@ -9,10 +9,12 @@ import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../../types";
 import { HalftonePreview } from "../canvas/HalftonePreview";
 import { pickImages, selectedIndex } from "../itemOutput";
+import { useModels } from "../ModelsContext";
 import { BrandPreview } from "./BrandPreview";
 import { ListRows } from "./ListRows";
 import { NodeHeader } from "./NodeHeader";
 import { PaletteSwatches } from "./PaletteSwatches";
+import { promptOnlyNote } from "./promptOnlyNote";
 import { ResultImages } from "./ResultImages";
 import { SettingField } from "./SettingField";
 import "./OpNodeView.css";
@@ -111,6 +113,7 @@ export function OpNodeView({
   outputText,
   readOnly,
   wiredItems,
+  wiredPrompt,
 }: OpNodeViewProps) {
   const type = nodeTypeFor(item.nodeType);
   const state = item.runState ?? "idle";
@@ -175,6 +178,7 @@ export function OpNodeView({
           state={state}
           type={type}
           wiredItems={wiredItems}
+          wiredPrompt={wiredPrompt}
         />
 
         {readOnly || isSource ? null : (
@@ -260,6 +264,8 @@ interface NodeBodyProps {
   state: string;
   type: NonNullable<ReturnType<typeof nodeTypeFor>>;
   wiredItems?: readonly string[];
+  /** The words those wires are actually sending. See wiredTextFor. */
+  wiredPrompt?: string | null;
 }
 
 /**
@@ -274,6 +280,7 @@ function NodeBody({
   analysed,
   config,
   hasWiredPrompt,
+  wiredPrompt,
   imageCount,
   imageUrl,
   images,
@@ -286,6 +293,8 @@ function NodeBody({
   type,
   wiredItems,
 }: NodeBodyProps) {
+  const { models } = useModels();
+  const shapeNote = promptOnlyNote(models, config, imageCount ?? 0);
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
 
@@ -334,12 +343,28 @@ function NodeBody({
         selected={selectedIndex(config)}
       />
 
-      {/* A prompt arriving down a wire wins over one typed here, so saying
-              so is better than leaving a field that looks live but is ignored. */}
+      {/*
+        What the wires are adding, not merely that they are.
+        
+        The notice alone was the whole of this for a while, and it left the
+        one question it raised unanswered: a List node feeding fifty prompts
+        in said "a wire is adding to this prompt" and nothing else, so the
+        only way to see the fifty was to run them. The canvas already resolves
+        them — `wiredTextFor` mirrors what jobsFor will send, numbered when
+        there are several — so the answer was a render away the whole time.
+      */}
       {hasWiredPrompt ? (
-        <p className="op-node-view__notice op-node-view__notice--wired">
-          A wire is adding to this prompt. What you type here comes first.
-        </p>
+        <div className="op-node-view__wired">
+          <p className="op-node-view__notice op-node-view__notice--wired">
+            A wire is adding to this prompt. What you type here comes first.
+          </p>
+          {/* Selectable and scrolling rather than truncated: fifty prompts is
+              a list to check, and a node that grew to hold all of them would
+              bury everything below it. */}
+          {wiredPrompt ? (
+            <pre className="op-node-view__wired-text">{wiredPrompt}</pre>
+          ) : null}
+        </div>
       ) : null}
 
       {/* A node with thirty-two controls cannot hold them: they render in the
@@ -409,6 +434,13 @@ function NodeBody({
         };
         return <div key={setting.key}>{custom()}</div>;
       })}
+
+      {/* Said before the run, not after. See promptOnlyNote. */}
+      {shapeNote ? (
+        <p className="op-node-view__notice op-node-view__notice--warn">
+          {shapeNote}
+        </p>
+      ) : null}
 
       {/* A run that reported success but drew nothing would otherwise look
               identical to one that never ran. Saying so is what keeps a broken

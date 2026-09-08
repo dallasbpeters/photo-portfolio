@@ -76,8 +76,8 @@ export function ModelRow({
         ) : null}
         {model.training?.status === "training" ? (
           <p className="admin-row__note">
-            Training on fal. Usually about twenty minutes; it turns itself on
-            when the weights arrive.
+            Training on fal. Usually a few minutes; it turns itself on when the
+            weights arrive.
           </p>
         ) : null}
       </div>

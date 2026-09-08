@@ -12,8 +12,8 @@ import { parseJsonBody } from "../_lib/parseBody.js";
 /**
  * Starts training a style, and answers as soon as fal has taken the job.
  *
- * A training run takes twenty minutes or so, which is far past what a
- * serverless function may wait for — so this does not wait. It hands fal the
+ * A training run takes minutes, which is past what a serverless function may
+ * wait for — so this does not wait. It hands fal the
  * dataset, writes a model row marked `training`, and returns. The row is what
  * carries the job: /api/models/training finishes it later, and the Models panel
  * shows it in the meantime.

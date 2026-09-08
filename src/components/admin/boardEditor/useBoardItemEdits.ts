@@ -164,7 +164,7 @@ export const useBoardItemEdits = (deps: BoardItemEditDeps) => {
     const name = await prompt({
       confirmLabel: "Train",
       description:
-        "Trains a style on the pictures in this frame. It takes about twenty minutes and is billed as fal usage. The style appears in Models when it is ready.",
+        "Trains a style on the pictures in this frame. Usually a few minutes, billed as fal usage. The style appears in Models when it is ready.",
       placeholder: "Cruise shirts",
       title: "Name this style",
     });

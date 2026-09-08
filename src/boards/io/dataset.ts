@@ -63,7 +63,8 @@ export interface TrainingStarted {
  * what somebody pastes into fal by hand if they would rather drive it there.
  *
  * Answers as soon as fal accepts the job, not when the training ends. The run
- * takes about twenty minutes; `pollTraining` finishes it.
+ * runs for minutes, well past a function's ceiling; `pollTraining` finishes
+ * it.
  */
 export const startTraining = async (
   datasetUrl: string,
