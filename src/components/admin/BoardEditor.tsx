@@ -33,7 +33,6 @@ import type {
 } from "../../types";
 import { BoardEditorDialogs } from "./BoardEditorDialogs";
 import { BoardInsertPanel } from "./BoardInsertPanel";
-import { useConfirm } from "./ConfirmProvider";
 import { CustomCursor } from "./CustomCursor";
 import "./BoardEditor.css";
 
@@ -66,7 +65,6 @@ export function BoardEditor({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { prompt } = useConfirm();
   const { dropPoint, viewCentreRef } = useDropPoint();
   const [board, setBoard] = useState<Board | null>(null);
   const [items, setItems] = useState<BoardItem[]>([]);
@@ -118,10 +116,6 @@ export function BoardEditor({
     strokeWidth: DEFAULT_STROKE_WIDTH,
   });
 
-  /**
-   * Publishing mints the slug server-side, so the link only exists once the
-   * response comes back — there is nothing to show optimistically.
-   */
   // A saved item is keyed by its id; an unsaved one by the key it was created
   // with. Both survive the new object that every edit produces.
   const keyOf = useCallback((item: BoardItem) => item.id, []);
@@ -162,19 +156,7 @@ export function BoardEditor({
     wires,
   });
 
-  // The status bar's name is a button, but the name itself is typed somewhere
-  // else: the prompt dialog asks for it, and only a real answer reaches rename.
-  const askForName = useCallback(async () => {
-    const next = await prompt({
-      confirmLabel: "Rename",
-      defaultValue: board?.title ?? "",
-      placeholder: "Board name",
-      title: "Rename this board",
-    });
-    if (next !== null) {
-      await rename(next);
-    }
-  }, [board?.title, prompt, rename]);
+  const train = (id: string) => void trainOnFrame(id);
 
   const { applyRun, createFromPort, flushBeforeRun } = useBoardRun({
     items,
@@ -249,6 +231,7 @@ export function BoardEditor({
     copyFrameToBoard,
     dropImage,
     removeVersion,
+    trainOnFrame,
   } = useBoardItemEdits({
     boardId,
     change,
@@ -315,7 +298,7 @@ export function BoardEditor({
         <BoardStatusBar
           isDirty={isDirty}
           isSaving={isSaving}
-          onRename={() => void askForName()}
+          onRename={() => void rename()}
           title={board?.title ?? "Board"}
         />
 
@@ -363,7 +346,10 @@ export function BoardEditor({
 
           {/* A frame offers its link once published. Nothing to open: that is
               the published board's own view. */}
-          <FrameOpenProvider linkFor={(id) => frameLink(publicUrl, items, id)}>
+          <FrameOpenProvider
+            linkFor={(id) => frameLink(publicUrl, items, id)}
+            onTrainOnFrame={train}
+          >
             <BoardCanvas
               autoEditId={autoEditId}
               boardId={boardId}

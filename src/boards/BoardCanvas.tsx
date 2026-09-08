@@ -212,6 +212,8 @@ interface BoardCanvasProps {
   onSendToCanva?: (item: BoardItem) => void;
   /** Pins every stored version of a node onto the board. */
   onSendVersions?: (itemId: string) => void;
+  /** Builds a training set from a frame. Absent when the board is read-only. */
+  onTrainOnFrame?: (itemId: string) => void;
   /** Runs the Recraft vectorizer on a placed image, via a fresh node. */
   onVectorize?: (itemId: string) => void;
   onWiresChange?: (wires: BoardWire[]) => void;

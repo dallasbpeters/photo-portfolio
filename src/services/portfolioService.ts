@@ -946,7 +946,7 @@ export const pagesApi = {
 
 const boardsPath = (): string => `${apiBase()}/api/boards`;
 
-const boardUrl = (id: string): string =>
+export const boardUrl = (id: string): string =>
   `${boardsPath()}/${encodeURIComponent(id)}`;
 
 export const boardsApi = {

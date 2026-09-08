@@ -31,6 +31,16 @@ interface FrameActions {
   linkFor?: (frameId: string) => string | null;
   /** Opens the frame as its own view. */
   open?: (frameId: string) => void;
+  /**
+   * Packs the frame's pictures into a dataset for fal's LoRA trainer.
+   *
+   * Here for the same reason as the other two: the canvas menu is five levels
+   * below the editor and has no opinion about what training *means*, and
+   * BoardCanvas.tsx is already too long to carry a callback it does not use.
+   * Absent on the published page, where a visitor has no business spending
+   * somebody else's fal credit.
+   */
+  trainOnFrame?: (frameId: string) => void;
 }
 
 const FrameContext = createContext<FrameActions>({});
@@ -39,13 +49,17 @@ export function FrameOpenProvider({
   children,
   linkFor,
   onOpenFrame,
+  onTrainOnFrame,
 }: {
   children: ReactNode;
   linkFor?: (frameId: string) => string | null;
   onOpenFrame?: (frameId: string) => void;
+  onTrainOnFrame?: (frameId: string) => void;
 }) {
   return (
-    <FrameContext.Provider value={{ linkFor, open: onOpenFrame }}>
+    <FrameContext.Provider
+      value={{ linkFor, open: onOpenFrame, trainOnFrame: onTrainOnFrame }}
+    >
       {children}
     </FrameContext.Provider>
   );

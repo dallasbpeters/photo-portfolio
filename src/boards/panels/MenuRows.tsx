@@ -11,8 +11,10 @@ import {
   MagicWand01Icon,
   PenTool01Icon,
   RepeatIcon,
+  SparklesIcon,
 } from "@hugeicons-pro/core-stroke-standard";
 import type { BoardItem, BoardWire } from "../../types";
+import { useFrameActions } from "../FrameOpenContext";
 import { isSvgUrl } from "../io/affinity";
 import { frameSummary } from "../io/copyToBoard";
 import { outputImageOf, outputImagesOf } from "../itemOutput";
@@ -211,6 +213,7 @@ function FrameRows({
   onArrange,
   onCopy,
   onExport,
+  onTrain,
 }: {
   canArrange: boolean;
   canGroup: boolean;
@@ -218,6 +221,8 @@ function FrameRows({
   onArrange: () => void;
   onCopy: () => void;
   onExport: () => void;
+  /** Absent on a board that cannot hand the frame to a trainer. */
+  onTrain?: () => void;
 }) {
   return (
     <>
@@ -247,6 +252,18 @@ function FrameRows({
         <HugeiconsIcon aria-hidden icon={CopyIcon} size={14} />
         <span>Copy frame to new board</span>
       </button>
+      {/* Last, and divided: it is the only row here that hands work to a
+          third party, so it should not sit next to the local ones. */}
+      {onTrain ? (
+        <button
+          className={`${rowClass} panel-row--divided`}
+          onClick={onTrain}
+          type="button"
+        >
+          <HugeiconsIcon aria-hidden icon={SparklesIcon} size={14} />
+          <span>Train a model on this frame</span>
+        </button>
+      ) : null}
     </>
   );
 }
@@ -263,6 +280,7 @@ export function MenuRows({
   onBringToFront,
   onCollect,
   onCopy,
+  onDismiss,
   onExport,
   onGroup,
   onSaveElement,
@@ -281,6 +299,8 @@ export function MenuRows({
   /** Opens the collection panel on the pictures the selection can hand over. */
   onCollect: (urls: string[]) => void;
   onCopy: (frame: BoardItem) => void;
+  /** Closes the menu, for a row whose work outlives it. */
+  onDismiss: () => void;
   onExport: (itemId: string) => void;
   onGroup: (items: BoardItem[]) => void;
   onSaveElement: (items: BoardItem[]) => void;
@@ -295,6 +315,8 @@ export function MenuRows({
   wires: BoardWire[];
 }) {
   const { frame, selection } = menu;
+  // From the context rather than a prop: see FrameOpenContext.
+  const { trainOnFrame } = useFrameActions();
   const canGroup = selection.length > 0;
   const summary = frame ? frameSummary(frame, items, wires) : null;
 
@@ -389,6 +411,14 @@ export function MenuRows({
           onArrange={() => onArrange(frame.id)}
           onCopy={() => onCopy(frame)}
           onExport={() => onExport(frame.id)}
+          onTrain={
+            trainOnFrame
+              ? () => {
+                  trainOnFrame(frame.id);
+                  onDismiss();
+                }
+              : undefined
+          }
         />
       ) : null}
     </>

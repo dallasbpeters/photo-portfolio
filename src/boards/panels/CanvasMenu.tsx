@@ -219,6 +219,7 @@ export function CanvasMenu({
           title: frameBoardTitle(frameToCopy),
         })
       }
+      onDismiss={onDismiss}
       onExport={onExport}
       onGroup={onGroup}
       onOpenInAffinity={onOpenInAffinity}

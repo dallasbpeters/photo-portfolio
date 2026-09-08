@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
 import { getDownloadUrl, put } from "@vercel/blob";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { containedBy } from "../../../config/graph.js";
 import { getBearerUser } from "../../_lib/auth.js";
 import { blobToken } from "../../_lib/blobToken.js";
 import { handleCors } from "../../_lib/cors.js";
 import { getSql } from "../../_lib/db.js";
+import { type ItemRow, urlsFor } from "../../_lib/frameImages.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
 import { zipSync } from "../../_lib/zip.js";
 
@@ -32,73 +32,6 @@ const EXTENSION = /\.([a-z0-9]+)(?:\?|$)/i;
 
 const extensionOf = (url: string): string =>
   url.match(EXTENSION)?.[1]?.toLowerCase() ?? "png";
-
-interface ItemRow {
-  config: unknown;
-  height: number | string;
-  id: string;
-  image_url: string | null;
-  kind: string;
-  photo_url: string | null;
-  result: unknown;
-  width: number | string;
-  x: number | string;
-  y: number | string;
-}
-
-const num = (value: number | string): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const asObject = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
-
-/** Every picture a node produced, newest run first, in the order shown. */
-const resultUrls = (row: ItemRow): string[] => {
-  const result = asObject(row.result);
-  const variations = Array.isArray(result.variations)
-    ? (result.variations as Record<string, unknown>[])
-    : [];
-  const urls = variations
-    .map((variation) => variation?.url)
-    .filter((url): url is string => typeof url === "string" && url !== "");
-  if (urls.length > 0) {
-    return urls;
-  }
-  return typeof result.url === "string" ? [result.url] : [];
-};
-
-/**
- * What to pack, given what was asked for.
- *
- * A node means its own output. A frame means what is sitting on it — which is
- * how you export an arrangement without first wiring it into anything.
- */
-const urlsFor = (target: ItemRow, rows: ItemRow[]): string[] => {
-  if (target.kind !== "frame") {
-    const own = resultUrls(target);
-    return own.length > 0
-      ? own
-      : [target.photo_url ?? target.image_url].filter(
-          (url): url is string => typeof url === "string" && url !== ""
-        );
-  }
-  const box = (row: ItemRow) => ({
-    height: num(row.height),
-    id: row.id,
-    kind: row.kind,
-    width: num(row.width),
-    x: num(row.x),
-    y: num(row.y),
-  });
-  return containedBy(box(target), rows.map(box)).flatMap((inside) => {
-    const row = rows.find((candidate) => candidate.id === inside.id);
-    return row ? urlsFor(row, rows) : [];
-  });
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) {

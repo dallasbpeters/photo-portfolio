@@ -16,6 +16,7 @@ import type {
   BoardWire,
   Photo,
 } from "../../../types";
+import { useConfirm } from "../ConfirmProvider";
 import { dropComposites } from "./placement";
 import { useBoardWindowEvents } from "./useBoardWindowEvents";
 
@@ -67,6 +68,7 @@ export interface BoardDocumentDeps {
 }
 
 export const useBoardDocument = (deps: BoardDocumentDeps) => {
+  const { prompt } = useConfirm();
   const {
     board,
     boardId,
@@ -338,6 +340,10 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
     [setItems, setIsDirty]
   );
 
+  /**
+   * Publishing mints the slug server-side, so the link only exists once the
+   * response comes back — there is nothing to show optimistically.
+   */
   const publish = async (isPublic: boolean) => {
     setIsPublishing(true);
     try {
@@ -354,15 +360,26 @@ export const useBoardDocument = (deps: BoardDocumentDeps) => {
   /**
    * Gives the board a new name.
    *
+   * The name is asked for by the caller, which owns the dialog; this only
+   * validates the answer and writes it, alongside the rest of the board-level
+   * writes.
+   *
    * Its own call rather than part of the debounced save: that save replaces the
    * arrangement wholesale and knows nothing about the title, so folding a
    * rename into it would make naming a board wait on the canvas being idle.
    *
-   * A blank name is refused rather than accepted and shown as an empty line —
-   * the title is how a board is found again in the list.
+   * A blank name, and a name that has not changed, are both dropped: the title
+   * is how a board is found again in the list, and a no-op still costs a
+   * request and a toast saying something happened.
    */
-  const rename = async (next: string) => {
-    const title = next.trim();
+  const rename = async () => {
+    const next = await prompt({
+      confirmLabel: "Rename",
+      defaultValue: board?.title ?? "",
+      placeholder: "Board name",
+      title: "Rename board",
+    });
+    const title = next?.trim();
     if (!title || title === board?.title) {
       return;
     }

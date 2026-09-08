@@ -15,6 +15,7 @@ import {
   maskOf,
 } from "../../../boards/drawing/mask";
 import { copyOfFrame } from "../../../boards/io/copyToBoard";
+import { buildDataset } from "../../../boards/io/dataset";
 import { newItemId } from "../../../boards/io/newItemId";
 import { boardsApi } from "../../../services/portfolioService";
 import type { BoardItem, BoardWire } from "../../../types";
@@ -142,6 +143,53 @@ export const useBoardItemEdits = (deps: BoardItemEditDeps) => {
   };
 
   /**
+   * Packs a frame's pictures into a dataset fal's LoRA trainer can read.
+   *
+   * This is the missing first step of training a style, and deliberately only
+   * the first step: the training itself runs on fal, costs money and takes
+   * twenty minutes, so it is started there by a person rather than by a
+   * right-click here. What the board can do — and what was tedious by hand — is
+   * turn a gathered frame into one zip at a public URL.
+   *
+   * The URL is put on the clipboard rather than only shown, because the very
+   * next thing it is needed for is a paste into fal's form. It is also left in
+   * the toast, since a clipboard write can be refused and a URL nobody can see
+   * would strand the whole operation.
+   *
+   * The rest of the round trip stays manual and is written up in
+   * scripts/upload-lora.ts: train on fal, upload the weights, then add a model
+   * in the Models panel pointing at them.
+   */
+  const trainOnFrame = async (itemId: string) => {
+    const toastId = toast.loading("Packing the training set…");
+    try {
+      const { count, images_data_url, skipped } = await buildDataset(
+        boardId,
+        itemId
+      );
+      await navigator.clipboard?.writeText(images_data_url).catch(() => {
+        // Refused, or no permission. The URL is in the toast either way.
+      });
+      toast.dismiss(toastId);
+      toast.success(
+        `${count} image${count === 1 ? "" : "s"} packed${skipped > 0 ? `, ${skipped} could not be read` : ""}. Link copied — paste it into fal's LoRA trainer.`,
+        {
+          action: {
+            label: "Open",
+            onClick: () => window.open(images_data_url, "_blank", "noopener"),
+          },
+          duration: 30_000,
+        }
+      );
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(
+        err instanceof Error ? err.message : "Could not build the training set"
+      );
+    }
+  };
+
+  /**
    * A result dragged off a node and dropped on the canvas.
    *
    * Nothing is uploaded and nothing is copied: the picture already lives in our
@@ -247,5 +295,6 @@ export const useBoardItemEdits = (deps: BoardItemEditDeps) => {
     copyFrameToBoard,
     dropImage,
     removeVersion,
+    trainOnFrame,
   };
 };
