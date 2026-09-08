@@ -93,7 +93,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       continue;
     }
 
-    // biome-ignore lint/performance/noAwaitInLoops: see above
     const outcome = await advanceTraining(
       { responseUrl: row.responseUrl, statusUrl: row.statusUrl },
       row.id
@@ -101,7 +100,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (outcome.state === "waiting") {
       if (startedTooLongAgo(row.startedAt)) {
-        // biome-ignore lint/performance/noAwaitInLoops: see above
         await db
           .update(schema.models)
           .set({
@@ -117,7 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (outcome.state === "failed") {
-      // biome-ignore lint/performance/noAwaitInLoops: see above
       await db
         .update(schema.models)
         .set({ trainingError: outcome.error, trainingStatus: "failed" })
@@ -129,7 +126,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // usable model. Enabled here and not before — a model in the picker with
     // no weights generates in the base style, which reads as a LoRA that came
     // out weak rather than one that was not finished.
-    // biome-ignore lint/performance/noAwaitInLoops: see above
     const [saved] = await db
       .update(schema.models)
       .set({
