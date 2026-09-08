@@ -2,11 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   defaultSiteSettings,
   resolveSiteSettings,
-  type SiteSettingsRow,
 } from "../config/siteSettings.js";
 import { handleCors } from "./_lib/cors.js";
-import { getSql } from "./_lib/db.js";
 import { getSite } from "./_lib/site.js";
+import { readSiteSettingsRow } from "./_lib/siteSettingsStore.js";
 
 /**
  * Serves the PWA manifest from the database.
@@ -29,13 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let settings = defaultSiteSettings(site);
   try {
-    const sql = getSql();
-    const rows =
-      await sql`SELECT * FROM site_settings WHERE site_key = ${site.key} LIMIT 1`;
-    settings = resolveSiteSettings(
-      site,
-      (rows[0] as SiteSettingsRow | undefined) ?? null
-    );
+    settings = resolveSiteSettings(site, await readSiteSettingsRow(site.key));
   } catch (e) {
     // An install prompt is not worth a 500 — fall back to the compiled defaults.
     console.error(e);

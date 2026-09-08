@@ -1,27 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { sql } from "drizzle-orm";
 import {
   defaultSiteSettings,
   resolveSiteSettings,
-  type SiteSettingsRow,
 } from "../config/siteSettings.js";
 import { findFont, isHexColor, normalizeTheme } from "../config/theme.js";
 import { getBearerUser } from "./_lib/auth.js";
 import { handleCors } from "./_lib/cors.js";
-import { getSql } from "./_lib/db.js";
 import { parsePublicHttpUrl, sanitizeText } from "./_lib/httpUrl.js";
+import { getDb, schema } from "./_lib/orm.js";
 import { parseJsonBody } from "./_lib/parseBody.js";
 import { getSite, type SiteConfig } from "./_lib/site.js";
+import {
+  readSiteSettingsRow,
+  type SiteSettingsWrite,
+} from "./_lib/siteSettingsStore.js";
 
 const MAX_TEXT = 200;
 const COLOR_KEYS = ["background", "foreground", "accent"] as const;
 const FONT_KEYS = ["sansFont", "serifFont"] as const;
-
-const readRow = async (siteKey: string): Promise<SiteSettingsRow | null> => {
-  const sql = getSql();
-  const rows =
-    await sql`SELECT * FROM site_settings WHERE site_key = ${siteKey} LIMIT 1`;
-  return (rows[0] as SiteSettingsRow | undefined) ?? null;
-};
 
 const str = (body: Record<string, unknown>, key: string): string | null => {
   const raw = body[key];
@@ -64,7 +61,10 @@ const themeError = (themeInput: Record<string, unknown>): string | null => {
 
 const handleGet = async (site: SiteConfig, res: VercelResponse) => {
   try {
-    const settings = resolveSiteSettings(site, await readRow(site.key));
+    const settings = resolveSiteSettings(
+      site,
+      await readSiteSettingsRow(site.key)
+    );
     // Short cache: the gallery fetches this on every load, but an admin
     // saving a change should see it almost immediately.
     res.setHeader(
@@ -99,36 +99,43 @@ const save = async (
   values: { instagramUrl: string | null; theme: unknown; userId: string }
 ) => {
   try {
-    const sql = getSql();
-    await sql`
-      INSERT INTO site_settings (
-        site_key, name, short_name, hero_title, owner_name, tagline,
-        instagram_url, instagram_handle, show_shader, theme, updated_at, updated_by
-      ) VALUES (
-        ${site.key}, ${str(body, "name")}, ${str(body, "shortName")}, ${str(body, "heroTitle")},
-        ${str(body, "ownerName")}, ${str(body, "tagline")}, ${values.instagramUrl}, ${str(body, "instagramHandle")},
-        ${bool(body, "showShader")},
-        ${JSON.stringify(values.theme)}::jsonb, now(), ${values.userId}
-      )
-      ON CONFLICT (site_key) DO UPDATE SET
-        name = EXCLUDED.name,
-        short_name = EXCLUDED.short_name,
-        hero_title = EXCLUDED.hero_title,
-        owner_name = EXCLUDED.owner_name,
-        tagline = EXCLUDED.tagline,
-        instagram_url = EXCLUDED.instagram_url,
-        instagram_handle = EXCLUDED.instagram_handle,
-        show_shader = EXCLUDED.show_shader,
-        theme = EXCLUDED.theme,
-        updated_at = now(),
-        updated_by = EXCLUDED.updated_by
-    `;
+    /*
+     * One statement, so a save is never half-applied.
+     *
+     * `onConflictDoUpdate` is the same INSERT ... ON CONFLICT the raw form
+     * wrote out twice — once as values and once as EXCLUDED — and getting
+     * those two lists out of step was a column that silently stopped saving
+     * on an edit while still working on a first save. Naming each field once
+     * removes the way for them to disagree.
+     */
+    const saved: SiteSettingsWrite = {
+      heroTitle: str(body, "heroTitle"),
+      instagramHandle: str(body, "instagramHandle"),
+      instagramUrl: values.instagramUrl,
+      name: str(body, "name"),
+      ownerName: str(body, "ownerName"),
+      shortName: str(body, "shortName"),
+      showShader: bool(body, "showShader"),
+      tagline: str(body, "tagline"),
+      theme: values.theme,
+      // In the database, not in Node: a function's clock is not the one every
+      // other row's timestamp was written against.
+      updatedAt: sql`now()`,
+      updatedBy: values.userId,
+    };
+    await getDb()
+      .insert(schema.siteSettings)
+      .values({ siteKey: site.key, ...saved })
+      .onConflictDoUpdate({
+        set: saved,
+        target: schema.siteSettings.siteKey,
+      });
 
     // Re-read rather than echoing the input, so the client renders exactly
     // what a fresh page load would.
     return res
       .status(200)
-      .json(resolveSiteSettings(site, await readRow(site.key)));
+      .json(resolveSiteSettings(site, await readSiteSettingsRow(site.key)));
   } catch (e) {
     return handleSaveFailure(e, res);
   }

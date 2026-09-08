@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSql } from "./_lib/db.js";
+import { asc, eq } from "drizzle-orm";
+import { getDb, schema } from "./_lib/orm.js";
 import { getSite } from "./_lib/site.js";
 
 /**
@@ -21,11 +22,13 @@ export default async function handler(
   ];
 
   try {
-    const sql = getSql();
+    const db = getDb();
 
-    const pages = (await sql`
-      SELECT slug, updated_at FROM pages WHERE status = 'published' ORDER BY sort_order ASC
-    `) as { slug: string; updated_at: string | Date }[];
+    const pages = await db
+      .select({ slug: schema.pages.slug, updated_at: schema.pages.updatedAt })
+      .from(schema.pages)
+      .where(eq(schema.pages.status, "published"))
+      .orderBy(asc(schema.pages.sortOrder));
 
     for (const page of pages) {
       urls.push({
@@ -35,9 +38,10 @@ export default async function handler(
       });
     }
 
-    const photos = (await sql`
-      SELECT id, created_at FROM photos ORDER BY sort_order ASC, created_at ASC
-    `) as { id: string; created_at: string | Date }[];
+    const photos = await db
+      .select({ created_at: schema.photos.createdAt, id: schema.photos.id })
+      .from(schema.photos)
+      .orderBy(asc(schema.photos.sortOrder), asc(schema.photos.createdAt));
 
     for (const photo of photos) {
       urls.push({
