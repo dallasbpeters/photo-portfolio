@@ -3,6 +3,7 @@ import type {
   FalModelInput,
   falModelLora,
 } from "../../config/falModels.js";
+import { PALETTE_MODELS, paletteFrom, paletteOf } from "./falPalette.js";
 
 /**
  * What each fal endpoint's request body looks like.
@@ -15,19 +16,20 @@ import type {
  */
 
 /**
- * How much of a wired picture a LoRA is allowed to repaint.
+ * How much of a wired picture a LoRA repaints, when the node has not said.
  *
- * fal-ai/flux-lora/image-to-image defaults this to 0.85, and this app never
- * sent it — so wiring a photograph into a style node repainted 85% of it and
- * handed back something with no visible relationship to the input. That reads
- * as the LoRA being broken rather than as a parameter nobody set.
+ * fal-ai/flux-lora/image-to-image takes `strength` from 0 to 1: 0 preserves
+ * the original, 1 remakes it. Its own default is 0.85 and this app sent
+ * nothing at all for a while, so a photograph wired into a style came back
+ * with no visible relationship to the input.
  *
- * 0.7 keeps the composition and the subject legible while still restyling.
- * There is no correct value: below about 0.5 the style stops arriving, above
- * about 0.8 the source stops surviving, and where in between depends on the
- * LoRA. This is the value to change when a restyle is too faithful or too free.
+ * The correction to that overshot in the other direction: a fixed 0.7, chosen
+ * against one LoRA, which turned out to leave the first trained style
+ * reproducing its input almost exactly. There is no correct value — it depends
+ * on the LoRA and on the picture — so the node carries it now, and this is
+ * only the fallback for a node that predates the setting.
  */
-const LORA_STRENGTH = 0.7;
+const DEFAULT_LORA_STRENGTH = 0.8;
 
 /**
  * The request body for a model, which is not the same shape for any two of them.
@@ -41,6 +43,11 @@ export const bodyFor = (
   shape: FalModelInput,
   prompt: string,
   sourceImageUrl: string | null | undefined,
+  /**
+   * How far to repaint the wired picture, 0 to 1, from the node's Restyle
+   * setting. Undefined for a node that has never carried one.
+   */
+  loraStrength: number | undefined,
   /** What this endpoint calls its source: "image_url" for most. */
   imageParam: NonNullable<FalModelDef["imageParam"]>
 ): Record<string, unknown> => {
@@ -84,9 +91,12 @@ export const bodyFor = (
       prompt: withTrigger,
       // image_url only when there is one: the plain endpoint rejects it.
       // `strength` goes with it, and only with it — the text-to-image endpoint
-      // has no such field. See LORA_STRENGTH for why it is sent at all.
+      // has no such field. See DEFAULT_LORA_STRENGTH for why it is sent at all.
       ...(sourceImageUrl
-        ? { image_url: sourceImageUrl, strength: LORA_STRENGTH }
+        ? {
+            image_url: sourceImageUrl,
+            strength: loraStrength ?? DEFAULT_LORA_STRENGTH,
+          }
         : {}),
     };
   }
@@ -114,4 +124,59 @@ export const bodyFor = (
   return sourceImageUrl
     ? { ...imageField(sourceImageUrl), prompt }
     : { prompt };
+};
+
+/**
+ * The overrides for endpoints that do not take what they declare.
+ *
+ * Three unrelated quirks, grouped because they are all the same *kind* of
+ * thing — a body that has to be bent for one endpoint — and because leaving
+ * them inline pushed generateImage past the complexity ceiling. They stay in
+ * order: each is independent, but `applyFalParams` runs after all of them so
+ * an explicit choice on the node still wins.
+ */
+export const applyEndpointQuirks = (
+  body: Record<string, unknown>,
+  model: string,
+  from: {
+    maskUrl?: string | null;
+    masking: boolean;
+    palette: readonly string[];
+    prompt: string;
+    sourceImageUrl?: string | null;
+  }
+): void => {
+  // Inpainting endpoints take the picture as image_url whatever the chosen
+  // model normally uses, and the mask beside it.
+  if (from.masking && from.maskUrl && from.sourceImageUrl) {
+    body.image_url = from.sourceImageUrl;
+    body.image_urls = undefined;
+    body.mask_url = from.maskUrl;
+  }
+
+  /*
+   * A real constraint where the model has one, rather than a request in prose.
+   *
+   * Taken from the parameters first and the prompt second. The prompt used to
+   * be the only source — the hexes were scraped back out of it — and that
+   * stopped working the moment prompts started describing colours in words
+   * instead of listing them, which they now do because a model that letters
+   * well drew the hex codes onto the picture. The scrape stays as a fallback
+   * for a prompt somebody typed hex into by hand.
+   */
+  if (PALETTE_MODELS.has(model)) {
+    const palette = paletteOf(from.palette) ?? paletteFrom(from.prompt);
+    if (palette) {
+      body.color_palette = palette;
+    }
+  }
+
+  // The GPT family outputs a preset aspect unless told otherwise: the text
+  // model defaults to landscape, and the edit model's "auto" copies the input
+  // image's shape — feed it a portrait crop and it returns a portrait, which
+  // is how edits started coming back tall. Every other model on the board is
+  // square, so ask for square here or a node changes shape with its model.
+  if (model === "openai/gpt-image-2" || model === "openai/gpt-image-2/edit") {
+    body.image_size = "square";
+  }
 };

@@ -24,7 +24,7 @@ const LORA = {
 };
 
 const body = (prompt: string, lora = LORA) =>
-  bodyFor(lora, "prompt", prompt, null, "image_url") as {
+  bodyFor(lora, "prompt", prompt, null, undefined, "image_url") as {
     loras?: { path: string; scale: number }[];
     prompt?: string;
   };
@@ -60,6 +60,7 @@ describe("a trained style's trigger word", () => {
       "prompt",
       "a book cover",
       null,
+      undefined,
       "image_url"
     ) as {
       loras?: unknown;
@@ -67,5 +68,46 @@ describe("a trained style's trigger word", () => {
     };
     expect(plain.prompt).toBe("a book cover");
     expect(plain.loras).toBeUndefined();
+  });
+});
+
+describe("how far a trained style repaints a wired picture", () => {
+  const restyled = (strength: number | undefined) =>
+    bodyFor(
+      LORA,
+      "prompt-or-image",
+      "a book cover",
+      "https://ours/subject.jpg",
+      strength,
+      "image_url"
+    ) as { image_url?: string; strength?: number };
+
+  it("sends the strength the node asked for", () => {
+    expect(restyled(0.45).strength).toBe(0.45);
+  });
+
+  it("falls back for a node that has no setting saved", () => {
+    // Every node built before the setting existed. The fallback has to restyle
+    // plainly, because the value it replaced — 0.7 — turned out to hand back
+    // something close to the input, which reads as the style not working.
+    expect(restyled(undefined).strength).toBe(0.8);
+  });
+
+  it("sends the picture alongside it, not instead of it", () => {
+    expect(restyled(0.6).image_url).toBe("https://ours/subject.jpg");
+  });
+
+  it("sends no strength at all when no picture is wired", () => {
+    // The text-to-image endpoint has no such field, and fal rejects a body it
+    // did not ask for — after billing the call.
+    const plain = bodyFor(
+      LORA,
+      "prompt",
+      "a book cover",
+      null,
+      0.6,
+      "image_url"
+    ) as { strength?: number };
+    expect(plain.strength).toBeUndefined();
   });
 });

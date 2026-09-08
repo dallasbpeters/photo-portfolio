@@ -12,8 +12,7 @@ import {
   applyFalParams,
   type GenerationParams,
 } from "../../config/nodes/falParams.js";
-import { bodyFor } from "./falBody.js";
-import { PALETTE_MODELS, paletteFrom, paletteOf } from "./falPalette.js";
+import { applyEndpointQuirks, bodyFor } from "./falBody.js";
 import { loadModelDefs } from "./modelStore.js";
 import { persistGenerated } from "./persistGenerated.js";
 
@@ -230,6 +229,7 @@ export const generateImage = async (
     falModelInput(models, requestedModel ?? "auto"),
     prompt,
     sourceImageUrl,
+    params?.restyle ?? undefined,
     // Keyed off the endpoint actually being called, not off what was asked
     // for. "auto" resolves to nano-banana/edit, which takes a list where most
     // take one URL — reading the parameter name off "auto" would send the
@@ -237,40 +237,15 @@ export const generateImage = async (
     falImageParam(models, model)
   );
 
-  // Inpainting endpoints take the picture as image_url whatever the chosen
-  // model normally uses, and the mask beside it.
-  if (masking && maskUrl && sourceImageUrl) {
-    body.image_url = sourceImageUrl;
-    body.image_urls = undefined;
-    body.mask_url = maskUrl;
-  }
-
-  /*
-   * A real constraint where the model has one, rather than a request in prose.
-   *
-   * Taken from the parameters first and the prompt second. The prompt used to be
-   * the only source — the hexes were scraped back out of it — and that stopped
-   * working the moment prompts started describing colours in words instead of
-   * listing them, which they now do because a model that letters well drew the
-   * hex codes onto the picture. The scrape stays as a fallback for a prompt
-   * somebody typed hex into by hand.
-   */
-  if (PALETTE_MODELS.has(model)) {
-    const palette = paletteOf(params?.palette ?? []) ?? paletteFrom(prompt);
-    if (palette) {
-      body.color_palette = palette;
-    }
-  }
-
-  // The GPT family outputs a preset aspect unless told otherwise: the text
-  // model defaults to landscape, and the edit model's "auto" copies the input
-  // image's shape — feed it a portrait crop and it returns a portrait, which is
-  // how edits started coming back tall. Every other model on the board is
-  // square, so ask for square here or a node changes shape with its model. Same
-  // endpoint-quirk handling as the palette and mask overrides above.
-  if (model === "openai/gpt-image-2" || model === "openai/gpt-image-2/edit") {
-    body.image_size = "square";
-  }
+  // The endpoints that want something other than their declared shape. Three
+  // separate quirks, applied together and away from here — see falBody.ts.
+  applyEndpointQuirks(body, model, {
+    masking,
+    maskUrl,
+    palette: params?.palette ?? [],
+    prompt,
+    sourceImageUrl,
+  });
 
   // Last, so an explicit choice on the node wins over the defaults above —
   // including the square this function has always forced on the GPT family.

@@ -9,7 +9,13 @@ import {
   QUALITIES,
   QUALITY_LABELS,
 } from "./generation.js";
-import { GENERATE_PROMPT_MAX, MAX_BATCH_COUNT } from "./limits.js";
+import {
+  DEFAULT_RESTYLE,
+  GENERATE_PROMPT_MAX,
+  MAX_BATCH_COUNT,
+  MAX_RESTYLE,
+  MIN_RESTYLE,
+} from "./limits.js";
 
 /**
  * An image, invented from words or reworked from a picture.
@@ -104,6 +110,28 @@ export const GENERATE: NodeType = {
       max: MAX_LOOPS,
       min: 1,
       panel: true,
+    },
+    {
+      /*
+       * How far a trained style repaints a wired picture.
+       *
+       * Only bites when the chosen model carries a LoRA and a picture is
+       * wired — every other model ignores it, because `strength` is a field
+       * only fal's image-to-image endpoints have.
+       *
+       * A setting rather than the constant it used to be. There is no correct
+       * value: it depends on the LoRA and on the picture, so "this restyle
+       * came back identical to what I wired in" needs an answer on the node
+       * rather than in a source file.
+       */
+      default: DEFAULT_RESTYLE,
+      key: "restyle",
+      kind: "number",
+      label: "Restyle %",
+      max: MAX_RESTYLE,
+      min: MIN_RESTYLE,
+      panel: true,
+      step: 5,
     },
     {
       default: "auto",

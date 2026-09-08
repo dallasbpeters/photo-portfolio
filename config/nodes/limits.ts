@@ -31,3 +31,26 @@ export const MAX_BATCH_COUNT = 8;
  * contact sheet, short of a whole library.
  */
 export const MAX_SHADER_RENDERS = 40;
+
+/**
+ * How far a trained style may repaint a wired picture, as a percentage.
+ *
+ * fal's image-to-image endpoints take `strength` from 0 to 1: 0 preserves the
+ * original and 1 remakes it entirely. Expressed here as a percentage because
+ * that is what it means and what reads on a node — "70%" rather than "0.7".
+ *
+ * There is no correct value. Below about 40% the style stops arriving; above
+ * about 90% the source stops surviving; where in between depends on the LoRA
+ * and on the picture. It was a constant in api/_lib/fal.ts for a while, which
+ * meant "this restyle is too faithful" had no answer short of editing code —
+ * and the one value chosen turned out to be too faithful for the first style
+ * anyone trained.
+ */
+export const MIN_RESTYLE = 10;
+export const MAX_RESTYLE = 100;
+
+/**
+ * fal's own default is 85. This sits just under it: high enough that a restyle
+ * plainly restyles, low enough that the subject and composition survive.
+ */
+export const DEFAULT_RESTYLE = 80;

@@ -34,6 +34,18 @@ export interface GenerationParams {
    */
   palette?: readonly string[] | null;
   quality?: string | null;
+  /**
+   * How far a trained style repaints a wired picture, 0 to 1.
+   *
+   * Read from the node's Restyle setting, which is a percentage — the division
+   * happens where it is read, so the number on the node and the number fal
+   * takes are never confused for one another. Null for a node with no setting
+   * saved, which falls back to DEFAULT_LORA_STRENGTH.
+   *
+   * Not applied by applyFalParams: `strength` belongs only to the LoRA
+   * image-to-image branch, and bodyFor is where that branch is decided.
+   */
+  restyle?: number | null;
   size?: string | null;
 }
 

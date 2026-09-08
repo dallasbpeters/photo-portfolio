@@ -3,6 +3,7 @@ import type { FalModelDef } from "../../../../config/falModels.js";
 import { isVectorModel } from "../../../../config/falModels.js";
 import { ICON_STYLES, isIconStyle } from "../../../../config/iconStyles.js";
 import { MAX_LOOPS } from "../../../../config/nodes/generation.js";
+import { MAX_RESTYLE, MIN_RESTYLE } from "../../../../config/nodes/limits.js";
 import type { NodeCapability } from "../../../../config/nodeTypes.js";
 import type { BrandLogo } from "../../../_lib/brandLogo.js";
 import { stampLogo } from "../../../_lib/brandStamp.js";
@@ -139,8 +140,30 @@ const generationParams = (config: Record<string, unknown>) => ({
   outputFormat:
     typeof config.outputFormat === "string" ? config.outputFormat : null,
   quality: typeof config.quality === "string" ? config.quality : null,
+  // A percentage on the node, a fraction at fal. Converted here, once, so the
+  // two units cannot be mistaken for each other further down.
+  restyle: restyleFraction(config.restyle),
   size: typeof config.size === "string" ? config.size : null,
 });
+
+/**
+ * The Restyle setting as fal's 0-to-1 `strength`.
+ *
+ * Null for anything unusable — absent, a string, out of range — so bodyFor
+ * falls back to its default rather than sending a nonsense strength that the
+ * endpoint would accept and bill.
+ */
+const restyleFraction = (raw: unknown): number | null => {
+  const percent = Number(raw);
+  if (
+    !Number.isFinite(percent) ||
+    percent < MIN_RESTYLE ||
+    percent > MAX_RESTYLE
+  ) {
+    return null;
+  }
+  return percent / 100;
+};
 
 /** Analyse's branch: reads the wired images and returns words, not a picture. */
 const described = async (
