@@ -110,7 +110,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       enabled: false,
       id,
       imageParam: "image_url",
-      input: "prompt",
+      /*
+       * Words, and a picture if one happens to be wired.
+       *
+       * Not "prompt". A LoRA has three endpoints on its base — invent from
+       * words, restyle a wired picture, or repaint part of one under a mask —
+       * and `endpointFor` already picks between them from what is wired. But
+       * the run path strips every image before that choice is reached when a
+       * model declares it takes none, so `input: "prompt"` quietly locked a
+       * trained style to the first of the three. The weights were fine; two
+       * thirds of what they could do was simply unreachable.
+       */
+      input: "prompt-or-image",
       label: name,
       // The LoRA's own fields, minus the weights, which do not exist yet.
       loraScale: 1,
