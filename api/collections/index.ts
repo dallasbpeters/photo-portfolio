@@ -1,14 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { count, desc, eq } from "drizzle-orm";
 import { getBearerUser } from "../_lib/auth.js";
 import {
-  type CollectionRow,
+  collectionSelection,
   MAX_COLLECTION_DESCRIPTION,
   MAX_COLLECTION_NAME,
   rowToCollectionDto,
 } from "../_lib/collections.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /**
@@ -19,17 +20,22 @@ import { parseJsonBody } from "../_lib/parseBody.js";
  * there is no anonymous read to serve.
  */
 
-type Sql = ReturnType<typeof getSql>;
-
-async function handleGet(sql: Sql, res: VercelResponse) {
-  const rows = (await sql`
-    SELECT c.id, c.name, c.description, c.cover_url, c.created_at, c.updated_at,
-           COUNT(i.id)::int AS item_count
-    FROM collections c
-    LEFT JOIN collection_items i ON i.collection_id = c.id
-    GROUP BY c.id
-    ORDER BY c.updated_at DESC
-  `) as CollectionRow[];
+async function handleGet(res: VercelResponse) {
+  const rows = await getDb()
+    .select({
+      ...collectionSelection,
+      item_count: count(schema.collectionItems.id),
+    })
+    .from(schema.collections)
+    // LEFT, so a collection with nothing in it still appears with a count of
+    // zero. An inner join would drop exactly the empty ones somebody is most
+    // likely to be looking for.
+    .leftJoin(
+      schema.collectionItems,
+      eq(schema.collectionItems.collectionId, schema.collections.id)
+    )
+    .groupBy(schema.collections.id)
+    .orderBy(desc(schema.collections.updatedAt));
   // Counted rather than fetched: the list draws a card per collection with a
   // number on it, and pulling every item of every collection to arrive at that
   // number is the whole library on every page load.
@@ -37,7 +43,6 @@ async function handleGet(sql: Sql, res: VercelResponse) {
 }
 
 async function handlePost(
-  sql: Sql,
   userId: string,
   body: Record<string, unknown>,
   res: VercelResponse
@@ -54,11 +59,10 @@ async function handlePost(
         null
       : null;
 
-  const rows = (await sql`
-    INSERT INTO collections (name, description, created_by)
-    VALUES (${name}, ${description}, ${userId}::uuid)
-    RETURNING id, name, description, cover_url, created_at, updated_at
-  `) as CollectionRow[];
+  const rows = await getDb()
+    .insert(schema.collections)
+    .values({ createdBy: userId, description, name })
+    .returning(collectionSelection);
   const [created] = rows;
   if (!created) {
     return res.status(500).json({ error: "The collection was not created" });
@@ -75,14 +79,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const sql = getSql();
   try {
     if (req.method === "GET") {
-      return await handleGet(sql, res);
+      return await handleGet(res);
     }
     if (req.method === "POST") {
       return await handlePost(
-        sql,
         user.userId,
         parseJsonBody(req.body) as Record<string, unknown>,
         res

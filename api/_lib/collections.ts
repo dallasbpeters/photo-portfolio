@@ -1,3 +1,5 @@
+import { schema } from "./orm.js";
+
 /**
  * Reading and writing a collection, in the shapes both apps agree on.
  *
@@ -114,3 +116,20 @@ export const rowToCollectionDto = (
 /** The kind an incoming item claims to be, narrowed to what the column allows. */
 export const itemKind = (value: unknown): "image" | "video" =>
   value === "video" ? "video" : "image";
+
+/**
+ * The columns a collection response is built from, under the snake_case names
+ * `CollectionRow` and `rowToCollectionDto` expect.
+ *
+ * `item_count` is not here: only the list query computes it, and putting a
+ * LEFT JOIN's aggregate into a shared projection would make the create query
+ * need a join it has no reason to.
+ */
+export const collectionSelection = {
+  cover_url: schema.collections.coverUrl,
+  created_at: schema.collections.createdAt,
+  description: schema.collections.description,
+  id: schema.collections.id,
+  name: schema.collections.name,
+  updated_at: schema.collections.updatedAt,
+};
