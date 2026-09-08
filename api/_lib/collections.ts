@@ -133,3 +133,22 @@ export const collectionSelection = {
   name: schema.collections.name,
   updated_at: schema.collections.updatedAt,
 };
+
+/**
+ * The columns an item response is built from, under the names
+ * `CollectionItemRow` and `rowToItemDto` expect.
+ *
+ * Named once because three queries return it: the load, the add, and the add's
+ * conflict branch.
+ */
+export const collectionItemSelection = {
+  alt: schema.collectionItems.alt,
+  created_at: schema.collectionItems.createdAt,
+  height: schema.collectionItems.height,
+  id: schema.collectionItems.id,
+  kind: schema.collectionItems.kind,
+  sort_order: schema.collectionItems.sortOrder,
+  title: schema.collectionItems.title,
+  url: schema.collectionItems.url,
+  width: schema.collectionItems.width,
+};

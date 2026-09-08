@@ -1,8 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { and, asc, count, eq, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { getBearerUser } from "../_lib/auth.js";
 import {
   type CollectionItemRow,
-  type CollectionRow,
+  collectionItemSelection,
+  collectionSelection,
   itemKind,
   MAX_COLLECTION_DESCRIPTION,
   MAX_COLLECTION_ITEMS,
@@ -12,8 +15,8 @@ import {
   rowToItemDto,
 } from "../_lib/collections.js";
 import { handleCors } from "../_lib/cors.js";
-import { getSql } from "../_lib/db.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /**
@@ -25,38 +28,36 @@ import { parseJsonBody } from "../_lib/parseBody.js";
  * validation and bounds.
  */
 
-type Sql = ReturnType<typeof getSql>;
-
 const idOf = (req: VercelRequest): string => {
   const raw = req.query.id;
   return (Array.isArray(raw) ? raw[0] : raw) ?? "";
 };
 
-const loadItems = async (sql: Sql, id: string): Promise<CollectionItemRow[]> =>
-  (await sql`
-    SELECT id, url, kind, title, alt, width, height, sort_order, created_at
-    FROM collection_items
-    WHERE collection_id = ${id}::uuid
-    ORDER BY sort_order, created_at
-  `) as CollectionItemRow[];
+const loadItems = async (id: string): Promise<CollectionItemRow[]> =>
+  await getDb()
+    .select(collectionItemSelection)
+    .from(schema.collectionItems)
+    .where(eq(schema.collectionItems.collectionId, id))
+    .orderBy(
+      asc(schema.collectionItems.sortOrder),
+      asc(schema.collectionItems.createdAt)
+    );
 
-async function handleGet(sql: Sql, id: string, res: VercelResponse) {
-  const rows = (await sql`
-    SELECT id, name, description, cover_url, created_at, updated_at
-    FROM collections WHERE id = ${id}::uuid
-  `) as CollectionRow[];
+async function handleGet(id: string, res: VercelResponse) {
+  const rows = await getDb()
+    .select(collectionSelection)
+    .from(schema.collections)
+    .where(eq(schema.collections.id, id))
+    .limit(1);
   const [found] = rows;
   if (!found) {
     return res.status(404).json({ error: "Collection not found" });
   }
-  return res
-    .status(200)
-    .json(rowToCollectionDto(found, await loadItems(sql, id)));
+  return res.status(200).json(rowToCollectionDto(found, await loadItems(id)));
 }
 
 /** Renaming, re-describing, or setting which item is the cover. */
 async function handlePatch(
-  sql: Sql,
   id: string,
   body: Record<string, unknown>,
   res: VercelResponse
@@ -77,29 +78,41 @@ async function handlePatch(
       ? parsePublicHttpUrl(body.coverUrl)
       : null;
 
-  const rows = (await sql`
-    UPDATE collections SET
-      name = COALESCE(${name}, name),
-      description = CASE WHEN ${body.description === undefined}
-        THEN description ELSE ${description} END,
-      cover_url = CASE WHEN ${body.coverUrl === undefined}
-        THEN cover_url ELSE ${coverUrl} END,
-      updated_at = NOW()
-    WHERE id = ${id}::uuid
-    RETURNING id, name, description, cover_url, created_at, updated_at
-  `) as CollectionRow[];
+  /*
+   * Only what was sent.
+   *
+   * The raw form needed COALESCE for the name and a CASE each for the two
+   * nullable fields, because COALESCE cannot mean "set this to NULL" — which
+   * is exactly what clearing a description or a cover is. Keys present say the
+   * same thing with no special cases.
+   */
+  const changes: PgUpdateSetSource<typeof schema.collections> = {
+    updatedAt: sql`NOW()`,
+  };
+  if (name !== null) {
+    changes.name = name;
+  }
+  if (body.description !== undefined) {
+    changes.description = description;
+  }
+  if (body.coverUrl !== undefined) {
+    changes.coverUrl = coverUrl;
+  }
+
+  const rows = await getDb()
+    .update(schema.collections)
+    .set(changes)
+    .where(eq(schema.collections.id, id))
+    .returning(collectionSelection);
   const [saved] = rows;
   if (!saved) {
     return res.status(404).json({ error: "Collection not found" });
   }
-  return res
-    .status(200)
-    .json(rowToCollectionDto(saved, await loadItems(sql, id)));
+  return res.status(200).json(rowToCollectionDto(saved, await loadItems(id)));
 }
 
 /** Adds one asset. The url is what identifies it, so a repeat is a no-op. */
 async function handlePost(
-  sql: Sql,
   id: string,
   body: Record<string, unknown>,
   res: VercelResponse
@@ -114,10 +127,10 @@ async function handlePost(
       .json({ error: "An asset needs a public http(s) URL" });
   }
 
-  const counted = (await sql`
-    SELECT COUNT(*)::int AS n FROM collection_items
-    WHERE collection_id = ${id}::uuid
-  `) as { n: number }[];
+  const counted = await getDb()
+    .select({ n: count() })
+    .from(schema.collectionItems)
+    .where(eq(schema.collectionItems.collectionId, id));
   if ((counted[0]?.n ?? 0) >= MAX_COLLECTION_ITEMS) {
     return res.status(409).json({
       error: `A collection holds ${MAX_COLLECTION_ITEMS} items. Start another one.`,
@@ -135,26 +148,36 @@ async function handlePost(
   const width = Number(body.width);
   const height = Number(body.height);
 
-  const rows = (await sql`
-    INSERT INTO collection_items (
-      collection_id, url, kind, title, alt, width, height, sort_order
-    ) VALUES (
-      ${id}::uuid, ${url}, ${itemKind(body.kind)}, ${title}, ${alt},
-      ${Number.isFinite(width) && width > 0 ? Math.round(width) : null},
-      ${Number.isFinite(height) && height > 0 ? Math.round(height) : null},
-      ${(counted[0]?.n ?? 0) + 1}
-    )
-    -- The same asset twice is a duplicate rather than an error: a second "save
-    -- to collection" on the same picture should read as already done, not as a
-    -- failure. The existing row is returned so the caller still gets an item.
-    ON CONFLICT (collection_id, url) DO UPDATE
-      SET title = COALESCE(EXCLUDED.title, collection_items.title)
-    RETURNING id, url, kind, title, alt, width, height, sort_order, created_at
-  `) as CollectionItemRow[];
+  const db = getDb();
+  const rows = await db
+    .insert(schema.collectionItems)
+    .values({
+      alt,
+      collectionId: id,
+      height: Number.isFinite(height) && height > 0 ? Math.round(height) : null,
+      kind: itemKind(body.kind),
+      sortOrder: (counted[0]?.n ?? 0) + 1,
+      title,
+      url,
+      width: Number.isFinite(width) && width > 0 ? Math.round(width) : null,
+    })
+    // The same asset twice is a duplicate rather than an error: a second "save
+    // to collection" on the same picture should read as already done, not as a
+    // failure. The existing row comes back so the caller still gets an item,
+    // and its title is only overwritten by a new one — COALESCE, so a repeat
+    // with no title does not blank the title it already had.
+    .onConflictDoUpdate({
+      set: {
+        title: sql`COALESCE(excluded.title, ${schema.collectionItems.title})`,
+      },
+      target: [schema.collectionItems.collectionId, schema.collectionItems.url],
+    })
+    .returning(collectionItemSelection);
 
-  await sql`
-    UPDATE collections SET updated_at = NOW() WHERE id = ${id}::uuid
-  `;
+  await db
+    .update(schema.collections)
+    .set({ updatedAt: sql`NOW()` })
+    .where(eq(schema.collections.id, id));
   const [added] = rows;
   if (!added) {
     return res.status(404).json({ error: "Collection not found" });
@@ -170,21 +193,30 @@ async function handlePost(
  * may be in other collections, and on a board.
  */
 async function handleDelete(
-  sql: Sql,
   id: string,
   body: Record<string, unknown>,
   res: VercelResponse
 ) {
+  const db = getDb();
   const itemId = typeof body.itemId === "string" ? body.itemId : "";
   if (itemId) {
-    await sql`
-      DELETE FROM collection_items
-      WHERE id = ${itemId}::uuid AND collection_id = ${id}::uuid
-    `;
-    await sql`UPDATE collections SET updated_at = NOW() WHERE id = ${id}::uuid`;
+    // Both ids, so an item id from another collection cannot delete a row
+    // here — the collection is the scope, not just a hint.
+    await db
+      .delete(schema.collectionItems)
+      .where(
+        and(
+          eq(schema.collectionItems.id, itemId),
+          eq(schema.collectionItems.collectionId, id)
+        )
+      );
+    await db
+      .update(schema.collections)
+      .set({ updatedAt: sql`NOW()` })
+      .where(eq(schema.collections.id, id));
     return res.status(204).end();
   }
-  await sql`DELETE FROM collections WHERE id = ${id}::uuid`;
+  await db.delete(schema.collections).where(eq(schema.collections.id, id));
   return res.status(204).end();
 }
 
@@ -200,20 +232,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "A collection is required" });
   }
 
-  const sql = getSql();
   const body = parseJsonBody(req.body) as Record<string, unknown>;
   try {
     if (req.method === "GET") {
-      return await handleGet(sql, id, res);
+      return await handleGet(id, res);
     }
     if (req.method === "PATCH") {
-      return await handlePatch(sql, id, body, res);
+      return await handlePatch(id, body, res);
     }
     if (req.method === "POST") {
-      return await handlePost(sql, id, body, res);
+      return await handlePost(id, body, res);
     }
     if (req.method === "DELETE") {
-      return await handleDelete(sql, id, body, res);
+      return await handleDelete(id, body, res);
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (e) {
