@@ -1,5 +1,6 @@
 import { schema } from "./orm.js";
 import { persistGenerated } from "./persistGenerated.js";
+import { toIso } from "./timestamps.js";
 
 /**
  * An element as it is stored: a style already found, kept for reuse.
@@ -9,12 +10,12 @@ import { persistGenerated } from "./persistGenerated.js";
  */
 export interface ElementRow {
   cover_url: string | null;
-  created_at: string;
+  created_at: string | Date;
   description: string | null;
   id: string;
   image_urls: unknown;
   name: string;
-  updated_at: string;
+  updated_at: string | Date;
 }
 
 /** An element as the canvas reads it. */
@@ -38,12 +39,12 @@ export const imageUrlsOf = (raw: unknown): string[] =>
 
 export const rowToElementDto = (row: ElementRow): ElementDto => ({
   coverUrl: row.cover_url,
-  createdAt: row.created_at,
+  createdAt: toIso(row.created_at),
   description: row.description,
   id: row.id,
   imageUrls: imageUrlsOf(row.image_urls),
   name: row.name,
-  updatedAt: row.updated_at,
+  updatedAt: toIso(row.updated_at),
 });
 
 /** One picture, before and after it became ours. */

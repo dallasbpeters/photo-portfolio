@@ -50,7 +50,7 @@ import {
 export const categories = pgTable(
   "categories",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().defaultRandom().primaryKey().notNull(),
@@ -80,7 +80,7 @@ export const siteSettings = pgTable(
     siteKey: text("site_key").primaryKey().notNull(),
     tagline: text(),
     theme: jsonb().default({}).notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     updatedBy: uuid("updated_by"),
@@ -97,7 +97,7 @@ export const siteSettings = pgTable(
 export const users = pgTable(
   "users",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     email: text().notNull(),
@@ -112,7 +112,7 @@ export const dailyChallenges = pgTable(
   {
     altText: text("alt_text"),
     challengeDate: date("challenge_date").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().defaultRandom().primaryKey().notNull(),
@@ -135,7 +135,7 @@ export const challengeJournalEntries = pgTable(
     challengeDate: date("challenge_date").notNull(),
     id: uuid().defaultRandom().primaryKey().notNull(),
     updatedAt: timestamp("updated_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     })
       .defaultNow()
@@ -163,17 +163,17 @@ export const challengeJournalEntries = pgTable(
 export const passwordResetTokens = pgTable(
   "password_reset_tokens",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     expiresAt: timestamp("expires_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }).notNull(),
     id: uuid().defaultRandom().primaryKey().notNull(),
     requestedIp: text("requested_ip"),
     tokenHash: text("token_hash").notNull(),
-    usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
+    usedAt: timestamp("used_at", { mode: "date", withTimezone: true }),
     userId: uuid("user_id").notNull(),
   },
   (table) => [
@@ -199,7 +199,7 @@ export const pages = pgTable(
   "pages",
   {
     content: jsonb().default({ content: [], type: "doc" }).notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     icon: text(),
@@ -208,7 +208,7 @@ export const pages = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     status: text().default("draft").notNull(),
     title: text().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     updatedBy: uuid("updated_by"),
@@ -237,7 +237,7 @@ export const boards = pgTable(
   "boards",
   {
     coverUrl: text("cover_url"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
@@ -245,7 +245,7 @@ export const boards = pgTable(
     isPublic: boolean("is_public").default(false).notNull(),
     slug: text(),
     title: text().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
   },
@@ -269,7 +269,7 @@ export const photos = pgTable(
     alt: text(),
     categoryId: uuid("category_id").notNull(),
     chromeUrl: text("chrome_url"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
@@ -329,15 +329,15 @@ export const lightroomTokens = pgTable(
     accessToken: text("access_token").notNull(),
     accountEmail: text("account_email"),
     catalogId: text("catalog_id"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     expiresAt: timestamp("expires_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }).notNull(),
     refreshToken: text("refresh_token"),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     userId: uuid("user_id").primaryKey().notNull(),
@@ -354,7 +354,7 @@ export const lightroomTokens = pgTable(
 export const recipes = pgTable(
   "recipes",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
@@ -362,7 +362,7 @@ export const recipes = pgTable(
     description: text(),
     id: uuid().defaultRandom().primaryKey().notNull(),
     name: text().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
   },
@@ -384,7 +384,7 @@ export const lightroomOauthStates = pgTable(
   "lightroom_oauth_states",
   {
     codeVerifier: text("code_verifier").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     state: text().primaryKey().notNull(),
@@ -403,14 +403,14 @@ export const collections = pgTable(
   "collections",
   {
     coverUrl: text("cover_url"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
     description: text(),
     id: uuid().defaultRandom().primaryKey().notNull(),
     name: text().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
   },
@@ -433,7 +433,7 @@ export const collectionItems = pgTable(
   {
     alt: text(),
     collectionId: uuid("collection_id").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     height: integer(),
@@ -472,7 +472,7 @@ export const elements = pgTable(
   "elements",
   {
     coverUrl: text("cover_url"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
@@ -482,7 +482,7 @@ export const elements = pgTable(
     name: text().notNull(),
     styleBrief: text("style_brief"),
     styleBriefKey: text("style_brief_key"),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
   },
@@ -508,7 +508,7 @@ export const boardWires = pgTable(
   "board_wires",
   {
     boardId: uuid("board_id").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().primaryKey().notNull(),
@@ -551,7 +551,7 @@ export const boardSources = pgTable(
   "board_sources",
   {
     boardId: uuid("board_id").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().primaryKey().notNull(),
@@ -578,15 +578,15 @@ export const canvaTokens = pgTable(
   "canva_tokens",
   {
     accessToken: text("access_token").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     expiresAt: timestamp("expires_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }).notNull(),
     refreshToken: text("refresh_token").notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     userId: uuid("user_id").primaryKey().notNull(),
@@ -604,7 +604,7 @@ export const canvaOauthStates = pgTable(
   "canva_oauth_states",
   {
     codeVerifier: text("code_verifier").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     state: text().primaryKey().notNull(),
@@ -625,7 +625,7 @@ export const boardComments = pgTable(
     authorName: text("author_name").notNull(),
     boardId: uuid("board_id").notNull(),
     body: text().notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().defaultRandom().primaryKey().notNull(),
@@ -657,7 +657,7 @@ export const recipeUses = pgTable(
   "recipe_uses",
   {
     boardId: uuid("board_id").notNull(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: uuid().primaryKey().notNull(),
@@ -691,7 +691,7 @@ export const recipeUses = pgTable(
 export const recipeVersions = pgTable(
   "recipe_versions",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     declaredInputs: jsonb("declared_inputs").default([]).notNull(),
@@ -730,7 +730,7 @@ export const lightroomAssets = pgTable(
     assetId: text("asset_id").primaryKey().notNull(),
     catalogId: text("catalog_id").notNull(),
     direction: text().default("import").notNull(),
-    importedAt: timestamp("imported_at", { mode: "string", withTimezone: true })
+    importedAt: timestamp("imported_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     photoId: uuid("photo_id"),
@@ -759,7 +759,7 @@ export const lightroomAssets = pgTable(
 export const models = pgTable(
   "models",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     enabled: boolean().default(true).notNull(),
@@ -787,12 +787,12 @@ export const models = pgTable(
     trainingError: text("training_error"),
     trainingResponseUrl: text("training_response_url"),
     trainingStartedAt: timestamp("training_started_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }),
     trainingStatus: text("training_status"),
     trainingStatusUrl: text("training_status_url"),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     vector: boolean().default(false).notNull(),
@@ -830,7 +830,7 @@ export const boardItems = pgTable(
     boardId: uuid("board_id").notNull(),
     body: text(),
     config: jsonb(),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     creditName: text("credit_name"),
@@ -898,12 +898,12 @@ export const lightroomCredentials = pgTable(
   {
     clientId: text("client_id"),
     clientSecret: text("client_secret"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     id: integer().default(1).primaryKey().notNull(),
     redirectUri: text("redirect_uri"),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     updatedBy: uuid("updated_by"),
@@ -920,7 +920,7 @@ export const lightroomCredentials = pgTable(
 
 const brandKitVersionsColumns = {
   brandKitId: uuid("brand_kit_id").notNull(),
-  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .defaultNow()
     .notNull(),
   doc: jsonb().notNull(),
@@ -959,13 +959,13 @@ export const brandVerdicts = pgTable(
   "brand_verdicts",
   {
     acknowledgedAt: timestamp("acknowledged_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }),
     assetUrl: text("asset_url").notNull(),
     boardId: uuid("board_id").notNull(),
     brandKitVersionId: uuid("brand_kit_version_id"),
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     findings: jsonb().default([]).notNull(),
@@ -973,7 +973,7 @@ export const brandVerdicts = pgTable(
     itemId: uuid("item_id"),
     kitVersion: integer("kit_version").notNull(),
     overriddenAt: timestamp("overridden_at", {
-      mode: "string",
+      mode: "date",
       withTimezone: true,
     }),
     overrideReason: text("override_reason"),
@@ -1018,7 +1018,7 @@ export const brandVerdicts = pgTable(
 export const brandKits = pgTable(
   "brand_kits",
   {
-    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
     createdBy: uuid("created_by"),
@@ -1026,7 +1026,7 @@ export const brandKits = pgTable(
     id: uuid().defaultRandom().primaryKey().notNull(),
     name: text().notNull(),
     parentId: uuid("parent_id"),
-    updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
   },

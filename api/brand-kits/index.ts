@@ -5,6 +5,7 @@ import { loadKit, loadKits, writeKitVersion } from "../_lib/brandKitStore.js";
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /**
@@ -54,11 +55,10 @@ async function handlePost(
 
   let created: { id: string }[];
   try {
-    created = (await sql`
-      INSERT INTO brand_kits (name, created_by, parent_id)
-      VALUES (${name}, ${user.userId}, ${parentId})
-      RETURNING id
-    `) as { id: string }[];
+    created = await getDb()
+      .insert(schema.brandKits)
+      .values({ createdBy: user.userId, name, parentId })
+      .returning({ id: schema.brandKits.id });
   } catch (e) {
     /* The trigger raises for a sub-brand of a sub-brand, which is a request
        problem rather than a server one — so it is reported as such. */

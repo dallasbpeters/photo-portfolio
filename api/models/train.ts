@@ -131,7 +131,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // important than the models already there.
       sortOrder: 999,
       trainingResponseUrl: receipt.responseUrl,
-      trainingStartedAt: new Date().toISOString(),
+      // A Date now, matching the column's mode — see db/schema.ts, where
+      // every timestamp returns one so both drivers agree.
+      trainingStartedAt: new Date(),
       trainingStatus: "training",
       trainingStatusUrl: receipt.statusUrl,
       vector: false,

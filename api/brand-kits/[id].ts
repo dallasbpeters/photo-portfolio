@@ -1,4 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+// `sql` is aliased because this file still holds the raw driver's `sql` for
+// the three store queries that stay on it, and two things of that name in one
+// scope is how a timestamp silently becomes a query object.
+import { eq, sql as sqlExpr } from "drizzle-orm";
 import { MAX_KIT_NAME, sanitizeKitDoc } from "../../config/brandKit.js";
 import { getBearerUser } from "../_lib/auth.js";
 import {
@@ -9,6 +13,7 @@ import {
 import { handleCors } from "../_lib/cors.js";
 import { getSql } from "../_lib/db.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
+import { getDb, schema } from "../_lib/orm.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
 
 /**
@@ -53,7 +58,7 @@ async function handleGet(
   if (req.query.versions === "1") {
     return res
       .status(200)
-      .json({ ...kit, versions: await loadKitVersions(sql, id) });
+      .json({ ...kit, versions: await loadKitVersions(id) });
   }
   return res.status(200).json(kit);
 }
@@ -79,9 +84,12 @@ async function handlePatch(
     if (!name) {
       return res.status(400).json({ error: "A kit needs a name" });
     }
-    await sql`
-      UPDATE brand_kits SET name = ${name}, updated_at = NOW() WHERE id = ${id}
-    `;
+    await getDb()
+      .update(schema.brandKits)
+      // NOW() in the database rather than a Date from Node, so every row's
+      // timestamp comes from one clock.
+      .set({ name, updatedAt: sqlExpr`NOW()` })
+      .where(eq(schema.brandKits.id, id));
   }
 
   if (body.doc !== undefined) {
@@ -94,21 +102,17 @@ async function handlePatch(
   return res.status(200).json(await loadKit(sql, id));
 }
 
-async function handleDelete(
-  sql: Sql,
-  user: User,
-  id: string,
-  res: VercelResponse
-) {
+async function handleDelete(user: User, id: string, res: VercelResponse) {
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   /* Versions and verdicts go with it by cascade — see patch 031. Nothing here
      re-implements that, because two places deciding what a delete reaches is
      how one of them ends up wrong. */
-  const deleted = (await sql`
-    DELETE FROM brand_kits WHERE id = ${id} RETURNING id
-  `) as { id: string }[];
+  const deleted = await getDb()
+    .delete(schema.brandKits)
+    .where(eq(schema.brandKits.id, id))
+    .returning({ id: schema.brandKits.id });
   if (deleted.length === 0) {
     return res.status(404).json({ error: "Brand kit not found" });
   }
@@ -133,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handlePatch(sql, user, id, req, res);
     }
     if (req.method === "DELETE") {
-      return await handleDelete(sql, user, id, res);
+      return await handleDelete(user, id, res);
     }
     res.setHeader("Allow", "GET, PATCH, DELETE");
     return res.status(405).json({ error: "Method not allowed" });

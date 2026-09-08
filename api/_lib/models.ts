@@ -15,6 +15,7 @@ import {
   PROTECTED_MODEL_ID,
 } from "../../config/models.js";
 import { parsePublicHttpUrl, sanitizeText } from "./httpUrl.js";
+import { toIso } from "./timestamps.js";
 
 /**
  * A row of the `models` table.
@@ -23,7 +24,7 @@ import { parsePublicHttpUrl, sanitizeText } from "./httpUrl.js";
  * for other tables, because the query selects them directly onto the object.
  */
 export interface ModelRow {
-  created_at: string;
+  created_at: string | Date;
   enabled: boolean;
   id: string;
   image_param: string;
@@ -40,7 +41,7 @@ export interface ModelRow {
   training_error?: string | null;
   /** Null on a model added by hand; only a trained row carries a status. */
   training_status?: string | null;
-  updated_at: string;
+  updated_at: string | Date;
   vector: boolean;
 }
 
@@ -127,30 +128,6 @@ export const rowToModelDef = (row: ModelRow): FalModelDef => {
   };
 };
 
-/**
- * A timestamp as ISO 8601, whatever shape the driver handed over.
- *
- * The raw driver gives a Date; Drizzle reads timestamptz as the text Postgres
- * prints — "2026-08-13 16:17:41.82435+00" — which is not ISO 8601 and which a
- * browser's `new Date()` is not obliged to parse. Normalising here means the
- * DTO promises one format regardless of which driver filled the row.
- *
- * The string is handed to `Date` exactly as it arrives. Tidying it into
- * something ISO-looking first is the trap: `"…41.82435+00"` parses on Node's
- * lenient path, while the same string with a `T` in place of the space does
- * not parse at all — `+00` is not a valid ISO offset, so making it stricter
- * makes the whole thing unparseable. That mistake is silent, because the
- * fallback below then returns the raw text and the value still looks like a
- * timestamp.
- */
-const toIsoString = (value: string | Date): string => {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
-};
-
 /** The training state, narrowed to the three the column permits. */
 const trainingOf = (row: ModelRow): ModelDto["training"] => {
   const status = row.training_status;
@@ -170,7 +147,7 @@ export const rowToModelDto = (row: ModelRow): ModelDto => {
     // Postgres prints — "2026-08-13 16:17:41.82435+00" — which is not ISO 8601
     // and which `new Date()` in a browser is not obliged to parse. The DTO owes
     // its consumers one format whichever driver filled the row.
-    createdAt: toIsoString(row.created_at),
+    createdAt: toIso(row.created_at),
     enabled: row.enabled,
     id: row.id,
     imageParam: row.image_param === "image_urls" ? "image_urls" : "image_url",
@@ -188,7 +165,7 @@ export const rowToModelDto = (row: ModelRow): ModelDto => {
     output: def.output,
     sortOrder: row.sort_order,
     training: trainingOf(row),
-    updatedAt: toIsoString(row.updated_at),
+    updatedAt: toIso(row.updated_at),
     vector: row.vector,
   };
 };

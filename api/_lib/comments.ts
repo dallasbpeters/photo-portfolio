@@ -1,4 +1,5 @@
 import type { getSql } from "./db.js";
+import { toIso } from "./timestamps.js";
 
 type Sql = ReturnType<typeof getSql>;
 
@@ -9,7 +10,7 @@ const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL?.trim() ?? "";
 export interface CommentRow {
   author_name: string;
   body: string;
-  created_at: string;
+  created_at: string | Date;
   id: string;
   item_id: string;
   resolved: boolean;
@@ -31,7 +32,7 @@ export interface CommentDto {
 export const commentDto = (row: CommentRow): CommentDto => ({
   authorName: row.author_name,
   body: row.body,
-  createdAt: row.created_at,
+  createdAt: toIso(row.created_at),
   id: row.id,
   itemId: row.item_id,
   resolved: row.resolved,

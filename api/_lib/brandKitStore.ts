@@ -1,3 +1,4 @@
+import { desc, eq } from "drizzle-orm";
 import type { BrandKitDoc } from "../../config/brandKit.js";
 import {
   EMPTY_KIT,
@@ -6,6 +7,8 @@ import {
   sanitizeKitDoc,
 } from "../../config/brandKit.js";
 import type { getSql } from "./db.js";
+import { getDb, schema } from "./orm.js";
+import { toIso } from "./timestamps.js";
 
 /**
  * Reading and writing brand kits.
@@ -19,7 +22,7 @@ import type { getSql } from "./db.js";
 type Sql = ReturnType<typeof getSql>;
 
 export interface BrandKitRow {
-  created_at: string;
+  created_at: string | Date;
   current_version: number | null;
   current_version_id: string | null;
   doc: unknown;
@@ -28,7 +31,7 @@ export interface BrandKitRow {
   parent_doc: unknown;
   parent_id: string | null;
   parent_name: string | null;
-  updated_at: string;
+  updated_at: string | Date;
   version_count: number | string;
 }
 
@@ -67,7 +70,7 @@ export const rowToKitDto = (row: BrandKitRow): BrandKitDto => {
   const own = row.current_version_id ? sanitizeKitDoc(row.doc) : EMPTY_KIT;
   const parent = row.parent_id ? sanitizeKitDoc(row.parent_doc) : null;
   return {
-    createdAt: row.created_at,
+    createdAt: toIso(row.created_at),
     doc: own,
     id: row.id,
     inherited: inheritedParts(own, parent),
@@ -75,12 +78,33 @@ export const rowToKitDto = (row: BrandKitRow): BrandKitDto => {
     parentId: row.parent_id,
     parentName: row.parent_name,
     resolvedDoc: resolveKitDoc(own, parent),
-    updatedAt: row.updated_at,
+    updatedAt: toIso(row.updated_at),
     version: row.current_version,
     versionCount: Number(row.version_count) || 0,
     versionId: row.current_version_id,
   };
 };
+
+/*
+ * Three queries below stay on the raw driver, deliberately.
+ *
+ * `loadKits` and `loadKit` join brand_kits to itself twice — once for the
+ * parent's name and once for the parent's *current* version — alongside a
+ * correlated count and an ORDER BY over COALESCE(parent, own) with an explicit
+ * NULLS FIRST. Every one of those is expressible in Drizzle; the self-aliasing
+ * is also exactly where a mistake would go unnoticed, because the result is
+ * plausible data rather than an error.
+ *
+ * `writeKitVersion` is the one that must not move without care. Its version
+ * number comes from `COALESCE(MAX(version), 0) + 1` *inside* the INSERT, which
+ * is the whole guard against two saves claiming the same number. Computing it
+ * in JavaScript first would open exactly the race the statement exists to
+ * close, and the failure would be a unique-constraint error on a save that
+ * looked fine in testing.
+ *
+ * The read path here is converted; these are not, and that is a judgement
+ * rather than an omission.
+ */
 
 /**
  * Every kit, newest first, each with its current version inlined.
@@ -154,15 +178,19 @@ export const loadKit = async (
 /** A kit's history, newest first — what "which version was this made against"
  *  is answered from. The documents come too: they are small, and a history
  *  nobody can read the contents of is a list of numbers. */
-export const loadKitVersions = async (sql: Sql, kitId: string) => {
-  const rows = (await sql`
-    SELECT id, version, doc, created_at
-    FROM brand_kit_versions
-    WHERE brand_kit_id = ${kitId}
-    ORDER BY version DESC
-  `) as { created_at: string; doc: unknown; id: string; version: number }[];
+export const loadKitVersions = async (kitId: string) => {
+  const rows = await getDb()
+    .select({
+      created_at: schema.brandKitVersions.createdAt,
+      doc: schema.brandKitVersions.doc,
+      id: schema.brandKitVersions.id,
+      version: schema.brandKitVersions.version,
+    })
+    .from(schema.brandKitVersions)
+    .where(eq(schema.brandKitVersions.brandKitId, kitId))
+    .orderBy(desc(schema.brandKitVersions.version));
   return rows.map((row) => ({
-    createdAt: row.created_at,
+    createdAt: toIso(row.created_at),
     doc: sanitizeKitDoc(row.doc),
     id: row.id,
     version: row.version,

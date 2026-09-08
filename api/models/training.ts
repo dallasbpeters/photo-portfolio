@@ -39,11 +39,14 @@ import { getDb, schema } from "../_lib/orm.js";
  */
 const ABANDON_AFTER_MS = 2 * 60 * 60 * 1000;
 
-const startedTooLongAgo = (startedAt: string | null): boolean => {
+const startedTooLongAgo = (startedAt: Date | string | null): boolean => {
   if (!startedAt) {
     return false;
   }
-  const started = new Date(startedAt).getTime();
+  const started =
+    startedAt instanceof Date
+      ? startedAt.getTime()
+      : new Date(startedAt).getTime();
   return Number.isFinite(started) && Date.now() - started > ABANDON_AFTER_MS;
 };
 
