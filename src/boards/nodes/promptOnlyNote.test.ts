@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { promptOnlyNote } from "./promptOnlyNote";
+import { loraTriggerNote, promptOnlyNote } from "./promptOnlyNote";
 
 /**
  * The node's warning about a picture wired into a model that takes none.
@@ -52,5 +52,34 @@ describe("the note about a model that takes no picture", () => {
     expect(
       promptOnlyNote([], { model: "fal-ai/nano-banana-pro" }, 2)
     ).toBeNull();
+  });
+});
+
+describe("the note about a trained style's token", () => {
+  const TRAINED = [
+    { id: "auto", lora: null },
+    { id: "trained/x", lora: { trigger: "mitchkellyz21y" } },
+    { id: "trained/blank", lora: { trigger: "   " } },
+  ];
+
+  it("says the token is added for you, and names it", () => {
+    const note = loraTriggerNote(TRAINED, { model: "trained/x" });
+    expect(note).toContain("mitchkellyz21y");
+    expect(note).toContain("added to your prompt for you");
+  });
+
+  it("stays quiet for a model with no LoRA", () => {
+    expect(loraTriggerNote(TRAINED, { model: "auto" })).toBeNull();
+    expect(loraTriggerNote(TRAINED, {})).toBeNull();
+  });
+
+  it("stays quiet for a LoRA whose trigger is blank", () => {
+    // A trigger of spaces is a row that would return the base model whatever
+    // was prompted; promising it works would be worse than saying nothing.
+    expect(loraTriggerNote(TRAINED, { model: "trained/blank" })).toBeNull();
+  });
+
+  it("stays quiet while the model list is loading", () => {
+    expect(loraTriggerNote([], { model: "trained/x" })).toBeNull();
   });
 });

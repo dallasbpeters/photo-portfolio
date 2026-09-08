@@ -14,7 +14,7 @@ import { BrandPreview } from "./BrandPreview";
 import { ListRows } from "./ListRows";
 import { NodeHeader } from "./NodeHeader";
 import { PaletteSwatches } from "./PaletteSwatches";
-import { promptOnlyNote } from "./promptOnlyNote";
+import { loraTriggerNote, promptOnlyNote } from "./promptOnlyNote";
 import { ResultImages } from "./ResultImages";
 import { SettingField } from "./SettingField";
 import "./OpNodeView.css";
@@ -295,6 +295,7 @@ function NodeBody({
 }: NodeBodyProps) {
   const { models } = useModels();
   const shapeNote = promptOnlyNote(models, config, imageCount ?? 0);
+  const triggerNote = loraTriggerNote(models, config);
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
 
@@ -434,6 +435,14 @@ function NodeBody({
         };
         return <div key={setting.key}>{custom()}</div>;
       })}
+
+      {/* A trained style's token is prepended server-side; nothing said so, so
+          the only way to know was to ask. See loraTriggerNote. */}
+      {triggerNote ? (
+        <p className="op-node-view__notice op-node-view__notice--wired">
+          {triggerNote}
+        </p>
+      ) : null}
 
       {/* Said before the run, not after. See promptOnlyNote. */}
       {shapeNote ? (

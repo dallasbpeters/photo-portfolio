@@ -40,3 +40,28 @@ export const promptOnlyNote = (
   }
   return "This model works from words alone. A wired element still styles it; a wired picture is ignored, and the run is refused rather than billed.";
 };
+
+/**
+ * That a trained style fires without its token being typed.
+ *
+ * The token is generated — `mitchkellyz21y` — so nobody is going to remember
+ * it, and a LoRA prompted without its trigger returns the base model: an
+ * ordinary picture rather than an error, which reads as a training that came
+ * out weak. The server has always prepended it (see api/_lib/falBody.ts), but
+ * nothing said so, so the only way to know was to ask.
+ *
+ * Said rather than shown as a field to fill in, because there is nothing to
+ * do: typing it changes nothing, and typing it wrong changes nothing either.
+ *
+ * Null for a model without a LoRA, which is every model the app ships with.
+ */
+export const loraTriggerNote = (
+  models: readonly { id: string; lora?: { trigger: string | null } | null }[],
+  config: Record<string, unknown>
+): string | null => {
+  const id = typeof config.model === "string" ? config.model : "auto";
+  const trigger = models.find((m) => m.id === id)?.lora?.trigger?.trim();
+  return trigger
+    ? `Trained style. "${trigger}" is added to your prompt for you.`
+    : null;
+};
