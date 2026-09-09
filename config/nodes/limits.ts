@@ -54,3 +54,25 @@ export const MAX_RESTYLE = 100;
  * plainly restyles, low enough that the subject and composition survive.
  */
 export const DEFAULT_RESTYLE = 80;
+
+/**
+ * How hard a freshly trained style presses, as fal's LoRA `scale`.
+ *
+ * Trained rows were written at 1, which is fal's own default and the one value
+ * no hand-tuned style on this board uses: the six curated LoRAs sit between
+ * 0.8 and 0.9. At 1 a style trained on a small, similar set of pictures — which
+ * is what training from a single frame produces — presses hard enough to pull
+ * an image-to-image run back to what it memorised. Wire one of the training
+ * pictures into such a style and it is reproduced almost exactly, which reads
+ * as the style ignoring the prompt and copying the input.
+ *
+ * The strength setting on the node cannot fix that, because it is the other
+ * lever: it decides how much of the *picture* is repainted, not how hard the
+ * weights press while it is. Repainting more of an image with a style that has
+ * memorised it just arrives back at the same place.
+ *
+ * A per-style number rather than a per-node one, because it belongs to the
+ * weights: how overfit a given LoRA is, is a fact about that LoRA. It is
+ * editable per style in the Models panel.
+ */
+export const DEFAULT_TRAINED_SCALE = 0.85;

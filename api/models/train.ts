@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { eq } from "drizzle-orm";
+import { DEFAULT_TRAINED_SCALE } from "../../config/nodes/limits.js";
 import { getBearerUser } from "../_lib/auth.js";
 import { handleCors } from "../_lib/cors.js";
 import { sanitizeText } from "../_lib/httpUrl.js";
@@ -124,7 +125,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       input: "prompt-or-image",
       label: name,
       // The LoRA's own fields, minus the weights, which do not exist yet.
-      loraScale: 1,
+      //
+      // Under 1 deliberately. See DEFAULT_TRAINED_SCALE: a style trained from
+      // one frame is trained on few, similar pictures, and at full scale it
+      // presses hard enough to pull an image-to-image run back to what it
+      // memorised. Editable per style in the Models panel.
+      loraScale: DEFAULT_TRAINED_SCALE,
       loraTrigger: trigger,
       output: "image",
       // Last in the picker until someone moves it: a new style is not more
