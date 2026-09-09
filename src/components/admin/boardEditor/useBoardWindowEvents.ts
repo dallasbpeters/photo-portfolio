@@ -95,6 +95,33 @@ export const useBoardWindowEvents = (deps: BoardWindowDeps) => {
   }, [boardId]);
 
   /**
+   * The pointer lift ends a gesture, for the history's benefit.
+   *
+   * The snapshot stack collapses edits that arrive close together, because a
+   * drag emits one per pointer move and undoing a drag a pixel at a time is
+   * useless. Time alone cannot tell where one gesture stops and the next
+   * starts, though: two drags two hundred milliseconds apart look exactly like
+   * one long one, so the second recorded nothing and a single ⌘Z undid both.
+   *
+   * Bound here rather than in the canvas because this is where the history
+   * already is. Every gesture on a board ends with a pointer lift, whatever
+   * made it — dragging, resizing, wiring, drawing — so one listener covers all
+   * of them and no edit path has to remember to announce that it has finished.
+   */
+  useEffect(() => {
+    const lift = () => history.seal();
+    // pointercancel counts as an end: a gesture the browser takes away is over
+    // just as surely as one the user finishes, and leaving the run open would
+    // swallow the next edit.
+    window.addEventListener("pointerup", lift);
+    window.addEventListener("pointercancel", lift);
+    return () => {
+      window.removeEventListener("pointerup", lift);
+      window.removeEventListener("pointercancel", lift);
+    };
+  }, [history]);
+
+  /**
    * ⌘/ opens the insert palette.
    *
    * The header has run out of room — notes, text, images, three node types, a

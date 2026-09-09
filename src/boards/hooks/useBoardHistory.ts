@@ -29,6 +29,15 @@ const MAX_DEPTH = 100;
  * A drag emits a change per pointer move, and undo that steps back through
  * every frame of a drag is useless. Anything within the same gesture collapses
  * into a single entry.
+ *
+ * A window alone cannot tell two gestures apart, which is what `seal` is for.
+ * The clock is refreshed on every swallowed edit — that is how a drag of any
+ * length stays one entry — so the gap it measures is the gap since the *last*
+ * pointer move, not since the gesture began. Two drags two hundred
+ * milliseconds apart are a normal pause to a person and one continuous edit to
+ * this window: the second drag recorded nothing, and the single ⌘Z that should
+ * have undone it threw away both. `seal` ends the run at the pointer lift, so
+ * the window only ever collapses moves within one gesture.
  */
 const COALESCE_MS = 400;
 
@@ -40,6 +49,14 @@ export interface BoardHistory {
   redo: (current: BoardSnapshot) => BoardSnapshot | null;
   /** Clears everything — a different board has a different history. */
   reset: () => void;
+  /**
+   * Ends the current gesture, so the next edit starts its own entry.
+   *
+   * Called on the pointer lift rather than by whatever made the edit: every
+   * place that changes the board would otherwise have to remember to say when
+   * it had finished, and the one that forgot would silently lose an undo step.
+   */
+  seal: () => void;
   undo: (current: BoardSnapshot) => BoardSnapshot | null;
 }
 
@@ -92,12 +109,17 @@ export const useBoardHistory = (): BoardHistory => {
     lastAt.current = 0;
   }, []);
 
+  const seal = useCallback(() => {
+    lastAt.current = 0;
+  }, []);
+
   return {
     canRedo: future.current.length > 0,
     canUndo: past.current.length > 0,
     record,
     redo,
     reset,
+    seal,
     undo,
   };
 };
