@@ -23,7 +23,6 @@ import { QUALITY_OPENAI, QUALITY_STEPS, SIZE_AS_ASPECT } from "./generation.js";
  * config/nodes/generation.ts on why that is the whole safety property.
  */
 export interface GenerationParams {
-  outputFormat?: string | null;
   /**
    * The exact colours a wired Brand or Palette node is asking for.
    *
@@ -32,6 +31,19 @@ export interface GenerationParams {
    * `color_palette` on the endpoints that accept one wants the real numbers. One
    * palette, two representations, each going where it works.
    */
+  /**
+   * The other pictures of a blend, for an endpoint that takes a list.
+   *
+   * Rides with the parameters for the same reason `palette` and `restyle` do:
+   * generateImage already takes five positional arguments, and a sixth that is
+   * empty on almost every call is one every caller has to remember. Empty or
+   * absent for a single-picture run.
+   *
+   * Not applied by applyFalParams — it belongs to the image field, which
+   * bodyFor owns.
+   */
+  blendWith?: readonly string[] | null;
+  outputFormat?: string | null;
   palette?: readonly string[] | null;
   quality?: string | null;
   /**

@@ -15,6 +15,7 @@ import { type Job, type JobShape, jobsFor } from "./elementStyle.js";
  */
 
 const shape = (fields: Partial<JobShape> = {}): JobShape => ({
+  blends: false,
   briefs: [],
   capability: "fal.image",
   config: {},

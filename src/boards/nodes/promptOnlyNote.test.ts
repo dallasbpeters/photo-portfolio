@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { loraTriggerNote, promptOnlyNote } from "./promptOnlyNote";
+import {
+  loraTriggerNote,
+  multiImageNote,
+  promptOnlyNote,
+} from "./promptOnlyNote";
 
 /**
  * The node's warning about a picture wired into a model that takes none.
@@ -81,5 +85,79 @@ describe("the note about a trained style's token", () => {
 
   it("stays quiet while the model list is loading", () => {
     expect(loraTriggerNote([], { model: "trained/x" })).toBeNull();
+  });
+});
+
+describe("multiImageNote", () => {
+  const models = [
+    { id: "auto", imageParam: "image_url", input: "prompt-or-image" },
+    {
+      id: "fal-ai/nano-banana/edit",
+      imageParam: "image_urls",
+      input: "prompt-and-image",
+    },
+    {
+      id: "fal-ai/flux-pro/kontext",
+      imageParam: "image_url",
+      input: "prompt-and-image",
+    },
+    { id: "fal-ai/nano-banana-pro", imageParam: "image_url", input: "prompt" },
+    {
+      id: "lora/logo-design",
+      imageParam: "image_url",
+      input: "prompt-or-image",
+      lora: { path: "https://ours/l.safetensors" },
+    },
+  ];
+
+  it("says nothing about a single picture", () => {
+    expect(multiImageNote(models, { model: "auto" }, 1)).toBeNull();
+    expect(multiImageNote(models, { model: "auto" }, 0)).toBeNull();
+  });
+
+  it("promises a blend on auto, which resolves to the edit model", () => {
+    // The row itself declares one image_url; only the endpoint it resolves to
+    // takes a list, which is why auto is special-cased.
+    expect(multiImageNote(models, {}, 3)).toContain("blended together");
+    expect(multiImageNote(models, { model: "auto" }, 2)).toContain(
+      "blended together"
+    );
+  });
+
+  it("promises a blend on a model that takes a list outright", () => {
+    expect(
+      multiImageNote(models, { model: "fal-ai/nano-banana/edit" }, 2)
+    ).toContain("blended together");
+  });
+
+  it("warns that a single-source model runs each picture separately", () => {
+    const note = multiImageNote(
+      models,
+      { model: "fal-ai/flux-pro/kontext" },
+      2
+    );
+    expect(note).toContain("2 separate runs");
+    expect(note).toContain("Composite");
+  });
+
+  it("says nothing for a LoRA, whose endpoints all take one picture", () => {
+    const note = multiImageNote(models, { model: "lora/logo-design" }, 2);
+    expect(note).toContain("separate runs");
+  });
+
+  it("says nothing under a mask, which goes to an inpainting endpoint", () => {
+    const note = multiImageNote(
+      models,
+      { model: "fal-ai/nano-banana/edit" },
+      2,
+      true
+    );
+    expect(note).toContain("separate runs");
+  });
+
+  it("leaves a prompt-only model to its own, stronger note", () => {
+    expect(
+      multiImageNote(models, { model: "fal-ai/nano-banana-pro" }, 2)
+    ).toBeNull();
   });
 });

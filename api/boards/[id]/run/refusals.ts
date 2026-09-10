@@ -169,21 +169,44 @@ export const unmetRequirement = (
  * a third party to go and fetch, which is the same reason api/ai/generate.ts
  * insists on an explicit scheme rather than helpfully adding one.
  */
+/**
+ * One address checked, or null.
+ *
+ * Trimmed before the scheme is tested: the test is anchored, so a stored URL
+ * carrying a stray leading space failed it and took the whole batch down with
+ * it.
+ */
+const forwardable = (raw: string): string | null => {
+  const trimmed = raw.trim();
+  return HTTP_SCHEME.test(trimmed) ? parsePublicHttpUrl(trimmed) : null;
+};
+
 export const validatedJobs = (raw: Job[]): { dropped: number; jobs: Job[] } => {
   const jobs: Job[] = [];
   let dropped = 0;
   for (const job of raw) {
+    /*
+     * The pictures a blend rides with are checked like any other.
+     *
+     * They are forwarded to fal to go and fetch, which is the whole reason
+     * this function exists — letting them past unchecked because they are not
+     * the *subject* would leave the one hole the check was written to close.
+     * An unusable one is dropped from the blend rather than failing the run,
+     * matching what happens to a subject: three good references and one bad
+     * address is still a blend worth making.
+     */
+    const blendWith = job.blendWith
+      .map((extra) => forwardable(extra))
+      .filter((extra): extra is string => extra !== null);
+    dropped += job.blendWith.length - blendWith.length;
+
     if (job.image === null) {
-      jobs.push(job);
+      jobs.push({ ...job, blendWith });
       continue;
     }
-    // Trimmed before the scheme is tested: the test is anchored, so a stored
-    // URL carrying a stray leading space failed it and took the whole batch
-    // down with it.
-    const trimmed = job.image.trim();
-    const url = HTTP_SCHEME.test(trimmed) ? parsePublicHttpUrl(trimmed) : null;
+    const url = forwardable(job.image);
     if (url) {
-      jobs.push({ ...job, image: url });
+      jobs.push({ ...job, blendWith, image: url });
       continue;
     }
     // Dropped rather than fatal, for the same reason a vector is: one wire out

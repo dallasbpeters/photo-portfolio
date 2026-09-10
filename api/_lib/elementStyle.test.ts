@@ -65,6 +65,7 @@ const wire = (
 
 /** A Generate node on a model that takes both a prompt and a picture. */
 const shape = (fields: Partial<JobShape> = {}): JobShape => ({
+  blends: false,
   briefs: [],
   capability: "fal.image",
   config: {},
@@ -222,7 +223,9 @@ describe("shaping jobs around a style", () => {
 
   it("invents from the prompt when nothing at all is wired", () => {
     const jobs = jobsFor(shape());
-    expect(jobs).toEqual([{ image: null, mask: null, prompt: "a portrait" }]);
+    expect(jobs).toEqual([
+      { blendWith: [], image: null, mask: null, prompt: "a portrait" },
+    ]);
   });
 
   it("multiplies by the variation count, not by the references", () => {
@@ -252,7 +255,12 @@ describe("shaping jobs around a style", () => {
       })
     );
     expect(jobs).toEqual([
-      { image: null, mask: null, prompt: "a portrait, oil on linen" },
+      {
+        blendWith: [],
+        image: null,
+        mask: null,
+        prompt: "a portrait, oil on linen",
+      },
     ]);
   });
 
@@ -300,7 +308,7 @@ describe("shaping jobs around a style", () => {
       })
     );
     expect(jobs).toEqual([
-      { image: "cover.jpg", mask: null, prompt: "a portrait" },
+      { blendWith: [], image: "cover.jpg", mask: null, prompt: "a portrait" },
     ]);
   });
 
@@ -313,7 +321,9 @@ describe("shaping jobs around a style", () => {
         values: { image: ["cover.jpg", "mine.jpg"] },
       })
     );
-    expect(jobs).toEqual([{ image: null, mask: null, prompt: "" }]);
+    expect(jobs).toEqual([
+      { blendWith: [], image: null, mask: null, prompt: "" },
+    ]);
   });
 });
 

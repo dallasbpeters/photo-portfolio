@@ -138,6 +138,16 @@ export const withElementWords = (prompt: string, words: string[]): string => {
 
 /** One run: which image it reworks, which mask confines it, which prompt. */
 export interface Job {
+  /**
+   * The rest of the pictures this one run is of, for an endpoint that blends
+   * a list of them. Empty for every other run.
+   *
+   * Separate from `image` rather than replacing it because most endpoints take
+   * exactly one picture, and a single field that is sometimes a list is a
+   * field every caller has to unpack. `image` stays the subject; these are the
+   * ones it is blended with.
+   */
+  blendWith: string[];
   image: string | null;
   /** The rendered mask belonging to `image`, when that picture carries one. */
   mask: string | null;
@@ -145,6 +155,16 @@ export interface Job {
 }
 
 export interface JobShape {
+  /**
+   * Whether the endpoint this run will reach takes a list of pictures.
+   *
+   * True for the handful that blend — nano-banana/edit, which is also where
+   * "auto" lands with a picture wired in, grok's edit model and gpt-image-2's.
+   * Decided by falAcceptsImageList from the *resolved* endpoint rather than
+   * from the model chosen on the node, because a LoRA and a mask both send the
+   * run somewhere that takes one picture whatever the row says.
+   */
+  blends: boolean;
   /** How the vision model read each wired element. See elementStyleOf. */
   briefs: string[];
   capability: NodeCapability;
@@ -189,6 +209,7 @@ const typedTextOf = (config: Record<string, unknown>): string => {
 };
 
 export const jobsFor = ({
+  blends,
   capability,
   config,
   lists,
@@ -207,13 +228,14 @@ export const jobsFor = ({
     // One run however many pictures feed it: the images are its material, not
     // a batch to iterate over. Fanning out here would store the same rendered
     // composite once per source.
-    return [{ image: null, mask: null, prompt: "" }];
+    return [{ blendWith: [], image: null, mask: null, prompt: "" }];
   }
   if (capability === "fal.describe") {
     // Reading a picture back as words is not affected by a mask, and an element
     // wired into Analyse is a picture to read rather than a style to apply.
     return [
       {
+        blendWith: [],
         image: values.image?.[0] ?? null,
         mask: null,
         prompt: typedPrompt,
@@ -241,8 +263,27 @@ export const jobsFor = ({
   // reproduces it — which is what "the model just recreates the cover" was.
   // With nothing to rework, a model that can generate from words does that, and
   // one that cannot is refused before it is billed.
-  const images: (string | null)[] =
-    subjects.length === 0 ? [null] : [...subjects];
+  /*
+   * One run per subject, or one run of all of them where the endpoint blends.
+   *
+   * Fanning out is right for a model that takes a single picture: two
+   * references wired into a restyle are two things to restyle, and the batch
+   * is what the variation strip shows. It is exactly wrong for nano-banana's
+   * edit model and the two like it, which take a *list* and combine what is in
+   * it — wiring two pictures in to be blended and getting back two separate
+   * pictures, each ignoring the other, is what this looked like.
+   *
+   * The first subject stays `image` so every single-picture path below is
+   * untouched; the rest ride along in `blendWith`.
+   */
+  const blending = blends && subjects.length > 1;
+  const images: (string | null)[] = (() => {
+    if (subjects.length === 0) {
+      return [null];
+    }
+    return blending ? [subjects[0]] : [...subjects];
+  })();
+  const blendWith = blending ? subjects.slice(1) : [];
   // One wire carrying several prompts is an Iterate node: each is its own run.
   // Several wires are several *parts* of each run — a subject and a palette,
   // say — so they are joined. Both at once: five subjects and one palette line
@@ -283,6 +324,7 @@ export const jobsFor = ({
   return prompts.flatMap((prompt) =>
     images.flatMap((image) =>
       Array.from({ length: count }, () => ({
+        blendWith,
         image,
         mask: image ? (masks.get(image) ?? null) : null,
         /*

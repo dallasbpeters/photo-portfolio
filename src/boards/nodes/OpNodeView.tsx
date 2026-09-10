@@ -9,12 +9,11 @@ import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import type { BoardItem, BoardItemVariation } from "../../types";
 import { HalftonePreview } from "../canvas/HalftonePreview";
 import { pickImages, selectedIndex } from "../itemOutput";
-import { useModels } from "../ModelsContext";
 import { BrandPreview } from "./BrandPreview";
 import { ListRows } from "./ListRows";
 import { NodeHeader } from "./NodeHeader";
+import { NodeNotes } from "./NodeNotes";
 import { PaletteSwatches } from "./PaletteSwatches";
-import { loraTriggerNote, promptOnlyNote } from "./promptOnlyNote";
 import { ResultImages } from "./ResultImages";
 import { SettingField } from "./SettingField";
 import "./OpNodeView.css";
@@ -293,9 +292,6 @@ function NodeBody({
   type,
   wiredItems,
 }: NodeBodyProps) {
-  const { models } = useModels();
-  const shapeNote = promptOnlyNote(models, config, imageCount ?? 0);
-  const triggerNote = loraTriggerNote(models, config);
   const set = (key: string, value: string) =>
     onConfigChange({ ...config, [key]: value });
 
@@ -436,20 +432,11 @@ function NodeBody({
         return <div key={setting.key}>{custom()}</div>;
       })}
 
-      {/* A trained style's token is prepended server-side; nothing said so, so
-          the only way to know was to ask. See loraTriggerNote. */}
-      {triggerNote ? (
-        <p className="op-node-view__notice op-node-view__notice--wired">
-          {triggerNote}
-        </p>
-      ) : null}
-
-      {/* Said before the run, not after. See promptOnlyNote. */}
-      {shapeNote ? (
-        <p className="op-node-view__notice op-node-view__notice--warn">
-          {shapeNote}
-        </p>
-      ) : null}
+      {/* Everything this node will do that it would otherwise only reveal by
+          being run: the added trigger token, a model that ignores what is
+          wired to it, and whether several pictures blend or fan out. See
+          NodeNotes. */}
+      <NodeNotes config={config} imageCount={imageCount ?? 0} />
 
       {/* A run that reported success but drew nothing would otherwise look
               identical to one that never ran. Saying so is what keeps a broken

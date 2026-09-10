@@ -255,6 +255,14 @@ export const produce = async (
   capability: NodeCapability,
   models: readonly FalModelDef[],
   args: {
+    /**
+     * The rest of the pictures, when this run's endpoint blends a list.
+     *
+     * Empty for everything else. Distinct from `sourceImageUrls`, which is
+     * every image wired to the node including an element's cover and is read
+     * by Analyse; these are the subjects jobsFor decided this one run is of.
+     */
+    blendImageUrls: string[];
     item: RunnableItem;
     /** "auto" (or absent) keeps fal.ts's own image-present switch. */
     model: string | null;
@@ -317,6 +325,7 @@ export const produce = async (
 
   const params = {
     ...generationParams(args.item.config),
+    blendWith: args.blendImageUrls,
     palette: args.palette ?? [],
   };
   const loops = loopsOf(args.item.config);
@@ -348,7 +357,10 @@ export const produce = async (
       image.url,
       args.model,
       null,
-      params
+      // Blended on the first pass only. After it there is one picture — the
+      // blend — and sending the originals again would mix them back into
+      // their own result. Same reasoning as the mask above.
+      { ...params, blendWith: [] }
     );
   }
 

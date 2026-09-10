@@ -49,7 +49,13 @@ export const bodyFor = (
    */
   loraStrength: number | undefined,
   /** What this endpoint calls its source: "image_url" for most. */
-  imageParam: NonNullable<FalModelDef["imageParam"]>
+  imageParam: NonNullable<FalModelDef["imageParam"]>,
+  /**
+   * The other pictures to blend with the source, for the endpoints that take
+   * a list. Empty for every single-picture run — see jobsFor, which only fills
+   * it when the resolved endpoint blends.
+   */
+  blendWith: readonly string[] = []
 ): Record<string, unknown> => {
   /*
    * A clip is not this function's business.
@@ -75,7 +81,16 @@ export const bodyFor = (
    * was one of seven. The style is read into words now — see elementBrief.ts.
    */
   const imageField = (url: string): Record<string, unknown> =>
-    imageParam === "image_urls" ? { image_urls: [url] } : { [imageParam]: url };
+    imageParam === "image_urls"
+      ? // The subject first, then whatever it is being blended with. Order is
+        // kept because these endpoints read the list as written — the first
+        // picture is the one being edited and the rest are what to bring into
+        // it, so shuffling them changes the answer.
+        { image_urls: [url, ...blendWith] }
+      : // One picture, whatever else was wired. An endpoint that names a
+        // single source has nowhere to put the others, and jobsFor has already
+        // made those their own runs rather than dropping them.
+        { [imageParam]: url };
 
   if (lora) {
     // The trigger token is prepended rather than left to be remembered. A LoRA

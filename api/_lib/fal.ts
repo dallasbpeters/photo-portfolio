@@ -1,9 +1,5 @@
 import {
-  type FalModelDef,
-  FLUX_INPAINT_ENDPOINT,
-  FLUX_LORA_INPAINT_ENDPOINT,
   falImageParam,
-  falLoraEndpoint,
   falModelInput,
   falModelLora,
   falModelMasks,
@@ -13,16 +9,16 @@ import {
   type GenerationParams,
 } from "../../config/nodes/falParams.js";
 import { applyEndpointQuirks, bodyFor } from "./falBody.js";
+import { endpointFor } from "./falEndpoint.js";
 import { loadModelDefs } from "./modelStore.js";
 import { persistGenerated } from "./persistGenerated.js";
 
 /**
  * Image generation through fal.ai.
  *
- * The two constants below are the *automatic* choice, and they do different
- * jobs: the pro model writes an image from a prompt, the edit model rewrites
- * one you already have, and the edit endpoint takes an array of source images
- * even when there is only one.
+ * Which endpoint a run reaches — including the *automatic* choice between
+ * inventing an image and rewriting one — is decided in falEndpoint.ts, where
+ * it can be tested; this file holds the key, the call and the storing.
  *
  * A caller may instead name any model on the list in the `models` table — the
  * same table the node's picker is built from, so the two cannot drift —
@@ -31,9 +27,6 @@ import { persistGenerated } from "./persistGenerated.js";
  * happens to be present. Those endpoints disagree about their parameters, and
  * fal only says so after the call has been billed.
  */
-const TEXT_TO_IMAGE_MODEL = "fal-ai/nano-banana-pro";
-const EDIT_MODEL = "fal-ai/nano-banana/edit";
-
 /** Generation is slow by web standards; well under Vercel's function ceiling. */
 const REQUEST_TIMEOUT_MS = 120_000;
 
@@ -90,77 +83,10 @@ const falDetail = (json: FalResponse, status: number): string => {
   return `status ${status}`;
 };
 
-/**
- * Which fal endpoint this run actually goes to.
- *
- * Four things decide it and they are checked in order of how much they
- * constrain the answer: a mask needs an inpainting endpoint, a LoRA needs one
- * that loads weights, an explicitly named model is taken at its word, and
- * "auto" falls back to inventing or editing depending on whether a picture was
- * wired in.
- */
-const endpointFor = ({
-  hasSourceImage,
-  lora,
-  masking,
-  requestedModel,
-}: {
-  hasSourceImage: boolean;
-  lora: ReturnType<typeof falModelLora>;
-  masking: boolean;
-  requestedModel: string | null;
-}): string => {
-  if (lora) {
-    return masking
-      ? FLUX_LORA_INPAINT_ENDPOINT
-      : // A wired image reworks rather than invents, so the style is applied
-        // to it through the image-to-image endpoint instead.
-        falLoraEndpoint(lora, hasSourceImage);
-  }
-  if (masking) {
-    return FLUX_INPAINT_ENDPOINT;
-  }
-  if (requestedModel && requestedModel !== "auto") {
-    return requestedModel;
-  }
-  return hasSourceImage ? EDIT_MODEL : TEXT_TO_IMAGE_MODEL;
-};
-
 export const falKey = (): string | null =>
   process.env.FAL_API_KEY?.trim() || null;
 
 export const isFalConfigured = (): boolean => falKey() !== null;
-
-/**
- * Whether this run's endpoint takes a list of images rather than one.
- *
- * The only way a style reference can be sent: it rides in `image_urls` after
- * the subject. Answered here rather than in the run endpoint because the
- * endpoint a run reaches is not the model that was asked for — "auto" with a
- * picture resolves to nano-banana/edit, which takes a list, and a LoRA or a
- * mask resolves to endpoints that take a single `image_url` whatever the row
- * says. The run endpoint asks this before spending anything, and refuses by
- * name when the answer is no.
- */
-export const falAcceptsImageList = ({
-  hasSourceImage,
-  masking,
-  models,
-  requestedModel,
-}: {
-  hasSourceImage: boolean;
-  masking: boolean;
-  models: readonly FalModelDef[];
-  requestedModel: string | null;
-}): boolean => {
-  const lora = falModelLora(models, requestedModel);
-  // Both send the picture as image_url; see bodyFor and the mask override.
-  if (lora || masking) {
-    return false;
-  }
-  const model = endpointFor({ hasSourceImage, lora, masking, requestedModel });
-  return falImageParam(models, model) === "image_urls";
-};
 
 /**
  * Generates an image, or a variation of one, and stores it.
@@ -234,7 +160,10 @@ export const generateImage = async (
     // for. "auto" resolves to nano-banana/edit, which takes a list where most
     // take one URL — reading the parameter name off "auto" would send the
     // wrong field on every automatic edit.
-    falImageParam(models, model)
+    falImageParam(models, model),
+    // Only ever non-empty when the resolved endpoint takes a list; jobsFor
+    // asks falAcceptsImageList the same question before it fills this in.
+    params?.blendWith ?? []
   );
 
   // The endpoints that want something other than their declared shape. Three

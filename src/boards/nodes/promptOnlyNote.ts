@@ -65,3 +65,51 @@ export const loraTriggerNote = (
     ? `Trained style. "${trigger}" is added to your prompt for you.`
     : null;
 };
+
+/**
+ * What several wired pictures will do, which is one of two different things.
+ *
+ * A model that names a single source gets one run per picture: two references
+ * wired into a restyle are two things to restyle, and the batch fills the
+ * variation strip. A model that takes a *list* gets one run of all of them and
+ * blends them. Both are reasonable and they look nothing alike, so the node
+ * says which is about to happen rather than letting it be discovered by
+ * paying for it — wiring two pictures in to be combined and getting back two
+ * separate pictures was exactly that discovery.
+ *
+ * The rule mirrors falAcceptsImageList on the server, minus the two cases that
+ * cannot arise here: a LoRA and a mask both resolve to single-picture
+ * endpoints, and the note is suppressed for them below. "auto" is the one that
+ * has to be special-cased, because the row itself declares a single image_url
+ * and only the endpoint it resolves to — nano-banana's edit model — takes a
+ * list.
+ *
+ * Null with fewer than two pictures, where there is no choice to explain.
+ */
+export const multiImageNote = (
+  models: readonly {
+    id: string;
+    imageParam: string;
+    input: string;
+    lora?: { path: string | null } | null;
+  }[],
+  config: Record<string, unknown>,
+  imageCount: number,
+  masking = false
+): string | null => {
+  if (imageCount < 2) {
+    return null;
+  }
+  const id = typeof config.model === "string" ? config.model : "auto";
+  const model = models.find((m) => m.id === id);
+  if (!model || model.input === "prompt") {
+    // A prompt-only model has its own note, which says something stronger.
+    return null;
+  }
+  const blends =
+    !(masking || model.lora?.path) &&
+    (id === "auto" || model.imageParam === "image_urls");
+  return blends
+    ? `All ${imageCount} pictures go into one run and are blended together.`
+    : `This model takes one picture at a time, so this is ${imageCount} separate runs — one per picture. To blend them, pick Auto, or wire them through a Composite node first.`;
+};

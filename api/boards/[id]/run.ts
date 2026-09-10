@@ -18,6 +18,7 @@ import {
   jobsFor,
   withElementWords,
 } from "../../_lib/elementStyle.js";
+import { falAcceptsImageList } from "../../_lib/falEndpoint.js";
 import { loadModelDefs } from "../../_lib/modelStore.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
 import { produce, unconfiguredProvider } from "./run/capabilities.js";
@@ -199,6 +200,20 @@ const prepare = async (
     // appending only to the typed fallback would drop the style in exactly the
     // case elements exist for.
     jobsFor({
+      /*
+       * Whether this run's endpoint blends a list of pictures.
+       *
+       * Read from the resolved endpoint, not from the model on the node: a
+       * LoRA and a mask both send the run to somewhere that takes one picture
+       * whatever the row declares, and "auto" with a picture wired in lands on
+       * nano-banana's edit model, which takes a list. Only the endpoint knows.
+       */
+      blends: falAcceptsImageList({
+        hasSourceImage: subjects.length > 0,
+        masking: masked,
+        models,
+        requestedModel: model,
+      }),
       briefs: element.briefs,
       capability: type.capability,
       config: item.config,
@@ -360,6 +375,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       const produced = await produce(capability, models, {
+        // The other pictures of a blend, empty for every single-picture run.
+        // See jobsFor: only an endpoint that takes a list is ever given one.
+        blendImageUrls: jobs[variation]?.blendWith ?? [],
         /* The mark a wired Brand node offers, read off the same rows the brand
            words came from. Resolved per run rather than hoisted, because a
            board edited between variations should stamp what it now says. */
