@@ -27,7 +27,13 @@
  * is called.
  *
  * Run it with:
- *   node scripts/affinity-bridge.mjs
+ *   pnpm bridge
+ *
+ * which is the same thing plus --env-file-if-exists=.env.local, so a
+ * VECTOR_APP written there is honoured however the bridge is started. The dev
+ * stack and the desktop shell both hand it down themselves; this is for
+ * running it on its own, which is what you do when the board is the live site
+ * rather than localhost.
  *
  * Configuration (all optional):
  *   VECTOR_PORT  port to listen on                              (default 4123)
