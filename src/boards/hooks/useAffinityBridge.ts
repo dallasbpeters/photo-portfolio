@@ -6,6 +6,7 @@ import {
   affinityOpen,
   affinityReadSvg,
   affinityStatus,
+  type EditorSource,
 } from "../io/affinity";
 
 /**
@@ -43,7 +44,7 @@ export const useAffinityBridge = (
   useEffect(() => stop, [stop]);
 
   const openInAffinity = useCallback(
-    async (itemId: string, source: { svg: string } | { url: string }) => {
+    async (itemId: string, source: EditorSource) => {
       stop();
       const baseline = await affinityOpen(itemId, source);
       let lastHash = baseline;

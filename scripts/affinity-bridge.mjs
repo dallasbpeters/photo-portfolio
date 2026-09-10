@@ -44,11 +44,12 @@
  * only ever opened one app.
  *
  * Endpoints (all under the bridge's origin):
- *   POST /open?item=<id>   body { url } or { svg }
- *                          a url is downloaded; svg is written as given, which
- *                          is how a photograph reaches a vector editor — the
- *                          browser wraps it, since only it can measure a
- *                          picture without a decoder per format
+ *   POST /open?item=<id>   body { url } | { svg } | { raster }
+ *                          url: downloaded and written as-is (already an SVG)
+ *                          svg: written as given
+ *                          raster: { url, width, height } — a photograph,
+ *                            downloaded and embedded in a one-element SVG so
+ *                            the editor gets real pixels to trace
  *   GET  /status?item=<id>               { file, hash } of the working copy
  *   GET  /file?item=<id>                 the working copy, as image/svg+xml
  *   GET  /                                { name, ok } — a health check
@@ -178,29 +179,65 @@ const readJsonBody = async (req, res) => {
   }
 };
 
-/** The SVG to write, downloaded from a url or handed over ready-made. */
-const svgFrom = async (parsed) => {
-  /*
-   * Given, not fetched.
-   *
-   * A photograph cannot be opened in a vector editor as it stands, so the
-   * browser wraps it in a one-element SVG that references it — see
-   * src/boards/io/rasterAsSvg.ts. The wrapping happens there because measuring
-   * a picture needs a decoder per format, and the browser already has them
-   * all. This end only has to agree to write what it is handed.
-   */
-  if (typeof parsed?.svg === "string") {
-    return parsed.svg;
+/** The bytes at a url, or an error naming what went wrong. */
+const download = async (url) => {
+  if (!HTTP_URL.test(url)) {
+    throw new Error("A http(s) url is required");
   }
-  const source = typeof parsed?.url === "string" ? parsed.url : "";
-  if (!HTTP_URL.test(source)) {
-    throw new Error("A http(s) url or an svg is required");
-  }
-  const fetched = await fetch(source);
+  const fetched = await fetch(url);
   if (!fetched.ok) {
     throw new Error(`The image could not be downloaded (${fetched.status})`);
   }
-  return fetched.text();
+  return fetched;
+};
+
+/**
+ * A photograph as a one-element SVG, with the picture inside it.
+ *
+ * Embedded rather than referenced, which is the whole point of doing this
+ * here. A remote href looked cheaper and broke the one thing the wrap exists
+ * for: tracing needs the editor to read the pixels, and a picture from
+ * another origin cannot be read — plenty of what lands on a board is served
+ * with no CORS header at all, so the trace had nothing to work from. A data
+ * URI has no origin to be wrong about.
+ *
+ * The bytes never pass through the browser: it sends the address and the
+ * size, and this end, which has no request body limit to worry about, does
+ * the carrying. A two megabyte JPEG would be three megabytes of base64
+ * through a JSON body otherwise, over the cap /open enforces.
+ *
+ * Sized to the picture's own pixels, measured in the browser — see
+ * src/boards/io/measureRaster.ts, and the comment there about why not here.
+ */
+const wrapRaster = async ({ url, width, height }) => {
+  const w = Math.round(Number(width));
+  const h = Math.round(Number(height));
+  if (!(w > 0 && h > 0)) {
+    throw new Error("That picture has no size to draw it at");
+  }
+  const fetched = await download(url);
+  const type = fetched.headers.get("content-type") ?? "image/png";
+  const bytes = Buffer.from(await fetched.arrayBuffer());
+  const href = `data:${type};base64,${bytes.toString("base64")}`;
+  return (
+    '<svg xmlns="http://www.w3.org/2000/svg" ' +
+    'xmlns:xlink="http://www.w3.org/1999/xlink" ' +
+    `width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+    `<image href="${href}" xlink:href="${href}" width="${w}" height="${h}"/>` +
+    "</svg>"
+  );
+};
+
+/** The SVG to write, however this one was asked for. */
+const svgFrom = async (parsed) => {
+  if (typeof parsed?.svg === "string") {
+    return parsed.svg;
+  }
+  if (parsed?.raster && typeof parsed.raster.url === "string") {
+    return wrapRaster(parsed.raster);
+  }
+  const source = typeof parsed?.url === "string" ? parsed.url : "";
+  return (await download(source)).text();
 };
 
 const open = async (req, res, item) => {

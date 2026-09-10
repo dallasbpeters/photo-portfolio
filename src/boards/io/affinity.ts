@@ -87,15 +87,23 @@ export interface AffinityWriteback {
 }
 
 /**
- * Puts a drawing in front of the editor; returns the baseline hash.
+ * What to put in front of the editor.
  *
- * Either an address for the bridge to download, or the SVG itself — the
- * second is how a photograph gets there, wrapped by rasterAsSvg, because only
- * the browser can measure a picture without a decoder per format.
+ * A `url` is already a drawing and is fetched as-is. A `raster` is a
+ * photograph: the bridge downloads it and wraps it in a one-element SVG, so
+ * the editor gets real pixels to trace rather than a reference it may not be
+ * allowed to read. Only the size travels from here, because only the browser
+ * can measure a picture without a decoder per format — see measureRaster.
  */
+export type EditorSource =
+  | { raster: { height: number; url: string; width: number } }
+  | { svg: string }
+  | { url: string };
+
+/** Puts something in front of the editor; returns the baseline hash. */
 export const affinityOpen = async (
   itemId: string,
-  source: { svg: string } | { url: string }
+  source: EditorSource
 ): Promise<string | null> => {
   const res = await bridgeFetch(`/open?item=${encodeURIComponent(itemId)}`, {
     body: JSON.stringify(source),

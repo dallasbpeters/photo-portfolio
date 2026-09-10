@@ -10,8 +10,8 @@ import { useBoardImageEditor } from "../../../boards/hooks/useBoardImageEditor";
 import { editorLabel } from "../../../boards/hooks/useVectorEditorName";
 import type { AffinityWriteback } from "../../../boards/io/affinity";
 import { bridgeAppName, isSvgUrl } from "../../../boards/io/affinity";
+import { measureRaster } from "../../../boards/io/measureRaster";
 import { newItemId } from "../../../boards/io/newItemId";
-import { rasterAsSvg } from "../../../boards/io/rasterAsSvg";
 import { outputImageOf } from "../../../boards/itemOutput";
 import type { BoardItem, BoardItemResult, BoardWire } from "../../../types";
 import { BLANK_ITEM, PORT_SPAWN_GAP } from "./placement";
@@ -137,10 +137,17 @@ export const useBoardVectorTools = (deps: BoardVectorDeps) => {
        * PNGs. Wrapping keeps the round trip exactly as it was, since the file
        * is a real SVG either way, and in an SVG editor a placed bitmap is the
        * first step of tracing it rather than a dead end.
+       *
+       * Only the size goes over. The bridge fetches and embeds the picture
+       * itself: a reference is smaller and cannot be traced, because the
+       * editor is not allowed to read pixels from another origin, and a great
+       * deal of what lands on a board is served with no CORS header at all.
        */
       await openInAffinity(
         itemId,
-        isSvgUrl(url) ? { url } : { svg: await rasterAsSvg(url) }
+        isSvgUrl(url)
+          ? { url }
+          : { raster: { ...(await measureRaster(url)), url } }
       );
       toast.success(`Open in ${editor} — save there and it comes back`);
     } catch (err) {
