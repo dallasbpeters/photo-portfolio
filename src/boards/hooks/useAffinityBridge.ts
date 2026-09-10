@@ -9,7 +9,7 @@ import {
 } from "../io/affinity";
 
 /**
- * The "Open in Affinity" loop for a board.
+ * The "open it in the desktop editor" loop for a board.
  *
  * Opening hands the SVG to the local bridge and starts polling it; when the
  * file changes (the user saved in Affinity) the new source is read back and
@@ -62,11 +62,11 @@ export const useAffinityBridge = (
           const writeback = await boardsApi.writebackSvg(boardId, itemId, svg);
           applyRef.current(itemId, writeback);
           lastHash = status.hash;
-          toast.success("Updated from Affinity");
+          toast.success("Updated from the editor");
         } catch (err) {
           stop();
           toast.error(
-            err instanceof Error ? err.message : "Affinity sync stopped"
+            err instanceof Error ? err.message : "The editor sync stopped"
           );
         }
       };

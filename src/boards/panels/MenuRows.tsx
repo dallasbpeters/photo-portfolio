@@ -21,6 +21,7 @@ import { outputImageOf, outputImagesOf } from "../itemOutput";
 import type { CanvasMenuTarget } from "./CanvasMenu";
 import { CollectionRow, hasTools, ToolsRow } from "./CanvasMenuPanels";
 import "../boardChrome.css";
+import { useVectorEditorName } from "../hooks/useVectorEditorName";
 
 /**
  * Every row the canvas menu can offer, and the rules for which apply.
@@ -32,7 +33,8 @@ import "../boardChrome.css";
  *
  * Each row is its own component rather than a branch in one list, because what
  * makes a row applicable differs per row: a node that has produced something can
- * be downloaded, an SVG can be opened in Affinity, a raster can be vectorised,
+ * be downloaded, an SVG can be opened in the desktop editor, a raster can be
+ * vectorised,
  * and a frame can be arranged. Written as one list those conditions collapse
  * into a chain nobody can read.
  */
@@ -62,12 +64,20 @@ function NodeRow({ count, onExport }: { count: number; onExport: () => void }) {
   );
 }
 
-/** Sends a node's SVG to Affinity, where it can be edited and saved back. */
-function AffinityRow({ onOpen }: { onOpen: () => void }) {
+/**
+ * Sends a node's SVG to the desktop editor, where it is edited and saved back.
+ *
+ * The editor is named by the bridge rather than by this label: it opens
+ * whatever VECTOR_APP points at, so a hardcoded "Affinity" is wrong for anyone
+ * running Boxy SVG or Inkscape — and wrong quietly, because the button still
+ * works.
+ */
+function EditorRow({ onOpen }: { onOpen: () => void }) {
+  const editor = useVectorEditorName();
   return (
     <button className={rowClass} onClick={onOpen} type="button">
       <HugeiconsIcon aria-hidden icon={PenTool01Icon} size={14} />
-      <span>Open in Affinity</span>
+      <span>Open in {editor}</span>
     </button>
   );
 }
@@ -116,7 +126,7 @@ function CanvaRow({ onSend }: { onSend: () => void }) {
 
 /**
  * The actions that only make sense for one picked item: hand over its results,
- * edit it in Affinity, vectorize it, or move it through the stack.
+ * edit it in the desktop editor, vectorize it, or move it through the stack.
  *
  * Split out of MenuRows because each is its own boolean of conditions, and the
  * menu was heading past the complexity ceiling one row at a time.
@@ -143,7 +153,7 @@ function SingleItemRows({
   // A single selected node that has produced something can hand over the whole
   // batch. More than one selected is a grouping gesture, not an export one.
   const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
-  // A node's SVG is what Affinity edits, and only an actual vector is worth
+  // A node's SVG is what the editor edits, and only an actual vector is worth
   // offering that move for — a raster cannot be handed over as an SVG at all.
   const pickedSvg = onlyPicked
     ? isSvgUrl(outputImageOf(onlyPicked, items))
@@ -166,7 +176,7 @@ function SingleItemRows({
       ) : null}
 
       {onlyPicked && pickedSvg && onOpenInAffinity ? (
-        <AffinityRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
+        <EditorRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
       ) : null}
 
       {onlyPicked && placedImage && onVectorize ? (

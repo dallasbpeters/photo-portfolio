@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Local bridge between the board editor and Affinity Designer.
+ * Local bridge between the board editor and a desktop vector editor.
  *
- * The app is a web app, and Affinity is a desktop app; this little HTTP server
- * is the handshake between them. The browser tells it "open this SVG", it
- * downloads the bytes, writes them to a file on this machine and asks Affinity
- * to open that file. When the user edits and saves in Affinity, the same file
+ * The board is a web app and the editor is a desktop app; this little HTTP
+ * server is the handshake between them. The browser tells it "open this SVG",
+ * it downloads the bytes, writes them to a file on this machine and asks the
+ * editor to open that file. When the user edits and saves, the same file
  * changes, and the bridge reports the new content back to the browser, which
  * writes it into the board through the app's own API.
+ *
+ * Which editor is a setting, not a decision this file makes. It only ever runs
+ * `open -a <app> <file>`, so anything that opens an .svg and saves back to the
+ * same .svg works — Affinity, Boxy SVG, Inkscape, Illustrator. The one thing
+ * that does not is an app that saves to its own format and needs an explicit
+ * Export to give the SVG back: Linearity Curve writes .curve, so the file
+ * never changes and the canvas never sees an edit. A browser PWA is out for a
+ * different reason — it is a launcher stub that ignores the file argument
+ * entirely, so `open -a` starts it with nothing loaded.
  *
  * It is deliberately stateless and dumb: change detection is done by the
  * browser, which compares the file's sha256 across status polls, so the bridge
@@ -21,8 +30,12 @@
  *   node scripts/affinity-bridge.mjs
  *
  * Configuration (all optional):
- *   AFFINITY_PORT  port to listen on                 (default 4123)
- *   AFFINITY_APP   the Affinity app name             (default "Affinity")
+ *   VECTOR_PORT  port to listen on                              (default 4123)
+ *   VECTOR_APP   the editor's app name, or a full path to the
+ *                .app when two installs share a name            (default "Affinity")
+ *
+ * AFFINITY_PORT and AFFINITY_APP still work; they were the names when this
+ * only ever opened one app.
  *
  * Endpoints (all under the bridge's origin):
  *   POST /open?item=<id>   body { url }  downloads the SVG, opens it in Affinity
@@ -30,10 +43,13 @@
  *   GET  /file?item=<id>                 the working copy, as image/svg+xml
  *   GET  /                                { name, ok } — a health check
  *
- * A note on saving: Affinity remembers the format of the file it opened, so
- * Cmd+S writes back to the .svg rather than prompting for an .afdesign. If that
- * ever changes, the hash in /status simply stops moving and the canvas stops
- * picking up edits — the fix is on Affinity's side, not here.
+ * A note on saving: this only works while the editor writes back to the file
+ * it opened. Affinity remembers the format it was handed, so Cmd+S writes the
+ * .svg rather than prompting for an .afdesign, and Boxy SVG and Inkscape have
+ * SVG as their native format so there is nothing to remember. If an editor
+ * ever stops doing that, the hash in /status simply stops moving and the
+ * canvas stops picking up edits — which looks like the bridge being broken and
+ * is not.
  */
 
 import { spawn } from "node:child_process";
@@ -44,11 +60,19 @@ import os from "node:os";
 import path from "node:path";
 
 /** The port vercel dev and the SPA have no reason to collide with. */
-const PORT = Number(process.env.AFFINITY_PORT) || 4123;
-// The unified "Affinity" app (the single app that replaced Designer/Photo/Publisher
-// 2) is the one installed on this machine; `open -a` fails if the name does not
-// match exactly, so the default follows the install rather than the brand.
-const APP = process.env.AFFINITY_APP || "Affinity";
+const PORT =
+  Number(process.env.VECTOR_PORT || process.env.AFFINITY_PORT) || 4123;
+/*
+ * Which editor to hand the file to.
+ *
+ * `open -a` fails if the name does not match the install exactly, so the
+ * default follows what is installed rather than the brand: the unified
+ * "Affinity" app that replaced Designer/Photo/Publisher 2. A full path to the
+ * .app works too, and is the answer when two installs share a name — a Mac App
+ * Store editor and its own PWA both answer to "Boxy SVG", and the PWA is the
+ * one that silently does nothing.
+ */
+const APP = process.env.VECTOR_APP || process.env.AFFINITY_APP || "Affinity";
 const HOST = "127.0.0.1";
 const DIR = path.join(os.homedir(), ".addison-affinity");
 mkdirSync(DIR, { recursive: true });
@@ -84,7 +108,7 @@ const json = (res, code, body) => {
   res.end(JSON.stringify(body));
 };
 
-const openInAffinity = (filePath) =>
+const openInEditor = (filePath) =>
   new Promise((resolve, reject) => {
     const child = spawn("open", ["-a", APP, filePath], { stdio: "ignore" });
     child.on("error", reject);
@@ -94,8 +118,9 @@ const openInAffinity = (filePath) =>
       } else {
         reject(
           new Error(
-            `Affinity could not be opened (exit ${code}). Is "${APP}" installed? ` +
-              "If it is named differently, set AFFINITY_APP."
+            `The editor could not be opened (exit ${code}). Is "${APP}" installed? ` +
+              "If it is named differently, set VECTOR_APP — a full path to the " +
+              ".app if two installs share a name."
           )
         );
       }
@@ -103,7 +128,7 @@ const openInAffinity = (filePath) =>
   });
 
 const health = (res) => {
-  json(res, 200, { app: APP, name: "affinity-bridge", ok: true, port: PORT });
+  json(res, 200, { app: APP, name: "vector-bridge", ok: true, port: PORT });
 };
 
 const status = (res, item) => {
@@ -163,7 +188,7 @@ const open = async (req, res, item) => {
       throw new Error("That URL does not look like an SVG");
     }
     writeFileSync(fileFor(item), svg);
-    await openInAffinity(fileFor(item));
+    await openInEditor(fileFor(item));
     json(res, 200, { file: true, hash: sha256Of(item) });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not open it";
@@ -217,6 +242,6 @@ server.on("error", (err) => {
 
 server.listen(PORT, HOST, () => {
   console.log(
-    `\n[affinity-bridge] listening on http://localhost:${PORT} → ${APP}\n`
+    `\n[vector-bridge] listening on http://localhost:${PORT} → ${APP}\n`
   );
 });

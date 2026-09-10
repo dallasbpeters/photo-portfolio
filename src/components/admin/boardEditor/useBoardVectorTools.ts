@@ -7,8 +7,9 @@ import {
 import { OUTPUT_PORT_KEY } from "../../../../config/ports.js";
 import { useAffinityBridge } from "../../../boards/hooks/useAffinityBridge";
 import { useBoardImageEditor } from "../../../boards/hooks/useBoardImageEditor";
+import { editorLabel } from "../../../boards/hooks/useVectorEditorName";
 import type { AffinityWriteback } from "../../../boards/io/affinity";
-import { isSvgUrl } from "../../../boards/io/affinity";
+import { bridgeAppName, isSvgUrl } from "../../../boards/io/affinity";
 import { newItemId } from "../../../boards/io/newItemId";
 import { outputImageOf } from "../../../boards/itemOutput";
 import type { BoardItem, BoardItemResult, BoardWire } from "../../../types";
@@ -111,13 +112,15 @@ export const useBoardVectorTools = (deps: BoardVectorDeps) => {
   );
 
   /**
-   * Opens a node's SVG in Affinity Designer, through the local bridge.
+   * Opens a node's SVG in the desktop editor, through the local bridge.
    *
-   * The bridge download-and-opens; edits are picked up by the bridge's poll and
-   * written back through the app, so a save in Affinity is all the user needs
-   * to do to land a new version on the node.
+   * The bridge downloads and opens; edits are picked up by its poll and
+   * written back through the app, so saving in the editor is all the user
+   * needs to do to land a new version on the node. Which editor is the
+   * bridge's setting, so the messages ask it rather than naming one.
    */
   const openItemInAffinity = async (itemId: string) => {
+    const editor = editorLabel(await bridgeAppName());
     const node = items.find((item) => item.id === itemId);
     const url = node ? outputImageOf(node, items) : null;
     if (!(node && url)) {
@@ -125,15 +128,15 @@ export const useBoardVectorTools = (deps: BoardVectorDeps) => {
       return;
     }
     if (!isSvgUrl(url)) {
-      toast.error("Only SVG results can be opened in Affinity");
+      toast.error(`Only SVG results can be opened in ${editor}`);
       return;
     }
     try {
       await openInAffinity(itemId, url);
-      toast.success("Open in Affinity — save there and it comes back");
+      toast.success(`Open in ${editor} — save there and it comes back`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not open Affinity"
+        err instanceof Error ? err.message : `Could not open ${editor}`
       );
     }
   };

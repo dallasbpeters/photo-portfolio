@@ -11,19 +11,58 @@
  *   PORT=3005 pnpm dev
  */
 import { execSync, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** API port. Overridable so this can run alongside other local apps. */
 const PORT = Number(process.env.PORT) || 3006;
 
-/** The Affinity bridge, which the editor calls to open SVGs in the desktop app. */
-const BRIDGE_PORT = Number(process.env.AFFINITY_PORT) || 4123;
+/** The repo root, needed before anything reads a file out of it. */
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * The two settings the vector bridge reads, lifted out of .env.local.
+ *
+ * vercel dev loads the env files for the app, but the bridge is a plain child
+ * process of this script and gets whatever is in the shell — so a VECTOR_APP
+ * written in .env.local reached the API and not the one process that needed
+ * it, and the bridge silently kept opening the default. Read here so the file
+ * everything else is configured in configures this too.
+ *
+ * Deliberately only these two keys, and only when the shell has not already
+ * said: this is not a general env loader, and it must not start deciding what
+ * DATABASE_URL is behind vercel's back.
+ */
+const loadBridgeEnv = () => {
+  let text = "";
+  try {
+    text = readFileSync(path.join(root, ".env.local"), "utf8");
+  } catch {
+    return;
+  }
+  for (const key of ["VECTOR_APP", "VECTOR_PORT"]) {
+    if (process.env[key]) {
+      continue;
+    }
+    const found = text.match(new RegExp(`^${key}=(.*)$`, "m"))?.[1]?.trim();
+    if (found) {
+      // Quotes are how a path with a space is written in an env file, and
+      // every editor worth pointing at lives in "/Applications/Something.app".
+      process.env[key] = found.replace(/^["']|["']$/g, "");
+    }
+  }
+};
+
+loadBridgeEnv();
+
+/** The vector bridge, which the canvas calls to open SVGs in a desktop app. */
+const BRIDGE_PORT =
+  Number(process.env.VECTOR_PORT || process.env.AFFINITY_PORT) || 4123;
 
 // Only ports this stack owns — killing an arbitrary PORT the user set is the
 // point, but the Vite range is fixed by vercel dev's devCommand.
 const PORTS = [PORT, BRIDGE_PORT, 5173, 5174, 5175];
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const isWin = process.platform === "win32";
 const WHITESPACE = /\s+/;
 
@@ -110,10 +149,17 @@ const child = spawn(pnpm, ["exec", "vercel", "dev", "--listen", String(PORT)], {
   stdio: "inherit",
 });
 
-// The editor's "Open in Affinity" button reaches a local HTTP server, so it has
-// to come up with the rest of the stack. It is optional in spirit — the canvas
-// works without it — but harmless to always run, and a half-started stack is
-// worse than a process sitting on a port.
+// The canvas's "Open in <editor>" button reaches a local HTTP server, so it
+// has to come up with the rest of the stack. It is optional in spirit — the
+// canvas works without it — but harmless to always run, and a half-started
+// stack is worse than a process sitting on a port.
+//
+// Which editor it opens is VECTOR_APP, read from the environment like
+// everything else here. Set it to a full path when two installs answer to the
+// same name: a Mac App Store editor and its own browser PWA both respond to
+// "Boxy SVG", and the PWA is a launcher stub that ignores the file it is
+// handed — it starts, loads nothing, and the canvas waits for an edit that
+// cannot arrive.
 const bridge = spawn(process.execPath, ["scripts/affinity-bridge.mjs"], {
   cwd: root,
   env: { ...process.env },
@@ -125,7 +171,7 @@ bridge.on("exit", (code, signal) => {
   if (signal) {
     return;
   }
-  console.log(`\n[affinity-bridge] exited (code ${code})\n`);
+  console.log(`\n[vector-bridge] exited (code ${code})\n`);
 });
 
 child.on("exit", (code, signal) => {

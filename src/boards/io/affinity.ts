@@ -1,9 +1,10 @@
 /**
- * The local Affinity bridge, as the browser sees it.
+ * The local vector bridge, as the browser sees it.
  *
  * The bridge (scripts/affinity-bridge.mjs) is a small HTTP server on this
- * machine that downloads an SVG and opens it in Affinity Designer. These are
- * the calls the canvas makes to it. Change detection lives here, not on the
+ * machine that downloads an SVG and opens it in a desktop editor. Which editor
+ * is the bridge's setting, not the browser's — which is why the name is asked
+ * for rather than written down here. These are the calls the canvas makes. Change detection lives here, not on the
  * bridge: the bridge is stateless on purpose, and it is the browser that knows
  * which sha256 it opened with, so it can tell when the file has moved.
  *
@@ -23,14 +24,46 @@ export const isSvgUrl = (url: string | null | undefined): boolean =>
 const bridgeUrl = (path: string): string => `${BRIDGE_ORIGIN}${path}`;
 
 const BRIDGE_HINT =
-  "Is the Affinity bridge running? Start it with `node scripts/affinity-bridge.mjs`.";
+  "Is the vector bridge running? Start it with `node scripts/affinity-bridge.mjs`.";
+
+/**
+ * What the bridge is pointed at, for the labels that name it.
+ *
+ * Asked once and remembered, including the failure: a bridge that is not
+ * running is not going to start answering because a menu opened, and one
+ * request per render of every context menu is a lot of nothing.
+ *
+ * Null when it cannot be reached, which is the ordinary case — the bridge is a
+ * dev tool. Callers fall back to naming no app at all rather than guessing,
+ * because guessing "Affinity" is exactly the wrong answer for somebody who has
+ * pointed it at something else.
+ */
+let appNamePromise: Promise<string | null> | null = null;
+
+export const bridgeAppName = (): Promise<string | null> => {
+  appNamePromise ??= (async () => {
+    try {
+      const res = await fetch(bridgeUrl("/"));
+      if (!res.ok) {
+        return null;
+      }
+      const body = (await res.json()) as { app?: unknown };
+      return typeof body.app === "string" && body.app.trim()
+        ? body.app.trim()
+        : null;
+    } catch {
+      return null;
+    }
+  })();
+  return appNamePromise;
+};
 
 const bridgeFetch = async (path: string, init?: RequestInit) => {
   try {
     return await fetch(bridgeUrl(path), init);
   } catch (cause) {
     throw new Error(
-      `Could not reach the Affinity bridge on ${BRIDGE_ORIGIN}. ${BRIDGE_HINT}`,
+      `Could not reach the vector bridge on ${BRIDGE_ORIGIN}. ${BRIDGE_HINT}`,
       { cause }
     );
   }
@@ -53,7 +86,7 @@ export interface AffinityWriteback {
   result?: unknown;
 }
 
-/** Downloads the SVG and asks Affinity to open it; returns the baseline hash. */
+/** Downloads the SVG and asks the editor to open it; returns the baseline hash. */
 export const affinityOpen = async (
   itemId: string,
   url: string
@@ -96,7 +129,5 @@ const affinityError = async (res: Response): Promise<string> => {
   } catch {
     message = "";
   }
-  return (
-    message || `The Affinity bridge answered ${res.status}. ${BRIDGE_HINT}`
-  );
+  return message || `The vector bridge answered ${res.status}. ${BRIDGE_HINT}`;
 };
