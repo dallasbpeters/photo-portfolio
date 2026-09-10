@@ -106,10 +106,24 @@ export const multiImageNote = (
     // A prompt-only model has its own note, which says something stronger.
     return null;
   }
-  const blends =
-    !(masking || model.lora?.path) &&
-    (id === "auto" || model.imageParam === "image_urls");
-  return blends
+  if (masking) {
+    // A mask was drawn over one picture, and the endpoint it sends the run to
+    // takes that picture and the mask. There is no room for a second.
+    return `A mask applies to one picture, so this is ${imageCount} separate runs — one per picture.`;
+  }
+  if (model.lora?.path) {
+    /*
+     * A trained style cannot be told to blend, and saying "pick Auto" here
+     * would be telling somebody to throw their style away.
+     *
+     * fal runs a LoRA on flux-lora, whose endpoints take a single image_url —
+     * there is no multi-image endpoint that also loads weights. Blending has
+     * to happen before the style is applied, which is two nodes rather than
+     * one setting.
+     */
+    return `A trained style takes one picture at a time, so this is ${imageCount} separate runs. To combine them, blend on an Auto node first and wire that result in here.`;
+  }
+  return id === "auto" || model.imageParam === "image_urls"
     ? `All ${imageCount} pictures go into one run and are blended together.`
     : `This model takes one picture at a time, so this is ${imageCount} separate runs — one per picture. To blend them, pick Auto, or wire them through a Composite node first.`;
 };

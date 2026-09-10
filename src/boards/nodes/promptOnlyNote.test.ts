@@ -140,12 +140,16 @@ describe("multiImageNote", () => {
     expect(note).toContain("Composite");
   });
 
-  it("says nothing for a LoRA, whose endpoints all take one picture", () => {
+  it("tells a trained style to blend elsewhere first", () => {
+    // Not "pick Auto", which would mean throwing the style away: fal has no
+    // endpoint that loads weights and takes more than one picture.
     const note = multiImageNote(models, { model: "lora/logo-design" }, 2);
-    expect(note).toContain("separate runs");
+    expect(note).toContain("trained style");
+    expect(note).toContain("Auto node first");
+    expect(note).not.toContain("blended together");
   });
 
-  it("says nothing under a mask, which goes to an inpainting endpoint", () => {
+  it("says a mask leaves room for one picture", () => {
     const note = multiImageNote(
       models,
       { model: "fal-ai/nano-banana/edit" },
@@ -153,6 +157,7 @@ describe("multiImageNote", () => {
       true
     );
     expect(note).toContain("separate runs");
+    expect(note).not.toContain("blended together");
   });
 
   it("leaves a prompt-only model to its own, stronger note", () => {
