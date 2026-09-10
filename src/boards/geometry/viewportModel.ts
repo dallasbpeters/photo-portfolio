@@ -245,6 +245,73 @@ export const zoomByAtCentre = (
   );
 
 /**
+ * A wheel event's deltas in screen pixels, whatever unit it arrived in.
+ *
+ * `deltaMode` is almost always pixels, and then it is lines — Firefox with a
+ * real mouse — or, rarely, pages. The numbers differ by two orders of
+ * magnitude between modes, so treating them alike makes one wheel notch move
+ * the board a pixel or a mile depending on the browser.
+ *
+ * The line and page heights are conventional rather than measured: the event
+ * does not say what a line is here, and asking the DOM for one costs a layout
+ * on every wheel tick to refine a gesture nobody is measuring.
+ */
+const LINE_PX = 16;
+const PAGE_PX = 800;
+
+export const wheelPixels = (delta: number, deltaMode: number): number => {
+  if (deltaMode === 1) {
+    return delta * LINE_PX;
+  }
+  if (deltaMode === 2) {
+    return delta * PAGE_PX;
+  }
+  return delta;
+};
+
+/**
+ * What a wheel event means on a canvas: moving, or getting closer.
+ *
+ * Two fingers on a trackpad send a wheel with both deltas, and on a board that
+ * means pan — it is how every canvas tool behaves, and the only one-handed way
+ * to move around a board on a laptop. Zoom is the modified gesture: a pinch
+ * arrives as ctrlKey+wheel, which browsers synthesize, and Cmd+wheel is what a
+ * Mac user reaches for with a real mouse.
+ *
+ * This used to be zoom unconditionally, which left no way to pan without the
+ * keyboard at all.
+ *
+ * A plain mouse wheel therefore scrolls the board rather than zooming it. That
+ * is the trade, and it is the one Figma, Sketch and Affinity all make: a wheel
+ * that pans is recoverable by holding a key, whereas a trackpad with no pan is
+ * not recoverable by anything.
+ */
+export const wheelIntent = (e: {
+  ctrlKey: boolean;
+  metaKey: boolean;
+}): "pan" | "zoom" => (e.ctrlKey || e.metaKey ? "zoom" : "pan");
+
+/**
+ * One wheel event's worth of pan, in screen pixels.
+ *
+ * Negated because a wheel reports how far the *content* should scroll, while
+ * the viewport offset says where the board has been moved to: scrolling down
+ * moves the board up. Both axes, so a sideways two-finger swipe works — a
+ * board is as wide as it is tall, unlike a page.
+ */
+export const panByWheel = (
+  viewport: Viewport,
+  deltaX: number,
+  deltaY: number,
+  deltaMode: number
+): Viewport =>
+  panBy(
+    viewport,
+    -wheelPixels(deltaX, deltaMode),
+    -wheelPixels(deltaY, deltaMode)
+  );
+
+/**
  * One wheel event's worth of zoom, anchored at the pointer.
  *
  * A trackpad pinch arrives as ctrlKey+wheel with the same `deltaY`, so both
@@ -256,11 +323,14 @@ export const zoomByWheel = (
   deltaY: number,
   clientX: number,
   clientY: number,
-  rect: ViewRect
+  rect: ViewRect,
+  /** Pixels unless a browser says otherwise; see wheelPixels. */
+  deltaMode = 0
 ): Viewport =>
   zoomAt(
     viewport,
-    viewport.scale * Math.exp(-deltaY * WHEEL_SENSITIVITY),
+    viewport.scale *
+      Math.exp(-wheelPixels(deltaY, deltaMode) * WHEEL_SENSITIVITY),
     clientX,
     clientY,
     rect
