@@ -587,7 +587,9 @@ function itemPointerDown({
       e.stopPropagation();
       return;
     }
-    onSelect(index, e.clientX, e.clientY, e.shiftKey || e.metaKey);
+    // Cmd, not shift: shift pans the board now, and a shift-press that both
+    // added to the selection and started a pan would do neither well.
+    onSelect(index, e.clientX, e.clientY, e.metaKey);
     // Already selected, so this is the second press: start typing.
     if (isWritable && isSelected) {
       onBeginEdit();

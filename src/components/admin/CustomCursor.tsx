@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSpaceKey } from "../../boards/hooks/useSpaceKey";
+import { usePanModifier } from "../../boards/hooks/usePanModifier";
 import "./CustomCursor.css";
 
 interface CustomCursorProps {
@@ -23,7 +23,7 @@ const GRAB =
  *
  * It also carries the board's pan affordance, which has nowhere else to live:
  * the canvas is `cursor-none`, so the `cursor-grab` class that used to say "a
- * drag here pans rather than selects" is gone. Space held swaps the arrow for a
+ * drag here pans rather than selects" is gone. A pan key held swaps the arrow for a
  * hand, and pressing closes it — the two states of the gesture the key arms.
  *
  * That state is read from `window` here rather than passed in. Both ends
@@ -37,7 +37,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
   const [position, setPosition] = useState({ x: -100, y: -100 });
   const [isVisible, setIsVisible] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
-  const space = useSpaceKey();
+  const panning = usePanModifier();
 
   useEffect(() => {
     // A coarse pointer has nothing to replace — a finger leaves no cursor — and
@@ -86,7 +86,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     return null;
   }
 
-  const grabbing = space.held && isPressed;
+  const grabbing = panning.held && isPressed;
 
   return (
     <div
@@ -95,7 +95,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
         transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
       }}
     >
-      {space.held ? (
+      {panning.held ? (
         <svg
           className="custom-cursor-grab"
           data-grabbing={grabbing ? "" : undefined}

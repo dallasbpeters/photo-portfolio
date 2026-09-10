@@ -59,7 +59,7 @@ import {
 } from "./geometry/snapIndex";
 import { useCanvasViewport } from "./hooks/useCanvasViewport";
 import { useDeleteKey } from "./hooks/useDeleteKey";
-import { useSpaceKey } from "./hooks/useSpaceKey";
+import { usePanModifier } from "./hooks/usePanModifier";
 import { useWireGesture } from "./hooks/useWireGesture";
 import { BOARD_IMAGE_TYPE } from "./itemOutput";
 import { CanvasMenu, type CanvasMenuTarget } from "./panels/CanvasMenu";
@@ -324,8 +324,11 @@ export function BoardCanvas({
   // The viewport frames itself on the items, and keeps doing so as the
   // container settles, until the board is panned, zoomed or rearranged.
   const view = useCanvasViewport(containerRef, () => contentBounds(items));
-  const space = useSpaceKey();
-  // Held space pans rather than sweeps a box; the pointerdown handler reads it.
+  const panning = usePanModifier();
+  // Space, Shift or Control held pans rather than sweeps a box or moves an
+  // item. Destructured because the hook returns a fresh object each render
+  // while the ref inside it is stable — the memoised handlers depend on this.
+  const panHeld = panning.heldRef;
   /**
    * Which items are selected, by index. A list rather than one index: several
    * can be picked with a marquee or with shift, and dragging any moves the
@@ -594,12 +597,6 @@ export function BoardCanvas({
   );
 
   /**
-   * Removes an item and everything attached to it.
-   *
-   * One action, not two: a board must never be left holding a wire that points
-   * at nothing. The schema cascades on the server for the same reason.
-   */
-  /**
    * Items gone, with every wire that touched any of them.
    *
    * One removal rather than one per way of asking. The cross on an item's
@@ -633,13 +630,6 @@ export function BoardCanvas({
     [items, removeIds]
   );
 
-  // Frames the arrangement the first time the board has one. A published board
-  // arrives from the API well after the canvas has been laid out, so nothing
-  // else tells the viewport that there is finally something to look at.
-  //
-  // Pulled out of `view`, whose identity changes every render; `frameContent`
-  // itself is stable, so this runs only when the items change, and it declines
-  // to do anything once the board has been framed or taken hold of.
   const removeSelected = useCallback(() => {
     removeIds(new Set(selectedItems(selection, items).map((i) => i.id)));
     setSelection(EMPTY_SELECTION);
@@ -649,16 +639,17 @@ export function BoardCanvas({
   // is being edited — the node's own fields handle their own keys.
   useDeleteKey(removeSelected, !(readOnly || editingId));
 
+  // Frames the arrangement the first time the board has one: a published board
+  // arrives long after the canvas is laid out, so nothing else tells the
+  // viewport there is something to look at. frameContent is stable where `view`
+  // is not, and declines once the board has been framed or taken hold of.
   const { frameContent } = view;
   useEffect(() => {
-    // An empty board has nothing to frame, and the viewport already centres the
-    // bare canvas on its own.
     if (items.length > 0) {
       frameContent();
     }
   }, [items, frameContent]);
 
-  /** Indices of the items a frame carries. Membership comes from graph.ts. */
   /** Indices of the items a frame carries. Membership comes from graph.ts. */
   const containedIndices = useCallback(
     (frame: BoardItem): number[] => indicesWithin(frame, items),
@@ -712,7 +703,6 @@ export function BoardCanvas({
     [frameAt, items, onCopyFrame, onGroupIntoFrame, readOnly, selection, view]
   );
 
-  /** Everything the swept rectangle touches, by index. */
   /**
    * Everything the swept rectangle touches.
    *
@@ -732,6 +722,14 @@ export function BoardCanvas({
     (index: number, clientX: number, clientY: number, additive = false) => {
       const item = items[index];
       if (!item) {
+        return;
+      }
+      // A pan key held means the press is for the board, not this item. Left
+      // as "none" so it falls through to the surface, where panning lives:
+      // otherwise a busy board has almost no empty canvas to aim a pan at,
+      // which is the whole reason space alone was not enough.
+      if (panHeld.current) {
+        gesture.current = { kind: "none" };
         return;
       }
       // Rearranging the board counts as taking hold of it: the view must stay
@@ -789,7 +787,7 @@ export function BoardCanvas({
         setSelection(select(item.id));
       }
     },
-    [containedIndices, items, selection, view]
+    [containedIndices, items, panHeld, selection, view]
   );
 
   const beginResize = useCallback(
@@ -1069,15 +1067,16 @@ export function BoardCanvas({
           // to hold space, and a drag on empty canvas expects to select.
           if (e.target === e.currentTarget || gesture.current.kind === "none") {
             setEditingId(null);
-            if (space.heldRef.current) {
+            if (panHeld.current) {
               setSelection(EMPTY_SELECTION);
               view.onPointerDown(e);
               return;
             }
             e.currentTarget.setPointerCapture(e.pointerId);
-            // Shift keeps what is already picked, matching what shift does on
-            // a single item; a plain sweep starts fresh.
-            if (!e.shiftKey) {
+            // Cmd keeps what is already picked, matching cmd on a single
+            // item; a plain sweep starts fresh. This was shift, which now
+            // pans — and a sweep is the very gesture a pan looks like.
+            if (!e.metaKey) {
               setSelection(EMPTY_SELECTION);
             }
             const start = view.toCanvas(e.clientX, e.clientY);
@@ -1114,7 +1113,7 @@ export function BoardCanvas({
         }}
         onPointerUp={(e) => {
           if (marquee) {
-            finishMarquee(marquee, e.shiftKey);
+            finishMarquee(marquee, e.metaKey);
             return;
           }
           if (stroke) {
