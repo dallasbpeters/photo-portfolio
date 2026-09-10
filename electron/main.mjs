@@ -1,7 +1,7 @@
 /**
  * Thin desktop shell for the photo portfolio.
  *
- * It opens one window on the live site and runs the Affinity bridge beside it.
+ * It opens one window on the live site and runs the vector bridge beside it.
  * Nothing from `api/` runs here — the site's own deployment serves every
  * request, so the app is only a window, a dock icon and the local bridge.
  *
@@ -11,6 +11,7 @@
  * Boot on demand: the app exits when the window closes, including on macOS.
  */
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
@@ -47,18 +48,56 @@ if (!origin) {
   app.exit(1);
 }
 
+/**
+ * Which vector editor the bridge should open, for a packaged app.
+ *
+ * The dev stack reads this out of .env.local, which a packaged app does not
+ * have and is not next to. An app launched from the Dock has almost no
+ * environment either — no shell has run, so an export in a profile never
+ * reaches here. So it lives in a file beside the Google tokens, in the one
+ * directory that survives an update.
+ *
+ * Write the app's name, or a full path to the .app when two installs share a
+ * name — a Mac App Store editor and its own browser PWA both answer to "Boxy
+ * SVG", and the PWA is a launcher stub that ignores the file it is handed.
+ *
+ *   echo '/Applications/Boxy SVG.app' > \
+ *     ~/Library/Application\ Support/Photos/vector-app.txt
+ *
+ * Absent, the bridge keeps its own default. An unreadable file is not worth an
+ * error: the button still works, it just opens what it always did.
+ */
+const vectorApp = () => {
+  try {
+    const chosen = readFileSync(
+      path.join(app.getPath("userData"), "vector-app.txt"),
+      "utf8"
+    ).trim();
+    return chosen || null;
+  } catch {
+    return null;
+  }
+};
+
 // The bridge is the same script the dev stack runs. Electron's binary doubles
 // as Node when ELECTRON_RUN_AS_NODE is set, so no separate Node install is
 // needed on the machine that runs the packaged app.
 const startBridge = () => {
   const script = path.join(here, "..", "scripts", "affinity-bridge.mjs");
+  const chosen = vectorApp();
   const child = spawn(process.execPath, [script], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "1",
+      // Only when chosen, so an absent file leaves the bridge's own default
+      // alone rather than overriding it with an empty string.
+      ...(chosen ? { VECTOR_APP: chosen } : {}),
+    },
     stdio: "inherit",
   });
   child.on("exit", (code, signal) => {
     if (!signal) {
-      console.log(`[affinity-bridge] exited (code ${code})`);
+      console.log(`[vector-bridge] exited (code ${code})`);
     }
   });
   return child;
