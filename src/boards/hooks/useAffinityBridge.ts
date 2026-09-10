@@ -43,9 +43,9 @@ export const useAffinityBridge = (
   useEffect(() => stop, [stop]);
 
   const openInAffinity = useCallback(
-    async (itemId: string, url: string) => {
+    async (itemId: string, source: { svg: string } | { url: string }) => {
       stop();
-      const baseline = await affinityOpen(itemId, url);
+      const baseline = await affinityOpen(itemId, source);
       let lastHash = baseline;
 
       const tick = async () => {

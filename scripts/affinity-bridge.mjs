@@ -44,7 +44,11 @@
  * only ever opened one app.
  *
  * Endpoints (all under the bridge's origin):
- *   POST /open?item=<id>   body { url }  downloads the SVG, opens it in Affinity
+ *   POST /open?item=<id>   body { url } or { svg }
+ *                          a url is downloaded; svg is written as given, which
+ *                          is how a photograph reaches a vector editor — the
+ *                          browser wraps it, since only it can measure a
+ *                          picture without a decoder per format
  *   GET  /status?item=<id>               { file, hash } of the working copy
  *   GET  /file?item=<id>                 the working copy, as image/svg+xml
  *   GET  /                                { name, ok } — a health check
@@ -174,24 +178,43 @@ const readJsonBody = async (req, res) => {
   }
 };
 
+/** The SVG to write, downloaded from a url or handed over ready-made. */
+const svgFrom = async (parsed) => {
+  /*
+   * Given, not fetched.
+   *
+   * A photograph cannot be opened in a vector editor as it stands, so the
+   * browser wraps it in a one-element SVG that references it — see
+   * src/boards/io/rasterAsSvg.ts. The wrapping happens there because measuring
+   * a picture needs a decoder per format, and the browser already has them
+   * all. This end only has to agree to write what it is handed.
+   */
+  if (typeof parsed?.svg === "string") {
+    return parsed.svg;
+  }
+  const source = typeof parsed?.url === "string" ? parsed.url : "";
+  if (!HTTP_URL.test(source)) {
+    throw new Error("A http(s) url or an svg is required");
+  }
+  const fetched = await fetch(source);
+  if (!fetched.ok) {
+    throw new Error(`The image could not be downloaded (${fetched.status})`);
+  }
+  return fetched.text();
+};
+
 const open = async (req, res, item) => {
   const parsed = await readJsonBody(req, res);
   if (parsed === null) {
     return;
   }
-  const source = typeof parsed?.url === "string" ? parsed.url : "";
-  if (!HTTP_URL.test(source)) {
-    json(res, 400, { error: "A http(s) url is required" });
-    return;
-  }
   try {
-    const fetched = await fetch(source);
-    if (!fetched.ok) {
-      throw new Error(`The image could not be downloaded (${fetched.status})`);
-    }
-    const svg = await fetched.text();
+    const svg = await svgFrom(parsed);
+    // Checked whichever way it arrived: the editor is about to be pointed at
+    // this file, and an editor opening something that is not a drawing is a
+    // worse failure than a refusal here.
     if (!SVG_TAG.test(svg.slice(0, 512))) {
-      throw new Error("That URL does not look like an SVG");
+      throw new Error("That does not look like an SVG");
     }
     writeFileSync(fileFor(item), svg);
     await openInEditor(fileFor(item));

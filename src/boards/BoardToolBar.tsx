@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import type { BoardItem } from "../types";
 import { useFrameActions } from "./FrameOpenContext";
 import { PANEL_GAP } from "./geometry/panelPlacement";
+import {
+  FALLBACK_EDITOR,
+  useVectorEditorName,
+} from "./hooks/useVectorEditorName";
 import { downloadImage } from "./io/downloadImage";
 import { isVideoUrl } from "./io/isVideo";
 import { ToolPicker } from "./panels/ToolPicker";
@@ -56,6 +60,8 @@ interface BoardToolBarProps {
    * to — the editor's whole purpose is producing a version to keep.
    */
   onEditManually?: () => void;
+  /** Hands the picture to the desktop vector editor. See useAffinityBridge. */
+  onOpenInEditor?: (itemId: string) => void;
   /** Runs the tool. The words come from the picker when the tool needs them. */
   onRun: (
     tool: Tool,
@@ -64,12 +70,51 @@ interface BoardToolBarProps {
   ) => void;
 }
 
+/**
+ * Out to the desktop vector editor.
+ *
+ * Beside "Edit by hand" because it is the same choice one step further: the
+ * built-in editor for a crop, a real vector app for anything that needs
+ * drawing. It was only in the right-click menu, and only for results that
+ * were already vector art — which is almost nothing a board makes.
+ *
+ * Named after whatever the bridge opens, so it reads "Boxy SVG" rather than
+ * something generic; "Editor" only when the bridge is not running to ask.
+ * Answers "should I exist" itself, so the bar it sits in gains no branch.
+ */
+function EditorButton({
+  itemId,
+  onOpen,
+}: {
+  itemId: string;
+  onOpen?: (itemId: string) => void;
+}) {
+  const editor = useVectorEditorName();
+  if (!onOpen) {
+    return null;
+  }
+  // The fallback is a phrase, not a name — "Open in your editor" reads on a
+  // tooltip and "your editor" does not read on a button.
+  const label = editor === FALLBACK_EDITOR ? "Editor" : editor;
+  return (
+    <Button
+      onClick={() => onOpen(itemId)}
+      size="xs"
+      title={`Open in ${editor} and save there to bring it back`}
+      variant="ghost"
+    >
+      {label}
+    </Button>
+  );
+}
+
 export function BoardToolBar({
   anchor,
   chromeScale,
   isRunning,
   item,
   onEditManually,
+  onOpenInEditor,
   onRun,
 }: BoardToolBarProps) {
   const [picking, setPicking] = useState(false);
@@ -267,6 +312,7 @@ export function BoardToolBar({
             Edit by hand
           </Button>
         ) : null}
+        <EditorButton itemId={item.id} onOpen={onOpenInEditor} />
         <Button
           aria-expanded={picking || pending !== null}
           onClick={() => {

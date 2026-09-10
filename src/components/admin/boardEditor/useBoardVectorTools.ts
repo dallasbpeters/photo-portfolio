@@ -11,6 +11,7 @@ import { editorLabel } from "../../../boards/hooks/useVectorEditorName";
 import type { AffinityWriteback } from "../../../boards/io/affinity";
 import { bridgeAppName, isSvgUrl } from "../../../boards/io/affinity";
 import { newItemId } from "../../../boards/io/newItemId";
+import { rasterAsSvg } from "../../../boards/io/rasterAsSvg";
 import { outputImageOf } from "../../../boards/itemOutput";
 import type { BoardItem, BoardItemResult, BoardWire } from "../../../types";
 import { BLANK_ITEM, PORT_SPAWN_GAP } from "./placement";
@@ -127,12 +128,20 @@ export const useBoardVectorTools = (deps: BoardVectorDeps) => {
       toast.error("That node has no image to edit");
       return;
     }
-    if (!isSvgUrl(url)) {
-      toast.error(`Only SVG results can be opened in ${editor}`);
-      return;
-    }
     try {
-      await openInAffinity(itemId, url);
+      /*
+       * A photograph goes over wrapped, a drawing as it is.
+       *
+       * This used to refuse anything that was not already vector art, which
+       * hid the button on almost everything a board makes — the results are
+       * PNGs. Wrapping keeps the round trip exactly as it was, since the file
+       * is a real SVG either way, and in an SVG editor a placed bitmap is the
+       * first step of tracing it rather than a dead end.
+       */
+      await openInAffinity(
+        itemId,
+        isSvgUrl(url) ? { url } : { svg: await rasterAsSvg(url) }
+      );
       toast.success(`Open in ${editor} — save there and it comes back`);
     } catch (err) {
       toast.error(

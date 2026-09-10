@@ -1247,6 +1247,7 @@ export function BoardCanvas({
                 onEditManually={
                   onEditImage ? () => onEditImage(item) : undefined
                 }
+                onOpenInEditor={onOpenInAffinity}
                 onPatch={(patch) =>
                   onChange(
                     items.map((it, i) =>

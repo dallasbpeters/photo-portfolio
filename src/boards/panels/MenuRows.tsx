@@ -153,10 +153,11 @@ function SingleItemRows({
   // A single selected node that has produced something can hand over the whole
   // batch. More than one selected is a grouping gesture, not an export one.
   const madeCount = onlyPicked ? countResults(onlyPicked) : 0;
-  // A node's SVG is what the editor edits, and only an actual vector is worth
-  // offering that move for — a raster cannot be handed over as an SVG at all.
-  const pickedSvg = onlyPicked
-    ? isSvgUrl(outputImageOf(onlyPicked, items))
+  // Any picture can go to the editor, not only a vector one. A raster is
+  // wrapped on the way — see rasterAsSvg — so the round trip is unchanged and
+  // the button stops hiding on almost everything a board makes.
+  const pickedImage = onlyPicked
+    ? Boolean(outputImageOf(onlyPicked, items))
     : false;
 
   // A placed picture — photo or reference — is a raster waiting to be traced.
@@ -175,7 +176,7 @@ function SingleItemRows({
         <NodeRow count={madeCount} onExport={() => onExport(onlyPicked.id)} />
       ) : null}
 
-      {onlyPicked && pickedSvg && onOpenInAffinity ? (
+      {onlyPicked && pickedImage && onOpenInAffinity ? (
         <EditorRow onOpen={() => onOpenInAffinity(onlyPicked.id)} />
       ) : null}
 

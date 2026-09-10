@@ -86,13 +86,19 @@ export interface AffinityWriteback {
   result?: unknown;
 }
 
-/** Downloads the SVG and asks the editor to open it; returns the baseline hash. */
+/**
+ * Puts a drawing in front of the editor; returns the baseline hash.
+ *
+ * Either an address for the bridge to download, or the SVG itself — the
+ * second is how a photograph gets there, wrapped by rasterAsSvg, because only
+ * the browser can measure a picture without a decoder per format.
+ */
 export const affinityOpen = async (
   itemId: string,
-  url: string
+  source: { svg: string } | { url: string }
 ): Promise<string | null> => {
   const res = await bridgeFetch(`/open?item=${encodeURIComponent(itemId)}`, {
-    body: JSON.stringify({ url }),
+    body: JSON.stringify(source),
     headers: { "Content-Type": "application/json" },
     method: "POST",
   });

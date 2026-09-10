@@ -112,6 +112,7 @@ interface BoardItemViewProps {
   onEditBody: (body: string) => void;
   /** Opens the manual editor on this item, when there is a board to save to. */
   onEditManually?: () => void;
+  onOpenInEditor?: (itemId: string) => void;
   /** Writes any field of this item back — how the text panel saves. */
   onPatch: (patch: Partial<BoardItem>) => void;
   onRemoveVersion?: (index: number) => void;
@@ -587,8 +588,7 @@ function itemPointerDown({
       e.stopPropagation();
       return;
     }
-    // Cmd, not shift: shift pans the board now, and a shift-press that both
-    // added to the selection and started a pan would do neither well.
+    // Cmd, not shift: shift pans the board now, and one press cannot do both.
     onSelect(index, e.clientX, e.clientY, e.metaKey);
     // Already selected, so this is the second press: start typing.
     if (isWritable && isSelected) {
@@ -614,6 +614,7 @@ export function BoardItemView({
   isSelected,
   isSoleSelected = false,
   onEditManually,
+  onOpenInEditor,
   tools,
   onBeginEdit,
   item,
@@ -761,6 +762,7 @@ export function BoardItemView({
           isRunning={tools.isRunning(item.id)}
           item={item}
           onEditManually={onEditManually}
+          onOpenInEditor={onOpenInEditor}
           onRun={(tool, prompt, config) =>
             tools.run(item, tool, prompt, config)
           }
