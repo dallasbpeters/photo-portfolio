@@ -105,7 +105,6 @@ export const shrinkForFal = async (url: string): Promise<string> => {
       // biome-ignore lint/performance/noAwaitInLoops: each rung depends on the last not fitting
       const { bytes, type } = await encoded(original, step, Boolean(hasAlpha));
       if (bytes.byteLength <= FAL_MAX_BYTES) {
-        // biome-ignore lint/performance/noAwaitInLoops: only reached once, on the rung that fits
         const stored = await persistBytes(bytes, "boards/ai", type);
         SHRUNK_CACHE.set(url, stored);
         return stored;
