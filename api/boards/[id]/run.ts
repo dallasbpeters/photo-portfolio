@@ -5,6 +5,7 @@ import {
   isFalModel,
 } from "../../../config/falModels.js";
 import { hasCycle } from "../../../config/graph.js";
+import { wantsBlend } from "../../../config/nodes/generate.js";
 import { nodeTypeFor } from "../../../config/nodeTypes.js";
 import { getBearerUser } from "../../_lib/auth.js";
 import type { BoardItemRow, BoardWireRow } from "../../_lib/boards.js";
@@ -88,6 +89,28 @@ const loadWires = async (sql: Sql, boardId: string) =>
  * level of nesting, and so the order — cheapest and most certain first, the
  * expensive third-party call last — is visible at a glance.
  */
+/**
+ * Whether this run blends its pictures into one, which takes two yeses.
+ *
+ * The node has to ask. Blending used to be automatic, and automatic turned
+ * every batch into a single run — wiring a frame of twenty references in is
+ * how a batch is run here, so the default stays separate and a blend is
+ * chosen.
+ *
+ * And the endpoint has to be able to. Read from the *resolved* endpoint rather
+ * than the model named on the node: a LoRA and a mask both send the run
+ * somewhere that takes one picture whatever the row declares, and "auto" with
+ * a picture wired in lands on nano-banana's edit model, which takes a list.
+ * Only the endpoint knows.
+ */
+const blendsPictures = (args: {
+  config: Record<string, unknown>;
+  hasSourceImage: boolean;
+  masking: boolean;
+  models: readonly FalModelDef[];
+  requestedModel: string | null;
+}): boolean => wantsBlend(args.config) && falAcceptsImageList(args);
+
 const prepare = async (
   rows: BoardItemRow[],
   wireRows: BoardWireRow[],
@@ -200,15 +223,8 @@ const prepare = async (
     // appending only to the typed fallback would drop the style in exactly the
     // case elements exist for.
     jobsFor({
-      /*
-       * Whether this run's endpoint blends a list of pictures.
-       *
-       * Read from the resolved endpoint, not from the model on the node: a
-       * LoRA and a mask both send the run to somewhere that takes one picture
-       * whatever the row declares, and "auto" with a picture wired in lands on
-       * nano-banana's edit model, which takes a list. Only the endpoint knows.
-       */
-      blends: falAcceptsImageList({
+      blends: blendsPictures({
+        config: item.config,
         hasSourceImage: subjects.length > 0,
         masking: masked,
         models,

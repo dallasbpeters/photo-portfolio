@@ -1,3 +1,4 @@
+import { wantsBlend } from "../../../config/nodes/generate.js";
 /**
  * A note for the one model shape that silently ignores what is wired to it.
  *
@@ -123,7 +124,18 @@ export const multiImageNote = (
      */
     return `A trained style takes one picture at a time, so this is ${imageCount} separate runs. To combine them, blend on an Auto node first and wire that result in here.`;
   }
-  return id === "auto" || model.imageParam === "image_urls"
+  if (!(id === "auto" || model.imageParam === "image_urls")) {
+    return `This model takes one picture at a time, so this is ${imageCount} separate runs — one per picture. To blend them, pick Auto, or wire them through a Composite node first.`;
+  }
+  /*
+   * The model could blend; whether it does is the node's to say.
+   *
+   * Said either way, because both are reasonable and neither is visible until
+   * it has been paid for — and because blending used to happen on its own,
+   * which turned a batch of twenty into one picture with nothing on the node
+   * to explain it.
+   */
+  return wantsBlend(config)
     ? `All ${imageCount} pictures go into one run and are blended together.`
-    : `This model takes one picture at a time, so this is ${imageCount} separate runs — one per picture. To blend them, pick Auto, or wire them through a Composite node first.`;
+    : `${imageCount} separate runs, one per picture. Set "Several pictures" to blend them into one instead.`;
 };

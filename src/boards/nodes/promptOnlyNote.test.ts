@@ -115,18 +115,33 @@ describe("multiImageNote", () => {
     expect(multiImageNote(models, { model: "auto" }, 0)).toBeNull();
   });
 
-  it("promises a blend on auto, which resolves to the edit model", () => {
+  it("says a batch is a batch when nothing asked for a blend", () => {
+    // The default, and what every board built before the setting existed
+    // carries. Saying "blended together" here is the wrong half of the bug
+    // that made twenty runs into one.
+    const note = multiImageNote(models, { model: "auto" }, 3);
+    expect(note).toContain("3 separate runs");
+    expect(note).not.toContain("blended together");
+  });
+
+  it("promises a blend on auto once it is chosen", () => {
     // The row itself declares one image_url; only the endpoint it resolves to
     // takes a list, which is why auto is special-cased.
-    expect(multiImageNote(models, {}, 3)).toContain("blended together");
-    expect(multiImageNote(models, { model: "auto" }, 2)).toContain(
+    expect(multiImageNote(models, { multiImage: "blend" }, 3)).toContain(
       "blended together"
     );
+    expect(
+      multiImageNote(models, { model: "auto", multiImage: "blend" }, 2)
+    ).toContain("blended together");
   });
 
   it("promises a blend on a model that takes a list outright", () => {
     expect(
-      multiImageNote(models, { model: "fal-ai/nano-banana/edit" }, 2)
+      multiImageNote(
+        models,
+        { model: "fal-ai/nano-banana/edit", multiImage: "blend" },
+        2
+      )
     ).toContain("blended together");
   });
 

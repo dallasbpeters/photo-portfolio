@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { FalModelDef } from "../../config/falModels.js";
+import {
+  MULTI_IMAGE_BLEND,
+  MULTI_IMAGE_SEPARATE,
+  wantsBlend,
+} from "../../config/nodes/generate.js";
 import { type JobShape, jobsFor } from "./elementStyle.js";
 import { bodyFor } from "./falBody.js";
 import { falAcceptsImageList } from "./falEndpoint.js";
@@ -36,6 +41,27 @@ const shape = (fields: Partial<JobShape> = {}): JobShape => ({
 const two = ["https://ours/a.jpg", "https://ours/b.jpg"];
 
 describe("two pictures into one node", () => {
+  it("runs each picture separately unless a blend was asked for", () => {
+    /*
+     * The regression this file exists for.
+     *
+     * Wiring a frame of references into a Generate node is how a batch is run
+     * here — one run per picture, filling the variation strip. Blending was
+     * added automatically, so every one of those batches silently became a
+     * single run: a board that made twenty pictures made one, and nothing on
+     * the node said why. `blends` now takes the node's word as well as the
+     * endpoint's, and this is the case that had no test at all.
+     */
+    const jobs = jobsFor(shape({ values: { image: two } }));
+    expect(jobs).toHaveLength(2);
+    expect(jobs.map((job) => job.image)).toEqual(two);
+  });
+
+  it("runs each of twenty separately, which is what a frame wires in", () => {
+    const many = Array.from({ length: 20 }, (_, i) => `https://ours/${i}.jpg`);
+    expect(jobsFor(shape({ values: { image: many } }))).toHaveLength(20);
+  });
+
   it("makes one run of both where the endpoint blends", () => {
     const jobs = jobsFor(shape({ blends: true, values: { image: two } }));
     expect(jobs).toHaveLength(1);
@@ -192,5 +218,25 @@ describe("which endpoints blend", () => {
     expect(
       accepts({ masking: true, requestedModel: "fal-ai/nano-banana/edit" })
     ).toBe(false);
+  });
+});
+
+describe("what the node asked for", () => {
+  it("only blends when it was chosen", () => {
+    expect(wantsBlend({ multiImage: MULTI_IMAGE_BLEND })).toBe(true);
+    expect(wantsBlend({ multiImage: MULTI_IMAGE_SEPARATE })).toBe(false);
+  });
+
+  it("treats a node that predates the setting as separate", () => {
+    // Every board built before this existed carries no such key, and every one
+    // of them was built expecting a batch. Defaulting the other way is the
+    // bug this whole change is undoing.
+    expect(wantsBlend({})).toBe(false);
+    expect(wantsBlend({ multiImage: undefined })).toBe(false);
+  });
+
+  it("ignores a value it does not recognise", () => {
+    expect(wantsBlend({ multiImage: "yes" })).toBe(false);
+    expect(wantsBlend({ multiImage: true })).toBe(false);
   });
 });
