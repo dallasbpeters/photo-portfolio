@@ -14,6 +14,7 @@ import {
 } from "../../../_lib/fal.js";
 import { generateIcon, isMagnificConfigured } from "../../../_lib/magnific.js";
 import { persistBytes } from "../../../_lib/persistGenerated.js";
+import { shrinkForFal } from "../../../_lib/shrinkForFal.js";
 import { getSite } from "../../../_lib/site.js";
 import { browserRendered } from "./browserRendered.js";
 import type { RunnableItem } from "./inputs.js";
@@ -318,14 +319,24 @@ export const produce = async (
   // An image model reads pixels, and a wired SVG is not pixels — rasterize it
   // first. Raster sources pass through untouched, and Analyse above never gets
   // here (its vision model reads SVG fine, so it needs no conversion).
-  const sourceImageUrl =
+  const rasterized =
     args.sourceImageUrl && SVG_URL.test(args.sourceImageUrl)
       ? await rasterizeSvgUrl(args.sourceImageUrl)
       : args.sourceImageUrl;
+  /*
+   * Then small enough for fal to fetch at all.
+   *
+   * After the rasterise, not before: a vector has no size worth measuring and
+   * the PNG it becomes is the thing with a limit. Both the subject and the
+   * pictures it is blended with go through, because fal fetches every one of
+   * them and refuses on the first that is too big. See shrinkForFal.
+   */
+  const sourceImageUrl = rasterized ? await shrinkForFal(rasterized) : null;
+  const blendWith = await Promise.all(args.blendImageUrls.map(shrinkForFal));
 
   const params = {
     ...generationParams(args.item.config),
-    blendWith: args.blendImageUrls,
+    blendWith,
     palette: args.palette ?? [],
   };
   const loops = loopsOf(args.item.config);
