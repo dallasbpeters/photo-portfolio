@@ -36,11 +36,18 @@ export const PLACEMENT_SIZES: readonly { label: string; px: number }[] = [
 ];
 
 export type TileKind =
+  | "appicon"
+  | "card"
   | "clearspace"
   | "contrast"
+  | "dotmatrix"
+  | "emboss"
   | "greyscale"
   | "ground"
+  | "lockup"
+  | "negative"
   | "outline"
+  | "pattern"
   | "scale"
   | "squint";
 
@@ -51,10 +58,14 @@ export interface ProofTile {
   blur?: number;
   /** What this tile is asking, in the words a finding would use. */
   caption: string;
+  /** The mark's own colour, where a tile draws it rather than the artwork. */
+  ink?: string;
   kind: TileKind;
   label: string;
   /** The placement sizes this tile renders, for the scale ramp. */
   sizes?: readonly { label: string; px: number }[];
+  /** Words to set beside the mark, for a lockup. */
+  words?: string;
 }
 
 /** Black and white, which every mark has to survive before anything else. */
@@ -83,7 +94,11 @@ const SQUINT_BLUR = 6;
  * sheet that refuses to render until every field is filled would be useless
  * exactly then.
  */
-export const proofTilesFor = (doc: BrandKitDoc): ProofTile[] => {
+export const proofTilesFor = (
+  doc: BrandKitDoc,
+  /** The brand's name, for the tiles that set the mark beside words. */
+  name = ""
+): ProofTile[] => {
   const tiles: ProofTile[] = [
     {
       caption:
@@ -118,6 +133,77 @@ export const proofTilesFor = (doc: BrandKitDoc): ProofTile[] => {
       label: "Outline",
     },
   ];
+
+  /*
+   * The rest of the sheet: real placements rather than more grounds.
+   *
+   * Each still makes a claim that can fail. An app icon crops to a rounded
+   * square and a mark drawn to the edges loses its corners. A pattern repeats
+   * it, which is where an accidental shape between the marks appears. A dot
+   * matrix is the cheapest stand-in for every low-resolution surface a mark
+   * meets — embroidery, a receipt printer, an LED board — and is the test a
+   * fine detail fails first.
+   */
+  const accent = doc.palette[0]?.value ?? "#101a2b";
+  tiles.push(
+    {
+      background: accent,
+      caption:
+        "Cropped to a rounded square, on the brand's own colour. A mark drawn to its edges loses its corners here.",
+      ink: "#ffffff",
+      kind: "appicon",
+      label: "App icon",
+    },
+    {
+      caption:
+        "Knocked out of a solid. What is left is the counter-shape, which is the half nobody draws and everybody sees.",
+      ink: accent,
+      kind: "negative",
+      label: "Negative",
+    },
+    {
+      caption:
+        "Repeated. The shape that appears *between* the marks belongs to the brand too, whether or not it was designed.",
+      kind: "pattern",
+      label: "Pattern",
+    },
+    {
+      caption:
+        "Rendered as coarse dots — embroidery, a receipt printer, an LED board. The first place a fine detail disappears.",
+      kind: "dotmatrix",
+      label: "Low resolution",
+    },
+    {
+      caption:
+        "Single colour, in relief. Debossed, foiled, or cut — every process that has no ink, only depth.",
+      kind: "emboss",
+      label: "Relief",
+    },
+    {
+      caption:
+        "On a card, at the size it is really printed. The smallest place the mark appears with words beside it.",
+      kind: "card",
+      label: "Business card",
+      words: name,
+    }
+  );
+
+  /*
+   * The mark beside its name, in the brand's own typeface.
+   *
+   * Only when the kit names one. A lockup set in a fallback font is a lockup
+   * of somebody else's brand, and showing it would be worse than showing
+   * nothing — it is the tile most likely to be screenshotted and sent on.
+   */
+  const typeface = doc.typefaces[0]?.name;
+  if (typeface) {
+    tiles.push({
+      caption: `The mark beside the name, set in ${typeface}.`,
+      kind: "lockup",
+      label: "Lockup",
+      words: name,
+    });
+  }
 
   for (const background of MONO_GROUNDS) {
     tiles.push({
