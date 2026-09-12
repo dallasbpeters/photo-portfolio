@@ -1,19 +1,8 @@
 import { type HandleUploadBody, handleUpload } from "@vercel/blob/client";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { UPLOAD_TYPES } from "../config/uploads.js";
 import { getBearerUser } from "./_lib/auth.js";
 import { handleCors } from "./_lib/cors.js";
-
-const ALLOWED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "image/avif",
-  // SVG, so a vector dropped onto a board can be kept as a vector rather than
-  // always being rasterised. Nothing downstream minds: the run endpoint
-  // rasterises an SVG the moment a model needs pixels.
-  "image/svg+xml",
-];
 
 /**
  * Signs client-side uploads to Vercel Blob.
@@ -64,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Namespaced per user, and suffixed so re-uploading the same filename
           // never overwrites an existing photo.
           addRandomSuffix: true,
-          allowedContentTypes: ALLOWED_TYPES,
+          allowedContentTypes: [...UPLOAD_TYPES],
           tokenPayload: JSON.stringify({ pathname, userId: user.userId }),
         });
       },

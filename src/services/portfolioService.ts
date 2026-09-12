@@ -1,5 +1,6 @@
 import type { IconStyle } from "../../config/iconStyles";
 import type { ResolvedSiteSettings } from "../../config/siteSettings";
+import { isUploadType, UPLOAD_REFUSAL } from "../../config/uploads.js";
 import type { AffinityWriteback } from "../boards/io/affinity";
 import type {
   AiModel,
@@ -594,18 +595,8 @@ export const portfolioService = {
      */
     prefix = "portfolio"
   ): Promise<{ url: string }> => {
-    const allowed = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-      "image/avif",
-      // SVG, so a vector dropped onto a board can be kept as a vector — the
-      // same allowance the server's upload handler now makes.
-      "image/svg+xml",
-    ] as const;
-    if (!(file.type && (allowed as readonly string[]).includes(file.type))) {
-      throw new Error("Choose a JPEG, PNG, WebP, AVIF, GIF or SVG image");
+    if (!(file.type && isUploadType(file.type))) {
+      throw new Error(UPLOAD_REFUSAL);
     }
 
     const token = getAuthToken();

@@ -1,3 +1,5 @@
+import { isPsdFile } from "../io/psdPreview";
+
 /**
  * An SVG dropped on the board, rasterised so it can be stored and generated from.
  *
@@ -93,13 +95,14 @@ export const isSvgFile = (file: File): boolean =>
 /**
  * Worth treating as an image when dropped or pasted.
  *
- * An SVG counts, since it is rasterised on the way in. The extension is
+ * An SVG counts, since it is rasterised on the way in, and so does a PSD,
+ * which is flattened the same way. The extension is
  * consulted only when the drop carried no type at all — some file managers and
  * some remote sources give none, and an .svg discarded silently at the filter
  * looks exactly like a board that ignores drops.
  */
 export const isImageDrop = (file: File): boolean =>
-  file.type.startsWith("image/") || isSvgFile(file);
+  file.type.startsWith("image/") || isSvgFile(file) || isPsdFile(file);
 
 /**
  * Rasterises an SVG file to a bitmap one, keeping its aspect and its name.
