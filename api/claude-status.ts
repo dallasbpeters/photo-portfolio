@@ -3,6 +3,7 @@ import { getBearerUser } from "./_lib/auth.js";
 import { claudeToken, federationConfig } from "./_lib/claudeAuth.js";
 import { tokenFromHeaders } from "./_lib/claudeTokenState.js";
 import { handleCors } from "./_lib/cors.js";
+import { withRequestIdentity } from "./_lib/requestIdentity.js";
 
 /**
  * Whether this deployment can reach Claude without a key.
@@ -41,7 +42,7 @@ const claimsOf = (jwt: string): Record<string, unknown> | null => {
   }
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+const report = async (req: VercelRequest, res: VercelResponse) => {
   if (handleCors(req, res)) {
     return;
   }
@@ -109,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const token = await claudeToken(req.headers);
+    const token = await claudeToken();
     return res.status(200).json({
       configured: true,
       configuredAs,
@@ -127,4 +128,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       reason: e instanceof Error ? e.message : String(e),
     });
   }
+};
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  // Wrapped like every other handler that may reach Claude — see
+  // withRequestIdentity for why the token is scoped rather than threaded.
+  return withRequestIdentity(req.headers, () => report(req, res));
 }

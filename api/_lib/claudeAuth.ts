@@ -20,7 +20,8 @@
  * nothing to paste or rotate.
  */
 
-import { freshness, tokenFromHeaders } from "./claudeTokenState.js";
+import { freshness } from "./claudeTokenState.js";
+import { currentIdentityToken } from "./requestIdentity.js";
 
 const TOKEN_URL = "https://api.anthropic.com/v1/oauth/token";
 
@@ -128,9 +129,7 @@ const exchange = async (
  * Returns null only when nothing is configured, so a caller can say "Claude is
  * not set up here" — the same shape `isFalConfigured` gives.
  */
-export const claudeToken = async (
-  headers: Record<string, string | string[] | undefined>
-): Promise<string | null> => {
+export const claudeToken = async (): Promise<string | null> => {
   const federation = federationConfig();
   if (!federation) {
     return null;
@@ -139,13 +138,10 @@ export const claudeToken = async (
   if (minted && freshness(minted.expiresAt, now) === "fresh") {
     return minted.token;
   }
-  const assertion = tokenFromHeaders(
-    headers,
-    process.env.VERCEL_OIDC_TOKEN ?? ""
-  );
+  const assertion = currentIdentityToken();
   if (!assertion) {
     throw new Error(
-      "No Vercel identity token on this request. Is OIDC Federation enabled for this project?"
+      "No Vercel identity token in scope. Is the handler wrapped in withRequestIdentity, and OIDC Federation enabled for this project?"
     );
   }
   try {

@@ -10,6 +10,7 @@ import { generateImage, isFalConfigured } from "../_lib/fal.js";
 import { parsePublicHttpUrl, sanitizeText } from "../_lib/httpUrl.js";
 import { loadModelDefs } from "../_lib/modelStore.js";
 import { parseJsonBody } from "../_lib/parseBody.js";
+import { withRequestIdentity } from "../_lib/requestIdentity.js";
 
 /** Long enough for a considered prompt, short enough to bound the request. */
 const MAX_PROMPT = 1200;
@@ -69,7 +70,7 @@ function maskRefusal(
  * Admin-only, and deliberately so: every call spends money on the project's fal
  * account, so this must never be reachable by an anonymous visitor.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+const serve = async (req: VercelRequest, res: VercelResponse) => {
   if (handleCors(req, res)) {
     return;
   }
@@ -166,4 +167,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // fix is simply to try again.
     return res.status(502).json({ error: message });
   }
+};
+
+/*
+ * Wrapped so Claude can be reached without a key.
+ *
+ * Reaches describeImage through the same path a board run does.
+ * The identity Vercel signs arrives as a request header, so the scope has to
+ * be opened here — at the door — rather than passed down through every layer
+ * that does not use it. See withRequestIdentity.
+ */
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestIdentity(req.headers, () => serve(req, res));
 }

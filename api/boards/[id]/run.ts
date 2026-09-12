@@ -22,6 +22,7 @@ import {
 import { falAcceptsImageList } from "../../_lib/falEndpoint.js";
 import { loadModelDefs } from "../../_lib/modelStore.js";
 import { parseJsonBody } from "../../_lib/parseBody.js";
+import { withRequestIdentity } from "../../_lib/requestIdentity.js";
 import { produce, unconfiguredProvider } from "./run/capabilities.js";
 import { fingerprintFor } from "./run/fingerprint.js";
 import {
@@ -327,7 +328,7 @@ const readRequest = (
   return { boardId, force: body.force === true, itemId, variation };
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+const serve = async (req: VercelRequest, res: VercelResponse) => {
   if (handleCors(req, res)) {
     return;
   }
@@ -481,4 +482,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: e instanceof Error ? e.message : "Could not run this node",
     });
   }
+};
+
+/*
+ * Wrapped so Claude can be reached without a key.
+ *
+ * A run writes element briefs before it generates, and a brief is a vision call — see describeImage.
+ * The identity Vercel signs arrives as a request header, so the scope has to
+ * be opened here — at the door — rather than passed down through every layer
+ * that does not use it. See withRequestIdentity.
+ */
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestIdentity(req.headers, () => serve(req, res));
 }

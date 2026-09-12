@@ -8,6 +8,11 @@ import {
   applyFalParams,
   type GenerationParams,
 } from "../../config/nodes/falParams.js";
+import {
+  describeWithClaude,
+  isClaudeVisionConfigured,
+} from "./claudeVision.js";
+import { describePrompt, describeSystemPrompt } from "./describePrompt.js";
 import { applyEndpointQuirks, bodyFor } from "./falBody.js";
 import { endpointFor } from "./falEndpoint.js";
 import { loadModelDefs } from "./modelStore.js";
@@ -217,13 +222,6 @@ export const generateImage = async (
 /** Vision model used to read a picture back as words. Cheap and fast. */
 const VISION_MODEL = "google/gemini-flash-1.5";
 
-const FOCUS_BRIEF: Record<string, string> = {
-  both: "Describe both the subject and the visual style.",
-  style:
-    "Describe only the visual style. Never mention the specific subject, any people, or any text in the image.",
-  subject: "Describe the subject and composition, briefly noting the style.",
-};
-
 /**
  * Reads a picture back as a prompt.
  *
@@ -239,6 +237,23 @@ export const describeImage = async (
   /** What to look for, wired in or typed. Empty means the default reading. */
   instruction: string
 ): Promise<string> => {
+  const system = describeSystemPrompt(focus);
+  const prompt = describePrompt(imageUrls, instruction);
+
+  /*
+   * Claude first, fal only if federation is not set up here.
+   *
+   * fal-ai/any-llm/vision is marked "no longer supported", so the fal path is
+   * a fallback rather than a peer: it exists for a deployment that has no
+   * workload identity configured, and it will stop working on fal's schedule
+   * rather than ours. A failure from Claude is *not* caught and retried
+   * against it — a provider that is answering badly should surface, not be
+   * quietly papered over by one that is deprecated.
+   */
+  if (await isClaudeVisionConfigured()) {
+    return await describeWithClaude(imageUrls, system, prompt);
+  }
+
   const key = falKey();
   if (!key) {
     throw new Error("Image analysis is not configured");
@@ -248,18 +263,8 @@ export const describeImage = async (
     body: JSON.stringify({
       image_urls: imageUrls,
       model: VISION_MODEL,
-      prompt: [
-        imageUrls.length > 1
-          ? "These images share a visual style. Describe what they have in common, as one reusable image-generation prompt. Ignore anything true of only one of them."
-          : "Describe this image as a reusable image-generation prompt.",
-        // Appended rather than replacing the brief: the instruction says what
-        // to pay attention to, while the sentence above is what makes the
-        // answer a prompt rather than a paragraph about a picture.
-        instruction ? `Pay particular attention to: ${instruction}` : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-      system_prompt: `You describe images so their look can be reproduced by an image generator. Reply with a single paragraph of comma-separated descriptive phrases and nothing else — no preamble, no list, no quotation marks. Cover medium, palette, lighting, composition, texture, mood and rendering technique. ${FOCUS_BRIEF[focus] ?? FOCUS_BRIEF.style}`,
+      prompt,
+      system_prompt: system,
     }),
     headers: {
       Authorization: `Key ${key}`,
