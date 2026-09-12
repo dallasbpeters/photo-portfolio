@@ -6,6 +6,7 @@ import {
   outputTextOf,
 } from "../itemOutput";
 import { itemsFromWire } from "../listItems";
+import { runPlanFor } from "./runPlan";
 
 /**
  * What a node is about to send, shown before it is run.
@@ -198,9 +199,27 @@ export interface WiredPreview {
   imageUrl: string | null;
   outputText: string | null;
   previewImages?: string[];
+  /**
+   * Generations one press of Run will buy, for the node that buys them.
+   *
+   * Undefined for every other kind, which is how the node knows not to show a
+   * number: a Composite renders in the browser and costs nothing, and a line
+   * saying "9 runs" over it would be a lie about money.
+   */
+  runs?: number;
   wiredItems?: string[];
   wiredPrompt: string | null;
 }
+
+/**
+ * What this node will spend, for the one node that spends.
+ *
+ * Guarded inside like the resolvers above, and narrowed to Generate on
+ * purpose: it is the node with the multiplying inputs, and the only one where
+ * the number is ever a surprise.
+ */
+const runCountFor = (item: BoardItem, graph: Graph): number | undefined =>
+  item.nodeType === "generate" ? runPlanFor(item, graph).runs : undefined;
 
 export const resolveWired = (graph: Graph): Map<string, WiredPreview> =>
   new Map(
@@ -211,6 +230,7 @@ export const resolveWired = (graph: Graph): Map<string, WiredPreview> =>
         imageUrl: wiredImageFor(item.id, graph),
         outputText: previewTextFor(item, graph),
         previewImages: previewImagesFor(item, graph),
+        runs: runCountFor(item, graph),
         wiredItems: wiredItemsFor(item, graph),
         wiredPrompt: wiredTextFor(item.id, graph),
       },

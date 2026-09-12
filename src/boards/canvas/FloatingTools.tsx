@@ -78,8 +78,10 @@ export function FloatingTools({
           gets its model and parameters. */}
       <div className="floating-tools-side">
         <NodeSettingsPanel
+          items={items}
           onConfigChange={onConfigChange}
           selected={selected}
+          wires={wires}
         />
         <ShaderPanel
           imageUrl={

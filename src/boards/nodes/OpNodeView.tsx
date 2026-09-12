@@ -38,6 +38,7 @@ interface OpNodeViewProps {
   /** What this node computes from its inputs — a Combine node’s joined text. */
   outputText?: string | null;
   readOnly: boolean;
+  runs?: number;
   /** The rows a List node's Fill input is offering, already flattened. */
   wiredItems?: readonly string[];
   /**
@@ -102,6 +103,7 @@ function PublishedResult({
 export function OpNodeView({
   hasWiredPrompt,
   imageCount,
+  runs,
   imageUrl,
   item,
   onCancel,
@@ -174,6 +176,7 @@ export function OpNodeView({
           onRemoveVersion={onRemoveVersion}
           onSendVersions={onSendVersions}
           readOnly={readOnly}
+          runs={runs}
           state={state}
           type={type}
           wiredItems={wiredItems}
@@ -260,6 +263,7 @@ interface NodeBodyProps {
   onRemoveVersion?: (index: number) => void;
   onSendVersions?: () => void;
   readOnly: boolean;
+  runs?: number;
   state: string;
   type: NonNullable<ReturnType<typeof nodeTypeFor>>;
   wiredItems?: readonly string[];
@@ -281,6 +285,7 @@ function NodeBody({
   hasWiredPrompt,
   wiredPrompt,
   imageCount,
+  runs,
   imageUrl,
   images,
   item,
@@ -436,7 +441,7 @@ function NodeBody({
           being run: the added trigger token, a model that ignores what is
           wired to it, and whether several pictures blend or fan out. See
           NodeNotes. */}
-      <NodeNotes config={config} imageCount={imageCount ?? 0} />
+      <NodeNotes config={config} imageCount={imageCount ?? 0} runs={runs} />
 
       {/* A run that reported success but drew nothing would otherwise look
               identical to one that never ran. Saying so is what keeps a broken

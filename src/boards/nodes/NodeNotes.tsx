@@ -22,16 +22,32 @@ import {
 export function NodeNotes({
   config,
   imageCount,
+  runs,
 }: {
   config: Record<string, unknown>;
   imageCount: number;
+  /** Generations one press of Run buys. Undefined on a node that buys none. */
+  runs?: number;
 }) {
   const { models } = useModels();
   const trigger = loraTriggerNote(models, config);
   const shape = promptOnlyNote(models, config, imageCount);
   const blend = multiImageNote(models, config, imageCount);
+  /*
+   * Only when it is more than one.
+   *
+   * A default node would carry "1 run" forever, which is noise on every board.
+   * The point is the number nobody meant — a List of two prompts against a
+   * frame of nine is eighteen, and until now nothing said so anywhere.
+   */
+  const showRuns = (runs ?? 0) > 1;
   return (
     <>
+      {showRuns ? (
+        <p className="op-node-view__notice op-node-view__notice--warn">
+          {runs} generations per run.
+        </p>
+      ) : null}
       {trigger ? (
         <p className="op-node-view__notice op-node-view__notice--wired">
           {trigger}

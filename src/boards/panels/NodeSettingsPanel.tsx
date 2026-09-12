@@ -2,7 +2,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { SlidersHorizontalIcon } from "@hugeicons-pro/core-stroke-standard";
 import { nodeTypeFor, type SettingDef } from "../../../config/nodeTypes.js";
 import { providerFor } from "../../../config/providers.js";
-import type { AiModel, BoardItem } from "../../types";
+import type { AiModel, BoardItem, BoardWire } from "../../types";
+import { type RunPlan, runPlanFor } from "../canvas/runPlan";
 import { useModels } from "../ModelsContext";
 import { ProviderLogo } from "../nodes/ProviderLogo";
 import { SettingField } from "../nodes/SettingField";
@@ -29,25 +30,12 @@ import "./NodeSettingsPanel.css";
  */
 
 export interface NodeSettingsPanelProps {
+  /** The board, so the cost can count what is wired and not only what is typed. */
+  items: BoardItem[];
   onConfigChange: (itemId: string, config: Record<string, unknown>) => void;
   selected: BoardItem | null;
+  wires: BoardWire[];
 }
-
-/**
- * What a run of this node will cost, in generations.
- *
- * Iterations multiply loops: three iterations over two loops is six billed
- * calls, and neither number says so on its own. Worth stating because both
- * fields are one keystroke from a number nobody meant — and unlike most
- * mistakes on a board, this one is charged for.
- */
-const runCost = (config: Record<string, unknown>): number => {
-  const count = Number(config.count ?? 1);
-  const loops = Number(config.loops ?? 1);
-  const safe = (value: number) =>
-    Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1;
-  return safe(count) * safe(loops);
-};
 
 /** The chosen model's row, or null for "auto" and for a list still loading. */
 const modelOf = (
@@ -60,9 +48,35 @@ const modelOf = (
     : null;
 };
 
+/**
+ * Where a surprising number came from.
+ *
+ * "18 generations" on its own invites the wrong fix — turning Iterations down
+ * when the nine wired pictures are the cause. Only the parts above one are
+ * named, so the common case stays one short phrase.
+ */
+const costBreakdown = (plan: RunPlan): string => {
+  const parts: string[] = [];
+  if (plan.prompts > 1) {
+    parts.push(`${plan.prompts} prompts`);
+  }
+  if (plan.images > 1) {
+    parts.push(`${plan.images} pictures`);
+  }
+  if (plan.variations > 1) {
+    parts.push(`${plan.variations} iterations`);
+  }
+  if (plan.loops > 1) {
+    parts.push(`${plan.loops} loops`);
+  }
+  return parts.length > 0 ? `${parts.join(" x ")}.` : "";
+};
+
 export function NodeSettingsPanel({
+  items,
   onConfigChange,
   selected,
+  wires,
 }: NodeSettingsPanelProps) {
   const { models } = useModels();
   const type = selected?.kind === "op" ? nodeTypeFor(selected.nodeType) : null;
@@ -83,7 +97,21 @@ export function NodeSettingsPanel({
   const provider = providerFor(
     typeof config.model === "string" ? config.model : null
   );
-  const cost = runCost(config);
+  /*
+   * What pressing Run will actually spend.
+   *
+   * Counted from the graph, not from the two fields. The number here used to
+   * be Iterations times Loops, which is the small half: a List of two prompts
+   * and a frame of nine pictures is eighteen generations, and it said one.
+   * See runPlanFor, which restates jobsFor's arithmetic.
+   */
+  // A text-to-image model is handed no pictures at all, so a frame wired into
+  // one multiplies nothing — see promptOnlyNote, which says so on the node.
+  const plan = runPlanFor(
+    selected,
+    { items, wires },
+    modelOf(models, config)?.input === "prompt"
+  );
 
   const set = (key: string, value: string) =>
     onConfigChange(selected.id, { ...config, [key]: value });
@@ -137,10 +165,12 @@ export function NodeSettingsPanel({
           noise, and the point is to catch the pair of numbers that quietly
           became twelve.
         */}
-        {cost > 1 ? (
+        {plan.runs > 1 ? (
           <p className="panel-hint">
-            <span className="panel-warning">{cost} generations per run</span>
-            Iterations multiply loops. Each one is billed.
+            <span className="panel-warning">
+              {plan.runs} generations per run
+            </span>
+            {costBreakdown(plan)} Each one is billed.
           </p>
         ) : null}
       </div>

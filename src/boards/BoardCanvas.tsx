@@ -1274,6 +1274,7 @@ export function BoardCanvas({
                 }
                 previewImages={preview.previewImages}
                 readOnly={readOnly}
+                runs={preview.runs}
                 scale={view.viewport.scale}
                 tools={readOnly ? undefined : tools}
                 wiredItems={preview.wiredItems}

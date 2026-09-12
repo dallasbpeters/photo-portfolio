@@ -1,6 +1,6 @@
 {
-  "src/boards/BoardCanvas.tsx": 1368,
-  "src/boards/BoardItemView.tsx": 798,
+  "src/boards/BoardCanvas.tsx": 1364,
+  "src/boards/BoardItemView.tsx": 579,
   "src/components/Admin.tsx": 679,
   "src/components/StandarShader.tsx": 600,
   "src/components/admin/BoardInsertPanel.tsx": 1203,
