@@ -15,6 +15,7 @@ import {
   resolveKitDoc,
   sanitizeKitDoc,
 } from "../../../config/brandKit.js";
+import { useProofBoard } from "../../boards/brand/useProofBoard";
 import { useBrandKits } from "../../hooks/useBrandKits";
 import { type BrandKit, brandKitsApi } from "../../services/brandKitService";
 import { Button } from "../ui/button";
@@ -70,6 +71,7 @@ function KitEditor({
   parentDoc: BrandKitDoc | null;
 }) {
   const { confirm } = useConfirm();
+  const { proofHandlerFor } = useProofBoard();
   const [doc, setDoc] = useState<BrandKitDoc>(kit.doc);
   const [name, setName] = useState(kit.name);
   const [isSaving, setIsSaving] = useState(false);
@@ -198,7 +200,11 @@ function KitEditor({
 
         <section className="stack stack--tight">
           <h3 className="admin-caps">Logos</h3>
-          <LogoEditor doc={doc} onChange={setDoc} />
+          <LogoEditor
+            doc={doc}
+            onChange={setDoc}
+            onProof={proofHandlerFor(kit)}
+          />
         </section>
 
         <section className="stack stack--tight">

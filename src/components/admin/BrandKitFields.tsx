@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { BrandKitDoc } from "../../../config/brandKit.js";
 import {
   isHexColour,
+  type LogoEntry,
   MAX_LOGOS,
   MAX_PALETTE,
   MAX_TYPEFACES,
@@ -193,9 +194,12 @@ export function CssImport({
 export function LogoEditor({
   doc,
   onChange,
+  onProof,
 }: {
   doc: BrandKitDoc;
   onChange: (next: BrandKitDoc) => void;
+  /** Draws a proof sheet for one mark. Absent on a kit with no version yet. */
+  onProof?: (logo: LogoEntry) => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -249,6 +253,22 @@ export function LogoEditor({
                 placeholder="Primary mark"
                 value={logo.label}
               />
+              {/* Puts the mark through the sizes, grounds and surfaces it is
+                  really met at, and marks where the minWidth typed two fields
+                  away actually falls. Only once the kit exists: a sheet is
+                  named after the version it was made against. */}
+              {onProof ? (
+                <Button
+                  aria-label={`Proof ${logo.label || "logo"}`}
+                  onClick={() => onProof(logo)}
+                  size="xs"
+                  title="Draw a proof sheet on a new board"
+                  type="button"
+                  variant="ghost"
+                >
+                  Proof
+                </Button>
+              ) : null}
               <Button
                 aria-label={`Remove ${logo.label || "logo"}`}
                 onClick={() =>
