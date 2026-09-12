@@ -117,7 +117,6 @@ export const useBoardUploads = (deps: BoardUploadDeps) => {
       try {
         // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — see above
         const preview = await psdToPng(file);
-        // biome-ignore lint/performance/noAwaitInLoops: the pair belongs to one file
         const [shown, source] = await Promise.all([
           portfolioService.uploadImageFile(
             preview,
