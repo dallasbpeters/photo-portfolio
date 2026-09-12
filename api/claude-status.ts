@@ -50,6 +50,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const federation = federationConfig();
+  // Fingerprints only. The ids are not secrets, but echoing them whole makes
+  // a screenshot of this page a copy of the configuration.
+  const configuredAs = federation
+    ? {
+        organizationId: `${federation.organizationId.slice(0, 8)}…`,
+        ruleId: `${federation.ruleId.slice(0, 12)}…`,
+        serviceAccountId: `${federation.serviceAccountId.slice(0, 12)}…`,
+        workspaceId: federation.workspaceId
+          ? `${federation.workspaceId.slice(0, 12)}…`
+          : null,
+      }
+    : null;
   const assertion = tokenFromHeaders(
     req.headers,
     process.env.VERCEL_OIDC_TOKEN ?? ""
@@ -64,10 +76,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
    * where the pattern says, an environment the rule excludes, an audience that
    * is the platform's rather than Anthropic's.
    */
+  const now = Math.floor(Date.now() / 1000);
   const identity = claims
     ? {
         aud: claims.aud,
         environment: claims.environment,
+        /*
+         * How long this token has left, and whether it can be replayed.
+         *
+         * Both are causes a 401 will not name. An expired assertion is
+         * refused exactly like a rule that did not match, and a `jti` is
+         * single-use by default — so a platform that hands the same token to
+         * several invocations succeeds once and then fails forever, which
+         * reads as "it worked and then it broke".
+         */
+        expiresInSeconds:
+          typeof claims.exp === "number" ? claims.exp - now : null,
+        hasJti: Boolean(claims.jti),
         iss: claims.iss,
         project: claims.project,
         sub: claims.sub,
@@ -87,6 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = await claudeToken(req.headers);
     return res.status(200).json({
       configured: true,
+      configuredAs,
       exchanged: Boolean(token),
       identity,
     });
@@ -95,6 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // paraphrasing it here would throw away the only useful part.
     return res.status(200).json({
       configured: true,
+      configuredAs,
       exchanged: false,
       identity,
       reason: e instanceof Error ? e.message : String(e),
