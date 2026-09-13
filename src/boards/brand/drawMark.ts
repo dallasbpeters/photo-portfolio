@@ -49,12 +49,56 @@ export const ground = (
 };
 
 /**
- * The mark, recoloured to a single ink.
+ * Whether the artwork has anything to knock out.
+ *
+ * A mark is usually a shape on transparency, and several tiles depend on that:
+ * recolouring, knocking out, printing in one ink. Plenty of real artwork is
+ * not — a logo exported as a poster, a lockup saved with its own background —
+ * and for those the whole rectangle is opaque.
+ *
+ * Sampled rather than counted. A full read of a large mark is a megabyte of
+ * pixel data for a yes-or-no question, and a grid of a few hundred points
+ * answers it just as well: anything with real negative space has some of it
+ * near the edges.
+ */
+const SAMPLE = 24;
+const OPAQUE_ENOUGH = 0.98;
+
+export const hasTransparency = (
+  mark: CanvasImageSource & { height: number; width: number }
+): boolean => {
+  const canvas = document.createElement("canvas");
+  canvas.width = SAMPLE;
+  canvas.height = SAMPLE;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    return true;
+  }
+  ctx.drawImage(mark, 0, 0, SAMPLE, SAMPLE);
+  const { data } = ctx.getImageData(0, 0, SAMPLE, SAMPLE);
+  let opaque = 0;
+  for (let at = 3; at < data.length; at += 4) {
+    if ((data[at] ?? 0) > 250) {
+      opaque += 1;
+    }
+  }
+  return opaque / (SAMPLE * SAMPLE) < OPAQUE_ENOUGH;
+};
+
+/**
+ * The mark, recoloured to a single ink — or left alone if it cannot be.
  *
  * Drawn through its own alpha rather than by filtering: `source-in` keeps the
  * shape and replaces every colour in it, which is what "the mark in one
  * colour" means. A CSS filter would shift the colours it already has, and a
  * two-colour mark would come back as two different wrong colours.
+ *
+ * Opaque artwork is returned untouched, and that is the important case. Fill
+ * through the alpha of something with no transparency and every pixel is
+ * inside the shape, so the tile becomes a solid rectangle — which is what an
+ * app icon, a knockout and every drawn surface did the first time this met a
+ * logo saved as a poster rather than as a mark. A block of colour is not a
+ * failed recolour, it is a picture of nothing.
  *
  * Composited on an offscreen canvas so the recolour cannot reach the tile
  * behind it.
@@ -62,7 +106,10 @@ export const ground = (
 export const inked = (
   mark: CanvasImageSource & { height: number; width: number },
   colour: string
-): HTMLCanvasElement => {
+): CanvasImageSource & { height: number; width: number } => {
+  if (!hasTransparency(mark)) {
+    return mark;
+  }
   const canvas = document.createElement("canvas");
   canvas.width = mark.width;
   canvas.height = mark.height;

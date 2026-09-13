@@ -100,14 +100,33 @@ describe("inked", () => {
   it("replaces every colour in the mark, keeping its shape", () => {
     // source-in rather than a filter: a filter shifts the colours a mark
     // already has, so a two-colour mark comes back as two wrong colours.
-    const recoloured = inked(markOf(20, 20), "#ff0000");
+    const recoloured = inked(markOf(20, 20), "#ff0000") as HTMLCanvasElement;
     const ctx = recoloured.getContext("2d");
     const pixel = ctx?.getImageData(10, 10, 1, 1).data;
     expect([pixel?.[0], pixel?.[1], pixel?.[2]]).toEqual([255, 0, 0]);
   });
 
+  it("leaves opaque artwork alone, because it cannot be knocked out", () => {
+    /*
+     * The bug this caught in the wild. Fill through the alpha of something
+     * with no transparency and every pixel is inside the shape, so the tile
+     * becomes a solid rectangle — which is what an app icon, a knockout and
+     * every drawn surface showed the first time this met a logo saved as a
+     * poster rather than as a mark.
+     */
+    const solid = document.createElement("canvas");
+    solid.width = 40;
+    solid.height = 40;
+    const ctx = solid.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "#c8342b";
+      ctx.fillRect(0, 0, 40, 40);
+    }
+    expect(inked(solid, "#ffffff")).toBe(solid);
+  });
+
   it("leaves the transparent parts transparent", () => {
-    const recoloured = inked(markOf(20, 20), "#ff0000");
+    const recoloured = inked(markOf(20, 20), "#ff0000") as HTMLCanvasElement;
     const alpha = recoloured.getContext("2d")?.getImageData(1, 1, 1, 1).data[3];
     expect(alpha).toBe(0);
   });
