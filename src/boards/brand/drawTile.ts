@@ -1,4 +1,5 @@
 import { caption, fitted, ground, inked } from "./drawMark";
+import { MOCKUPS } from "./mockups";
 import type { ProofTile } from "./proofTiles";
 
 /**
@@ -196,6 +197,63 @@ const drawLockup: Draw = (ctx, mark, tile, { typeface }) => {
 };
 
 /**
+ * The mark on a surface, in a scene.
+ *
+ * Drawn rather than generated, which is the point: a sheet that asks "does
+ * this survive a real sign" while showing a sign a model invented is not
+ * evidence. Four numbers describe the surface and four more the mark's place
+ * on it, so a real photograph can replace the drawing later without touching
+ * this.
+ */
+const drawMockup: Draw = (ctx, mark, tile) => {
+  const mockup = MOCKUPS.find((entry) => entry.label === tile.label);
+  if (!mockup) {
+    return;
+  }
+  ground(ctx, mockup.backdrop, { height: TILE, width: TILE });
+  const face = {
+    height: mockup.surface.h * TILE,
+    width: mockup.surface.w * TILE,
+    x: mockup.surface.x * TILE,
+    y: mockup.surface.y * TILE,
+  };
+  ctx.fillStyle = mockup.surface.colour;
+  ctx.fillRect(face.x, face.y, face.width, face.height);
+
+  const box = fitted(
+    mark,
+    {
+      height: mockup.mark.h * face.height,
+      width: mockup.mark.w * face.width,
+      x: face.x + mockup.mark.x * face.width,
+      y: face.y + mockup.mark.y * face.height,
+    },
+    { enlarge: true }
+  );
+  ctx.drawImage(inked(mark, mockup.ink), box.x, box.y, box.width, box.height);
+
+  /*
+   * A band of shade over everything, mark included.
+   *
+   * The difference between a mockup and a sticker: light falls on the surface
+   * *and* on what is printed on it. Drawn last and over both so the mark sits
+   * in the scene rather than on top of it.
+   */
+  if (mockup.shade) {
+    const gradient = ctx.createLinearGradient(
+      face.x,
+      face.y,
+      face.x + face.width,
+      face.y + face.height
+    );
+    gradient.addColorStop(0, `rgba(0,0,0,${mockup.shade})`);
+    gradient.addColorStop(0.6, "rgba(0,0,0,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(face.x, face.y, face.width, face.height);
+  }
+};
+
+/**
  * The mark, as it is, on whatever ground the tile asked for.
  *
  * Serves the tiles whose whole test is the ground or a filter — greyscale,
@@ -237,6 +295,7 @@ const DRAWS: Partial<Record<ProofTile["kind"], Draw>> = {
   lockup: drawLockup,
   pattern: drawPattern,
   scale: drawScale,
+  surface: drawMockup,
 };
 
 export interface TileContext {

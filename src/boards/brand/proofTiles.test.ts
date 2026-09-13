@@ -98,3 +98,46 @@ describe("PLACEMENT_SIZES", () => {
     expect(px).toEqual([...px].sort((a, b) => a - b));
   });
 });
+
+describe("the drawn surfaces", () => {
+  it("puts one tile on the sheet for each", async () => {
+    const { MOCKUPS } = await import("./mockups");
+    const surfaces = proofTilesFor(EMPTY_KIT).filter(
+      (tile) => tile.kind === "surface"
+    );
+    expect(surfaces).toHaveLength(MOCKUPS.length);
+    expect(surfaces.map((tile) => tile.label)).toEqual(
+      MOCKUPS.map((mockup) => mockup.label)
+    );
+  });
+
+  it("labels them the way the renderer looks them up", async () => {
+    // drawMockup finds its config by label. A tile whose label drifts from
+    // its entry draws an empty square, which reads as a broken renderer.
+    const { MOCKUPS } = await import("./mockups");
+    for (const mockup of MOCKUPS) {
+      expect(
+        proofTilesFor(EMPTY_KIT).some((tile) => tile.label === mockup.label),
+        mockup.label
+      ).toBe(true);
+    }
+  });
+
+  it("keeps the mark inside the surface it is printed on", async () => {
+    // A mark placed past the edge of the thing it sits on is drawn over the
+    // scene behind it, which reads as a rendering bug rather than a mockup.
+    const { MOCKUPS } = await import("./mockups");
+    for (const { label, mark } of MOCKUPS) {
+      expect(mark.x + mark.w, label).toBeLessThanOrEqual(1);
+      expect(mark.y + mark.h, label).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("keeps every surface inside the tile", async () => {
+    const { MOCKUPS } = await import("./mockups");
+    for (const { label, surface } of MOCKUPS) {
+      expect(surface.x + surface.w, label).toBeLessThanOrEqual(1);
+      expect(surface.y + surface.h, label).toBeLessThanOrEqual(1);
+    }
+  });
+});

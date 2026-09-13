@@ -1,4 +1,5 @@
 import type { BrandKitDoc } from "../../../config/brandKit.js";
+import { MOCKUPS } from "./mockups";
 
 /**
  * What a proof board is made of.
@@ -49,7 +50,8 @@ export type TileKind =
   | "outline"
   | "pattern"
   | "scale"
-  | "squint";
+  | "squint"
+  | "surface";
 
 export interface ProofTile {
   /** The colour behind the mark, when the tile has an opinion about one. */
@@ -187,6 +189,21 @@ export const proofTilesFor = (
       words: name,
     }
   );
+
+  /*
+   * The surfaces, drawn rather than generated.
+   *
+   * Last on the sheet on purpose: they are the softest evidence on it. The
+   * tiles above ask whether the mark works; these ask whether it looks right
+   * somewhere, which is a question about the drawing as much as the mark.
+   */
+  for (const mockup of MOCKUPS) {
+    tiles.push({
+      caption: mockup.caption,
+      kind: "surface",
+      label: mockup.label,
+    });
+  }
 
   /*
    * The mark beside its name, in the brand's own typeface.
